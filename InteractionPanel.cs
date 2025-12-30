@@ -25,7 +25,7 @@ namespace DesktopAiMascot
         {
             // Enable transparent painting
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-            this.BackColor = Color.Transparent;
+            this.BackColor = Color.White;
 
             // Use an emoji-capable font so emoji render correctly (Segoe UI Emoji on Windows)
             messageFont = new Font("Segoe UI Emoji", this.Font.Size);
@@ -33,7 +33,7 @@ namespace DesktopAiMascot
             // Create input box (extracted control) docked to bottom
             inputBox = new ChatInputBox();
             inputBox.Font = messageFont;
-            inputBox.Height = 28;
+            inputBox.Height = 20;
             inputBox.Dock = DockStyle.Bottom;
             inputBox.SendRequested += InputBox_SendRequested;
             inputBox.ClearHistoryRequested += () =>
@@ -160,6 +160,20 @@ namespace DesktopAiMascot
             inputBox.Clear();
             messagesPanel.Focus();
             messagesPanel.Invalidate();
+        }
+
+        private void InitializeComponent()
+        {
+            SuspendLayout();
+            // 
+            // InteractionPanel
+            // 
+            BackColor = SystemColors.Control;
+            BorderStyle = BorderStyle.FixedSingle;
+            Name = "InteractionPanel";
+            Size = new Size(148, 148);
+            ResumeLayout(false);
+
         }
 
         protected override void Dispose(bool disposing)

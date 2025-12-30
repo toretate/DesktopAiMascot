@@ -6,37 +6,44 @@ using System.Text.Json;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using DesktopAiMascot.aiservice;
+using System.ComponentModel;
 
 namespace DesktopAiMascot.Controls
 {
     /// <summary>
     /// A list-style message control that uses a ListBox to manage items.
     /// Rendering of each message (bubble) is delegated to ChatMessage.Draw/Measure.
+    /// Converted to a partial UserControl so the WinForms designer can be used.
     /// </summary>
-    public class MessageListPanel : Panel
+    [DesignerCategory("Code")]
+    public partial class MessageListPanel : UserControl
     {
-        private readonly ListBox listBox;
-        private readonly ContextMenuStrip messagesContextMenu;
+        // Designer fields
+        private ListBox listBox;
+        private ContextMenuStrip messagesContextMenu;
+
         private readonly Padding contentPadding = new(6);
 
         public MessageListPanel()
         {
+            InitializeComponent();
+
             this.DoubleBuffered = true;
             this.BackColor = Color.White;
 
-            listBox = new ListBox
+            // Ensure listbox has the expected modes (designer may have already set these)
+            if (listBox != null)
             {
-                Dock = DockStyle.Fill,
-                DrawMode = DrawMode.OwnerDrawVariable,
-                SelectionMode = SelectionMode.MultiExtended,
-                IntegralHeight = false
-            };
+                listBox.DrawMode = DrawMode.OwnerDrawVariable;
+                listBox.SelectionMode = SelectionMode.MultiExtended;
+                listBox.IntegralHeight = false;
 
-            listBox.MeasureItem += ListBox_MeasureItem;
-            listBox.DrawItem += ListBox_DrawItem;
-            listBox.MouseDoubleClick += ListBox_MouseDoubleClick;
+                listBox.MeasureItem += ListBox_MeasureItem;
+                listBox.DrawItem += ListBox_DrawItem;
+                listBox.MouseDoubleClick += ListBox_MouseDoubleClick;
 
-            this.Controls.Add(listBox);
+                // Context menu set in designer
+            }
 
             // Populate from ChatHistory manager
             foreach (var m in ChatHistory.GetMessages()) listBox.Items.Add(m);
@@ -44,13 +51,36 @@ namespace DesktopAiMascot.Controls
             // Subscribe to future additions and bulk loads
             ChatHistory.MessageAdded += OnMessageAdded;
             ChatHistory.MessagesLoaded += OnMessagesLoaded;
+        }
 
-            // Context menu
-            messagesContextMenu = new ContextMenuStrip();
+        private void InitializeComponent()
+        {
+            this.listBox = new System.Windows.Forms.ListBox();
+            this.messagesContextMenu = new System.Windows.Forms.ContextMenuStrip();
+            this.SuspendLayout();
+            // 
+            // listBox
+            // 
+            this.listBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listBox.FormattingEnabled = true;
+            this.listBox.IntegralHeight = false;
+            this.listBox.Name = "listBox";
+            this.listBox.Size = new System.Drawing.Size(200, 150);
+            this.listBox.TabIndex = 0;
+            this.listBox.ContextMenuStrip = this.messagesContextMenu;
+            // 
+            // messagesContextMenu
+            // 
             var copyItem = new ToolStripMenuItem("Copy");
             copyItem.Click += (s, e) => CopySelectionToClipboard();
-            messagesContextMenu.Items.Add(copyItem);
-            listBox.ContextMenuStrip = messagesContextMenu;
+            this.messagesContextMenu.Items.Add(copyItem);
+            // 
+            // MessageListPanel
+            // 
+            this.Controls.Add(this.listBox);
+            this.Name = "MessageListPanel";
+            this.Size = new System.Drawing.Size(200, 150);
+            this.ResumeLayout(false);
         }
 
         private void OnMessageAdded(object? sender, ChatHistory.ChatMessageEventArgs e)
@@ -242,10 +272,13 @@ namespace DesktopAiMascot.Controls
                 messagesContextMenu?.Dispose();
                 ChatHistory.MessageAdded -= OnMessageAdded;
                 ChatHistory.MessagesLoaded -= OnMessagesLoaded;
-                listBox.MeasureItem -= ListBox_MeasureItem;
-                listBox.DrawItem -= ListBox_DrawItem;
-                listBox.MouseDoubleClick -= ListBox_MouseDoubleClick;
-                listBox?.Dispose();
+                if (listBox != null)
+                {
+                    listBox.MeasureItem -= ListBox_MeasureItem;
+                    listBox.DrawItem -= ListBox_DrawItem;
+                    listBox.MouseDoubleClick -= ListBox_MouseDoubleClick;
+                    listBox?.Dispose();
+                }
             }
             base.Dispose(disposing);
         }

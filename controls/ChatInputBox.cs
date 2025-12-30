@@ -72,11 +72,12 @@ namespace DesktopAiMascot.Controls
             // textBox
             // 
             textBox.AcceptsReturn = true;
+            textBox.BorderStyle = BorderStyle.None;
             textBox.Dock = DockStyle.Fill;
             textBox.Location = new Point(0, 0);
             textBox.Multiline = true;
             textBox.Name = "textBox";
-            textBox.Size = new Size(216, 24);
+            textBox.Size = new Size(218, 18);
             textBox.TabIndex = 0;
             textBox.KeyDown += TextBox_KeyDown;
             textBox.LostFocus += TextBox_LostFocus;
@@ -85,9 +86,9 @@ namespace DesktopAiMascot.Controls
             // 
             clearButton.Dock = DockStyle.Right;
             clearButton.FlatStyle = FlatStyle.System;
-            clearButton.Location = new Point(216, 0);
+            clearButton.Location = new Point(218, 0);
             clearButton.Name = "clearButton";
-            clearButton.Size = new Size(24, 24);
+            clearButton.Size = new Size(20, 18);
             clearButton.TabIndex = 1;
             clearButton.Text = "✖";
             clearButton.UseVisualStyleBackColor = true;
@@ -95,10 +96,11 @@ namespace DesktopAiMascot.Controls
             // 
             // ChatInputBox
             // 
+            BorderStyle = BorderStyle.FixedSingle;
             Controls.Add(textBox);
             Controls.Add(clearButton);
             Name = "ChatInputBox";
-            Size = new Size(240, 24);
+            Size = new Size(238, 18);
             ResumeLayout(false);
             PerformLayout();
 

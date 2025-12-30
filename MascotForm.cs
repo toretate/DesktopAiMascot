@@ -71,6 +71,9 @@ namespace DesktopAiMascot
             interactionPanel.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
             this.Controls.Add(interactionPanel);
 
+            this.BackColor = Color.LimeGreen;
+            this.TransparencyKey = this.BackColor;
+
             // Do not set Location here; OnLoad will apply saved location so it's not overwritten by framework.
         }
 
@@ -134,80 +137,8 @@ namespace DesktopAiMascot
         {
             base.OnPaint(e);
             mascot.Draw(e.Graphics);
-
-            // Draw speech bubble if visible
-            if (!string.IsNullOrEmpty(bubbleText) && bubbleVisible)
-            {
-                var g = e.Graphics;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                // Determine bubble rectangle above the mascot's head
-                int padding = 8;
-                SizeF textSize = g.MeasureString(bubbleText, this.Font, 200);
-                int bw = (int)textSize.Width + padding * 2;
-                int bh = (int)textSize.Height + padding * 2;
-
-                int bx = mascot.Position.X + mascot.Size.Width - bw;
-                int by = mascot.Position.Y - bh - 12; // tail gap
-                if (bx < 0) bx = 0;
-                if (by < 0) by = 0;
-
-                var bubbleRect = new Rectangle(bx, by, bw, bh);
-
-                using (var brush = new SolidBrush(Color.FromArgb(230, Color.White)))
-                using (var pen = new Pen(Color.Black))
-                using (var sf = new StringFormat())
-                {
-                    sf.Alignment = StringAlignment.Near;
-                    sf.LineAlignment = StringAlignment.Near;
-                    using (var path = CreateRoundedRectanglePath(bubbleRect, 8))
-                    {
-                        g.FillPath(brush, path);
-                        g.DrawPath(pen, path);
-                    }
-                    var textRect = new Rectangle(bx + padding, by + padding, bw - padding * 2, bh - padding * 2);
-                    g.DrawString(bubbleText, this.Font, Brushes.Black, textRect);
-
-                    // small triangular tail
-                    Point tailP1 = new Point(mascot.Position.X + mascot.Size.Width - 18, mascot.Position.Y - 4);
-                    Point tailP2 = new Point(mascot.Position.X + mascot.Size.Width - 8, mascot.Position.Y + 6);
-                    Point tailP3 = new Point(bx + bw - 10, by + bh);
-                    Point[] tail = new Point[] { tailP1, tailP2, tailP3 };
-                    g.FillPolygon(brush, tail);
-                    g.DrawLines(pen, tail);
-                }
-            }
         }
 
-        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectanglePath(Rectangle rect, int radius)
-        {
-            var path = new System.Drawing.Drawing2D.GraphicsPath();
-            int diameter = radius * 2;
-            var arc = new Rectangle(rect.Location, new Size(diameter, diameter));
-
-            // top-left arc
-            path.AddArc(arc, 180, 90);
-            // top edge
-            arc.X = rect.Right - diameter;
-            path.AddArc(arc, 270, 90);
-            // right edge
-            arc.Y = rect.Bottom - diameter;
-            path.AddArc(arc, 0, 90);
-            // bottom edge
-            arc.X = rect.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
-
-
-        // Paint semi-transparent background so child controls remain opaque when rendered on top.
-        protected override void OnPaintBackground(PaintEventArgs e)
-        {
-            // Paint a semi-transparent overlay for the form background
-            using var brush = new SolidBrush(Color.FromArgb(160, 0, 0, 0));
-            e.Graphics.FillRectangle(brush, this.ClientRectangle);
-        }
 
         private void ShowMascot(object sender, EventArgs e)
         {
