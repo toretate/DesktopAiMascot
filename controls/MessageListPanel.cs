@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows.Forms;
 using System.Drawing.Drawing2D;
+using DesktopAiMascot.aiservice;
 
 namespace DesktopAiMascot.Controls
 {
@@ -69,26 +70,23 @@ namespace DesktopAiMascot.Controls
             listBox.Items.Clear();
         }
 
-        public void SaveToFile(string path)
+        // Save messages to file. If sessionId is provided, save wrapper { sessionId, messages }.
+        public void SaveToFile(string path, string? sessionId = null)
         {
             try
             {
-                var dir = Path.GetDirectoryName(path) ?? string.Empty;
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(path, JsonSerializer.Serialize(messages, options));
+                ChatHistory.Save(path, messages, sessionId);
             }
             catch { }
         }
 
-        public void LoadFromFile(string path)
+        // Load messages from file. If file contains wrapper with sessionId, return it; otherwise return null.
+        public string? LoadFromFile(string path)
         {
             try
             {
-                if (!File.Exists(path)) return;
-                string txt = File.ReadAllText(path);
-                var loaded = JsonSerializer.Deserialize<List<ChatMessage>>(txt);
-                if (loaded != null)
+                var (loaded, sid) = ChatHistory.Load(path);
+                if (loaded != null && loaded.Count > 0)
                 {
                     messages.Clear();
                     messages.AddRange(loaded);
@@ -96,8 +94,12 @@ namespace DesktopAiMascot.Controls
                     foreach (var m in messages) listBox.Items.Add(m);
                     ScrollToBottom();
                 }
+
+                return sid;
             }
             catch { }
+
+            return null;
         }
 
         public void CopySelectionToClipboard()

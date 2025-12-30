@@ -19,6 +19,8 @@ namespace DesktopAiMascot
 
         public IAiChatService ChatService { get; set; }
 
+        private readonly string messagesFilePath;
+
         public InteractionPanel()
         {
             // Enable transparent painting
@@ -46,6 +48,29 @@ namespace DesktopAiMascot
 
             // Default chat service
             ChatService = new LmStudioChatService();
+
+            // messages file under AppData
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appDir = Path.Combine(appData, "DesktopAiMascot");
+            messagesFilePath = Path.Combine(appDir, "messages.json");
+
+            // Try to load saved messages and session id
+            try
+            {
+                string? sid = messagesPanel.LoadFromFile(messagesFilePath);
+                if (!string.IsNullOrEmpty(sid) && ChatService is aiservice.LmStudioChatService lm)
+                {
+                    lm.SessionId = sid;
+                }
+
+                // If we loaded messages, populate the chat service conversation so requests include history
+                if (ChatService is aiservice.LmStudioChatService lm2)
+                {
+                    var msgs = messagesPanel.GetMessages();
+                    if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
+                }
+            }
+            catch { }
         }
 
         public void AddMessage(string sender, string text)
@@ -62,12 +87,26 @@ namespace DesktopAiMascot
 
         public void SaveToFile(string path)
         {
-            messagesPanel.SaveToFile(path);
+            // Pass current session id when saving so file stores it
+            string? sid = null;
+            if (ChatService is aiservice.LmStudioChatService lm) sid = lm.SessionId;
+            messagesPanel.SaveToFile(path, sid);
         }
 
         public void LoadFromFile(string path)
         {
-            messagesPanel.LoadFromFile(path);
+            string? sid = messagesPanel.LoadFromFile(path);
+            if (!string.IsNullOrEmpty(sid) && ChatService is aiservice.LmStudioChatService lm)
+            {
+                lm.SessionId = sid;
+            }
+
+            // update conversation on the chat service when loading
+            if (ChatService is aiservice.LmStudioChatService lm2)
+            {
+                var msgs = messagesPanel.GetMessages();
+                if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
+            }
         }
 
         // Show the input box and focus it. Call this when mascot is clicked.
@@ -85,6 +124,13 @@ namespace DesktopAiMascot
         private async Task HandleSendFromInputAsync(string text)
         {
             AddMessage("User", text);
+
+            // ensure the chat service has up-to-date conversation history so LMStudio receives the full context
+            if (ChatService is aiservice.LmStudioChatService lm)
+            {
+                lm.Conversation = messagesPanel.GetMessages();
+            }
+
             try
             {
                 var reply = await ChatService.SendMessageAsync(text);
@@ -110,6 +156,13 @@ namespace DesktopAiMascot
                 }
             }
 
+            // after each send, persist messages and session id
+            try
+            {
+                SaveToFile(messagesFilePath);
+            }
+            catch { }
+
             // clear input
             inputBox.Clear();
             messagesPanel.Focus();
@@ -121,6 +174,8 @@ namespace DesktopAiMascot
             if (disposing)
             {
                 messageFont?.Dispose();
+                // persist messages on dispose
+                try { SaveToFile(messagesFilePath); } catch { }
             }
             base.Dispose(disposing);
         }
