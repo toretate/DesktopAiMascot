@@ -17,6 +17,17 @@ namespace DesktopAiMascot
 
         private readonly string settingsPath;
 
+        // Click vs drag detection
+        private Point dragStartScreen;
+        private bool potentialClick = false;
+        private const int ClickMoveThreshold = 5; // pixels
+
+        // Speech bubble / input is handled by InteractionPanel
+        private string bubbleText = string.Empty;
+        private bool bubbleVisible = false;
+
+        private InteractionPanel interactionPanel;
+
         public MascotForm()
         {
             // settings file in AppData
@@ -28,11 +39,11 @@ namespace DesktopAiMascot
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
             this.UpdateStyles();
 
-            // Display mascot image at 1024x768 (use half-size here as before)
-            int imageWidth = 768 /2;
-            int imageHeight = 1024 /2;
+            // Display mascot image at 1024x768 (use one-third size here)
+            int imageWidth = 768 /3;
+            int imageHeight = 1024 /3;
 
-            this.ClientSize = new System.Drawing.Size(imageWidth, imageHeight);
+            this.ClientSize = new System.Drawing.Size(imageWidth + 220, imageHeight); // extra width for interaction panel
             this.Name = "MascotForm";
             this.Text = "Desktop Mascot";
             this.MouseDown += new MouseEventHandler(this.MascotForm_MouseDown);
@@ -40,18 +51,25 @@ namespace DesktopAiMascot
             this.MouseUp += new MouseEventHandler(this.MascotForm_MouseUp);
 
             SetupNotifyIcon();
-            // Place mascot at top-left of the form and size it to full image size
-            mascot = new Mascot(new Point(0, 0), new Size(imageWidth, imageHeight));
+            // Place mascot at top-right area of the form and size it
+            mascot = new Mascot(new Point(220, 0), new Size(imageWidth, imageHeight));
             this.ShowInTaskbar = false;
             this.WindowState = FormWindowState.Normal;
             this.FormBorderStyle = FormBorderStyle.None;
-            this.BackColor = Color.Magenta;
-            this.TransparencyKey = Color.Magenta;
             this.TopMost = true;
-            this.Size = new Size(imageWidth, imageHeight);
+            // Use painting for semi-transparent background instead of whole-window Opacity
+            // this.Opacity = 0.5;
+            this.Size = new Size(imageWidth + 220, imageHeight);
 
             // Ensure Windows doesn't override our Location when the form is first shown
             this.StartPosition = FormStartPosition.Manual;
+
+            // Create interaction panel on the left side
+            interactionPanel = new InteractionPanel();
+            interactionPanel.Size = new Size(210, imageHeight);
+            interactionPanel.Location = new Point(4, 0);
+            interactionPanel.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
+            this.Controls.Add(interactionPanel);
 
             // Do not set Location here; OnLoad will apply saved location so it's not overwritten by framework.
         }
@@ -116,12 +134,79 @@ namespace DesktopAiMascot
         {
             base.OnPaint(e);
             mascot.Draw(e.Graphics);
+
+            // Draw speech bubble if visible
+            if (!string.IsNullOrEmpty(bubbleText) && bubbleVisible)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                // Determine bubble rectangle above the mascot's head
+                int padding = 8;
+                SizeF textSize = g.MeasureString(bubbleText, this.Font, 200);
+                int bw = (int)textSize.Width + padding * 2;
+                int bh = (int)textSize.Height + padding * 2;
+
+                int bx = mascot.Position.X + mascot.Size.Width - bw;
+                int by = mascot.Position.Y - bh - 12; // tail gap
+                if (bx < 0) bx = 0;
+                if (by < 0) by = 0;
+
+                var bubbleRect = new Rectangle(bx, by, bw, bh);
+
+                using (var brush = new SolidBrush(Color.FromArgb(230, Color.White)))
+                using (var pen = new Pen(Color.Black))
+                using (var sf = new StringFormat())
+                {
+                    sf.Alignment = StringAlignment.Near;
+                    sf.LineAlignment = StringAlignment.Near;
+                    using (var path = CreateRoundedRectanglePath(bubbleRect, 8))
+                    {
+                        g.FillPath(brush, path);
+                        g.DrawPath(pen, path);
+                    }
+                    var textRect = new Rectangle(bx + padding, by + padding, bw - padding * 2, bh - padding * 2);
+                    g.DrawString(bubbleText, this.Font, Brushes.Black, textRect);
+
+                    // small triangular tail
+                    Point tailP1 = new Point(mascot.Position.X + mascot.Size.Width - 18, mascot.Position.Y - 4);
+                    Point tailP2 = new Point(mascot.Position.X + mascot.Size.Width - 8, mascot.Position.Y + 6);
+                    Point tailP3 = new Point(bx + bw - 10, by + bh);
+                    Point[] tail = new Point[] { tailP1, tailP2, tailP3 };
+                    g.FillPolygon(brush, tail);
+                    g.DrawLines(pen, tail);
+                }
+            }
         }
 
-        // Prevent background from being erased to reduce flicker
+        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectanglePath(Rectangle rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            int diameter = radius * 2;
+            var arc = new Rectangle(rect.Location, new Size(diameter, diameter));
+
+            // top-left arc
+            path.AddArc(arc, 180, 90);
+            // top edge
+            arc.X = rect.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            // right edge
+            arc.Y = rect.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            // bottom edge
+            arc.X = rect.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+
+        // Paint semi-transparent background so child controls remain opaque when rendered on top.
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            // Intentionally do nothing to avoid clearing the background which causes flicker
+            // Paint a semi-transparent overlay for the form background
+            using var brush = new SolidBrush(Color.FromArgb(160, 0, 0, 0));
+            e.Graphics.FillRectangle(brush, this.ClientRectangle);
         }
 
         private void ShowMascot(object sender, EventArgs e)
@@ -174,8 +259,10 @@ namespace DesktopAiMascot
         {
             if (mascot.IsClicked(e.Location))
             {
-                isDragging = true;
-                // store offset of mouse inside the form so we can keep the same relative position while moving
+                // prepare for possible click; record starting screen position
+                potentialClick = true;
+                dragStartScreen = Control.MousePosition;
+                // store offset of mouse inside the form for dragging
                 mouseDownOffset = new Point(e.X, e.Y);
                 // capture mouse so we receive MouseUp even if released outside the form
                 this.Capture = true;
@@ -184,6 +271,17 @@ namespace DesktopAiMascot
 
         private void MascotForm_MouseMove(object sender, MouseEventArgs e)
         {
+            if (!isDragging && potentialClick)
+            {
+                // if mouse moved more than threshold since MouseDown, it's a drag
+                Point current = Control.MousePosition;
+                if (Math.Abs(current.X - dragStartScreen.X) > ClickMoveThreshold || Math.Abs(current.Y - dragStartScreen.Y) > ClickMoveThreshold)
+                {
+                    isDragging = true;
+                    potentialClick = false;
+                }
+            }
+
             if (isDragging)
             {
                 // Move the whole form so the mascot can be placed anywhere on the desktop
@@ -205,6 +303,12 @@ namespace DesktopAiMascot
 
         private void MascotForm_MouseUp(object sender, MouseEventArgs e)
         {
+            if (potentialClick && !isDragging)
+            {
+                // treat as click: show interaction panel input box
+                interactionPanel?.ShowInput();
+            }
+
             if (isDragging)
             {
                 isDragging = false;
@@ -216,6 +320,7 @@ namespace DesktopAiMascot
                 }
                 catch { }
             }
+            potentialClick = false;
         }
 
         protected override void OnMouseCaptureChanged(EventArgs e)
