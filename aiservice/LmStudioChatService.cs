@@ -21,17 +21,12 @@ namespace DesktopAiMascot.aiservice
         private static readonly HttpClient httpClient = new HttpClient() { Timeout = TimeSpan.FromSeconds(30) };
         private readonly string endpoint;
 
-        // Session id used by LMStudio for automatic context saving. Auto-generated but can be overridden when loading saved state.
-        public string SessionId { get; set; }
-
         // Conversation history captured from UI; if set, SendMessageAsync will include these messages in the 'messages' array.
         public IReadOnlyList<ChatMessage>? Conversation { get; set; }
 
         public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
         {
             this.endpoint = endpoint;
-            // generate a session id by default
-            this.SessionId = Guid.NewGuid().ToString();
         }
 
         public async Task<string?> SendMessageAsync(string message)
@@ -65,7 +60,6 @@ namespace DesktopAiMascot.aiservice
                 {
                     model = "qwen3-v1-8b",
                     // include session id as before (may be ignored by servers that don't support it)
-                    session = this.SessionId,
                     messages = msgs
                 };
 
@@ -128,6 +122,11 @@ namespace DesktopAiMascot.aiservice
                  return $"Error: {ex.Message}";
              }
          }
+
+        public void ClearConversation()
+        {
+
+        }
 
          private static string? LoadSystemPrompt()
          {

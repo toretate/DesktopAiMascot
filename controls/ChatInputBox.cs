@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -7,13 +7,29 @@ namespace DesktopAiMascot.Controls
     public class ChatInputBox : UserControl
     {
         private readonly TextBox textBox;
+        private readonly Button clearButton;
 
         // Raised when the user requests sending the current text (Enter without Shift) or when focus is lost with text.
         public event Action<string>? SendRequested;
+        // Raised when the user requests clearing the chat history via the clear button.
+        public event Action? ClearHistoryRequested;
 
         public ChatInputBox()
         {
             this.textBox = new TextBox();
+            this.clearButton = new Button();
+
+            // configure clear button (icon-like appearance)
+            clearButton.Dock = DockStyle.Right;
+            clearButton.Width = 24;
+            clearButton.Text = "✖";
+            clearButton.FlatStyle = FlatStyle.Flat;
+            clearButton.FlatAppearance.BorderSize = 0;
+            clearButton.Cursor = Cursors.Hand;
+            clearButton.TabStop = false;
+            clearButton.Margin = new Padding(0);
+            clearButton.Click += ClearButton_Click;
+
             textBox.BorderStyle = BorderStyle.FixedSingle;
             textBox.Multiline = true;
             textBox.AcceptsReturn = true;
@@ -22,11 +38,20 @@ namespace DesktopAiMascot.Controls
             textBox.KeyDown += TextBox_KeyDown;
             textBox.LostFocus += TextBox_LostFocus;
 
+            // add controls so the clear button stays at the right and textbox fills remaining
+            this.Controls.Add(clearButton);
             this.Controls.Add(textBox);
 
             // keep input visible by default
             this.Visible = true;
             this.Height = 28;
+        }
+
+        private void ClearButton_Click(object? sender, EventArgs e)
+        {
+            // request clearing the chat history (handled by parent/owner)
+            ClearHistoryRequested?.Invoke();
+            textBox.Focus();
         }
 
         private void TextBox_KeyDown(object? sender, KeyEventArgs e)
@@ -81,6 +106,7 @@ namespace DesktopAiMascot.Controls
             {
                 base.Font = value;
                 if (textBox != null) textBox.Font = value;
+                if (clearButton != null) clearButton.Font = value; // keep consistent
             }
         }
     }

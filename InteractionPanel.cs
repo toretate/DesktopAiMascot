@@ -36,6 +36,10 @@ namespace DesktopAiMascot
             inputBox.Height = 28;
             inputBox.Dock = DockStyle.Bottom;
             inputBox.SendRequested += InputBox_SendRequested;
+            inputBox.ClearHistoryRequested += () =>
+            {
+                ClearMessages();
+            };
 
             // Create messages panel above the input area
             messagesPanel = new MessageListPanel();
@@ -58,11 +62,6 @@ namespace DesktopAiMascot
             try
             {
                 string? sid = messagesPanel.LoadFromFile(messagesFilePath);
-                if (!string.IsNullOrEmpty(sid) && ChatService is aiservice.LmStudioChatService lm)
-                {
-                    lm.SessionId = sid;
-                }
-
                 // If we loaded messages, populate the chat service conversation so requests include history
                 if (ChatService is aiservice.LmStudioChatService lm2)
                 {
@@ -83,24 +82,18 @@ namespace DesktopAiMascot
         public void ClearMessages()
         {
             messagesPanel.ClearMessages();
+            if (ChatService != null)
+            {
+                ChatService.ClearConversation();
+            }
         }
 
         public void SaveToFile(string path)
         {
-            // Pass current session id when saving so file stores it
-            string? sid = null;
-            if (ChatService is aiservice.LmStudioChatService lm) sid = lm.SessionId;
-            messagesPanel.SaveToFile(path, sid);
         }
 
         public void LoadFromFile(string path)
         {
-            string? sid = messagesPanel.LoadFromFile(path);
-            if (!string.IsNullOrEmpty(sid) && ChatService is aiservice.LmStudioChatService lm)
-            {
-                lm.SessionId = sid;
-            }
-
             // update conversation on the chat service when loading
             if (ChatService is aiservice.LmStudioChatService lm2)
             {

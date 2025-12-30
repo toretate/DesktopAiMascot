@@ -15,7 +15,6 @@ namespace DesktopAiMascot.Controls
     /// </summary>
     public class MessageListPanel : Panel
     {
-        private readonly List<ChatMessage> messages = new();
         private readonly ListBox listBox;
         private readonly ContextMenuStrip messagesContextMenu;
         private readonly Padding contentPadding = new(6);
@@ -39,12 +38,46 @@ namespace DesktopAiMascot.Controls
 
             this.Controls.Add(listBox);
 
+            // Populate from ChatHistory manager
+            foreach (var m in ChatHistory.GetMessages()) listBox.Items.Add(m);
+
+            // Subscribe to future additions and bulk loads
+            ChatHistory.MessageAdded += OnMessageAdded;
+            ChatHistory.MessagesLoaded += OnMessagesLoaded;
+
             // Context menu
             messagesContextMenu = new ContextMenuStrip();
             var copyItem = new ToolStripMenuItem("Copy");
             copyItem.Click += (s, e) => CopySelectionToClipboard();
             messagesContextMenu.Items.Add(copyItem);
             listBox.ContextMenuStrip = messagesContextMenu;
+        }
+
+        private void OnMessageAdded(object? sender, ChatHistory.ChatMessageEventArgs e)
+        {
+            if (e == null || e.Message == null) return;
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(() => OnMessageAdded(sender, e)));
+                return;
+            }
+
+            listBox.Items.Add(e.Message);
+            ScrollToBottom();
+        }
+
+        private void OnMessagesLoaded(object? sender, ChatHistory.ChatMessagesEventArgs e)
+        {
+            if (e == null || e.Messages == null) return;
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(() => OnMessagesLoaded(sender, e)));
+                return;
+            }
+
+            listBox.Items.Clear();
+            foreach (var m in e.Messages) listBox.Items.Add(m);
+            ScrollToBottom();
         }
 
         public void AddMessage(string sender, string text)
@@ -57,17 +90,16 @@ namespace DesktopAiMascot.Controls
             }
 
             var msg = new ChatMessage { Sender = sender, Text = text };
-            messages.Add(msg);
-            listBox.Items.Add(msg);
-            ScrollToBottom();
+            // Add to manager; UI will be updated via MessageAdded event
+            ChatHistory.AddMessage(msg);
         }
 
-        public IReadOnlyList<ChatMessage> GetMessages() => messages.AsReadOnly();
+        public IReadOnlyList<ChatMessage> GetMessages() => ChatHistory.GetMessages();
 
         public void ClearMessages()
         {
-            messages.Clear();
             listBox.Items.Clear();
+            ChatHistory.DeleteAll();
         }
 
         // Save messages to file. If sessionId is provided, save wrapper { sessionId, messages }.
@@ -75,7 +107,7 @@ namespace DesktopAiMascot.Controls
         {
             try
             {
-                ChatHistory.Save(path, messages, sessionId);
+                ChatHistory.Save(path, sessionId);
             }
             catch { }
         }
@@ -85,16 +117,12 @@ namespace DesktopAiMascot.Controls
         {
             try
             {
-                var (loaded, sid) = ChatHistory.Load(path);
-                if (loaded != null && loaded.Count > 0)
-                {
-                    messages.Clear();
-                    messages.AddRange(loaded);
-                    listBox.Items.Clear();
-                    foreach (var m in messages) listBox.Items.Add(m);
-                    ScrollToBottom();
-                }
+                // Clear current UI first; ChatHistory.Load will raise MessagesLoaded for bulk replacement
+                listBox.Items.Clear();
 
+                var (loaded, sid) = ChatHistory.Load(path);
+                // If no messages loaded, nothing to add (Load already updated in-memory store)
+                ScrollToBottom();
                 return sid;
             }
             catch { }
@@ -108,10 +136,11 @@ namespace DesktopAiMascot.Controls
             var sb = new System.Text.StringBuilder();
             foreach (int idx in listBox.SelectedIndices)
             {
-                if (idx >= 0 && idx < messages.Count)
+                if (idx >= 0 && idx < listBox.Items.Count)
                 {
                     if (sb.Length > 0) sb.AppendLine();
-                    sb.AppendLine($"{messages[idx].Sender}: {messages[idx].Text}");
+                    var m = listBox.Items[idx] as ChatMessage;
+                    if (m != null) sb.AppendLine($"{m.Sender}: {m.Text}");
                 }
             }
             try { Clipboard.SetText(sb.ToString()); } catch { }
@@ -121,9 +150,13 @@ namespace DesktopAiMascot.Controls
         private void ListBox_MouseDoubleClick(object? sender, MouseEventArgs e)
         {
             int idx = listBox.IndexFromPoint(e.Location);
-            if (idx >= 0 && idx < messages.Count)
+            if (idx >= 0 && idx < listBox.Items.Count)
             {
-                try { Clipboard.SetText(messages[idx].Text); } catch { }
+                var m = listBox.Items[idx] as ChatMessage;
+                if (m != null)
+                {
+                    try { Clipboard.SetText(m.Text); } catch { }
+                }
             }
         }
 
@@ -207,6 +240,8 @@ namespace DesktopAiMascot.Controls
             if (disposing)
             {
                 messagesContextMenu?.Dispose();
+                ChatHistory.MessageAdded -= OnMessageAdded;
+                ChatHistory.MessagesLoaded -= OnMessagesLoaded;
                 listBox.MeasureItem -= ListBox_MeasureItem;
                 listBox.DrawItem -= ListBox_DrawItem;
                 listBox.MouseDoubleClick -= ListBox_MouseDoubleClick;

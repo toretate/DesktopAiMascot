@@ -103,6 +103,11 @@ namespace DesktopAiMascot.aiservice
             }
         }
 
+        public void ClearConversation()
+        {
+            // No conversation state to clear in this simple implementation.
+        }
+
         private static string? LoadSystemPrompt()
         {
             try
