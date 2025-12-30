@@ -13,9 +13,12 @@ namespace DesktopAiMascot
 {
     public class InteractionPanel : UserControl
     {
-        private readonly ChatInputBox inputBox;
+        // Expose controls so the WinForms designer can edit them
+        public ChatInputBox inputBox;
         private readonly Font messageFont;
-        private readonly MessageListPanel messagesPanel;
+        public MessageListPanel messagesPanel;
+        public ToolStrip topToolStrip;
+        private ToolStripButton clearBtn;
 
         public IAiChatService ChatService { get; set; }
 
@@ -23,32 +26,27 @@ namespace DesktopAiMascot
 
         public InteractionPanel()
         {
+            // Initialize designer-created controls
+            InitializeComponent();
+
             // Enable transparent painting
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
             this.BackColor = Color.White;
 
             // Use an emoji-capable font so emoji render correctly (Segoe UI Emoji on Windows)
+            // messageFont is kept private as it's not intended to be modified by the designer
             messageFont = new Font("Segoe UI Emoji", this.Font.Size);
 
-            // Create input box (extracted control) docked to bottom
-            inputBox = new ChatInputBox();
-            inputBox.Font = messageFont;
-            inputBox.Height = 20;
-            inputBox.Dock = DockStyle.Bottom;
-            inputBox.SendRequested += InputBox_SendRequested;
-            inputBox.ClearHistoryRequested += () =>
+            // Apply font to existing controls created in InitializeComponent
+            if (messagesPanel != null) messagesPanel.Font = messageFont;
+            if (inputBox != null) inputBox.Font = messageFont;
+
+            // Wire up events (some were set in InitializeComponent but ensure handlers are attached)
+            if (inputBox != null)
             {
-                ClearMessages();
-            };
-
-            // Create messages panel above the input area
-            messagesPanel = new MessageListPanel();
-            messagesPanel.Dock = DockStyle.Fill;
-            messagesPanel.Font = messageFont;
-
-            // Add controls: messages panel fills, input at bottom
-            this.Controls.Add(messagesPanel);
-            this.Controls.Add(inputBox);
+                inputBox.SendRequested += InputBox_SendRequested;
+                inputBox.ClearHistoryRequested += () => { ClearMessages(); };
+            }
 
             // Default chat service
             ChatService = new LmStudioChatService();
@@ -79,7 +77,8 @@ namespace DesktopAiMascot
 
         public IReadOnlyList<ChatMessage> GetMessages() => messagesPanel.GetMessages();
 
-        public void ClearMessages()
+        // Make ClearMessages compatible with EventHandler so the WinForms designer can wire it up directly.
+        private void ClearMessages(object? sender = null, EventArgs? e = null)
         {
             messagesPanel.ClearMessages();
             if (ChatService != null)
@@ -90,16 +89,30 @@ namespace DesktopAiMascot
 
         public void SaveToFile(string path)
         {
+            try
+            {
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                messagesPanel.SaveToFile(path);
+            }
+            catch { }
         }
 
         public void LoadFromFile(string path)
         {
-            // update conversation on the chat service when loading
-            if (ChatService is aiservice.LmStudioChatService lm2)
+            try
             {
-                var msgs = messagesPanel.GetMessages();
-                if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
+                // Load into messages panel (which will raise events to update UI)
+                var sid = messagesPanel.LoadFromFile(path);
+
+                // update conversation on the chat service when loading
+                if (ChatService is aiservice.LmStudioChatService lm2)
+                {
+                    var msgs = messagesPanel.GetMessages();
+                    if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
+                }
             }
+            catch { }
         }
 
         // Show the input box and focus it. Call this when mascot is clicked.
@@ -164,16 +177,63 @@ namespace DesktopAiMascot
 
         private void InitializeComponent()
         {
+            topToolStrip = new ToolStrip();
+            clearBtn = new ToolStripButton();
+            messagesPanel = new MessageListPanel();
+            inputBox = new ChatInputBox();
+            topToolStrip.SuspendLayout();
             SuspendLayout();
+            // 
+            // topToolStrip
+            // 
+            topToolStrip.GripStyle = ToolStripGripStyle.Hidden;
+            topToolStrip.Items.AddRange(new ToolStripItem[] { clearBtn });
+            topToolStrip.Location = new Point(0, 0);
+            topToolStrip.Name = "topToolStrip";
+            topToolStrip.Size = new Size(205, 25);
+            topToolStrip.TabIndex = 0;
+            // 
+            // clearBtn
+            // 
+            clearBtn.Alignment = ToolStripItemAlignment.Right;
+            clearBtn.Name = "clearBtn";
+            clearBtn.Size = new Size(37, 22);
+            clearBtn.Text = "Clear";
+            clearBtn.ToolTipText = "Clear messages";
+            clearBtn.Click += this.ClearMessages;
+            // 
+            // messagesPanel
+            // 
+            messagesPanel.BackColor = Color.White;
+            messagesPanel.Dock = DockStyle.Fill;
+            messagesPanel.Location = new Point(0, 0);
+            messagesPanel.Name = "messagesPanel";
+            messagesPanel.Size = new Size(205, 308);
+            messagesPanel.TabIndex = 1;
+            // 
+            // inputBox
+            // 
+            inputBox.BorderStyle = BorderStyle.FixedSingle;
+            inputBox.Dock = DockStyle.Bottom;
+            inputBox.Location = new Point(0, 308);
+            inputBox.Name = "inputBox";
+            inputBox.Size = new Size(205, 20);
+            inputBox.TabIndex = 2;
+            inputBox.SendRequested += InputBox_SendRequested;
             // 
             // InteractionPanel
             // 
             BackColor = SystemColors.Control;
             BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(topToolStrip);
+            Controls.Add(messagesPanel);
+            Controls.Add(inputBox);
             Name = "InteractionPanel";
-            Size = new Size(148, 148);
+            Size = new Size(205, 328);
+            topToolStrip.ResumeLayout(false);
+            topToolStrip.PerformLayout();
             ResumeLayout(false);
-
+            PerformLayout();
         }
 
         protected override void Dispose(bool disposing)
@@ -181,6 +241,7 @@ namespace DesktopAiMascot
             if (disposing)
             {
                 messageFont?.Dispose();
+                topToolStrip?.Dispose();
                 // persist messages on dispose
                 try { SaveToFile(messagesFilePath); } catch { }
             }
