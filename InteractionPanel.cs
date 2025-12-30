@@ -142,7 +142,8 @@ namespace DesktopAiMascot
                 if (string.IsNullOrWhiteSpace(reply)) reply = "(no response)";
                 if (this.IsHandleCreated)
                 {
-                    this.BeginInvoke(new Action(() => AddMessage("Assistant", reply)));
+                    // Use Invoke so the assistant message is added to the in-memory history before we save to disk
+                    this.Invoke(new Action(() => AddMessage("Assistant", reply)));
                 }
                 else
                 {
@@ -153,7 +154,8 @@ namespace DesktopAiMascot
             {
                 if (this.IsHandleCreated)
                 {
-                    this.BeginInvoke(new Action(() => AddMessage("Assistant", $"Error: {ex.Message}")));
+                    // Use Invoke for consistency when reporting errors as messages
+                    this.Invoke(new Action(() => AddMessage("Assistant", $"Error: {ex.Message}")));
                 }
                 else
                 {
