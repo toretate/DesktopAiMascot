@@ -1,17 +1,19 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using ImageMagick;
 
 namespace DesktopAiMascot
 {
-    public class Mascot
+    public class Mascot : IDisposable
     {
         public Point Position { get; set; }
         public Size Size { get; set; }
         public int CurrentFrame { get; private set; }
         private int frameCount = 1;
         private Image[]? images;
+        private bool disposed = false;
 
         public Mascot(Point position, Size size)
         {
@@ -23,6 +25,15 @@ namespace DesktopAiMascot
 
         private void LoadImages()
         {
+            // Dispose any previously loaded images
+            if (images != null)
+            {
+                foreach (var im in images)
+                {
+                    im?.Dispose();
+                }
+            }
+
             images = new Image[frameCount];
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             for (int i = 0; i < frameCount; i++)
@@ -38,6 +49,8 @@ namespace DesktopAiMascot
 
                     using (var magick = new MagickImage(imagePath))
                     {
+                        // Ensure we export to a format System.Drawing can read (PNG)
+                        magick.Format = MagickFormat.Png;
                         byte[] data = magick.ToByteArray();
                         using (var stream = new MemoryStream(data))
                         {
@@ -45,15 +58,14 @@ namespace DesktopAiMascot
                             {
                                 // Clone into a Bitmap so the underlying stream can be disposed safely
                                 images[i] = new Bitmap(img);
+                                Console.WriteLine($"Loaded image: {imagePath}");
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Handle error, maybe use a default image or log
                     Console.WriteLine($"Error loading image {imagePath}: {ex.Message}");
-                    // For now, keep as null or use a placeholder
                 }
             }
         }
@@ -66,16 +78,31 @@ namespace DesktopAiMascot
 
         public void Draw(Graphics g)
         {
-            if (images != null && images[CurrentFrame] != null)
+            // Save/restore graphics state to avoid side-effects
+            var state = g.Save();
+            try
             {
-                g.DrawImage(images[CurrentFrame], Position.X, Position.Y, Size.Width, Size.Height);
+                // Improve rendering quality and support alpha compositing
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                if (images != null && images.Length > 0 && images[CurrentFrame] != null)
+                {
+                    g.DrawImage(images[CurrentFrame], Position.X, Position.Y, Size.Width, Size.Height);
+                }
+                else
+                {
+                    int x = Position.X + CurrentFrame * 10;
+                    int y = Position.Y;
+                    g.FillEllipse(Brushes.Blue, x, y, Size.Width, Size.Height);
+                }
             }
-            else
+            finally
             {
-                // Fallback to drawing a circle if image not loaded
-                int x = Position.X + CurrentFrame * 10;
-                int y = Position.Y;
-                g.FillEllipse(Brushes.Blue, x, y, Size.Width, Size.Height);
+                g.Restore(state);
             }
         }
 
@@ -88,6 +115,23 @@ namespace DesktopAiMascot
         {
             Rectangle bounds = new Rectangle(Position, Size);
             return bounds.Contains(clickPoint);
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+
+            if (images != null)
+            {
+                foreach (var im in images)
+                {
+                    im?.Dispose();
+                }
+                images = null;
+            }
+
+            GC.SuppressFinalize(this);
         }
     }
 }

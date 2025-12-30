@@ -1,5 +1,7 @@
+using Microsoft.VisualBasic.Logging;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace DesktopAiMascot
@@ -8,14 +10,29 @@ namespace DesktopAiMascot
     {
         private NotifyIcon notifyIcon;
         private ContextMenuStrip contextMenu;
-        private System.Windows.Forms.Timer animationTimer;
         private Mascot mascot;
         private bool isDragging = false;
         private Point dragOffset;
+        private Point mouseDownOffset; // offset of mouse within the form when starting drag
+
+        private readonly string settingsPath;
 
         public MascotForm()
         {
-            this.ClientSize = new System.Drawing.Size(200, 200);
+            // settings file in AppData
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appDir = Path.Combine(appData, "DesktopAiMascot");
+            settingsPath = Path.Combine(appDir, "settings.txt");
+
+            // Enable double buffering and reduce background erasing to prevent flicker
+            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+            this.UpdateStyles();
+
+            // Display mascot image at 1024x768 (use half-size here as before)
+            int imageWidth = 768 /2;
+            int imageHeight = 1024 /2;
+
+            this.ClientSize = new System.Drawing.Size(imageWidth, imageHeight);
             this.Name = "MascotForm";
             this.Text = "Desktop Mascot";
             this.MouseDown += new MouseEventHandler(this.MascotForm_MouseDown);
@@ -23,17 +40,63 @@ namespace DesktopAiMascot
             this.MouseUp += new MouseEventHandler(this.MascotForm_MouseUp);
 
             SetupNotifyIcon();
-            SetupAnimation();
-            mascot = new Mascot(new Point(50, 50), new Size(50, 50));
+            // Place mascot at top-left of the form and size it to full image size
+            mascot = new Mascot(new Point(0, 0), new Size(imageWidth, imageHeight));
             this.ShowInTaskbar = false;
             this.WindowState = FormWindowState.Normal;
             this.FormBorderStyle = FormBorderStyle.None;
             this.BackColor = Color.Magenta;
             this.TransparencyKey = Color.Magenta;
             this.TopMost = true;
-            this.Size = new Size(200, 200);
-            this.Location = new Point(Screen.PrimaryScreen.WorkingArea.Width - 200, Screen.PrimaryScreen.WorkingArea.Height - 200);
-            this.Show();
+            this.Size = new Size(imageWidth, imageHeight);
+
+            // Ensure Windows doesn't override our Location when the form is first shown
+            this.StartPosition = FormStartPosition.Manual;
+
+            // Do not set Location here; OnLoad will apply saved location so it's not overwritten by framework.
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            // Try to load saved location; if not present, position at bottom-right of the screen that currently contains the mouse cursor
+            Point? saved = LoadSavedLocation();
+            Rectangle virtualBounds = SystemInformation.VirtualScreen;
+            if (saved.HasValue)
+            {
+                Point loc = saved.Value;
+                // Clamp to virtual screen so window remains visible
+                if (loc.X < virtualBounds.Left) loc.X = virtualBounds.Left;
+                if (loc.Y < virtualBounds.Top) loc.Y = virtualBounds.Top;
+                if (loc.X + this.Width > virtualBounds.Right) loc.X = virtualBounds.Right - this.Width;
+                if (loc.Y + this.Height > virtualBounds.Bottom) loc.Y = virtualBounds.Bottom - this.Height;
+
+                this.Location = loc;
+                Console.WriteLine($"Applied saved location to form: {loc.X},{loc.Y}");
+            }
+            else
+            {
+                Screen targetScreen;
+                try
+                {
+                    targetScreen = Screen.FromPoint(Cursor.Position);
+                }
+                catch
+                {
+                    targetScreen = Screen.PrimaryScreen;
+                }
+
+                Rectangle wa = targetScreen.WorkingArea;
+                int x = wa.Right - this.Width;
+                int y = wa.Bottom - this.Height;
+                // Clamp to ensure the form is at least partially visible
+                if (x < wa.Left) x = wa.Left;
+                if (y < wa.Top) y = wa.Top;
+
+                this.Location = new Point(x, y);
+                Console.WriteLine($"Applied default location to form: {this.Location.X},{this.Location.Y}");
+            }
         }
 
         private void SetupNotifyIcon()
@@ -49,24 +112,16 @@ namespace DesktopAiMascot
             notifyIcon.Visible = true;
         }
 
-        private void SetupAnimation()
-        {
-            animationTimer = new System.Windows.Forms.Timer();
-            animationTimer.Interval = 500; // Animation speed
-            animationTimer.Tick += AnimationTimer_Tick;
-            animationTimer.Start();
-        }
-
-        private void AnimationTimer_Tick(object sender, EventArgs e)
-        {
-            mascot.UpdateAnimation();
-            this.Invalidate();
-        }
-
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             mascot.Draw(e.Graphics);
+        }
+
+        // Prevent background from being erased to reduce flicker
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            // Intentionally do nothing to avoid clearing the background which causes flicker
         }
 
         private void ShowMascot(object sender, EventArgs e)
@@ -83,8 +138,36 @@ namespace DesktopAiMascot
 
         private void ExitApplication(object sender, EventArgs e)
         {
-            notifyIcon.Visible = false;
-            Application.Exit();
+            // Close the form so OnFormClosing runs and disposes resources
+            this.Close();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // Save location and dispose mascot and notify icon resources
+            try
+            {
+                SaveLocation(this.Location);
+            }
+            catch { }
+
+            try
+            {
+                mascot?.Dispose();
+            }
+            catch { }
+
+            try
+            {
+                if (notifyIcon != null)
+                {
+                    notifyIcon.Visible = false;
+                    notifyIcon.Dispose();
+                }
+            }
+            catch { }
+
+            base.OnFormClosing(e);
         }
 
         private void MascotForm_MouseDown(object sender, MouseEventArgs e)
@@ -92,7 +175,10 @@ namespace DesktopAiMascot
             if (mascot.IsClicked(e.Location))
             {
                 isDragging = true;
-                dragOffset = new Point(e.X - mascot.Position.X, e.Y - mascot.Position.Y);
+                // store offset of mouse inside the form so we can keep the same relative position while moving
+                mouseDownOffset = new Point(e.X, e.Y);
+                // capture mouse so we receive MouseUp even if released outside the form
+                this.Capture = true;
             }
         }
 
@@ -100,14 +186,79 @@ namespace DesktopAiMascot
         {
             if (isDragging)
             {
-                mascot.MoveTo(new Point(e.X - dragOffset.X, e.Y - dragOffset.Y));
+                // Move the whole form so the mascot can be placed anywhere on the desktop
+                Point mouseScreen = Control.MousePosition;
+                Point newLocation = new Point(mouseScreen.X - mouseDownOffset.X, mouseScreen.Y - mouseDownOffset.Y);
+
+                // Allow moving across monitors. Optionally clamp to the virtual screen bounds so the form doesn't go completely off-screen.
+                Rectangle virtualBounds = SystemInformation.VirtualScreen;
+                if (newLocation.X < virtualBounds.Left) newLocation.X = virtualBounds.Left;
+                if (newLocation.Y < virtualBounds.Top) newLocation.Y = virtualBounds.Top;
+                if (newLocation.X + this.Width > virtualBounds.Right) newLocation.X = virtualBounds.Right - this.Width;
+                if (newLocation.Y + this.Height > virtualBounds.Bottom) newLocation.Y = virtualBounds.Bottom - this.Height;
+
+                this.Location = newLocation;
+                // Invalidate to redraw the mascot in new location
                 this.Invalidate();
             }
         }
 
         private void MascotForm_MouseUp(object sender, MouseEventArgs e)
         {
-            isDragging = false;
+            if (isDragging)
+            {
+                isDragging = false;
+                // release capture and save location
+                this.Capture = false;
+                try
+                {
+                    SaveLocation(this.Location);
+                }
+                catch { }
+            }
         }
+
+        protected override void OnMouseCaptureChanged(EventArgs e)
+        {
+            base.OnMouseCaptureChanged(e);
+            // If capture was lost while dragging (mouse released outside), ensure we stop dragging and save
+            if (isDragging && !this.Capture)
+            {
+                isDragging = false;
+                try { SaveLocation(this.Location); } catch { }
+            }
+        }
+
+        private Point? LoadSavedLocation()
+        {
+            try
+            {
+                if (!File.Exists(settingsPath)) return null;
+                string txt = File.ReadAllText(settingsPath).Trim();
+                if (string.IsNullOrEmpty(txt)) return null;
+                var parts = txt.Split(',');
+                if (parts.Length != 2) return null;
+                if (int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
+                {
+                    Console.WriteLine($"Loaded saved location: {x},{y}");
+                    return new Point(x, y);
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private void SaveLocation(Point p)
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(settingsPath) ?? string.Empty;
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(settingsPath, $"{p.X},{p.Y}");
+                Console.WriteLine($"Saved location: {p.X},{p.Y} to {settingsPath}");
+            }
+            catch { }
+        }
+
     }
 }
