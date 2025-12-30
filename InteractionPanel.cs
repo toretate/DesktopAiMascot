@@ -192,6 +192,7 @@ namespace DesktopAiMascot
             topToolStrip.Name = "topToolStrip";
             topToolStrip.Size = new Size(205, 25);
             topToolStrip.TabIndex = 0;
+            topToolStrip.Dock = DockStyle.Top;
             // 
             // clearBtn
             // 
@@ -225,9 +226,9 @@ namespace DesktopAiMascot
             // 
             BackColor = SystemColors.Control;
             BorderStyle = BorderStyle.FixedSingle;
-            Controls.Add(topToolStrip);
-            Controls.Add(messagesPanel);
             Controls.Add(inputBox);
+            Controls.Add(messagesPanel);
+            Controls.Add(topToolStrip);
             Name = "InteractionPanel";
             Size = new Size(205, 328);
             topToolStrip.ResumeLayout(false);
