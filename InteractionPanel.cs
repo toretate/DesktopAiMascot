@@ -44,7 +44,6 @@ namespace DesktopAiMascot
             // Wire up events (some were set in InitializeComponent but ensure handlers are attached)
             if (inputBox != null)
             {
-                inputBox.SendRequested += InputBox_SendRequested;
                 inputBox.ClearHistoryRequested += () => { ClearMessages(); };
             }
 
