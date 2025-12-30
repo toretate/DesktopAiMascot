@@ -30,6 +30,12 @@ namespace DesktopAiMascot.Controls
             clearButton.Margin = new Padding(0);
             clearButton.Click += ClearButton_Click;
 
+            // Ensure the clear button is painted immediately on startup when placed on a semi-transparent form.
+            // Set an explicit background and enable visual styles for consistent rendering, then refresh.
+            clearButton.BackColor = SystemColors.Control;
+            clearButton.UseVisualStyleBackColor = true;
+            clearButton.Refresh();
+
             textBox.BorderStyle = BorderStyle.FixedSingle;
             textBox.Multiline = true;
             textBox.AcceptsReturn = true;
