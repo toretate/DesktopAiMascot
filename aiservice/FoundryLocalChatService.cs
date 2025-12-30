@@ -1,28 +1,29 @@
-using System;
-using System.IO;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
+using System.IO;
+using System.Net.Http;
+using System.Text.Json;
 using System.Diagnostics;
 
-namespace DesktopAiMascot
+using DesktopAiMascot;
+
+namespace DesktopAiMascot.aiservice
 {
-
-    public class LmStudioChatService : IAiChatService
+    public class FoundryLocalChatService : IAiChatService
     {
-        // Local LmStudio endpoint
-        private const string LOCAL_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions";
-
+        private readonly string endpointOrModel;
         private static readonly HttpClient httpClient = new HttpClient();
-        private readonly string endpoint;
 
-
-        public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
+        public FoundryLocalChatService(string modelPath)
         {
-            this.endpoint = endpoint;
+            // The caller provides either a model identifier or a local endpoint URL.
+            // Treat the string as the model id if it looks like a short name, otherwise treat it as an endpoint URL.
+            endpointOrModel = modelPath ?? string.Empty;
         }
+
 
         public async Task<string?> SendMessageAsync(string message)
         {
@@ -30,9 +31,10 @@ namespace DesktopAiMascot
             {
                 var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
 
+                // Build a generic OpenAI-style chat request. Many Foundry Local deployments accept this shape.
                 var requestObj = new
                 {
-                    model = "qwen3-v1-8b",
+                    model = endpointOrModel,
                     messages = new[]
                     {
                         new { role = "system", content = systemPrompt },
@@ -41,23 +43,26 @@ namespace DesktopAiMascot
                 };
 
                 var json = JsonSerializer.Serialize(requestObj);
-
-                // Output the request JSON to debug console and standard output for troubleshooting
-                Debug.WriteLine("LMStudio request JSON:\n" + json);
-                Console.WriteLine("LMStudio request JSON:\n" + json);
+                Debug.WriteLine("FoundryLocal request JSON:\n" + json);
+                Console.WriteLine("FoundryLocal request JSON:\n" + json);
 
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                // If the provided string looks like a URL, POST to it. Otherwise assume a local default endpoint.
+                var endpoint = endpointOrModel.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || endpointOrModel.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                    ? endpointOrModel
+                    : "http://127.0.0.1:49834/v1/chat/completions"; // fallback endpoint commonly used by local servers
+
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 var resp = await httpClient.PostAsync(endpoint, content).ConfigureAwait(false);
                 var txt = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                // try to extract text from JSON
+                // try to extract text from JSON response (similar approach as LmStudioChatService)
                 try
                 {
                     using var doc = JsonDocument.Parse(txt);
                     var root = doc.RootElement;
 
-                    // OpenAI-style: choices[0].message.content
                     if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("choices", out var choices) && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0)
                     {
                         var first = choices[0];
@@ -68,7 +73,6 @@ namespace DesktopAiMascot
                                 return contentElem.GetString();
                             }
 
-                            // some servers use 'text' field on choice
                             if (first.TryGetProperty("text", out var textElem) && textElem.ValueKind == JsonValueKind.String)
                             {
                                 return textElem.GetString();
@@ -76,14 +80,12 @@ namespace DesktopAiMascot
                         }
                     }
 
-                    // fallback: common keys
                     if (root.ValueKind == JsonValueKind.Object)
                     {
                         if (root.TryGetProperty("output", out var outp) && outp.ValueKind == JsonValueKind.String) return outp.GetString();
                         if (root.TryGetProperty("response", out var respv) && respv.ValueKind == JsonValueKind.String) return respv.GetString();
                         if (root.TryGetProperty("text", out var textv) && textv.ValueKind == JsonValueKind.String) return textv.GetString();
 
-                        // explore nested
                         foreach (var prop in root.EnumerateObject())
                         {
                             if (prop.Value.ValueKind == JsonValueKind.String) return prop.Value.GetString();
@@ -120,16 +122,13 @@ namespace DesktopAiMascot
                 }
                 if (idx < 0) return null;
 
-                // collect the block scalar lines after the 'prompt:' line
                 var contentLines = lines.Skip(idx + 1).ToArray();
                 if (contentLines.Length == 0) return null;
 
-                // remove any leading empty lines
                 int start = 0;
                 while (start < contentLines.Length && string.IsNullOrWhiteSpace(contentLines[start])) start++;
                 if (start >= contentLines.Length) return null;
 
-                // determine minimal indent of non-empty lines
                 int minIndent = int.MaxValue;
                 for (int i = start; i < contentLines.Length; i++)
                 {
@@ -140,7 +139,6 @@ namespace DesktopAiMascot
                 }
                 if (minIndent == int.MaxValue) minIndent = 0;
 
-                // trim the common indent
                 var trimmed = contentLines.Skip(start).Select(l => l.Length >= minIndent ? l.Substring(minIndent) : l).ToArray();
                 var result = string.Join("\n", trimmed).TrimEnd();
                 return result;
