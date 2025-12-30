@@ -1,8 +1,11 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace DesktopAiMascot
 {
@@ -25,17 +28,23 @@ namespace DesktopAiMascot
         {
             try
             {
+                var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
+
                 var requestObj = new
                 {
                     model = "qwen3-v1-8b",
                     messages = new[]
                     {
-                        new { role = "system", content = "You are a helpful assistant." },
+                        new { role = "system", content = systemPrompt },
                         new { role = "user", content = message }
                     }
                 };
 
                 var json = JsonSerializer.Serialize(requestObj);
+
+                // Output the request JSON to debug console and standard output for troubleshooting
+                Debug.WriteLine("LMStudio request JSON:\n" + json);
+                Console.WriteLine("LMStudio request JSON:\n" + json);
 
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
@@ -89,6 +98,56 @@ namespace DesktopAiMascot
             catch (Exception ex)
             {
                 return $"Error: {ex.Message}";
+            }
+        }
+
+        private static string? LoadSystemPrompt()
+        {
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                var path = Path.Combine(baseDir, "prompts", "system.yaml");
+                if (!File.Exists(path)) return null;
+                var lines = File.ReadAllLines(path);
+                int idx = -1;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].TrimStart().StartsWith("prompt:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx < 0) return null;
+
+                // collect the block scalar lines after the 'prompt:' line
+                var contentLines = lines.Skip(idx + 1).ToArray();
+                if (contentLines.Length == 0) return null;
+
+                // remove any leading empty lines
+                int start = 0;
+                while (start < contentLines.Length && string.IsNullOrWhiteSpace(contentLines[start])) start++;
+                if (start >= contentLines.Length) return null;
+
+                // determine minimal indent of non-empty lines
+                int minIndent = int.MaxValue;
+                for (int i = start; i < contentLines.Length; i++)
+                {
+                    var line = contentLines[i];
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    int indent = line.TakeWhile(ch => ch == ' ').Count();
+                    if (indent < minIndent) minIndent = indent;
+                }
+                if (minIndent == int.MaxValue) minIndent = 0;
+
+                // trim the common indent
+                var trimmed = contentLines.Skip(start).Select(l => l.Length >= minIndent ? l.Substring(minIndent) : l).ToArray();
+                var result = string.Join("\n", trimmed).TrimEnd();
+                return result;
+            }
+            catch
+            {
+                return null;
             }
         }
     }
