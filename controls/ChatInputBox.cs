@@ -4,53 +4,20 @@ using System.Windows.Forms;
 
 namespace DesktopAiMascot.Controls
 {
-    public class ChatInputBox : UserControl
+    public partial class ChatInputBox : UserControl
     {
-        private readonly TextBox textBox;
-        private readonly Button clearButton;
+        private TextBox textBox;
+        private Button clearButton;
 
         // Raised when the user requests sending the current text (Enter without Shift) or when focus is lost with text.
         public event Action<string>? SendRequested;
         // Raised when the user requests clearing the chat history via the clear button.
         public event Action? ClearHistoryRequested;
 
+        // Designer-based constructor: initialize components and configure behavior
         public ChatInputBox()
         {
-            this.textBox = new TextBox();
-            this.clearButton = new Button();
-
-            // configure clear button (icon-like appearance)
-            clearButton.Dock = DockStyle.Right;
-            clearButton.Width = 24;
-            clearButton.Text = "✖";
-            clearButton.FlatStyle = FlatStyle.Flat;
-            clearButton.FlatAppearance.BorderSize = 0;
-            clearButton.Cursor = Cursors.Hand;
-            clearButton.TabStop = false;
-            clearButton.Margin = new Padding(0);
-            clearButton.Click += ClearButton_Click;
-
-            // Ensure the clear button is painted immediately on startup when placed on a semi-transparent form.
-            // Set an explicit background and enable visual styles for consistent rendering, then refresh.
-            clearButton.BackColor = SystemColors.Control;
-            clearButton.UseVisualStyleBackColor = true;
-            clearButton.Refresh();
-
-            textBox.BorderStyle = BorderStyle.FixedSingle;
-            textBox.Multiline = true;
-            textBox.AcceptsReturn = true;
-            textBox.AcceptsTab = true;
-            textBox.Dock = DockStyle.Fill;
-            textBox.KeyDown += TextBox_KeyDown;
-            textBox.LostFocus += TextBox_LostFocus;
-
-            // add controls so the clear button stays at the right and textbox fills remaining
-            this.Controls.Add(clearButton);
-            this.Controls.Add(textBox);
-
-            // keep input visible by default
-            this.Visible = true;
-            this.Height = 28;
+            InitializeComponent();
         }
 
         private void ClearButton_Click(object? sender, EventArgs e)
@@ -94,6 +61,47 @@ namespace DesktopAiMascot.Controls
         public void Clear()
         {
             textBox.Text = string.Empty;
+        }
+
+        private void InitializeComponent()
+        {
+            textBox = new TextBox();
+            clearButton = new Button();
+            SuspendLayout();
+            // 
+            // textBox
+            // 
+            textBox.AcceptsReturn = true;
+            textBox.Dock = DockStyle.Fill;
+            textBox.Location = new Point(0, 0);
+            textBox.Multiline = true;
+            textBox.Name = "textBox";
+            textBox.Size = new Size(216, 24);
+            textBox.TabIndex = 0;
+            textBox.KeyDown += TextBox_KeyDown;
+            textBox.LostFocus += TextBox_LostFocus;
+            // 
+            // clearButton
+            // 
+            clearButton.Dock = DockStyle.Right;
+            clearButton.FlatStyle = FlatStyle.System;
+            clearButton.Location = new Point(216, 0);
+            clearButton.Name = "clearButton";
+            clearButton.Size = new Size(24, 24);
+            clearButton.TabIndex = 1;
+            clearButton.Text = "✖";
+            clearButton.UseVisualStyleBackColor = true;
+            clearButton.Click += ClearButton_Click;
+            // 
+            // ChatInputBox
+            // 
+            Controls.Add(textBox);
+            Controls.Add(clearButton);
+            Name = "ChatInputBox";
+            Size = new Size(240, 24);
+            ResumeLayout(false);
+            PerformLayout();
+
         }
 
         // kept for compatibility but no longer hides
