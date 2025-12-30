@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Collections.Generic;
+using DesktopAiMascot.Controls;
 
 namespace DesktopAiMascot.aiservice
 {
@@ -19,10 +21,17 @@ namespace DesktopAiMascot.aiservice
         private static readonly HttpClient httpClient = new HttpClient() { Timeout = TimeSpan.FromSeconds(30) };
         private readonly string endpoint;
 
+        // Session id used by LMStudio for automatic context saving. Auto-generated but can be overridden when loading saved state.
+        public string SessionId { get; set; }
+
+        // Conversation history captured from UI; if set, SendMessageAsync will include these messages in the 'messages' array.
+        public IReadOnlyList<ChatMessage>? Conversation { get; set; }
 
         public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
         {
             this.endpoint = endpoint;
+            // generate a session id by default
+            this.SessionId = Guid.NewGuid().ToString();
         }
 
         public async Task<string?> SendMessageAsync(string message)
@@ -31,14 +40,33 @@ namespace DesktopAiMascot.aiservice
             {
                 var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
 
+                // Build messages array: always include system prompt, then include conversation history if available.
+                var msgs = new List<object>();
+                msgs.Add(new { role = "system", content = systemPrompt });
+
+                if (Conversation != null && Conversation.Count > 0)
+                {
+                    foreach (var m in Conversation)
+                    {
+                        string role = "user";
+                        if (string.Equals(m.Sender, "Assistant", StringComparison.OrdinalIgnoreCase)) role = "assistant";
+                        else if (string.Equals(m.Sender, "System", StringComparison.OrdinalIgnoreCase)) role = "system";
+                        // otherwise treat as user
+                        msgs.Add(new { role = role, content = m.Text });
+                    }
+                }
+                else
+                {
+                    // fallback: include the single user message passed in
+                    msgs.Add(new { role = "user", content = message });
+                }
+
                 var requestObj = new
                 {
                     model = "qwen3-v1-8b",
-                    messages = new[]
-                    {
-                        new { role = "system", content = systemPrompt },
-                        new { role = "user", content = message }
-                    }
+                    // include session id as before (may be ignored by servers that don't support it)
+                    session = this.SessionId,
+                    messages = msgs
                 };
 
                 var json = JsonSerializer.Serialize(requestObj);
