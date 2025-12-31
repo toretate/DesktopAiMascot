@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -19,10 +19,15 @@ namespace DesktopAiMascot
         public MessageListPanel messagesPanel;
         public ToolStrip topToolStrip;
         private ToolStripButton clearBtn;
+        private ToolStripButton settingsButton;
 
         public IAiChatService ChatService { get; set; }
 
         private readonly string messagesFilePath;
+
+        // overlay for showing settings inside the panel
+        private Panel overlayPanel;
+        private DesktopAiMascot.Views.SettingsForm settingsControl;
 
         public InteractionPanel()
         {
@@ -61,6 +66,51 @@ namespace DesktopAiMascot
                 }
             }
             catch { }
+
+            // prepare overlay and settings control
+            overlayPanel = new Panel();
+            overlayPanel.Visible = false;
+            overlayPanel.BackColor = Color.FromArgb(200, Color.Gray);
+            overlayPanel.Dock = DockStyle.Fill;
+            overlayPanel.TabStop = true;
+
+            settingsControl = new DesktopAiMascot.Views.SettingsForm();
+            settingsControl.Visible = false;
+            settingsControl.Dock = DockStyle.Fill;
+            settingsControl.CloseRequested += SettingsControl_CloseRequested;
+
+            overlayPanel.Controls.Add(settingsControl);
+            Controls.Add(overlayPanel);
+        }
+
+        private void SettingsControl_CloseRequested(object? sender, EventArgs e)
+        {
+            HideSettingsOverlay();
+        }
+
+        private void ShowSettingsOverlay()
+        {
+            try
+            {
+                // show overlay above other controls
+                overlayPanel.BringToFront();
+                overlayPanel.Visible = true;
+                settingsControl.Visible = true;
+                overlayPanel.Focus();
+            }
+            catch { }
+        }
+
+        private void HideSettingsOverlay()
+        {
+            try
+            {
+                settingsControl.Visible = false;
+                overlayPanel.Visible = false;
+                // restore focus to messages panel
+                messagesPanel.Focus();
+            }
+            catch { }
         }
 
         public void AddMessage(string sender, string text)
@@ -78,6 +128,11 @@ namespace DesktopAiMascot
             {
                 ChatService.ClearConversation();
             }
+        }
+
+        private void OnSettingsButtonCliecked(object? sender, EventArgs e)
+        {
+            ShowSettingsOverlay();
         }
 
         public void SaveToFile(string path)
@@ -174,6 +229,7 @@ namespace DesktopAiMascot
         {
             topToolStrip = new ToolStrip();
             clearBtn = new ToolStripButton();
+            settingsButton = new ToolStripButton();
             messagesPanel = new MessageListPanel();
             inputBox = new ChatInputBox();
             topToolStrip.SuspendLayout();
@@ -182,12 +238,11 @@ namespace DesktopAiMascot
             // topToolStrip
             // 
             topToolStrip.GripStyle = ToolStripGripStyle.Hidden;
-            topToolStrip.Items.AddRange(new ToolStripItem[] { clearBtn });
+            topToolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, settingsButton });
             topToolStrip.Location = new Point(0, 0);
             topToolStrip.Name = "topToolStrip";
             topToolStrip.Size = new Size(205, 25);
             topToolStrip.TabIndex = 0;
-            topToolStrip.Dock = DockStyle.Top;
             // 
             // clearBtn
             // 
@@ -196,15 +251,24 @@ namespace DesktopAiMascot
             clearBtn.Size = new Size(37, 22);
             clearBtn.Text = "Clear";
             clearBtn.ToolTipText = "Clear messages";
-            clearBtn.Click += this.ClearMessages;
+            clearBtn.Click += ClearMessages;
+            // 
+            // settingsButton
+            // 
+            settingsButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            settingsButton.ImageTransparentColor = Color.Magenta;
+            settingsButton.Name = "settingsButton";
+            settingsButton.Size = new Size(23, 22);
+            settingsButton.Text = "⚙";
+            settingsButton.Click += OnSettingsButtonCliecked;
             // 
             // messagesPanel
             // 
             messagesPanel.BackColor = Color.White;
             messagesPanel.Dock = DockStyle.Fill;
-            messagesPanel.Location = new Point(0, 0);
+            messagesPanel.Location = new Point(0, 25);
             messagesPanel.Name = "messagesPanel";
-            messagesPanel.Size = new Size(205, 308);
+            messagesPanel.Size = new Size(205, 303);
             messagesPanel.TabIndex = 1;
             // 
             // inputBox
