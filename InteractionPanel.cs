@@ -41,12 +41,6 @@ namespace DesktopAiMascot
             if (messagesPanel != null) messagesPanel.Font = messageFont;
             if (inputBox != null) inputBox.Font = messageFont;
 
-            // Wire up events (some were set in InitializeComponent but ensure handlers are attached)
-            if (inputBox != null)
-            {
-                inputBox.ClearHistoryRequested += () => { ClearMessages(); };
-            }
-
             // Default chat service
             ChatService = new LmStudioChatService();
 

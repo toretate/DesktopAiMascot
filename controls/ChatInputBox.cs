@@ -7,12 +7,10 @@ namespace DesktopAiMascot.Controls
     public partial class ChatInputBox : UserControl
     {
         private TextBox textBox;
-        private Button clearButton;
+        private Button sendMessageButton;
 
-        // Raised when the user requests sending the current text (Enter without Shift) or when focus is lost with text.
+        // メッセージ送信イベント
         public event Action<string>? SendRequested;
-        // Raised when the user requests clearing the chat history via the clear button.
-        public event Action? ClearHistoryRequested;
 
         // Designer-based constructor: initialize components and configure behavior
         public ChatInputBox()
@@ -20,33 +18,32 @@ namespace DesktopAiMascot.Controls
             InitializeComponent();
         }
 
-        private void ClearButton_Click(object? sender, EventArgs e)
+        // テキストボックスの内容を取得
+        public string GetText() => textBox.Text;
+
+        private void SendMessage()
         {
-            // request clearing the chat history (handled by parent/owner)
-            ClearHistoryRequested?.Invoke();
-            textBox.Focus();
+            var text = textBox.Text?.Trim();
+            if (!string.IsNullOrEmpty(text))
+            {
+                SendRequested?.Invoke(text);
+            }
         }
 
+        // 送信ボタンのクリックイベントハンドラ
+        private void OnSendMessageButton_Click(object? sender, EventArgs e)
+        {
+            SendMessage();
+        }
+
+        // テキストボックスのKeyDownイベントハンドラ。 Enterキーで送信
         private void TextBox_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter && !e.Shift)
             {
                 e.SuppressKeyPress = true;
                 e.Handled = true;
-                var txt = textBox.Text?.Trim();
-                if (!string.IsNullOrEmpty(txt))
-                {
-                    SendRequested?.Invoke(txt);
-                }
-            }
-        }
-
-        private void TextBox_LostFocus(object? sender, EventArgs e)
-        {
-            var txt = textBox.Text?.Trim();
-            if (!string.IsNullOrEmpty(txt))
-            {
-                SendRequested?.Invoke(txt);
+                SendMessage();
             }
         }
 
@@ -66,7 +63,7 @@ namespace DesktopAiMascot.Controls
         private void InitializeComponent()
         {
             textBox = new TextBox();
-            clearButton = new Button();
+            sendMessageButton = new Button();
             SuspendLayout();
             // 
             // textBox
@@ -80,25 +77,24 @@ namespace DesktopAiMascot.Controls
             textBox.Size = new Size(218, 18);
             textBox.TabIndex = 0;
             textBox.KeyDown += TextBox_KeyDown;
-            textBox.LostFocus += TextBox_LostFocus;
             // 
-            // clearButton
+            // sendMessageButton
             // 
-            clearButton.Dock = DockStyle.Right;
-            clearButton.FlatStyle = FlatStyle.System;
-            clearButton.Location = new Point(218, 0);
-            clearButton.Name = "clearButton";
-            clearButton.Size = new Size(20, 18);
-            clearButton.TabIndex = 1;
-            clearButton.Text = "✖";
-            clearButton.UseVisualStyleBackColor = true;
-            clearButton.Click += ClearButton_Click;
+            sendMessageButton.Dock = DockStyle.Right;
+            sendMessageButton.FlatStyle = FlatStyle.System;
+            sendMessageButton.Location = new Point(218, 0);
+            sendMessageButton.Name = "sendMessageButton";
+            sendMessageButton.Size = new Size(20, 18);
+            sendMessageButton.TabIndex = 1;
+            sendMessageButton.Text = "➡";
+            sendMessageButton.UseVisualStyleBackColor = true;
+            sendMessageButton.Click += OnSendMessageButton_Click;
             // 
             // ChatInputBox
             // 
             BorderStyle = BorderStyle.FixedSingle;
             Controls.Add(textBox);
-            Controls.Add(clearButton);
+            Controls.Add(sendMessageButton);
             Name = "ChatInputBox";
             Size = new Size(238, 18);
             ResumeLayout(false);
@@ -113,8 +109,6 @@ namespace DesktopAiMascot.Controls
             // do not hide to keep input always visible
         }
 
-        public string Text => textBox.Text;
-
         public new Font Font
         {
             get => base.Font;
@@ -122,7 +116,7 @@ namespace DesktopAiMascot.Controls
             {
                 base.Font = value;
                 if (textBox != null) textBox.Font = value;
-                if (clearButton != null) clearButton.Font = value; // keep consistent
+                if (sendMessageButton != null) sendMessageButton.Font = value; // keep consistent
             }
         }
     }
