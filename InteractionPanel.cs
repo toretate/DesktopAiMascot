@@ -8,11 +8,14 @@ using System.Windows.Forms;
 
 using DesktopAiMascot.aiservice;
 using DesktopAiMascot.Controls;
+using DesktopAiMascot.mascots;
 
 namespace DesktopAiMascot
 {
     public class InteractionPanel : UserControl
     {
+        public event EventHandler<MascotModel>? MascotChanged;
+
         // Expose controls so the WinForms designer can edit them
         public ChatInputBox inputBox;
         private readonly Font messageFont;
@@ -78,6 +81,10 @@ namespace DesktopAiMascot
             settingsControl.Visible = false;
             settingsControl.Dock = DockStyle.Fill;
             settingsControl.CloseRequested += SettingsControl_CloseRequested;
+            settingsControl.MascotChanged += (s, m) =>
+            {
+                MascotChanged?.Invoke(this, m);
+            };
 
             overlayPanel.Controls.Add(settingsControl);
             Controls.Add(overlayPanel);
@@ -133,6 +140,15 @@ namespace DesktopAiMascot
         private void OnSettingsButtonCliecked(object? sender, EventArgs e)
         {
             ShowSettingsOverlay();
+        }
+
+        // Allow external callers (e.g., MascotForm) to register a provider for the mascot image
+        public void SetSettingsMascotImageProvider(Func<Image?> provider)
+        {
+            if (settingsControl != null)
+            {
+                settingsControl.GetMascotImage = provider;
+            }
         }
 
         public void SaveToFile(string path)

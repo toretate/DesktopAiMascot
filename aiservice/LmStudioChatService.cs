@@ -24,6 +24,8 @@ namespace DesktopAiMascot.aiservice
         // Conversation history captured from UI; if set, SendMessageAsync will include these messages in the 'messages' array.
         public IReadOnlyList<ChatMessage>? Conversation { get; set; }
 
+        public string? SystemPrompt { get; set; }
+
         public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
         {
             this.endpoint = endpoint;
@@ -33,7 +35,7 @@ namespace DesktopAiMascot.aiservice
         {
             try
             {
-                var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
+                var systemPrompt = SystemPrompt ?? LoadSystemPrompt() ?? "You are a helpful assistant.";
 
                 // Build messages array: always include system prompt, then include conversation history if available.
                 var msgs = new List<object>();
@@ -58,7 +60,7 @@ namespace DesktopAiMascot.aiservice
 
                 var requestObj = new
                 {
-                    model = "qwen3-v1-8b",
+                    model = "qwen3-8b-nsfw-jp",
                     // include session id as before (may be ignored by servers that don't support it)
                     messages = msgs
                 };

@@ -1,6 +1,8 @@
 using System;
 using System.Windows.Forms;
 
+using DesktopAiMascot.mascots;
+
 namespace DesktopAiMascot
 {
     static class Program
@@ -10,6 +12,7 @@ namespace DesktopAiMascot
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
             Application.Run(new MascotForm());
         }
     }
