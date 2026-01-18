@@ -4,18 +4,24 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace DesktopAiMascot
+namespace DesktopAiMascot.mascots
 {
     public partial class MascotForm : Form
     {
+        private readonly string DEFAULT_MODEL_NAME = "AIアシスタント";
+
         private NotifyIcon notifyIcon;
         private ContextMenuStrip contextMenu;
+
+        private SystemConfig config;
         private Mascot mascot;
+
+
         private bool isDragging = false;
         private Point dragOffset;
         private Point mouseDownOffset; // offset of mouse within the form when starting drag
 
-        private readonly string settingsPath;
+        private readonly SystemConfig systemConfig = SystemConfig.Instance;
 
         // Click vs drag detection
         private Point dragStartScreen;
@@ -33,7 +39,12 @@ namespace DesktopAiMascot
             // settings file in AppData
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string appDir = Path.Combine(appData, "DesktopAiMascot");
-            settingsPath = Path.Combine(appDir, "settings.txt");
+            if (!Directory.Exists(appDir))
+            {
+                Directory.CreateDirectory(appDir);
+            }
+            systemConfig.BaseDir = appDir;
+            systemConfig.Load();
 
             // Enable double buffering and reduce background erasing to prevent flicker
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
@@ -69,7 +80,35 @@ namespace DesktopAiMascot
             interactionPanel.Size = new Size(210, imageHeight);
             interactionPanel.Location = new Point(4, 0);
             interactionPanel.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
+            // マスコット変更時の処理
+            interactionPanel.MascotChanged += (s, model) =>
+            {
+                mascot.Reload(model);
+                MascotManager.Instance.CurrentModel = model;
+                SaveModelName();
+                this.Invalidate();
+            };
             this.Controls.Add(interactionPanel);
+
+            // 初期マスコットモデルの読み込み
+            var modelName = LoadModelName();
+            var mManager = MascotManager.Instance;
+            mManager.Load();
+            mManager.CurrentModel = mManager.GetMascotByName(modelName);
+            mascot.Reload(mManager.CurrentModel!);
+
+            // Provide the SettingsForm with a callback to obtain the current mascot image
+            interactionPanel.SetSettingsMascotImageProvider(() =>
+            {
+                try
+                {
+                    return mascot?.GetCurrentImageClone();
+                }
+                catch
+                {
+                    return null as Image;
+                }
+            });
 
             this.BackColor = Color.LimeGreen;
             this.TransparencyKey = this.BackColor;
@@ -265,35 +304,31 @@ namespace DesktopAiMascot
             }
         }
 
+        private String LoadModelName()
+        {
+            return systemConfig.MascotName;
+        }
+
+        private void SaveModelName()
+        {
+            if (MascotManager.Instance.CurrentModel != null)
+            {
+                systemConfig.MascotName = MascotManager.Instance.CurrentModel.Name;
+                systemConfig.Save();
+                Console.WriteLine($"Saved model name: {systemConfig.MascotName}");
+            }
+        }
+
         private Point? LoadSavedLocation()
         {
-            try
-            {
-                if (!File.Exists(settingsPath)) return null;
-                string txt = File.ReadAllText(settingsPath).Trim();
-                if (string.IsNullOrEmpty(txt)) return null;
-                var parts = txt.Split(',');
-                if (parts.Length != 2) return null;
-                if (int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
-                {
-                    Console.WriteLine($"Loaded saved location: {x},{y}");
-                    return new Point(x, y);
-                }
-            }
-            catch { }
-            return null;
+            return systemConfig.WindowPosition;
         }
 
         private void SaveLocation(Point p)
         {
-            try
-            {
-                string dir = Path.GetDirectoryName(settingsPath) ?? string.Empty;
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                File.WriteAllText(settingsPath, $"{p.X},{p.Y}");
-                Console.WriteLine($"Saved location: {p.X},{p.Y} to {settingsPath}");
-            }
-            catch { }
+            systemConfig.WindowPosition = p;
+            systemConfig.Save();
+            Console.WriteLine($"Saved location: {p.X},{p.Y}");
         }
 
     }
