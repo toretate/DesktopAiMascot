@@ -12,17 +12,11 @@ using DesktopAiMascot.mascots;
 
 namespace DesktopAiMascot
 {
-    public class InteractionPanel : UserControl
+    public partial class InteractionPanel : UserControl
     {
         public event EventHandler<MascotModel>? MascotChanged;
 
         // Expose controls so the WinForms designer can edit them
-        public ChatInputBox inputBox;
-        private readonly Font messageFont;
-        public MessageListPanel messagesPanel;
-        public ToolStrip topToolStrip;
-        private ToolStripButton clearBtn;
-        private ToolStripButton settingsButton;
 
         public IAiChatService ChatService { get; set; }
 
@@ -215,6 +209,7 @@ namespace DesktopAiMascot
             _ = HandleSendFromInputAsync(text);
         }
 
+
         private async Task HandleSendFromInputAsync(string text)
         {
             AddMessage("User", text);
@@ -265,87 +260,6 @@ namespace DesktopAiMascot
             messagesPanel.Invalidate();
         }
 
-        private void InitializeComponent()
-        {
-            topToolStrip = new ToolStrip();
-            clearBtn = new ToolStripButton();
-            settingsButton = new ToolStripButton();
-            messagesPanel = new MessageListPanel();
-            inputBox = new ChatInputBox();
-            topToolStrip.SuspendLayout();
-            SuspendLayout();
-            // 
-            // topToolStrip
-            // 
-            topToolStrip.GripStyle = ToolStripGripStyle.Hidden;
-            topToolStrip.Items.AddRange(new ToolStripItem[] { clearBtn, settingsButton });
-            topToolStrip.Location = new Point(0, 0);
-            topToolStrip.Name = "topToolStrip";
-            topToolStrip.Size = new Size(205, 25);
-            topToolStrip.TabIndex = 0;
-            // 
-            // clearBtn
-            // 
-            clearBtn.Alignment = ToolStripItemAlignment.Right;
-            clearBtn.Name = "clearBtn";
-            clearBtn.Size = new Size(37, 22);
-            clearBtn.Text = "Clear";
-            clearBtn.ToolTipText = "Clear messages";
-            clearBtn.Click += ClearMessages;
-            // 
-            // settingsButton
-            // 
-            settingsButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            settingsButton.ImageTransparentColor = Color.Magenta;
-            settingsButton.Name = "settingsButton";
-            settingsButton.Size = new Size(23, 22);
-            settingsButton.Text = "⚙";
-            settingsButton.Click += OnSettingsButtonCliecked;
-            // 
-            // messagesPanel
-            // 
-            messagesPanel.BackColor = Color.White;
-            messagesPanel.Dock = DockStyle.Fill;
-            messagesPanel.Location = new Point(0, 25);
-            messagesPanel.Name = "messagesPanel";
-            messagesPanel.Size = new Size(205, 303);
-            messagesPanel.TabIndex = 1;
-            // 
-            // inputBox
-            // 
-            inputBox.BorderStyle = BorderStyle.FixedSingle;
-            inputBox.Dock = DockStyle.Bottom;
-            inputBox.Location = new Point(0, 308);
-            inputBox.Name = "inputBox";
-            inputBox.Size = new Size(205, 20);
-            inputBox.TabIndex = 2;
-            inputBox.SendRequested += InputBox_SendRequested;
-            // 
-            // InteractionPanel
-            // 
-            BackColor = SystemColors.Control;
-            BorderStyle = BorderStyle.FixedSingle;
-            Controls.Add(inputBox);
-            Controls.Add(messagesPanel);
-            Controls.Add(topToolStrip);
-            Name = "InteractionPanel";
-            Size = new Size(205, 328);
-            topToolStrip.ResumeLayout(false);
-            topToolStrip.PerformLayout();
-            ResumeLayout(false);
-            PerformLayout();
-        }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                messageFont?.Dispose();
-                topToolStrip?.Dispose();
-                // persist messages on dispose
-                try { SaveToFile(messagesFilePath); } catch { }
-            }
-            base.Dispose(disposing);
-        }
     }
 }
