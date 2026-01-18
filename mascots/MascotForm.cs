@@ -1,4 +1,5 @@
 using Microsoft.VisualBasic.Logging;
+using DesktopAiMascot.aiservice;
 using System;
 using System.Drawing;
 using System.IO;
@@ -96,6 +97,12 @@ namespace DesktopAiMascot.mascots
             mManager.Load();
             mManager.CurrentModel = mManager.GetMascotByName(modelName);
             mascot.Reload(mManager.CurrentModel!);
+
+            // Voice AI ‚Ì‰Šú‰»
+            if (!string.IsNullOrEmpty(systemConfig.VoiceService) && VoiceAiManager.Instance.VoiceAiServices.ContainsKey(systemConfig.VoiceService))
+            {
+                VoiceAiManager.Instance.CurrentService = VoiceAiManager.Instance.VoiceAiServices[systemConfig.VoiceService];
+            }
 
             // Provide the SettingsForm with a callback to obtain the current mascot image
             interactionPanel.SetSettingsMascotImageProvider(() =>

@@ -50,7 +50,7 @@ namespace DesktopAiMascot
             if (inputBox != null) inputBox.Font = messageFont;
 
             // Default chat service
-            ChatService = new LmStudioChatService();
+            UpdateChatService(SystemConfig.Instance.LlmService);
 
             // messages file under AppData
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -85,9 +85,33 @@ namespace DesktopAiMascot
             {
                 MascotChanged?.Invoke(this, m);
             };
+            settingsControl.LlmServiceChanged += (s, name) =>
+            {
+                UpdateChatService(name);
+            };
 
             overlayPanel.Controls.Add(settingsControl);
             Controls.Add(overlayPanel);
+        }
+
+        private void UpdateChatService(string serviceName)
+        {
+            if (serviceName == "Foundry Local")
+            {
+                ChatService = new FoundryLocalChatService(SystemConfig.Instance.ModelName);
+            }
+            else
+            {
+                // Default to LM Studio
+                ChatService = new LmStudioChatService();
+            }
+
+            // Restore conversation history if service supports it
+            if (ChatService is LmStudioChatService lm && messagesPanel != null)
+            {
+                var msgs = messagesPanel.GetMessages();
+                if (msgs != null && msgs.Count > 0) lm.Conversation = msgs;
+            }
         }
 
         private void SettingsControl_CloseRequested(object? sender, EventArgs e)

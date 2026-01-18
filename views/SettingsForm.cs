@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using DesktopAiMascot.aiservice;
 using DesktopAiMascot.mascots;
 using System.Data;
+using System.Linq;
 
 namespace DesktopAiMascot.Views
 {
@@ -37,6 +38,9 @@ namespace DesktopAiMascot.Views
             // LLMエンジンコンボボックスの初期化
             populateLlmEngineCombo();
 
+            // Voice AIエンジンコンボボックスの初期化
+            populateVoiceAiCombo();
+
             // 表示されたときに最新の状態を反映する
             this.VisibleChanged += (s, e) =>
             {
@@ -51,34 +55,20 @@ namespace DesktopAiMascot.Views
 
         private void SetupScrollableLayout()
         {
-            // titleLabelをcontentPanelに移動（一緒にスクロールさせるため）
-            //if (titleLabel.Parent != contentPanel)
-            //{
-            //    titleLabel.Parent = contentPanel;
-            //    titleLabel.Dock = DockStyle.Top;
-            //    titleLabel.SendToBack(); // 最背面に移動（上部に配置されるように）
-            //}
+            // スクロール可能なレイアウトの設定
+            if (this.Controls.Count > 0 && this.Controls[0] is Panel panel)
+            {
+                panel.AutoScroll = true;
+                foreach (Control control in panel.Controls)
+                {
+                    control.Width = panel.Width - SystemInformation.VerticalScrollBarArrowHeight;
+                }
 
-            // closeButtonの設定調整
-            //if (closeButton != null)
-            //{
-            //    closeButton.Dock = DockStyle.None; // Dockを解除してスクロールコンテンツの一部にする
-            //    closeButton.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-                
-            //    // 配置位置の調整（コンテンツの一番下に配置）
-            //    int maxY = 0;
-            //    foreach (Control c in contentPanel.Controls)
-            //    {
-            //        if (c != closeButton && c.Bottom > maxY)
-            //        {
-            //            maxY = c.Bottom;
-            //        }
-            //    }
-                
-            //    // 少し余白を空けて配置
-            //    closeButton.Location = new Point(0, maxY + 20);
-            //    closeButton.Width = contentPanel.ClientSize.Width;
-            //}
+                panel.VerticalScroll.Enabled = true;
+                panel.VerticalScroll.Visible = true;
+                panel.HorizontalScroll.Enabled = false;
+                panel.HorizontalScroll.Visible = false;
+            }
         }
 
         /** マスコットコンボボックスの選択イベント */
@@ -187,27 +177,56 @@ namespace DesktopAiMascot.Views
             }
         }
 
+        /** Voice AIエンジン選択コンボボックスの選択イベント */
+        private void voiceAiComboBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (voiceAiComboBox.SelectedValue is string voiceName)
+            {
+                SystemConfig.Instance.VoiceService = voiceName;
+                SystemConfig.Instance.Save();
+
+                // VoiceAiManager に即時反映
+                if (VoiceAiManager.Instance.VoiceAiServices.TryGetValue(voiceName, out var service))
+                {
+                    VoiceAiManager.Instance.CurrentService = service;
+                }
+            }
+        }
+
+        // Voice AIエンジンコンボボックスの初期化
+        private void populateVoiceAiCombo()
+        {
+            try
+            {
+                // イベントハンドラを一時的に解除
+                voiceAiComboBox.SelectedIndexChanged -= voiceAiComboBox_SelectedIndexChanged;
+
+                // バインディング設定
+                voiceAiComboBox.DataSource = VoiceAiManager.Instance.VoiceAiServices.Values.ToList();
+                voiceAiComboBox.DisplayMember = "Name";
+                voiceAiComboBox.ValueMember = "Name";
+
+                // 現在の設定を選択
+                string currentVoice = SystemConfig.Instance.VoiceService;
+                voiceAiComboBox.SelectedValue = currentVoice;
+
+                // もし選択できていなければデフォルト(0番目)を選択
+                if (voiceAiComboBox.SelectedIndex < 0 && voiceAiComboBox.Items.Count > 0)
+                {
+                    voiceAiComboBox.SelectedIndex = 0;
+                }
+
+                // イベントハンドラを再設定
+                voiceAiComboBox.SelectedIndexChanged += voiceAiComboBox_SelectedIndexChanged;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error populating Voice AI combo: {ex.Message}");
+            }
+        }
 
         private void SettingsForm_Resize(object? sender, EventArgs e)
         {
-            LayoutControls();
-        }
-
-        private void LayoutControls()
-        {
-            // AutoScrollによる自動レイアウトを使用するため、手動配置ロジックは無効化
-            /*
-            int margin = 8;
-            if (closeButton != null)
-            {
-                closeButton.Location = new Point(Math.Max(margin, this.ClientSize.Width - closeButton.Width - margin), margin);
-            }
-
-            if (contentPanel != null)
-            {
-                contentPanel.Size = new Size(Math.Max(0, this.ClientSize.Width - 24), Math.Max(0, this.ClientSize.Height - 56));
-            }
-            */
         }
 
         private void SettingsForm_KeyDown(object? sender, KeyEventArgs e)

@@ -52,6 +52,7 @@ namespace DesktopAiMascot
 
         public string MascotName { get; set; } = "AIアシスタント";
         public string LlmService { get; set; } = "LM Studio";
+        public string VoiceService { get; set; } = "Style Bert Vits 2";
         public string ModelName { get; set; } = "gpt-3.5-turbo";
 
         public void Load()
@@ -80,6 +81,7 @@ namespace DesktopAiMascot
                     this.MascotName = loaded.MascotName;
                     this.ModelName = loaded.ModelName;
                     this.LlmService = loaded.LlmService;
+                    this.VoiceService = loaded.VoiceService;
                 }
             }
             catch (Exception ex)

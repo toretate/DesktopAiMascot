@@ -43,7 +43,7 @@ namespace DesktopAiMascot.Views
             mascotGroupBox = new GroupBox();
             mascotChooseComboBox = new ComboBox();
             removeBackGroundButton = new Button();
-            comboBox1 = new ComboBox();
+            voiceAiComboBox = new ComboBox();
             generateEmotes = new Button();
             label2 = new Label();
             llmAiEngineComboBox = new ComboBox();
@@ -119,14 +119,14 @@ namespace DesktopAiMascot.Views
             // 
             mascotGroupBox.Controls.Add(mascotChooseComboBox);
             mascotGroupBox.Controls.Add(removeBackGroundButton);
-            mascotGroupBox.Controls.Add(comboBox1);
+            mascotGroupBox.Controls.Add(voiceAiComboBox);
             mascotGroupBox.Controls.Add(generateEmotes);
             mascotGroupBox.Controls.Add(label2);
             mascotGroupBox.Controls.Add(llmAiEngineComboBox);
             mascotGroupBox.Controls.Add(aiEngineLabel);
             mascotGroupBox.Location = new Point(9, 27);
             mascotGroupBox.Name = "mascotGroupBox";
-            mascotGroupBox.Size = new Size(180, 165);
+            mascotGroupBox.Size = new Size(180, 230);
             mascotGroupBox.TabIndex = 19;
             mascotGroupBox.TabStop = false;
             mascotGroupBox.Text = "マスコット";
@@ -150,13 +150,13 @@ namespace DesktopAiMascot.Views
             removeBackGroundButton.UseVisualStyleBackColor = true;
             removeBackGroundButton.Click += OnRemoveBackgound_Click;
             // 
-            // comboBox1
+            // voiceAiComboBox
             // 
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Location = new Point(88, 131);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(85, 23);
-            comboBox1.TabIndex = 18;
+            voiceAiComboBox.FormattingEnabled = true;
+            voiceAiComboBox.Location = new Point(57, 131);
+            voiceAiComboBox.Name = "voiceAiComboBox";
+            voiceAiComboBox.Size = new Size(116, 23);
+            voiceAiComboBox.TabIndex = 18;
             // 
             // generateEmotes
             // 
@@ -171,7 +171,7 @@ namespace DesktopAiMascot.Views
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(9, 134);
+            label2.Location = new Point(6, 134);
             label2.Name = "label2";
             label2.Size = new Size(42, 15);
             label2.TabIndex = 17;
@@ -180,11 +180,11 @@ namespace DesktopAiMascot.Views
             // 
             // llmAiEngineComboBox
             // 
-            llmAiEngineComboBox.DataSource = llmManagerBindingSource;
+            llmAiEngineComboBox.DisplayMember = "Name";
             llmAiEngineComboBox.FormattingEnabled = true;
-            llmAiEngineComboBox.Location = new Point(88, 100);
+            llmAiEngineComboBox.Location = new Point(57, 100);
             llmAiEngineComboBox.Name = "llmAiEngineComboBox";
-            llmAiEngineComboBox.Size = new Size(86, 23);
+            llmAiEngineComboBox.Size = new Size(117, 23);
             llmAiEngineComboBox.TabIndex = 8;
             llmAiEngineComboBox.SelectedIndexChanged += llmAiEngineComboBox_SelectedIndexChanged;
             // 
@@ -204,7 +204,7 @@ namespace DesktopAiMascot.Views
             // groupBox1
             // 
             groupBox1.Controls.Add(apiKeyTextBox);
-            groupBox1.Location = new Point(6, 198);
+            groupBox1.Location = new Point(6, 263);
             groupBox1.Name = "groupBox1";
             groupBox1.Size = new Size(183, 55);
             groupBox1.TabIndex = 16;
@@ -250,8 +250,7 @@ namespace DesktopAiMascot.Views
         private ComboBox mascotChooseComboBox;
         private GroupBox groupBox1;
         private Label label2;
-        private ComboBox comboBox1;
-        private BindingSource llmManagerBindingSource;
+        private ComboBox voiceAiComboBox;
         private Panel mainPanel;
         private Panel topPanel;
         private GroupBox mascotGroupBox;
