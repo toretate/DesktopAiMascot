@@ -41,6 +41,12 @@ namespace DesktopAiMascot.Views
             // Voice AIエンジンコンボボックスの初期化
             populateVoiceAiCombo();
 
+            // Image AIエンジンコンボボックスの初期化
+            populateImageAiCombo();
+
+            // Movie AIエンジンコンボボックスの初期化
+            populateMovieAiCombo();
+
             // 表示されたときに最新の状態を反映する
             this.VisibleChanged += (s, e) =>
             {
@@ -222,6 +228,102 @@ namespace DesktopAiMascot.Views
             catch (Exception ex)
             {
                 Console.WriteLine($"Error populating Voice AI combo: {ex.Message}");
+            }
+        }
+
+        /** Image AIエンジン選択コンボボックスの選択イベント */
+        private void imageAiComboBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (imageAiComboBox.SelectedValue is string aiName)
+            {
+                SystemConfig.Instance.ImageService = aiName;
+                SystemConfig.Instance.Save();
+
+                // ImageAiManager に即時反映
+                if (ImageAiManager.Instance.ImageAiServices.TryGetValue(aiName, out var service))
+                {
+                    ImageAiManager.Instance.CurrentService = service;
+                }
+            }
+        }
+
+        // Image AIエンジンコンボボックスの初期化
+        private void populateImageAiCombo()
+        {
+            try
+            {
+                // イベントハンドラを一時的に解除
+                imageAiComboBox.SelectedIndexChanged -= imageAiComboBox_SelectedIndexChanged;
+
+                // バインディング設定
+                imageAiComboBox.DataSource = ImageAiManager.Instance.ImageAiServices.Values.ToList();
+                imageAiComboBox.DisplayMember = "Name";
+                imageAiComboBox.ValueMember = "Name";
+
+                // 現在の設定を選択
+                string currentService = SystemConfig.Instance.ImageService;
+                imageAiComboBox.SelectedValue = currentService;
+
+                // もし選択できていなければデフォルト(0番目)を選択
+                if (imageAiComboBox.SelectedIndex < 0 && imageAiComboBox.Items.Count > 0)
+                {
+                    imageAiComboBox.SelectedIndex = 0;
+                }
+
+                // イベントハンドラを再設定
+                imageAiComboBox.SelectedIndexChanged += imageAiComboBox_SelectedIndexChanged;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error populating Image AI combo: {ex.Message}");
+            }
+        }
+
+        /** Movie AIエンジン選択コンボボックスの選択イベント */
+        private void movieAiComboBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (movieAiComboBox.SelectedValue is string aiName)
+            {
+                SystemConfig.Instance.MovieService = aiName;
+                SystemConfig.Instance.Save();
+
+                // MovieAiManager に即時反映
+                if (MovieAiManager.Instance.MovieAiServices.TryGetValue(aiName, out var service))
+                {
+                    MovieAiManager.Instance.CurrentService = service;
+                }
+            }
+        }
+
+        // Movie AIエンジンコンボボックスの初期化
+        private void populateMovieAiCombo()
+        {
+            try
+            {
+                // イベントハンドラを一時的に解除
+                movieAiComboBox.SelectedIndexChanged -= movieAiComboBox_SelectedIndexChanged;
+
+                // バインディング設定
+                movieAiComboBox.DataSource = MovieAiManager.Instance.MovieAiServices.Values.ToList();
+                movieAiComboBox.DisplayMember = "Name";
+                movieAiComboBox.ValueMember = "Name";
+
+                // 現在の設定を選択
+                string currentService = SystemConfig.Instance.MovieService;
+                movieAiComboBox.SelectedValue = currentService;
+
+                // もし選択できていなければデフォルト(0番目)を選択
+                if (movieAiComboBox.SelectedIndex < 0 && movieAiComboBox.Items.Count > 0)
+                {
+                    movieAiComboBox.SelectedIndex = 0;
+                }
+
+                // イベントハンドラを再設定
+                movieAiComboBox.SelectedIndexChanged += movieAiComboBox_SelectedIndexChanged;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error populating Movie AI combo: {ex.Message}");
             }
         }
 

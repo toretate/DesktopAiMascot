@@ -34,7 +34,6 @@ namespace DesktopAiMascot.Views
 
         private void InitializeComponent()
         {
-            components = new Container();
             titleLabel = new Label();
             closeButton = new Button();
             contentPanel = new Panel();
@@ -47,15 +46,17 @@ namespace DesktopAiMascot.Views
             generateEmotes = new Button();
             label2 = new Label();
             llmAiEngineComboBox = new ComboBox();
-            llmManagerBindingSource = new BindingSource(components);
             aiEngineLabel = new Label();
             groupBox1 = new GroupBox();
             apiKeyTextBox = new TextBox();
+            imageAiLabel = new Label();
+            imageAiComboBox = new ComboBox();
+            movieAiLabel = new Label();
+            movieAiComboBox = new ComboBox();
             contentPanel.SuspendLayout();
             topPanel.SuspendLayout();
             mainPanel.SuspendLayout();
             mascotGroupBox.SuspendLayout();
-            ((ISupportInitialize)llmManagerBindingSource).BeginInit();
             groupBox1.SuspendLayout();
             SuspendLayout();
             // 
@@ -117,6 +118,10 @@ namespace DesktopAiMascot.Views
             // 
             // mascotGroupBox
             // 
+            mascotGroupBox.Controls.Add(movieAiComboBox);
+            mascotGroupBox.Controls.Add(movieAiLabel);
+            mascotGroupBox.Controls.Add(imageAiComboBox);
+            mascotGroupBox.Controls.Add(imageAiLabel);
             mascotGroupBox.Controls.Add(mascotChooseComboBox);
             mascotGroupBox.Controls.Add(removeBackGroundButton);
             mascotGroupBox.Controls.Add(voiceAiComboBox);
@@ -188,10 +193,6 @@ namespace DesktopAiMascot.Views
             llmAiEngineComboBox.TabIndex = 8;
             llmAiEngineComboBox.SelectedIndexChanged += llmAiEngineComboBox_SelectedIndexChanged;
             // 
-            // llmManagerBindingSource
-            // 
-            llmManagerBindingSource.DataSource = typeof(LlmManager);
-            // 
             // aiEngineLabel
             // 
             aiEngineLabel.AutoSize = true;
@@ -220,6 +221,40 @@ namespace DesktopAiMascot.Views
             apiKeyTextBox.Size = new Size(174, 23);
             apiKeyTextBox.TabIndex = 12;
             // 
+            // imageAiLabel
+            // 
+            imageAiLabel.AutoSize = true;
+            imageAiLabel.Location = new Point(6, 165);
+            imageAiLabel.Name = "imageAiLabel";
+            imageAiLabel.Size = new Size(42, 15);
+            imageAiLabel.TabIndex = 19;
+            imageAiLabel.Text = "画像AI";
+            // 
+            // imageAiComboBox
+            // 
+            imageAiComboBox.FormattingEnabled = true;
+            imageAiComboBox.Location = new Point(58, 162);
+            imageAiComboBox.Name = "imageAiComboBox";
+            imageAiComboBox.Size = new Size(114, 23);
+            imageAiComboBox.TabIndex = 20;
+            // 
+            // movieAiLabel
+            // 
+            movieAiLabel.AutoSize = true;
+            movieAiLabel.Location = new Point(6, 195);
+            movieAiLabel.Name = "movieAiLabel";
+            movieAiLabel.Size = new Size(42, 15);
+            movieAiLabel.TabIndex = 21;
+            movieAiLabel.Text = "動画AI";
+            // 
+            // movieAiComboBox
+            // 
+            movieAiComboBox.FormattingEnabled = true;
+            movieAiComboBox.Location = new Point(57, 196);
+            movieAiComboBox.Name = "movieAiComboBox";
+            movieAiComboBox.Size = new Size(115, 23);
+            movieAiComboBox.TabIndex = 22;
+            // 
             // SettingsForm
             // 
             BackColor = SystemColors.Window;
@@ -235,7 +270,6 @@ namespace DesktopAiMascot.Views
             mainPanel.ResumeLayout(false);
             mascotGroupBox.ResumeLayout(false);
             mascotGroupBox.PerformLayout();
-            ((ISupportInitialize)llmManagerBindingSource).EndInit();
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
             ResumeLayout(false);
@@ -254,5 +288,9 @@ namespace DesktopAiMascot.Views
         private Panel mainPanel;
         private Panel topPanel;
         private GroupBox mascotGroupBox;
+        private Label movieAiLabel;
+        private ComboBox imageAiComboBox;
+        private Label imageAiLabel;
+        private ComboBox movieAiComboBox;
     }
 }
