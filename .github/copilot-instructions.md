@@ -24,3 +24,12 @@
 
 - [x] Ensure Documentation is Complete
 	<!-- README.md created -->
+
+- [x] コメントは日本語で記述
+	<!-- プロジェクト内のソースコードおよびドキュメントのコメントは日本語で記述してください。 -->
+
+- [x] １ファイルに機能を詰め込まない
+	<!-- 可能な限り、機能ごとにファイルを分割してください。 -->
+
+- [x] UIコンポーネントは cs, resx, Designer.cs に分割する
+	<!-- Windows Forms の UI コンポーネントは、cs, resx, designer.cs に分割してください。 -->
