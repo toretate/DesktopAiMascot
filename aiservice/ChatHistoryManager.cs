@@ -72,16 +72,6 @@ namespace DesktopAiMascot.aiservice
                     var wrapper = new { sessionId = sessionId, messages = msgs };
                     File.WriteAllText(path, JsonSerializer.Serialize(wrapper, options));
                 }
-
-                // Update in-memory store to match saved messages
-                messages.Clear();
-                if (msgs != null)
-                {
-                    foreach (var m in msgs)
-                    {
-                        if (m != null) messages.Add(m);
-                    }
-                }
             }
             catch { }
         }

@@ -54,13 +54,7 @@ namespace DesktopAiMascot
             // Try to load saved messages and session id
             try
             {
-                string? sid = messagesPanel.LoadFromFile(messagesFilePath);
-                // If we loaded messages, populate the chat service conversation so requests include history
-                if (ChatService is aiservice.LmStudioChatService lm2)
-                {
-                    var msgs = messagesPanel.GetMessages();
-                    if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
-                }
+                messagesPanel.LoadFromFile(messagesFilePath);
             }
             catch { }
 
@@ -98,13 +92,6 @@ namespace DesktopAiMascot
             {
                 // Default to LM Studio
                 ChatService = new LmStudioChatService();
-            }
-
-            // Restore conversation history if service supports it
-            if (ChatService is LmStudioChatService lm && messagesPanel != null)
-            {
-                var msgs = messagesPanel.GetMessages();
-                if (msgs != null && msgs.Count > 0) lm.Conversation = msgs;
             }
         }
 
@@ -186,13 +173,6 @@ namespace DesktopAiMascot
             {
                 // Load into messages panel (which will raise events to update UI)
                 var sid = messagesPanel.LoadFromFile(path);
-
-                // update conversation on the chat service when loading
-                if (ChatService is aiservice.LmStudioChatService lm2)
-                {
-                    var msgs = messagesPanel.GetMessages();
-                    if (msgs != null && msgs.Count > 0) lm2.Conversation = msgs;
-                }
             }
             catch { }
         }
@@ -214,11 +194,6 @@ namespace DesktopAiMascot
         {
             AddMessage("User", text);
 
-            // ensure the chat service has up-to-date conversation history so LMStudio receives the full context
-            if (ChatService is aiservice.LmStudioChatService lm)
-            {
-                lm.Conversation = messagesPanel.GetMessages();
-            }
 
             try
             {
