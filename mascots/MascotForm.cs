@@ -96,7 +96,10 @@ namespace DesktopAiMascot.mascots
             var mManager = MascotManager.Instance;
             mManager.Load();
             mManager.CurrentModel = mManager.GetMascotByName(modelName);
-            mascot.Reload(mManager.CurrentModel!);
+            if (mManager.CurrentModel != null)
+            {
+                mascot.Reload(mManager.CurrentModel!);
+            }
 
             // Voice AI ÇÃèâä˙âª
             if (!string.IsNullOrEmpty(systemConfig.VoiceService) && VoiceAiManager.Instance.VoiceAiServices.ContainsKey(systemConfig.VoiceService))

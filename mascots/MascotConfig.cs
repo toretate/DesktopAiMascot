@@ -34,7 +34,7 @@ namespace DesktopAiMascot.mascots
     {
         public string Name { get; set; } = string.Empty;
         public string Sex { get; set; } = string.Empty;
-        public int Age { get; set; }
+        public string Age { get; set; } = string.Empty;
         public string Birthday { get; set; } = string.Empty;
         public string Height { get; set; } = string.Empty;
         public string Birthplace { get; set; } = string.Empty;
