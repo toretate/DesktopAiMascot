@@ -39,6 +39,16 @@ namespace DesktopAiMascot.Controls
             g.DrawString(Text, font, isUser ? Brushes.White : Brushes.Black, textRect);
         }
 
+        /// <summary>
+        /// ユーザー（利用者）が送信したメッセージかどうかを判定します。
+        /// </summary>
+        /// <returns>true: 利用者のメッセージ</returns>
+        public bool isUserMessage()
+        {
+            return string.Equals(Sender, "User", StringComparison.OrdinalIgnoreCase);
+        }
+
+
         private static GraphicsPath CreateRoundedRectanglePath(Rectangle rect, int radius)
         {
             var path = new GraphicsPath();

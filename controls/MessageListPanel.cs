@@ -15,18 +15,18 @@ namespace DesktopAiMascot.Controls
     /// Rendering of each message (bubble) is delegated to ChatMessage.Draw/Measure.
     /// Converted to a partial UserControl so the WinForms designer can be used.
     /// </summary>
-    [DesignerCategory("Code")]
     public partial class MessageListPanel : UserControl
     {
-        // Designer fields
-        private ListBox listBox;
-        private ContextMenuStrip messagesContextMenu;
-
         private readonly Padding contentPadding = new(6);
 
         public MessageListPanel()
         {
             InitializeComponent();
+
+            // Initialize custom context menu items (not designer managed)
+            var copyItem = new ToolStripMenuItem("Copy");
+            copyItem.Click += (s, e) => CopySelectionToClipboard();
+            this.messagesContextMenu.Items.Add(copyItem);
 
             this.DoubleBuffered = true;
             this.BackColor = Color.White;
@@ -41,8 +41,6 @@ namespace DesktopAiMascot.Controls
                 listBox.MeasureItem += ListBox_MeasureItem;
                 listBox.DrawItem += ListBox_DrawItem;
                 listBox.MouseDoubleClick += ListBox_MouseDoubleClick;
-
-                // Context menu set in designer
             }
 
             // Populate from ChatHistory manager
@@ -51,36 +49,6 @@ namespace DesktopAiMascot.Controls
             // Subscribe to future additions and bulk loads
             ChatHistory.MessageAdded += OnMessageAdded;
             ChatHistory.MessagesLoaded += OnMessagesLoaded;
-        }
-
-        private void InitializeComponent()
-        {
-            this.listBox = new System.Windows.Forms.ListBox();
-            this.messagesContextMenu = new System.Windows.Forms.ContextMenuStrip();
-            this.SuspendLayout();
-            // 
-            // listBox
-            // 
-            this.listBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.listBox.FormattingEnabled = true;
-            this.listBox.IntegralHeight = false;
-            this.listBox.Name = "listBox";
-            this.listBox.Size = new System.Drawing.Size(200, 150);
-            this.listBox.TabIndex = 0;
-            this.listBox.ContextMenuStrip = this.messagesContextMenu;
-            // 
-            // messagesContextMenu
-            // 
-            var copyItem = new ToolStripMenuItem("Copy");
-            copyItem.Click += (s, e) => CopySelectionToClipboard();
-            this.messagesContextMenu.Items.Add(copyItem);
-            // 
-            // MessageListPanel
-            // 
-            this.Controls.Add(this.listBox);
-            this.Name = "MessageListPanel";
-            this.Size = new System.Drawing.Size(200, 150);
-            this.ResumeLayout(false);
         }
 
         private void OnMessageAdded(object? sender, ChatHistory.ChatMessageEventArgs e)
@@ -234,7 +202,7 @@ namespace DesktopAiMascot.Controls
             int bw = size.Width;
             int bh = size.Height;
 
-            bool isUser = string.Equals(msg.Sender, "User", StringComparison.OrdinalIgnoreCase);
+            bool isUser = msg.isUserMessage();
             Rectangle bubbleRect;
             if (isUser)
             {
@@ -269,7 +237,6 @@ namespace DesktopAiMascot.Controls
         {
             if (disposing)
             {
-                messagesContextMenu?.Dispose();
                 ChatHistory.MessageAdded -= OnMessageAdded;
                 ChatHistory.MessagesLoaded -= OnMessagesLoaded;
                 if (listBox != null)
@@ -277,7 +244,11 @@ namespace DesktopAiMascot.Controls
                     listBox.MeasureItem -= ListBox_MeasureItem;
                     listBox.DrawItem -= ListBox_DrawItem;
                     listBox.MouseDoubleClick -= ListBox_MouseDoubleClick;
-                    listBox?.Dispose();
+                }
+
+                if (components != null)
+                {
+                    components.Dispose();
                 }
             }
             base.Dispose(disposing);
