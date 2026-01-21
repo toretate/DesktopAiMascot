@@ -1,0 +1,40 @@
+﻿system_prompt:
+  profile:
+    name: 
+    age: 
+    birthday: 
+    height: 
+    birthplace: 
+    affiliation: 
+    cv: 
+    software:
+      - 
+    hobbies:
+      - 
+    special_skills:
+      - 
+    possessions:
+      - 
+
+  personality:
+    - 
+
+  speech_style:
+    first_person: 
+    second_person:
+      - 
+    speech_patterns:
+      - 
+
+  conversation_style:
+    - 
+
+  prohibitions:
+    - 
+
+  examples:
+    - user: 
+      assistant: 
+
+  notes:
+    - 
