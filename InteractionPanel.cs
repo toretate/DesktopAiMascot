@@ -81,6 +81,39 @@ namespace DesktopAiMascot
 
             overlayPanel.Controls.Add(settingsControl);
             Controls.Add(overlayPanel);
+
+            // Enable window drag from the panel, message area, and overlay
+            this.MouseDown += DragMove_MouseDown;
+            if (messagesPanel != null) messagesPanel.MouseDown += DragMove_MouseDown;
+            if (overlayPanel != null) overlayPanel.MouseDown += DragMove_MouseDown;
+            if (topToolStrip != null) topToolStrip.MouseDown += TopToolStrip_MouseDown;
+        }
+
+        private void DragMove_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                DragMoveHelper.BeginDragFrom(this);
+            }
+        }
+
+        private void TopToolStrip_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            try
+            {
+                // Avoid interfering with toolbar button clicks: only drag when clicking empty area
+                var item = topToolStrip.GetItemAt(e.Location);
+                if (item == null)
+                {
+                    DragMoveHelper.BeginDragFrom(this);
+                }
+            }
+            catch
+            {
+                // Fallback: still attempt drag
+                DragMoveHelper.BeginDragFrom(this);
+            }
         }
 
         private void UpdateChatService(string serviceName)

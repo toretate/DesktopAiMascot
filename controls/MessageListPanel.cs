@@ -58,6 +58,18 @@ namespace DesktopAiMascot.Controls
             // Subscribe to future additions and bulk loads
             ChatHistory.MessageAdded += OnMessageAdded;
             ChatHistory.MessagesLoaded += OnMessagesLoaded;
+
+            // Allow dragging the parent window from message area
+            this.MouseDown += DragMove_MouseDown;
+            if (listBox != null) listBox.MouseDown += DragMove_MouseDown;
+        }
+
+        private void DragMove_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                DragMoveHelper.BeginDragFrom(this);
+            }
         }
 
         private void OnMessageAdded(object? sender, ChatHistory.ChatMessageEventArgs e)
