@@ -7,6 +7,10 @@ using System.Windows.Forms;
 using System.Drawing.Drawing2D;
 using DesktopAiMascot.aiservice;
 using System.ComponentModel;
+using System.Media;
+using System.Threading.Tasks;
+using DesktopAiMascot.aiservice.voice;
+using DesktopAiMascot.mascots;
 
 namespace DesktopAiMascot.Controls
 {
@@ -18,6 +22,9 @@ namespace DesktopAiMascot.Controls
     public partial class MessageListPanel : UserControl
     {
         private readonly Padding contentPadding = new(6);
+        private const int PLAY_BUTTON_SIZE = 20;
+        private const int PLAY_BUTTON_MARGIN = 4;
+        private SoundPlayer? currentPlayer = null;
 
         public MessageListPanel()
         {
@@ -29,7 +36,8 @@ namespace DesktopAiMascot.Controls
             this.messagesContextMenu.Items.Add(copyItem);
 
             this.DoubleBuffered = true;
-            this.BackColor = Color.White;
+            this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+            this.BackColor = Color.FromArgb(128, Color.White); // �������̔w�i
 
             // Ensure listbox has the expected modes (designer may have already set these)
             if (listBox != null)
@@ -41,6 +49,7 @@ namespace DesktopAiMascot.Controls
                 listBox.MeasureItem += ListBox_MeasureItem;
                 listBox.DrawItem += ListBox_DrawItem;
                 listBox.MouseDoubleClick += ListBox_MouseDoubleClick;
+                listBox.MouseClick += ListBox_MouseClick;
             }
 
             // Populate from ChatHistory manager
@@ -144,7 +153,7 @@ namespace DesktopAiMascot.Controls
             try { Clipboard.SetText(sb.ToString()); } catch { }
         }
 
-        // �_�u���N���b�N�ŃN���b�v�{�[�h�ɓ��e�𑗕t
+        // ?_?u???N???b?N??N???b?v?{?[?h????e??t
         private void ListBox_MouseDoubleClick(object? sender, MouseEventArgs e)
         {
             int idx = listBox.IndexFromPoint(e.Location);
@@ -216,10 +225,242 @@ namespace DesktopAiMascot.Controls
             bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
             msg.Draw(g, bubbleRect, this.Font, isUser, selected);
 
+            // アシスタントメッセージの場合、常に再生ボタンを描画
+            if (!isUser)
+            {
+                Rectangle playButtonRect = GetPlayButtonRect(bounds, bubbleRect, isUser);
+                DrawPlayButton(g, playButtonRect, selected);
+            }
+
             // Draw focus rectangle if needed
             if ((e.State & DrawItemState.Focus) == DrawItemState.Focus)
             {
                 e.DrawFocusRectangle();
+            }
+        }
+
+        private Rectangle GetPlayButtonRect(Rectangle bounds, Rectangle bubbleRect, bool isUser)
+        {
+            int buttonX, buttonY;
+            buttonY = bounds.Top + (bounds.Height - PLAY_BUTTON_SIZE) / 2;
+
+            if (isUser)
+            {
+                // ユーザーメッセージの場合、バブルの左側に配置
+                buttonX = bubbleRect.Left - PLAY_BUTTON_SIZE - PLAY_BUTTON_MARGIN;
+            }
+            else
+            {
+                // アシスタントメッセージの場合、バブルの右側に配置
+                buttonX = bubbleRect.Right + PLAY_BUTTON_MARGIN;
+            }
+
+            return new Rectangle(buttonX, buttonY, PLAY_BUTTON_SIZE, PLAY_BUTTON_SIZE);
+        }
+
+        private void DrawPlayButton(Graphics g, Rectangle rect, bool selected)
+        {
+            // ボタンの背景を描画
+            using (var brush = new SolidBrush(selected ? Color.FromArgb(200, 100, 150, 255) : Color.FromArgb(200, 100, 150, 255)))
+            {
+                using (var path = CreateRoundedRectanglePath(rect, 4))
+                {
+                    g.FillPath(brush, path);
+                }
+            }
+
+            // 再生アイコン（三角形）を描画
+            Point[] playTriangle = new Point[]
+            {
+                new Point(rect.Left + 6, rect.Top + 5),
+                new Point(rect.Left + 6, rect.Bottom - 5),
+                new Point(rect.Right - 6, rect.Top + rect.Height / 2)
+            };
+
+            using (var brush = new SolidBrush(Color.White))
+            {
+                g.FillPolygon(brush, playTriangle);
+            }
+        }
+
+        private static GraphicsPath CreateRoundedRectanglePath(Rectangle rect, int radius)
+        {
+            var path = new GraphicsPath();
+            int diameter = radius * 2;
+            var arc = new Rectangle(rect.Location, new Size(diameter, diameter));
+
+            // top-left arc
+            path.AddArc(arc, 180, 90);
+            // top-right arc
+            arc.X = rect.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            // bottom-right arc
+            arc.Y = rect.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            // bottom-left arc
+            arc.X = rect.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private void ListBox_MouseClick(object? sender, MouseEventArgs e)
+        {
+            int idx = listBox.IndexFromPoint(e.Location);
+            if (idx >= 0 && idx < listBox.Items.Count)
+            {
+                var msg = listBox.Items[idx] as ChatMessage;
+                if (msg != null && !msg.isUserMessage())
+                {
+                    // メッセージのバブル矩形を計算
+                    Rectangle bounds = listBox.GetItemRectangle(idx);
+                    int maxWidth = Math.Max(20, listBox.ClientSize.Width - contentPadding.Horizontal - 20);
+                    using (var g = listBox.CreateGraphics())
+                    {
+                        var size = msg.Measure(g, this.Font, maxWidth);
+                        int bw = size.Width;
+                        int bh = size.Height;
+                        Rectangle bubbleRect = new Rectangle(bounds.Left + contentPadding.Left + 4, bounds.Top + 4, bw, bh);
+                        Rectangle playButtonRect = GetPlayButtonRect(bounds, bubbleRect, false);
+
+                        // 再生ボタンがクリックされたかチェック
+                        if (playButtonRect.Contains(e.Location))
+                        {
+                            // 音声ファイルが存在する場合は再生、存在しない場合はTTSを生成してから再生
+                            if (!string.IsNullOrEmpty(msg.VoiceFilePath) && File.Exists(msg.VoiceFilePath))
+                            {
+                                PlayVoiceFileInternal(msg.VoiceFilePath);
+                            }
+                            else
+                            {
+                                // 音声ファイルが存在しない場合、TTSを生成してから再生
+                                _ = GenerateTTSAndPlayAsync(msg);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 音声ファイルを再生します。外部から呼び出し可能です。
+        /// </summary>
+        /// <param name="filePath">再生する音声ファイルのパス</param>
+        public void PlayVoiceFile(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    if (this.InvokeRequired)
+                    {
+                        this.Invoke(new Action(() => PlayVoiceFileInternal(filePath)));
+                    }
+                    else
+                    {
+                        PlayVoiceFileInternal(filePath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音声再生エラー: {ex.Message}");
+            }
+        }
+
+        private void PlayVoiceFileInternal(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    // 前の再生を停止
+                    if (currentPlayer != null)
+                    {
+                        try
+                        {
+                            currentPlayer.Stop();
+                            currentPlayer.Dispose();
+                        }
+                        catch { }
+                    }
+
+                    currentPlayer = new SoundPlayer(filePath);
+                    // Play()は非同期で再生され、UIをブロックしません
+                    currentPlayer.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音声再生エラー: {ex.Message}");
+                if (currentPlayer != null)
+                {
+                    try
+                    {
+                        currentPlayer.Dispose();
+                    }
+                    catch { }
+                    currentPlayer = null;
+                }
+            }
+        }
+
+        private async Task GenerateTTSAndPlayAsync(ChatMessage msg)
+        {
+            try
+            {
+                Console.WriteLine($"[TTS] 再生ボタンクリック: TTS生成を開始します。テキスト: {msg.Text}");
+                
+                // マスコット名を取得
+                var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
+                Console.WriteLine($"[TTS] マスコット名: {mascotName}");
+                
+                // 音声ファイルの保存先を決定
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string voiceDir = Path.Combine(baseDir, "tmp", "voice", mascotName);
+                if (!Directory.Exists(voiceDir))
+                {
+                    Directory.CreateDirectory(voiceDir);
+                    Console.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
+                }
+
+                // ファイル名を生成（タイムスタンプベース）
+                string fileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
+                string voiceFilePath = Path.Combine(voiceDir, fileName);
+                Console.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
+
+                // StyleBertVits2Serviceを使用してTTSを実行
+                Console.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
+                var ttsService = new StyleBertVits2Service();
+                byte[] audioData = await ttsService.SynthesizeAsync(msg.Text);
+                Console.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
+
+                // 音声ファイルを保存
+                await File.WriteAllBytesAsync(voiceFilePath, audioData);
+                Console.WriteLine($"[TTS] 音声ファイルを保存しました: {voiceFilePath}");
+
+                // メッセージに音声ファイルパスを設定
+                msg.VoiceFilePath = voiceFilePath;
+                
+                // UIを更新
+                if (this.InvokeRequired)
+                {
+                    this.Invoke(new Action(() => this.Invalidate()));
+                }
+                else
+                {
+                    this.Invalidate();
+                }
+
+                // 音声を再生
+                PlayVoiceFileInternal(voiceFilePath);
+                
+                Console.WriteLine($"[TTS] TTS生成と再生が正常に完了しました");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
+                Console.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
             }
         }
 
@@ -244,6 +485,18 @@ namespace DesktopAiMascot.Controls
                     listBox.MeasureItem -= ListBox_MeasureItem;
                     listBox.DrawItem -= ListBox_DrawItem;
                     listBox.MouseDoubleClick -= ListBox_MouseDoubleClick;
+                    listBox.MouseClick -= ListBox_MouseClick;
+                }
+
+                if (currentPlayer != null)
+                {
+                    try
+                    {
+                        currentPlayer.Stop();
+                        currentPlayer.Dispose();
+                    }
+                    catch { }
+                    currentPlayer = null;
                 }
 
                 if (components != null)

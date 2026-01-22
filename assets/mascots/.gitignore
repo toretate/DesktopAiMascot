@@ -1,0 +1,8 @@
+# 許可
+!default/
+!metan/
+!miku/
+!config.template.yaml
+
+# 拒否
+*/

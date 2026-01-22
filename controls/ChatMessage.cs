@@ -8,6 +8,7 @@ namespace DesktopAiMascot.Controls
     {
         public string Sender { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
+        public string? VoiceFilePath { get; set; } = null;
 
         // Measure bubble size (including padding)
         public Size Measure(Graphics g, Font font, int maxWidth)
@@ -40,9 +41,9 @@ namespace DesktopAiMascot.Controls
         }
 
         /// <summary>
-        /// ƒ†[ƒU[i—˜—pÒj‚ª‘—M‚µ‚½ƒƒbƒZ[ƒW‚©‚Ç‚¤‚©‚ğ”»’è‚µ‚Ü‚·B
+        /// ï¿½ï¿½ï¿½[ï¿½Uï¿½[ï¿½iï¿½ï¿½ï¿½pï¿½Òjï¿½ï¿½ï¿½ï¿½ï¿½Mï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½ï¿½ï¿½Ç‚ï¿½ï¿½ï¿½ï¿½ğ”»’è‚µï¿½Ü‚ï¿½ï¿½B
         /// </summary>
-        /// <returns>true: —˜—pÒ‚ÌƒƒbƒZ[ƒW</returns>
+        /// <returns>true: ï¿½ï¿½ï¿½pï¿½Ò‚Ìƒï¿½ï¿½bï¿½Zï¿½[ï¿½W</returns>
         public bool isUserMessage()
         {
             return string.Equals(Sender, "User", StringComparison.OrdinalIgnoreCase);

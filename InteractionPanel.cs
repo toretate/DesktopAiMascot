@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.Controls;
 using DesktopAiMascot.mascots;
 
@@ -33,7 +34,7 @@ namespace DesktopAiMascot
 
             // Enable transparent painting
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-            this.BackColor = Color.White;
+            this.BackColor = Color.FromArgb(128, Color.White); // 半透明の背景
 
             // Use an emoji-capable font so emoji render correctly (Segoe UI Emoji on Windows)
             // messageFont is kept private as it's not intended to be modified by the designer
@@ -208,6 +209,9 @@ namespace DesktopAiMascot
                 {
                     AddMessage("Assistant", reply);
                 }
+
+                // アシスタントからのメッセージに対して自動的にTTSを実行
+                _ = GenerateTTSForAssistantMessageAsync(reply);
             }
             catch (Exception ex)
             {
@@ -233,6 +237,74 @@ namespace DesktopAiMascot
             inputBox.Clear();
             messagesPanel.Focus();
             messagesPanel.Invalidate();
+        }
+
+        private async Task GenerateTTSForAssistantMessageAsync(string text)
+        {
+            try
+            {
+                Console.WriteLine($"[TTS] TTS生成を開始します。テキスト長: {text.Length}文字");
+                
+                // マスコット名を取得
+                var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
+                Console.WriteLine($"[TTS] マスコット名: {mascotName}");
+                
+                // 音声ファイルの保存先を決定
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string voiceDir = Path.Combine(baseDir, "tmp", "voice", mascotName);
+                if (!Directory.Exists(voiceDir))
+                {
+                    Directory.CreateDirectory(voiceDir);
+                    Console.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
+                }
+
+                // ファイル名を生成（タイムスタンプベース）
+                string fileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
+                string voiceFilePath = Path.Combine(voiceDir, fileName);
+                Console.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
+
+                // StyleBertVits2Serviceを使用してTTSを実行
+                Console.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
+                var ttsService = new StyleBertVits2Service();
+                byte[] audioData = await ttsService.SynthesizeAsync(text);
+                Console.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
+
+                // 音声ファイルを保存
+                await File.WriteAllBytesAsync(voiceFilePath, audioData);
+                Console.WriteLine($"[TTS] 音声ファイルを保存しました: {voiceFilePath}");
+
+                // 最新のアシスタントメッセージに音声ファイルパスを設定
+                if (this.IsHandleCreated)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        var messages = messagesPanel.GetMessages();
+                        for (int i = messages.Count - 1; i >= 0; i--)
+                        {
+                            var msg = messages[i];
+                            if (!msg.isUserMessage() && string.IsNullOrEmpty(msg.VoiceFilePath))
+                            {
+                                msg.VoiceFilePath = voiceFilePath;
+                                messagesPanel.Invalidate();
+                                Console.WriteLine($"[TTS] メッセージに音声ファイルパスを設定しました");
+                                break;
+                            }
+                        }
+                        
+                        // TTS生成完了時に音声を自動再生
+                        messagesPanel.PlayVoiceFile(voiceFilePath);
+                        Console.WriteLine($"[TTS] 音声を自動再生しました");
+                    }));
+                }
+                
+                Console.WriteLine($"[TTS] TTS生成が正常に完了しました");
+            }
+            catch (Exception ex)
+            {
+                // TTSエラーは静かに処理（ログ出力のみ）
+                Console.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
+                Console.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
+            }
         }
 
 
