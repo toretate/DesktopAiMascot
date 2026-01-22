@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -23,9 +22,8 @@ namespace DesktopAiMascot
 
         private readonly string messagesFilePath;
 
-        // overlay for showing settings inside the panel
-        private Panel overlayPanel;
-        private DesktopAiMascot.Views.SettingsForm settingsControl;
+        // Settings dialog helper
+        private Func<Image?>? _settingsImageProvider;
 
         public InteractionPanel()
         {
@@ -59,33 +57,11 @@ namespace DesktopAiMascot
             }
             catch { }
 
-            // prepare overlay and settings control
-            overlayPanel = new Panel();
-            overlayPanel.Visible = false;
-            overlayPanel.BackColor = Color.FromArgb(200, Color.Gray);
-            overlayPanel.Dock = DockStyle.Fill;
-            overlayPanel.TabStop = true;
+            // Settings overlay removed; use modal dialog when needed
 
-            settingsControl = new DesktopAiMascot.Views.SettingsForm();
-            settingsControl.Visible = false;
-            settingsControl.Dock = DockStyle.Fill;
-            settingsControl.CloseRequested += SettingsControl_CloseRequested;
-            settingsControl.MascotChanged += (s, m) =>
-            {
-                MascotChanged?.Invoke(this, m);
-            };
-            settingsControl.LlmServiceChanged += (s, name) =>
-            {
-                UpdateChatService(name);
-            };
-
-            overlayPanel.Controls.Add(settingsControl);
-            Controls.Add(overlayPanel);
-
-            // Enable window drag from the panel, message area, and overlay
+            // Enable window drag from the panel and message area
             this.MouseDown += DragMove_MouseDown;
             if (messagesPanel != null) messagesPanel.MouseDown += DragMove_MouseDown;
-            if (overlayPanel != null) overlayPanel.MouseDown += DragMove_MouseDown;
             if (topToolStrip != null) topToolStrip.MouseDown += TopToolStrip_MouseDown;
         }
 
@@ -129,35 +105,41 @@ namespace DesktopAiMascot
             }
         }
 
-        private void SettingsControl_CloseRequested(object? sender, EventArgs e)
+        private void ShowSettingsDialog()
         {
-            HideSettingsOverlay();
-        }
-
-        private void ShowSettingsOverlay()
-        {
+            // Show settings as a modal dialog instead of overlay
             try
             {
-                // show overlay above other controls
-                overlayPanel.BringToFront();
-                overlayPanel.Visible = true;
-                settingsControl.Visible = true;
-                overlayPanel.Focus();
+                using (var dialogContent = new DesktopAiMascot.Views.SettingsForm())
+                {
+                    // propagate important event handlers and providers
+                    dialogContent.MascotChanged += (s, m) => MascotChanged?.Invoke(this, m);
+                    dialogContent.LlmServiceChanged += (s, name) => UpdateChatService(name);
+                    if (_settingsImageProvider != null)
+                    {
+                        dialogContent.GetMascotImage = _settingsImageProvider;
+                    }
+
+                    using (var dlg = new DesktopAiMascot.Views.SettingsDialog(dialogContent))
+                    {
+                        var owner = this.FindForm();
+                        if (owner != null)
+                        {
+                            dlg.StartPosition = FormStartPosition.CenterParent;
+                            dlg.ShowDialog(owner);
+                        }
+                        else
+                        {
+                            dlg.StartPosition = FormStartPosition.CenterScreen;
+                            dlg.ShowDialog();
+                        }
+                    }
+                }
             }
             catch { }
         }
 
-        private void HideSettingsOverlay()
-        {
-            try
-            {
-                settingsControl.Visible = false;
-                overlayPanel.Visible = false;
-                // restore focus to messages panel
-                messagesPanel.Focus();
-            }
-            catch { }
-        }
+        // (Removed: HideSettingsOverlay) Modal dialog flow does not need it.
 
         public void AddMessage(string sender, string text)
         {
@@ -178,16 +160,13 @@ namespace DesktopAiMascot
 
         private void OnSettingsButtonCliecked(object? sender, EventArgs e)
         {
-            ShowSettingsOverlay();
+            ShowSettingsDialog();
         }
 
         // Allow external callers (e.g., MascotForm) to register a provider for the mascot image
         public void SetSettingsMascotImageProvider(Func<Image?> provider)
         {
-            if (settingsControl != null)
-            {
-                settingsControl.GetMascotImage = provider;
-            }
+            _settingsImageProvider = provider;
         }
 
         public void SaveToFile(string path)
