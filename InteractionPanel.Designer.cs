@@ -1,9 +1,10 @@
-﻿using DesktopAiMascot.Controls;
+using DesktopAiMascot.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms.Integration;
 
 namespace DesktopAiMascot
 {
@@ -31,7 +32,8 @@ namespace DesktopAiMascot
             topToolStrip = new ToolStrip();
             clearBtn = new ToolStripButton();
             settingsButton = new ToolStripButton();
-            messagesPanel = new MessageListPanel();
+            messagesPanelHost = new ElementHost();
+            wpfMessagesPanel = new DesktopAiMascot.controls.MessageListPanel();
             inputBox = new ChatInputBox();
             topToolStrip.SuspendLayout();
             SuspendLayout();
@@ -63,14 +65,16 @@ namespace DesktopAiMascot
             settingsButton.Text = "⚙";
             settingsButton.Click += OnSettingsButtonCliecked;
             // 
-            // messagesPanel
+            // messagesPanelHost
             // 
-            messagesPanel.BackColor = Color.White;
-            messagesPanel.Dock = DockStyle.Fill;
-            messagesPanel.Location = new Point(0, 25);
-            messagesPanel.Name = "messagesPanel";
-            messagesPanel.Size = new Size(205, 283);
-            messagesPanel.TabIndex = 1;
+            messagesPanelHost.BackColor = Color.Transparent;
+            messagesPanelHost.Dock = DockStyle.Fill;
+            messagesPanelHost.Location = new Point(0, 25);
+            messagesPanelHost.Name = "messagesPanelHost";
+            messagesPanelHost.Size = new Size(205, 283);
+            messagesPanelHost.TabIndex = 1;
+            messagesPanelHost.Child = wpfMessagesPanel;
+            messagesPanelHost.ChildChanged += messagesPanelHost_ChildChanged;
             // 
             // inputBox
             // 
@@ -84,9 +88,9 @@ namespace DesktopAiMascot
             // 
             // InteractionPanel
             // 
-            BackColor = SystemColors.Control;
+            BackColor = Color.Transparent;
             BorderStyle = BorderStyle.FixedSingle;
-            Controls.Add(messagesPanel);
+            Controls.Add(messagesPanelHost);
             Controls.Add(topToolStrip);
             Controls.Add(inputBox);
             Name = "InteractionPanel";
@@ -100,9 +104,14 @@ namespace DesktopAiMascot
 
         public ChatInputBox inputBox;
         private readonly Font messageFont;
-        public MessageListPanel messagesPanel;
+        private ElementHost messagesPanelHost;
+        private DesktopAiMascot.controls.MessageListPanel wpfMessagesPanel;
         public ToolStrip topToolStrip;
         private ToolStripButton clearBtn;
         private ToolStripButton settingsButton;
+        
+        // WPF MessageListPanel へのアクセスを提供
+        public DesktopAiMascot.controls.MessageListPanel messagesPanel => wpfMessagesPanel;
     }
 }
+

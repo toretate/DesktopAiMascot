@@ -28,5 +28,18 @@ namespace DesktopAiMascot.aiservice
                 { "Chat GPT (未実装)" },
             }
         };
+
+        public static ChatAiService? CreateService(string serviceName)
+        {
+            if (serviceName == "Foundry Local")
+            {
+                return new FoundryLocalChatService(SystemConfig.Instance.ModelName);
+            }
+            else if (serviceName == "LM Studio")
+            {
+                return new LmStudioChatService();
+            }
+            return null;
+        }
     }
 }

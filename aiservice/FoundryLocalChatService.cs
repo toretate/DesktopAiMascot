@@ -8,24 +8,37 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Diagnostics;
 
-using DesktopAiMascot;
-
 namespace DesktopAiMascot.aiservice
 {
-    public class FoundryLocalChatService : IAiChatService
+    public class FoundryLocalChatService : ChatAiServiceBase
     {
-        private readonly string endpointOrModel;
         private static readonly HttpClient httpClient = new HttpClient();
+        public override string EndPoint { get; set; }
+        private string _chatEndpoint;
+        private string _modelName;
 
         public FoundryLocalChatService(string modelPath)
         {
             // The caller provides either a model identifier or a local endpoint URL.
             // Treat the string as the model id if it looks like a short name, otherwise treat it as an endpoint URL.
-            endpointOrModel = modelPath ?? string.Empty;
+            var endpointOrModel = modelPath ?? string.Empty;
+
+            if (endpointOrModel.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || endpointOrModel.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                EndPoint = endpointOrModel;
+                _chatEndpoint = endpointOrModel;
+                _modelName = endpointOrModel;
+            }
+            else
+            {
+                EndPoint = "http://127.0.0.1:49834/v1";
+                _chatEndpoint = "http://127.0.0.1:49834/v1/chat/completions";
+                _modelName = endpointOrModel;
+            }
         }
 
 
-        public async Task<string?> SendMessageAsync(string message)
+        public override async Task<string?> SendMessageAsync(string message)
         {
             try
             {
@@ -34,7 +47,7 @@ namespace DesktopAiMascot.aiservice
                 // Build a generic OpenAI-style chat request. Many Foundry Local deployments accept this shape.
                 var requestObj = new
                 {
-                    model = endpointOrModel,
+                    model = _modelName,
                     messages = new[]
                     {
                         new { role = "system", content = systemPrompt },
@@ -49,12 +62,9 @@ namespace DesktopAiMascot.aiservice
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 // If the provided string looks like a URL, POST to it. Otherwise assume a local default endpoint.
-                var endpoint = endpointOrModel.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || endpointOrModel.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                    ? endpointOrModel
-                    : "http://127.0.0.1:49834/v1/chat/completions"; // fallback endpoint commonly used by local servers
-
+                
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
-                var resp = await httpClient.PostAsync(endpoint, content).ConfigureAwait(false);
+                var resp = await httpClient.PostAsync(_chatEndpoint, content).ConfigureAwait(false);
                 var txt = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 // try to extract text from JSON response (similar approach as LmStudioChatService)
@@ -103,7 +113,7 @@ namespace DesktopAiMascot.aiservice
             }
         }
 
-        public void ClearConversation()
+        public override void ClearConversation()
         {
             // No conversation state to clear in this simple implementation.
         }

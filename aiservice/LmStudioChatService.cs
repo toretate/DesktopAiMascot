@@ -17,24 +17,28 @@ using DesktopAiMascot.mascots;
 namespace DesktopAiMascot.aiservice
 {
 
-    public class LmStudioChatService : IAiChatService
+    public class LmStudioChatService : ChatAiServiceBase
     {
         // Local LmStudio endpoint
         private const string LOCAL_ENDPOINT = "http://127.0.0.1:1234/v1/";
-        private readonly string Endpoint;
+        private readonly string _endpoint;
+
+        public override string EndPoint { get; set; }
+
 
 
         public string? SystemPrompt { get; set; }
 
         public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
         {
-            this.Endpoint = endpoint;
+            this.EndPoint = endpoint;
         }
 
-        public async Task<string?> SendMessageAsync(string message)
+        public override async Task<string?> SendMessageAsync(string message)
         {
-            string llmModel = "qwen3-8b-nsfw-jp";
+            string llmModel = SystemConfig.Instance.ModelName;
             string endpoint = Endpoint;
+            string endpoint = EndPoint;
             string apiKey = "NOT_NEEDED_API_KEY";
 
             var client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions()
@@ -75,7 +79,7 @@ namespace DesktopAiMascot.aiservice
             }
          }
 
-        public void ClearConversation()
+        public override void ClearConversation()
         {
 
         }

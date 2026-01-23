@@ -18,7 +18,7 @@ namespace DesktopAiMascot
 
         // Expose controls so the WinForms designer can edit them
 
-        public IAiChatService ChatService { get; set; }
+        public ChatAiService ChatService { get; set; }
 
         private readonly string messagesFilePath;
 
@@ -39,7 +39,7 @@ namespace DesktopAiMascot
             messageFont = new Font("Segoe UI Emoji", this.Font.Size);
 
             // Apply font to existing controls created in InitializeComponent
-            if (messagesPanel != null) messagesPanel.Font = messageFont;
+            // Note: WPF MessageListPanel doesn't have Font property, font is set in XAML
             if (inputBox != null) inputBox.Font = messageFont;
 
             // Default chat service
@@ -61,7 +61,7 @@ namespace DesktopAiMascot
 
             // Enable window drag from the panel and message area
             this.MouseDown += DragMove_MouseDown;
-            if (messagesPanel != null) messagesPanel.MouseDown += DragMove_MouseDown;
+            // Note: WPF MessageListPanel handles its own drag move
             if (topToolStrip != null) topToolStrip.MouseDown += TopToolStrip_MouseDown;
         }
 
@@ -247,8 +247,7 @@ namespace DesktopAiMascot
 
             // clear input
             inputBox.Clear();
-            messagesPanel.Focus();
-            messagesPanel.Invalidate();
+            // Note: WPF control doesn't need explicit Focus() and Invalidate() calls
         }
 
         private async Task GenerateTTSForAssistantMessageAsync(string text)
@@ -256,11 +255,11 @@ namespace DesktopAiMascot
             try
             {
                 Console.WriteLine($"[TTS] TTS生成を開始します。テキスト長: {text.Length}文字");
-                
+
                 // マスコット名を取得
                 var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
                 Console.WriteLine($"[TTS] マスコット名: {mascotName}");
-                
+
                 // 音声ファイルの保存先を決定
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string voiceDir = Path.Combine(baseDir, "tmp", "voice", mascotName);
@@ -297,18 +296,18 @@ namespace DesktopAiMascot
                             if (!msg.isUserMessage() && string.IsNullOrEmpty(msg.VoiceFilePath))
                             {
                                 msg.VoiceFilePath = voiceFilePath;
-                                messagesPanel.Invalidate();
+                                // Note: WPF control doesn't need explicit Invalidate() call
                                 Console.WriteLine($"[TTS] メッセージに音声ファイルパスを設定しました");
                                 break;
                             }
                         }
-                        
+
                         // TTS生成完了時に音声を自動再生
                         messagesPanel.PlayVoiceFile(voiceFilePath);
                         Console.WriteLine($"[TTS] 音声を自動再生しました");
                     }));
                 }
-                
+
                 Console.WriteLine($"[TTS] TTS生成が正常に完了しました");
             }
             catch (Exception ex)
@@ -319,6 +318,9 @@ namespace DesktopAiMascot
             }
         }
 
+        private void messagesPanelHost_ChildChanged(object sender, System.Windows.Forms.Integration.ChildChangedEventArgs e)
+        {
 
+        }
     }
 }
