@@ -1,4 +1,5 @@
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.views;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -12,10 +13,21 @@ namespace DesktopAiMascot.Views
         /// Required designer variable.
         /// </summary>
         private IContainer components = null;
-
-        private Button closeButton;
         private Label titleLabel;
         private Panel contentPanel;
+        
+        // Property Pages
+        private MascotPropertyPage mascotPropertyPage;
+        private ChatAiPropertyPage chatAiPropertyPage;
+        private VoiceAiPropertyPage voiceAiPropertyPage;
+        private ImageAiPropertyPage imageAiPropertyPage;
+        private MovieAiPropertyPage movieAiPropertyPage;
+        private ApiKeyPropertyPage apiKeyPropertyPage;
+
+        private Panel topPanel;
+        private Button closeButton;
+        private Panel sideCategoryListPanel;
+        private ListBox categorySelectionList;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -35,30 +47,25 @@ namespace DesktopAiMascot.Views
         private void InitializeComponent()
         {
             titleLabel = new Label();
-            closeButton = new Button();
             contentPanel = new Panel();
+            sideCategoryListPanel = new Panel();
+            categorySelectionList = new ListBox();
+            
+            mascotPropertyPage = new MascotPropertyPage();
+            chatAiPropertyPage = new ChatAiPropertyPage();
+            voiceAiPropertyPage = new VoiceAiPropertyPage();
+            imageAiPropertyPage = new ImageAiPropertyPage();
+            movieAiPropertyPage = new MovieAiPropertyPage();
+            apiKeyPropertyPage = new ApiKeyPropertyPage();
+
             topPanel = new Panel();
-            mainPanel = new Panel();
-            mascotGroupBox = new GroupBox();
-            mascotChooseComboBox = new ComboBox();
-            removeBackGroundButton = new Button();
-            voiceAiComboBox = new ComboBox();
-            generateEmotes = new Button();
-            label2 = new Label();
-            llmAiEngineComboBox = new ComboBox();
-            aiEngineLabel = new Label();
-            groupBox1 = new GroupBox();
-            apiKeyTextBox = new TextBox();
-            imageAiLabel = new Label();
-            imageAiComboBox = new ComboBox();
-            movieAiLabel = new Label();
-            movieAiComboBox = new ComboBox();
+            closeButton = new Button();
+
             contentPanel.SuspendLayout();
+            sideCategoryListPanel.SuspendLayout();
             topPanel.SuspendLayout();
-            mainPanel.SuspendLayout();
-            mascotGroupBox.SuspendLayout();
-            groupBox1.SuspendLayout();
             SuspendLayout();
+            
             // 
             // titleLabel
             // 
@@ -70,31 +77,110 @@ namespace DesktopAiMascot.Views
             titleLabel.Size = new Size(72, 21);
             titleLabel.TabIndex = 0;
             titleLabel.Text = "Settings";
-            // 
-            // closeButton
-            // 
-            closeButton.AutoSize = true;
-            closeButton.Dock = DockStyle.Bottom;
-            closeButton.Location = new Point(0, 324);
-            closeButton.Name = "closeButton";
-            closeButton.Size = new Size(198, 25);
-            closeButton.TabIndex = 1;
-            closeButton.Text = "Close";
-            closeButton.Click += closeButton_Click;
+            
             // 
             // contentPanel
             // 
             contentPanel.AutoScroll = true;
             contentPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             contentPanel.BackColor = Color.Transparent;
-            contentPanel.Controls.Add(topPanel);
-            contentPanel.Controls.Add(mainPanel);
-            contentPanel.Controls.Add(closeButton);
+            contentPanel.Controls.Add(mascotPropertyPage);
+            contentPanel.Controls.Add(chatAiPropertyPage);
+            contentPanel.Controls.Add(voiceAiPropertyPage);
+            contentPanel.Controls.Add(imageAiPropertyPage);
+            contentPanel.Controls.Add(movieAiPropertyPage);
+            contentPanel.Controls.Add(apiKeyPropertyPage);
+            contentPanel.Controls.Add(sideCategoryListPanel);
             contentPanel.Dock = DockStyle.Fill;
-            contentPanel.Location = new Point(0, 0);
+            contentPanel.Location = new Point(0, 21);
             contentPanel.Name = "contentPanel";
-            contentPanel.Size = new Size(198, 349);
+            contentPanel.Size = new Size(580, 506);
             contentPanel.TabIndex = 2;
+            
+            // 
+            // sideCategoryListPanel
+            // 
+            sideCategoryListPanel.Controls.Add(categorySelectionList);
+            sideCategoryListPanel.Dock = DockStyle.Left;
+            sideCategoryListPanel.Location = new Point(0, 0);
+            sideCategoryListPanel.Name = "sideCategoryListPanel";
+            sideCategoryListPanel.Size = new Size(100, 506);
+            sideCategoryListPanel.TabIndex = 20;
+
+            // 
+            // categorySelectionList
+            // 
+            categorySelectionList.Dock = DockStyle.Left;
+            categorySelectionList.Font = new Font("Yu Gothic UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 128);
+            categorySelectionList.FormattingEnabled = true;
+            categorySelectionList.ItemHeight = 17;
+            categorySelectionList.Items.AddRange(new object[] { "Mascot", "Chat AI", "Voice AI", "Image AI", "Movie AI", "API Keys" });
+            categorySelectionList.Location = new Point(0, 0);
+            categorySelectionList.Name = "categorySelectionList";
+            categorySelectionList.Size = new Size(100, 506);
+            categorySelectionList.TabIndex = 0;
+            categorySelectionList.SelectedIndexChanged += categorySelectionList_SelectedIndexChanged;
+
+            // 
+            // mascotPropertyPage
+            // 
+            mascotPropertyPage.AutoScroll = true;
+            mascotPropertyPage.Location = new Point(100, 0);
+            mascotPropertyPage.Name = "mascotPropertyPage";
+            mascotPropertyPage.Size = new Size(480, 506);
+            mascotPropertyPage.TabIndex = 20;
+            mascotPropertyPage.Visible = false;
+
+            //
+            // chatAiPropertyPage
+            //
+            chatAiPropertyPage.AutoScroll = true;
+            chatAiPropertyPage.Location = new Point(100, 0);
+            chatAiPropertyPage.Name = "chatAiPropertyPage";
+            chatAiPropertyPage.Size = new Size(480, 506);
+            chatAiPropertyPage.TabIndex = 21;
+            chatAiPropertyPage.Visible = false;
+
+            //
+            // voiceAiPropertyPage
+            //
+            voiceAiPropertyPage.AutoScroll = true;
+            voiceAiPropertyPage.Location = new Point(100, 0);
+            voiceAiPropertyPage.Name = "voiceAiPropertyPage";
+            voiceAiPropertyPage.Size = new Size(480, 506);
+            voiceAiPropertyPage.TabIndex = 22;
+            voiceAiPropertyPage.Visible = false;
+
+            //
+            // imageAiPropertyPage
+            //
+            imageAiPropertyPage.AutoScroll = true;
+            imageAiPropertyPage.Location = new Point(100, 0);
+            imageAiPropertyPage.Name = "imageAiPropertyPage";
+            imageAiPropertyPage.Size = new Size(480, 506);
+            imageAiPropertyPage.TabIndex = 23;
+            imageAiPropertyPage.Visible = false;
+
+            //
+            // movieAiPropertyPage
+            //
+            movieAiPropertyPage.AutoScroll = true;
+            movieAiPropertyPage.Location = new Point(100, 0);
+            movieAiPropertyPage.Name = "movieAiPropertyPage";
+            movieAiPropertyPage.Size = new Size(480, 506);
+            movieAiPropertyPage.TabIndex = 24;
+            movieAiPropertyPage.Visible = false;
+
+            //
+            // apiKeyPropertyPage
+            //
+            apiKeyPropertyPage.AutoScroll = true;
+            apiKeyPropertyPage.Location = new Point(100, 0);
+            apiKeyPropertyPage.Name = "apiKeyPropertyPage";
+            apiKeyPropertyPage.Size = new Size(480, 506);
+            apiKeyPropertyPage.TabIndex = 25;
+            apiKeyPropertyPage.Visible = false;
+
             // 
             // topPanel
             // 
@@ -102,195 +188,40 @@ namespace DesktopAiMascot.Views
             topPanel.Dock = DockStyle.Top;
             topPanel.Location = new Point(0, 0);
             topPanel.Name = "topPanel";
-            topPanel.Size = new Size(198, 21);
+            topPanel.Size = new Size(580, 21);
             topPanel.TabIndex = 19;
             // 
-            // mainPanel
+            // closeButton
             // 
-            mainPanel.AutoScroll = true;
-            mainPanel.Controls.Add(mascotGroupBox);
-            mainPanel.Controls.Add(groupBox1);
-            mainPanel.Dock = DockStyle.Fill;
-            mainPanel.Location = new Point(0, 0);
-            mainPanel.Name = "mainPanel";
-            mainPanel.Size = new Size(198, 324);
-            mainPanel.TabIndex = 19;
-            // 
-            // mascotGroupBox
-            // 
-            mascotGroupBox.Controls.Add(movieAiComboBox);
-            mascotGroupBox.Controls.Add(movieAiLabel);
-            mascotGroupBox.Controls.Add(imageAiComboBox);
-            mascotGroupBox.Controls.Add(imageAiLabel);
-            mascotGroupBox.Controls.Add(mascotChooseComboBox);
-            mascotGroupBox.Controls.Add(removeBackGroundButton);
-            mascotGroupBox.Controls.Add(voiceAiComboBox);
-            mascotGroupBox.Controls.Add(generateEmotes);
-            mascotGroupBox.Controls.Add(label2);
-            mascotGroupBox.Controls.Add(llmAiEngineComboBox);
-            mascotGroupBox.Controls.Add(aiEngineLabel);
-            mascotGroupBox.Location = new Point(9, 27);
-            mascotGroupBox.Name = "mascotGroupBox";
-            mascotGroupBox.Size = new Size(180, 230);
-            mascotGroupBox.TabIndex = 19;
-            mascotGroupBox.TabStop = false;
-            mascotGroupBox.Text = "マスコット";
-            // 
-            // mascotChooseComboBox
-            // 
-            mascotChooseComboBox.FormattingEnabled = true;
-            mascotChooseComboBox.Location = new Point(6, 20);
-            mascotChooseComboBox.Name = "mascotChooseComboBox";
-            mascotChooseComboBox.Size = new Size(168, 23);
-            mascotChooseComboBox.TabIndex = 15;
-            mascotChooseComboBox.SelectedIndexChanged += MascotChooseComboBox_SelectedIndexChanged;
-            // 
-            // removeBackGroundButton
-            // 
-            removeBackGroundButton.Location = new Point(6, 76);
-            removeBackGroundButton.Name = "removeBackGroundButton";
-            removeBackGroundButton.Size = new Size(168, 21);
-            removeBackGroundButton.TabIndex = 10;
-            removeBackGroundButton.Text = "背景削除";
-            removeBackGroundButton.UseVisualStyleBackColor = true;
-            removeBackGroundButton.Click += OnRemoveBackgound_Click;
-            // 
-            // voiceAiComboBox
-            // 
-            voiceAiComboBox.FormattingEnabled = true;
-            voiceAiComboBox.Location = new Point(57, 131);
-            voiceAiComboBox.Name = "voiceAiComboBox";
-            voiceAiComboBox.Size = new Size(116, 23);
-            voiceAiComboBox.TabIndex = 18;
-            // 
-            // generateEmotes
-            // 
-            generateEmotes.Location = new Point(6, 49);
-            generateEmotes.Name = "generateEmotes";
-            generateEmotes.Size = new Size(168, 21);
-            generateEmotes.TabIndex = 6;
-            generateEmotes.Text = "表情差分作成";
-            generateEmotes.UseVisualStyleBackColor = true;
-            generateEmotes.Click += OnGenerateEmotes_Click;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(6, 134);
-            label2.Name = "label2";
-            label2.Size = new Size(42, 15);
-            label2.TabIndex = 17;
-            label2.Text = "音声AI";
-            label2.Click += label2_Click;
-            // 
-            // llmAiEngineComboBox
-            // 
-            llmAiEngineComboBox.DisplayMember = "Name";
-            llmAiEngineComboBox.FormattingEnabled = true;
-            llmAiEngineComboBox.Location = new Point(57, 100);
-            llmAiEngineComboBox.Name = "llmAiEngineComboBox";
-            llmAiEngineComboBox.Size = new Size(117, 23);
-            llmAiEngineComboBox.TabIndex = 8;
-            llmAiEngineComboBox.SelectedIndexChanged += llmAiEngineComboBox_SelectedIndexChanged;
-            // 
-            // aiEngineLabel
-            // 
-            aiEngineLabel.AutoSize = true;
-            aiEngineLabel.Location = new Point(6, 103);
-            aiEngineLabel.Name = "aiEngineLabel";
-            aiEngineLabel.Size = new Size(45, 15);
-            aiEngineLabel.TabIndex = 7;
-            aiEngineLabel.Text = "Chat AI";
-            // 
-            // groupBox1
-            // 
-            groupBox1.Controls.Add(apiKeyTextBox);
-            groupBox1.Location = new Point(6, 263);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(183, 55);
-            groupBox1.TabIndex = 16;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Google API Key";
-            // 
-            // apiKeyTextBox
-            // 
-            apiKeyTextBox.AllowDrop = true;
-            apiKeyTextBox.Location = new Point(6, 22);
-            apiKeyTextBox.Name = "apiKeyTextBox";
-            apiKeyTextBox.PlaceholderText = "Google API KEY";
-            apiKeyTextBox.Size = new Size(174, 23);
-            apiKeyTextBox.TabIndex = 12;
-            // 
-            // imageAiLabel
-            // 
-            imageAiLabel.AutoSize = true;
-            imageAiLabel.Location = new Point(6, 165);
-            imageAiLabel.Name = "imageAiLabel";
-            imageAiLabel.Size = new Size(42, 15);
-            imageAiLabel.TabIndex = 19;
-            imageAiLabel.Text = "画像AI";
-            // 
-            // imageAiComboBox
-            // 
-            imageAiComboBox.FormattingEnabled = true;
-            imageAiComboBox.Location = new Point(58, 162);
-            imageAiComboBox.Name = "imageAiComboBox";
-            imageAiComboBox.Size = new Size(114, 23);
-            imageAiComboBox.TabIndex = 20;
-            // 
-            // movieAiLabel
-            // 
-            movieAiLabel.AutoSize = true;
-            movieAiLabel.Location = new Point(6, 195);
-            movieAiLabel.Name = "movieAiLabel";
-            movieAiLabel.Size = new Size(42, 15);
-            movieAiLabel.TabIndex = 21;
-            movieAiLabel.Text = "動画AI";
-            // 
-            // movieAiComboBox
-            // 
-            movieAiComboBox.FormattingEnabled = true;
-            movieAiComboBox.Location = new Point(57, 196);
-            movieAiComboBox.Name = "movieAiComboBox";
-            movieAiComboBox.Size = new Size(115, 23);
-            movieAiComboBox.TabIndex = 22;
+            closeButton.AutoSize = true;
+            closeButton.Dock = DockStyle.Bottom;
+            closeButton.Location = new Point(0, 527);
+            closeButton.Name = "closeButton";
+            closeButton.Size = new Size(580, 25);
+            closeButton.TabIndex = 20;
+            closeButton.Text = "Close";
+            closeButton.Click += closeButton_Click;
+
             // 
             // SettingsForm
             // 
             BackColor = SystemColors.Window;
             Controls.Add(contentPanel);
+            Controls.Add(closeButton);
+            Controls.Add(topPanel);
             Name = "SettingsForm";
-            Size = new Size(198, 349);
+            Size = new Size(580, 552);
             KeyDown += SettingsForm_KeyDown;
             Resize += SettingsForm_Resize;
+            
             contentPanel.ResumeLayout(false);
-            contentPanel.PerformLayout();
+            sideCategoryListPanel.ResumeLayout(false);
             topPanel.ResumeLayout(false);
             topPanel.PerformLayout();
-            mainPanel.ResumeLayout(false);
-            mascotGroupBox.ResumeLayout(false);
-            mascotGroupBox.PerformLayout();
-            groupBox1.ResumeLayout(false);
-            groupBox1.PerformLayout();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
-        private ComboBox llmAiEngineComboBox;
-        private Label aiEngineLabel;
-        private Button generateEmotes;
-        private Button removeBackGroundButton;
-        private TextBox apiKeyTextBox;
-        private ComboBox mascotChooseComboBox;
-        private GroupBox groupBox1;
-        private Label label2;
-        private ComboBox voiceAiComboBox;
-        private Panel mainPanel;
-        private Panel topPanel;
-        private GroupBox mascotGroupBox;
-        private Label movieAiLabel;
-        private ComboBox imageAiComboBox;
-        private Label imageAiLabel;
-        private ComboBox movieAiComboBox;
     }
 }

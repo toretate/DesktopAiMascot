@@ -17,7 +17,7 @@ namespace DesktopAiMascot.Views
             this.MinimizeBox = false;
             this.MaximizeBox = false;
             this.ShowInTaskbar = false;
-            this.Size = new Size(500, 600);
+            this.Size = new Size(600, 600);
             this.TopMost = true; // ensure dialog stays above mascot form
 
             settingsForm.Dock = DockStyle.Fill;
