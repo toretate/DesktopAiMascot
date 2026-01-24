@@ -1,0 +1,41 @@
+<UserControl x:Class="DesktopAiMascot.views.MascotPropertyPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DesktopAiMascot.views"
+             mc:Ignorable="d" 
+             d:DesignHeight="500" d:DesignWidth="480">
+    <GroupBox Header="Mascot" Padding="10">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ListView x:Name="listView1" Grid.Row="0"/>
+                <Button x:Name="addButton" Content="Add" Grid.Row="1" Height="33"/>
+            </Grid>
+
+            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                <ComboBox x:Name="mascotChooseComboBox" 
+                          Height="25"
+                          Margin="0,0,0,5"
+                          SelectionChanged="MascotChooseComboBox_SelectionChanged"/>
+                <Button x:Name="generateEmotes" 
+                        Content="Generate Emotes" 
+                        Height="25"
+                        Margin="0,0,0,5"/>
+                <Button x:Name="removeBackGroundButton" 
+                        Content="Remove Background" 
+                        Height="25"/>
+            </StackPanel>
+        </Grid>
+    </GroupBox>
+</UserControl>
