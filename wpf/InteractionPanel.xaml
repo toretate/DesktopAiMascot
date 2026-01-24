@@ -39,12 +39,6 @@
                     VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"/>
             
-            <Border x:Name="dragArea"
-                    Grid.Column="1"
-                    Background="Transparent"
-                    Cursor="SizeAll"
-                    PreviewMouseLeftButtonDown="DragArea_PreviewMouseLeftButtonDown"/>
-            
             <Button x:Name="clearBtn"
                     Grid.Column="2"
                     Content="&#xE74D;"
@@ -63,7 +57,6 @@
             Grid.Row="1"
             Margin="0"
             Background="#A0FFFFFF"
-            PreviewMouseLeftButtonDown="DragArea_PreviewMouseLeftButtonDown"
             />
 
         <!-- Input Box -->
