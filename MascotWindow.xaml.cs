@@ -1,4 +1,7 @@
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.mascots;
+using DesktopAiMascot.Controls;
+using DesktopAiMascot.Wpf;
 using System;
 using System.Drawing;
 using System.IO;
@@ -7,7 +10,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace DesktopAiMascot.mascots
+namespace DesktopAiMascot
 {
     public partial class MascotWindow : Window
     {
@@ -54,17 +57,17 @@ namespace DesktopAiMascot.mascots
 
             // マスコット初期化
             mascot = new Mascot(new System.Drawing.Point(220, 0), new System.Drawing.Size(imageWidth, imageHeight));
-            MascotControl.Initialize(mascot);
+            this.MascotControl.Initialize(mascot);
 
-            InteractionPanel.MascotChanged += (s, model) =>
+            this.InteractionPanel.MascotChanged += (s, model) =>
             {
-                MascotControl.ReloadMascot(model);
+                this.MascotControl.ReloadMascot(model);
                 MascotManager.Instance.CurrentModel = model;
                 SaveModelName();
             };
 
             // InteractionPanelのドラッグ移動イベントを処理。ウィンドウを動かす
-            InteractionPanel.RequestDragMove += (s, e) =>
+            this.InteractionPanel.RequestDragMove += (s, e) =>
             {
                 try
                 {
@@ -100,11 +103,11 @@ namespace DesktopAiMascot.mascots
                 VoiceAiManager.Instance.CurrentService = VoiceAiManager.Instance.VoiceAiServices[systemConfig.VoiceService];
             }
 
-            InteractionPanel.SetSettingsMascotImageProvider(() =>
+            this.InteractionPanel.SetSettingsMascotImageProvider(() =>
             {
                 try
                 {
-                    return MascotControl?.GetCurrentImage();
+                    return this.MascotControl?.GetCurrentImage();
                 }
                 catch
                 {
@@ -113,7 +116,7 @@ namespace DesktopAiMascot.mascots
             });
 
             // InteractionPanel上でマウス操作中はアニメーションを一時停止
-            InteractionPanel.MouseEnter += (s, e) =>
+            this.InteractionPanel.MouseEnter += (s, e) =>
             {
                 if (animationTimer != null && animationTimer.IsEnabled)
                 {
@@ -121,7 +124,7 @@ namespace DesktopAiMascot.mascots
                 }
             };
 
-            InteractionPanel.MouseLeave += (s, e) =>
+            this.InteractionPanel.MouseLeave += (s, e) =>
             {
                 if (animationTimer != null && !animationTimer.IsEnabled)
                 {
@@ -168,7 +171,7 @@ namespace DesktopAiMascot.mascots
                 Console.WriteLine($"Applied default location to window: {this.Left},{this.Top}");
             }
 
-            MascotControl?.UpdateMascotImage();
+            this.MascotControl?.UpdateMascotImage();
         }
 
         private void SetupNotifyIcon()
@@ -186,7 +189,7 @@ namespace DesktopAiMascot.mascots
 
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
-            MascotControl?.UpdateMascotImage();
+            this.MascotControl?.UpdateMascotImage();
         }
 
         private void ShowMascot(object sender, EventArgs e)
@@ -296,7 +299,7 @@ namespace DesktopAiMascot.mascots
             {
                 if (potentialClick && !isDragging)
                 {
-                    InteractionPanel?.ShowInput();
+                    this.InteractionPanel?.ShowInput();
                 }
 
                 if (isDragging)
