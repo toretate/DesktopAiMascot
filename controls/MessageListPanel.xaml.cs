@@ -24,6 +24,11 @@ namespace DesktopAiMascot.controls
         
         private SoundPlayer? currentPlayer = null;
         private ChatMessage? currentPlayingMessage = null;
+        private readonly Queue<string> voiceQueue = new Queue<string>();
+        private bool isPlayingQueue = false;
+        
+        // チャンク間の無音間隔（ミリ秒）
+        private const int CHUNK_INTERVAL_MS = 500;
 
         public MessageListPanel()
         {
@@ -248,6 +253,41 @@ namespace DesktopAiMascot.controls
         }
 
         /// <summary>
+        /// 再作成ボタンのクリックイベント
+        /// </summary>
+        private void RegenerateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.Tag is ChatMessage msg)
+            {
+                // 古い音声ファイルを削除
+                if (!string.IsNullOrEmpty(msg.VoiceFilePath) && File.Exists(msg.VoiceFilePath))
+                {
+                    try
+                    {
+                        File.Delete(msg.VoiceFilePath);
+                        Debug.WriteLine($"[TTS] 古い音声ファイルを削除しました: {msg.VoiceFilePath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[TTS] 音声ファイル削除エラー: {ex.Message}");
+                    }
+                }
+
+                // 音声ファイルパスをクリア
+                msg.VoiceFilePath = null;
+
+                // 再生中の場合は停止
+                if (currentPlayingMessage == msg && currentPlayer != null)
+                {
+                    StopCurrentPlayback();
+                }
+
+                // 新しいTTSを生成して再生
+                _ = GenerateTTSAndPlayAsync(msg);
+            }
+        }
+
+        /// <summary>
         /// 音声ファイルを再生（外部から呼び出し可能）
         /// </summary>
         public void PlayVoiceFile(string filePath)
@@ -459,7 +499,7 @@ namespace DesktopAiMascot.controls
 
                 // マスコット名を取得
                 var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
-                Console.WriteLine($"[TTS] マスコット名: {mascotName}");
+                Debug.WriteLine($"[TTS] マスコット名: {mascotName}");
 
                 // 音声ファイルの保存先を決定
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -473,31 +513,215 @@ namespace DesktopAiMascot.controls
                 // StyleBertVits2Serviceを使用してTTSをストリーミングで実行
                 Debug.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
                 var ttsService = new StyleBertVits2Service();
-                byte[] audioData = await ttsService.SynthesizeAsync(msg.Text);
-                Console.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
+                
+                var chunkFiles = new List<string>();
+                int chunkIndex = 0;
 
-                // 音声ファイルを保存
-                await File.WriteAllBytesAsync(voiceFilePath, audioData);
-                Console.WriteLine($"[TTS] 音声ファイルを保存しました: {voiceFilePath}");
-
-                // メッセージに音声ファイルパスを設定
-                msg.VoiceFilePath = voiceFilePath;
-
-                // UIを更新
-                Dispatcher.Invoke(() =>
+                await foreach (var audioData in ttsService.SynthesizeStreamAsync(msg.Text))
                 {
-                    chatMessageListBox.Items.Refresh();
-                });
+                    Debug.WriteLine($"[TTS] チャンク {chunkIndex + 1} の音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
 
-                // 音声を再生
-                PlayVoiceFileInternal(voiceFilePath, msg);
+                    // チャンクファイルを保存
+                    string chunkFileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}_chunk{chunkIndex}.wav";
+                    string chunkFilePath = Path.Combine(voiceDir, chunkFileName);
+                    await File.WriteAllBytesAsync(chunkFilePath, audioData);
+                    Debug.WriteLine($"[TTS] チャンク音声ファイルを保存しました: {chunkFilePath}");
 
-                Console.WriteLine($"[TTS] TTS生成と再生が正常に完了しました");
+                    chunkFiles.Add(chunkFilePath);
+
+                    // 最初のチャンクの場合、メッセージに音声ファイルパスを設定
+                    if (chunkIndex == 0)
+                    {
+                        msg.VoiceFilePath = chunkFilePath;
+                        Dispatcher.Invoke(() =>
+                        {
+                            chatMessageListBox.Items.Refresh();
+                        });
+                    }
+
+                    // キューに追加して順次再生
+                    EnqueueAndPlayVoice(chunkFilePath, chunkIndex == 0 ? msg : null);
+
+                    chunkIndex++;
+                }
+
+                Debug.WriteLine($"[TTS] TTS生成が正常に完了しました。合計 {chunkFiles.Count} チャンク");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
+                Debug.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// 音声ファイルをキューに追加して順次再生
+        /// </summary>
+        private void EnqueueAndPlayVoice(string filePath, ChatMessage? message)
+        {
+            voiceQueue.Enqueue(filePath);
+
+            // 最初のチャンクの場合、メッセージを保持
+            if (message != null && currentPlayingMessage == null)
+            {
+                currentPlayingMessage = message;
+            }
+
+            // キューの再生が開始されていない場合は開始
+            if (!isPlayingQueue)
+            {
+                _ = PlayVoiceQueueAsync();
+            }
+        }
+
+        /// <summary>
+        /// キューから順次音声ファイルを再生
+        /// </summary>
+        private async Task PlayVoiceQueueAsync()
+        {
+            if (isPlayingQueue)
+                return;
+
+            isPlayingQueue = true;
+
+            try
+            {
+                while (voiceQueue.Count > 0)
+                {
+                    var filePath = voiceQueue.Dequeue();
+                    
+                    if (File.Exists(filePath))
+                    {
+                        Debug.WriteLine($"[TTS] キューから再生: {filePath}");
+                        await PlayVoiceFileAndWaitAsync(filePath);
+                    }
+                }
+            }
+            finally
+            {
+                isPlayingQueue = false;
+                
+                // すべてのチャンクの再生が完了したら、ボタンを戻す
+                if (currentPlayingMessage != null)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdatePlayButtonImage(currentPlayingMessage, false);
+                        currentPlayingMessage = null;
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// 音声ファイルを再生して完了まで待機
+        /// </summary>
+        private async Task PlayVoiceFileAndWaitAsync(string filePath)
+        {
+            try
+            {
+                // 前の再生を停止
+                if (currentPlayer != null)
+                {
+                    try
+                    {
+                        currentPlayer.Stop();
+                        currentPlayer.Dispose();
+                    }
+                    catch { }
+                }
+
+                currentPlayer = new SoundPlayer(filePath);
+                currentPlayer.Load();
+
+                // 最初のチャンクの再生時のみボタンを停止ボタンに変更
+                if (currentPlayingMessage != null)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdatePlayButtonImage(currentPlayingMessage, true);
+                    }, System.Windows.Threading.DispatcherPriority.Render);
+                }
+
+                currentPlayer.Play();
+
+                // WAVファイルの長さを正確に計算
+                int durationMs = GetWavDurationMs(filePath);
+                Debug.WriteLine($"[TTS] 再生時間: {durationMs}ms");
+                await Task.Delay(durationMs);
+                
+                // チャンク間に適切な間隔を追加
+                Debug.WriteLine($"[TTS] チャンク間隔: {CHUNK_INTERVAL_MS}ms");
+                await Task.Delay(CHUNK_INTERVAL_MS);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TTS] 音声再生エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// WAVファイルの再生時間をミリ秒で取得
+        /// </summary>
+        private int GetWavDurationMs(string filePath)
+        {
+            try
+            {
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                using (var br = new BinaryReader(fs))
+                {
+                    // WAVヘッダーを読み込む
+                    // RIFF header
+                    br.ReadBytes(4); // "RIFF"
+                    br.ReadInt32();  // File size
+                    br.ReadBytes(4); // "WAVE"
+                    
+                    // fmt chunk
+                    br.ReadBytes(4); // "fmt "
+                    int fmtSize = br.ReadInt32();
+                    br.ReadInt16();  // Audio format
+                    short channels = br.ReadInt16();
+                    int sampleRate = br.ReadInt32();
+                    int byteRate = br.ReadInt32();
+                    br.ReadInt16();  // Block align
+                    short bitsPerSample = br.ReadInt16();
+                    
+                    // 追加のfmtデータをスキップ
+                    if (fmtSize > 16)
+                    {
+                        br.ReadBytes(fmtSize - 16);
+                    }
+                    
+                    // data chunk を探す
+                    while (fs.Position < fs.Length)
+                    {
+                        string chunkId = new string(br.ReadChars(4));
+                        int chunkSize = br.ReadInt32();
+                        
+                        if (chunkId == "data")
+                        {
+                            // データサイズから再生時間を計算
+                            // duration (ms) = (dataSize / byteRate) * 1000
+                            int durationMs = (int)((double)chunkSize / byteRate * 1000);
+                            return durationMs;
+                        }
+                        else
+                        {
+                            // 他のチャンクはスキップ
+                            br.ReadBytes(chunkSize);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[TTS] WAVファイル解析エラー: {ex.Message}");
             }
+            
+            // エラー時はファイルサイズから推定（安全側に倒す）
+            var fileInfo = new FileInfo(filePath);
+            // 44.1kHz, 16bit, mono と仮定
+            return (int)(fileInfo.Length / 88.2); // 88,200 bytes/sec = 88.2 bytes/ms
         }
 
         /// <summary>

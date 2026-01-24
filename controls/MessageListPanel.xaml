@@ -80,6 +80,39 @@ d:DesignHeight="450" d:DesignWidth="800"
                                 </Button.Template>
                             </Button>
                             
+                            <!-- 再作成ボタン -->
+                            <Button x:Name="RegenerateButton"
+                                    DockPanel.Dock="Right"
+                                    Width="20"
+                                    Height="20"
+                                    Margin="4,0,0,0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"
+                                    Click="RegenerateButton_Click"
+                                    Tag="{Binding}"
+                                    ToolTip="再作成">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="RegenerateBorder"
+                                                Background="{TemplateBinding Background}"
+                                                CornerRadius="4">
+                                            <Path Data="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
+                                                  Fill="#666666"
+                                                  Stretch="Uniform"
+                                                  Width="16"
+                                                  Height="16"
+                                                  Margin="2"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="RegenerateBorder" Property="Background" Value="#20000000"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            
                             <Border Background="#E6FFFFFF"
                                     CornerRadius="12"
                                     Padding="12,12"

@@ -64,7 +64,8 @@
         <Grid x:Name="inputBox" 
               Grid.Row="2" 
               Background="White"
-              Height="24"
+              MinHeight="24"
+              MaxHeight="120"
               Margin="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -74,14 +75,15 @@
             <TextBox x:Name="inputTextBox"
                      Grid.Column="0"
                      VerticalAlignment="Stretch"
-                     Padding="0"
+                     Padding="4,2"
                      BorderThickness="0"
                      TextWrapping="Wrap"
                      FontFamily="Segoe UI"
                      FontSize="16"
-                     AcceptsReturn="True"
+                     AcceptsReturn="False"
                      VerticalScrollBarVisibility="Auto"
-                     KeyDown="InputTextBox_KeyDown" TextChanged="inputTextBox_TextChanged"
+                     KeyDown="InputTextBox_KeyDown"
+                     TextChanged="inputTextBox_TextChanged"
                      Text=""
                      />
 
