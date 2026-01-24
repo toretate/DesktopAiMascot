@@ -8,8 +8,8 @@
     mc:Ignorable="d"
     Title="Desktop Mascot"
     WindowStyle="None"
-    AllowsTransparency="True"
     Background="Transparent"
+    AllowsTransparency="False"
     ShowInTaskbar="False"
     Topmost="True"
     ResizeMode="NoResize"
@@ -19,13 +19,22 @@
     MouseDown="Window_MouseDown"
     MouseMove="Window_MouseMove"
     MouseUp="Window_MouseUp">
-<Grid>
+<WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="0"
+                 GlassFrameThickness="-1"
+                 ResizeBorderThickness="0"
+                 CornerRadius="0"
+                 UseAeroCaptionButtons="False"/>
+</WindowChrome.WindowChrome>
+<Grid Background="Transparent">
     <!-- Interaction Panel (left side) -->
     <wpf:InteractionPanel x:Name="InteractionPanel"
                          Width="210"
                          HorizontalAlignment="Left"
                          VerticalAlignment="Stretch"
-                         Margin="4,0,0,0"/>
+                         Margin="4,0,0,0"
+						 Background="#80FFFFFF"
+						 />
         
     <!-- Mascot Image (right side) -->
     <Image x:Name="MascotImage"
@@ -36,6 +45,7 @@
            RenderOptions.BitmapScalingMode="Fant"
            RenderOptions.EdgeMode="Unspecified"
            UseLayoutRounding="False"
-           SnapsToDevicePixels="False"/>
-    </Grid>
+           SnapsToDevicePixels="False"
+		   />
+</Grid>
 </Window>

@@ -54,8 +54,10 @@ namespace DesktopAiMascot.mascots
 
             SetupNotifyIcon();
 
+            // マスコット初期化
             mascot = new Mascot(new System.Drawing.Point(220, 0), new System.Drawing.Size(imageWidth, imageHeight));
 
+            // InteractionPanelのマスコット変更イベントを処理。画像更新と設定保存
             InteractionPanel.MascotChanged += (s, model) =>
             {
                 mascot.Reload(model);
@@ -64,11 +66,25 @@ namespace DesktopAiMascot.mascots
                 UpdateMascotImage();
             };
 
+            // InteractionPanelのドラッグ移動イベントを処理。ウィンドウを動かす
             InteractionPanel.RequestDragMove += (s, e) =>
             {
                 try
                 {
-                    this.DragMove();
+                    if (Mouse.LeftButton == MouseButtonState.Pressed)
+                    {
+                        // ドラッグ開始時にアニメーションを一時停止
+                        if (animationTimer != null && animationTimer.IsEnabled)
+                        {
+                            animationTimer.Stop();
+                        }
+                        this.DragMove();
+                        // ドラッグ終了後にアニメーションを再開
+                        if (animationTimer != null && !animationTimer.IsEnabled)
+                        {
+                            animationTimer.Start();
+                        }
+                    }
                 }
                 catch { }
             };
@@ -99,8 +115,25 @@ namespace DesktopAiMascot.mascots
                 }
             });
 
-            animationTimer = new DispatcherTimer();
-            animationTimer.Interval = TimeSpan.FromMilliseconds(100);
+            // InteractionPanel上でマウス操作中はアニメーションを一時停止
+            InteractionPanel.MouseEnter += (s, e) =>
+            {
+                if (animationTimer != null && animationTimer.IsEnabled)
+                {
+                    animationTimer.Stop();
+                }
+            };
+
+            InteractionPanel.MouseLeave += (s, e) =>
+            {
+                if (animationTimer != null && !animationTimer.IsEnabled)
+                {
+                    animationTimer.Start();
+                }
+            };
+
+            animationTimer = new DispatcherTimer(DispatcherPriority.Background);
+            animationTimer.Interval = TimeSpan.FromMilliseconds(150);
             animationTimer.Tick += AnimationTimer_Tick;
             animationTimer.Start();
 
@@ -154,6 +187,8 @@ namespace DesktopAiMascot.mascots
             notifyIcon.Visible = true;
         }
 
+        private bool isUpdatingImage = false;
+
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
             UpdateMascotImage();
@@ -161,6 +196,9 @@ namespace DesktopAiMascot.mascots
 
         private void UpdateMascotImage()
         {
+            if (isUpdatingImage) return;
+
+            isUpdatingImage = true;
             try
             {
                 var image = mascot?.GetCurrentImageClone();
@@ -172,6 +210,10 @@ namespace DesktopAiMascot.mascots
             catch (Exception ex)
             {
                 Console.WriteLine($"Error updating mascot image: {ex.Message}");
+            }
+            finally
+            {
+                isUpdatingImage = false;
             }
         }
 
@@ -270,7 +312,11 @@ namespace DesktopAiMascot.mascots
                     isDragging = true;
                     potentialClick = false;
                     // ドラッグ中はアニメーションを一時停止してパフォーマンスを向上
-                    animationTimer?.Stop();
+                    if (animationTimer != null && animationTimer.IsEnabled)
+                    {
+                        animationTimer.Stop();
+                        Console.WriteLine("Animation stopped during drag");
+                    }
                 }
             }
 
@@ -312,7 +358,11 @@ namespace DesktopAiMascot.mascots
                     isDragging = false;
                     this.ReleaseMouseCapture();
                     // ドラッグ終了後、アニメーションを再開
-                    animationTimer?.Start();
+                    if (animationTimer != null && !animationTimer.IsEnabled)
+                    {
+                        animationTimer.Start();
+                        Console.WriteLine("Animation resumed after drag");
+                    }
                     try
                     {
                         SaveLocation(new System.Windows.Point(this.Left, this.Top));
