@@ -20,6 +20,7 @@ namespace DesktopAiMascot.Wpf
     public partial class InteractionPanel : System.Windows.Controls.UserControl
     {
         public event EventHandler<MascotModel>? MascotChanged;
+        public event EventHandler? RequestDragMove;
 
         public ChatAiService ChatService { get; set; }
 
@@ -42,9 +43,6 @@ namespace DesktopAiMascot.Wpf
                 messagesPanel.LoadFromFile(messagesFilePath);
             }
             catch { }
-
-            this.MouseDown += DragMove_MouseDown;
-            topToolStrip.MouseDown += DragMove_MouseDown;
 
             clearBtn.Click += ClearMessages;
             settingsButton.Click += OnSettingsButtonClicked;
@@ -75,8 +73,9 @@ namespace DesktopAiMascot.Wpf
 
         private void DragMove_MouseDown(object? sender, MouseButtonEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.ChangedButton == MouseButton.Left)
             {
+                // WPFウィンドウ内の場合
                 var window = Window.GetWindow(this);
                 if (window != null)
                 {
@@ -84,7 +83,15 @@ namespace DesktopAiMascot.Wpf
                     {
                         window.DragMove();
                     }
-                    catch { }
+                    catch (InvalidOperationException)
+                    {
+                        // DragMoveは左ボタンが押されている間のみ有効
+                    }
+                }
+                else
+                {
+                    // ElementHost内でホストされている場合、親Formに通知
+                    RequestDragMove?.Invoke(this, EventArgs.Empty);
                 }
             }
         }

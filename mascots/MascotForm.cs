@@ -3,6 +3,7 @@ using DesktopAiMascot.aiservice;
 using System;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 
@@ -10,6 +11,16 @@ namespace DesktopAiMascot.mascots
 {
     public partial class MascotForm : Form
     {
+        // Windows API for drag move
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
         private readonly string DEFAULT_MODEL_NAME = "AIアシスタント";
 
         private NotifyIcon notifyIcon;
@@ -98,6 +109,18 @@ namespace DesktopAiMascot.mascots
                 SaveModelName();
                 this.Invalidate();
             };
+            
+            // InteractionPanelからのドラッグ要求を処理
+            interactionPanel.RequestDragMove += (s, e) =>
+            {
+                // Windows FormsのDragMove実装
+                if (Control.MouseButtons == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+                }
+            };
+            
             this.Controls.Add(interactionPanelHost);
 
             // 初期マスコットモデルの読み込み
