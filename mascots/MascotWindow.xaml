@@ -1,51 +1,47 @@
 <Window x:Class="DesktopAiMascot.mascots.MascotWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:local="clr-namespace:DesktopAiMascot.mascots"
-    xmlns:wpf="clr-namespace:DesktopAiMascot.Wpf"
-    mc:Ignorable="d"
-    Title="Desktop Mascot"
-    WindowStyle="None"
-    Background="Transparent"
-    AllowsTransparency="False"
-    ShowInTaskbar="False"
-    Topmost="True"
-    ResizeMode="NoResize"
-    Width="476" Height="342"
-    UseLayoutRounding="True"
-    TextOptions.TextFormattingMode="Display"
-    MouseDown="Window_MouseDown"
-    MouseMove="Window_MouseMove"
-    MouseUp="Window_MouseUp">
-<WindowChrome.WindowChrome>
-    <WindowChrome CaptionHeight="0"
-                 GlassFrameThickness="-1"
-                 ResizeBorderThickness="0"
-                 CornerRadius="0"
-                 UseAeroCaptionButtons="False"/>
-</WindowChrome.WindowChrome>
-<Grid Background="Transparent">
-    <!-- Interaction Panel (left side) -->
-    <wpf:InteractionPanel x:Name="InteractionPanel"
-                         Width="210"
-                         HorizontalAlignment="Left"
-                         VerticalAlignment="Stretch"
-                         Margin="4,0,0,0"
-						 Background="#80FFFFFF"
-						 />
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DesktopAiMascot.mascots"
+        xmlns:wpf="clr-namespace:DesktopAiMascot.Wpf"
+        xmlns:controls="clr-namespace:DesktopAiMascot.Controls"
+        mc:Ignorable="d"
+        Title="Desktop Mascot"
+        WindowStyle="None"
+        Background="Transparent"
+		AllowsTransparency="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        Width="476" Height="342"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        MouseDown="Window_MouseDown"
+        MouseMove="Window_MouseMove"
+        MouseUp="Window_MouseUp">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0"
+                     GlassFrameThickness="-1"
+                     ResizeBorderThickness="0"
+                     CornerRadius="0"
+                     UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+    <Grid Background="Transparent">
+        <!-- Interaction Panel (left side) -->
+        <wpf:InteractionPanel x:Name="InteractionPanel"
+                             Width="210"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Stretch"
+                             Margin="4,0,0,0"
+                             Background="#80FFFFFF"/>
         
-    <!-- Mascot Image (right side) -->
-    <Image x:Name="MascotImage"
-           Width="256" Height="342"
-           HorizontalAlignment="Right"
-           VerticalAlignment="Top"
-           Stretch="Uniform"
-           RenderOptions.BitmapScalingMode="Fant"
-           RenderOptions.EdgeMode="Unspecified"
-           UseLayoutRounding="False"
-           SnapsToDevicePixels="False"
-		   />
-</Grid>
+        <!-- Mascot Control (right side) -->
+        <controls:MascotControl x:Name="MascotControl"
+                               Width="256" Height="342"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Top"
+							   Background="Transparent"
+							   />
+    </Grid>
 </Window>

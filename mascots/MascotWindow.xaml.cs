@@ -5,7 +5,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace DesktopAiMascot.mascots
@@ -31,7 +30,6 @@ namespace DesktopAiMascot.mascots
         private readonly SystemConfig systemConfig = SystemConfig.Instance;
 
         private DispatcherTimer animationTimer;
-        private BitmapSource cachedBitmapSource;
 
         public MascotWindow()
         {
@@ -56,14 +54,13 @@ namespace DesktopAiMascot.mascots
 
             // マスコット初期化
             mascot = new Mascot(new System.Drawing.Point(220, 0), new System.Drawing.Size(imageWidth, imageHeight));
+            MascotControl.Initialize(mascot);
 
-            // InteractionPanelのマスコット変更イベントを処理。画像更新と設定保存
             InteractionPanel.MascotChanged += (s, model) =>
             {
-                mascot.Reload(model);
+                MascotControl.ReloadMascot(model);
                 MascotManager.Instance.CurrentModel = model;
                 SaveModelName();
-                UpdateMascotImage();
             };
 
             // InteractionPanelのドラッグ移動イベントを処理。ウィンドウを動かす
@@ -107,7 +104,7 @@ namespace DesktopAiMascot.mascots
             {
                 try
                 {
-                    return mascot?.GetCurrentImageClone();
+                    return MascotControl?.GetCurrentImage();
                 }
                 catch
                 {
@@ -171,7 +168,7 @@ namespace DesktopAiMascot.mascots
                 Console.WriteLine($"Applied default location to window: {this.Left},{this.Top}");
             }
 
-            UpdateMascotImage();
+            MascotControl?.UpdateMascotImage();
         }
 
         private void SetupNotifyIcon()
@@ -187,63 +184,12 @@ namespace DesktopAiMascot.mascots
             notifyIcon.Visible = true;
         }
 
-        private bool isUpdatingImage = false;
-
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
-            UpdateMascotImage();
+            MascotControl?.UpdateMascotImage();
         }
 
-        private void UpdateMascotImage()
-        {
-            if (isUpdatingImage) return;
-
-            isUpdatingImage = true;
-            try
-            {
-                var image = mascot?.GetCurrentImageClone();
-                if (image != null)
-                {
-                    MascotImage.Source = ConvertToBitmapSource(image);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error updating mascot image: {ex.Message}");
-            }
-            finally
-            {
-                isUpdatingImage = false;
-            }
-        }
-
-        private BitmapSource ConvertToBitmapSource(Image image)
-        {
-            using (var bitmap = new System.Drawing.Bitmap(image))
-            {
-                using (var memoryStream = new MemoryStream())
-                {
-                    // PNGフォーマットで保存してアルファチャンネルと品質を保持
-                    bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
-                    memoryStream.Position = 0;
-
-                    var bitmapImage = new BitmapImage();
-                    bitmapImage.BeginInit();
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.StreamSource = memoryStream;
-                    // 高品質なデコーディングを有効化
-                    bitmapImage.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
-                    bitmapImage.EndInit();
-                    
-                     
-                     // Freeze to improve performance by making the bitmap immutable
-                     bitmapImage.Freeze();
-                     return bitmapImage;
-                 }
-             }
-         }
-
-         private void ShowMascot(object sender, EventArgs e)
+        private void ShowMascot(object sender, EventArgs e)
         {
             this.Show();
             this.WindowState = WindowState.Normal;
