@@ -19,6 +19,8 @@ namespace DesktopAiMascot.controls
     /// </summary>
     public partial class MessageListPanel : System.Windows.Controls.UserControl
     {
+        public event EventHandler? RequestDragMove;
+        
         private SoundPlayer? currentPlayer = null;
 
         public MessageListPanel()
@@ -45,8 +47,9 @@ namespace DesktopAiMascot.controls
         /// </summary>
         private void DragMove_MouseDown(object? sender, MouseButtonEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.ChangedButton == MouseButton.Left)
             {
+                // WPFウィンドウ内の場合
                 var window = Window.GetWindow(this);
                 if (window != null)
                 {
@@ -54,7 +57,15 @@ namespace DesktopAiMascot.controls
                     {
                         window.DragMove();
                     }
-                    catch { }
+                    catch (InvalidOperationException)
+                    {
+                        // DragMoveは左ボタンが押されている間のみ有効
+                    }
+                }
+                else
+                {
+                    // ElementHost内でホストされている場合、親に通知
+                    RequestDragMove?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
