@@ -37,7 +37,6 @@ namespace DesktopAiMascot.aiservice
         public override async Task<string?> SendMessageAsync(string message)
         {
             string llmModel = SystemConfig.Instance.ModelName;
-            string endpoint = Endpoint;
             string endpoint = EndPoint;
             string apiKey = "NOT_NEEDED_API_KEY";
 
