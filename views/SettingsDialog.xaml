@@ -11,9 +11,7 @@
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
-        ShowInTaskbar="False"
-        UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
+        ShowInTaskbar="False">
     <Grid x:Name="ContentGrid">
         
     </Grid>

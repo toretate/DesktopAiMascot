@@ -33,6 +33,7 @@ namespace DesktopAiMascot
         private readonly SystemConfig systemConfig = SystemConfig.Instance;
 
         private DispatcherTimer animationTimer;
+        private int animationTickCount = 0;
 
         public MascotWindow()
         {
@@ -118,24 +119,21 @@ namespace DesktopAiMascot
             // InteractionPanel上でマウス操作中はアニメーションを一時停止
             this.InteractionPanel.MouseEnter += (s, e) =>
             {
-                if (animationTimer != null && animationTimer.IsEnabled)
-                {
-                    animationTimer.Stop();
-                }
+                MascotAnimationManager.Instance.PauseAnimation();
             };
 
             this.InteractionPanel.MouseLeave += (s, e) =>
             {
-                if (animationTimer != null && !animationTimer.IsEnabled)
-                {
-                    animationTimer.Start();
-                }
+                MascotAnimationManager.Instance.ResumeAnimation();
             };
 
             animationTimer = new DispatcherTimer(DispatcherPriority.Background);
             animationTimer.Interval = TimeSpan.FromMilliseconds(150);
             animationTimer.Tick += AnimationTimer_Tick;
             animationTimer.Start();
+
+            // アニメーションマネージャーにタイマーを登録
+            MascotAnimationManager.Instance.RegisterAnimationTimer(animationTimer);
 
             this.Loaded += MascotWindow_Loaded;
             this.Closing += MascotWindow_Closing;
@@ -306,12 +304,7 @@ namespace DesktopAiMascot
                 {
                     isDragging = false;
                     this.ReleaseMouseCapture();
-                    // ドラッグ終了後、アニメーションを再開
-                    if (animationTimer != null && !animationTimer.IsEnabled)
-                    {
-                        animationTimer.Start();
-                        Console.WriteLine("Animation resumed after drag");
-                    }
+                    MascotAnimationManager.Instance.ResumeAnimation();
                     try
                     {
                         SaveLocation(new System.Windows.Point(this.Left, this.Top));

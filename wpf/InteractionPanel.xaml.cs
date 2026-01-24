@@ -123,7 +123,6 @@ namespace DesktopAiMascot.Wpf
 
                 var dlg = new DesktopAiMascot.views.SettingsDialog(dialogContent);
                 
-                // WPFウィンドウの親を設定
                 var parentWindow = Window.GetWindow(this);
                 if (parentWindow != null)
                 {
@@ -134,7 +133,7 @@ namespace DesktopAiMascot.Wpf
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"設定ダイアログエラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"設定ダイアログエラー: {ex.Message}");
             }
         }
 
