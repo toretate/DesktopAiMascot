@@ -3,26 +3,27 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.aiservice
 {
-    // AIƒ`ƒƒƒbƒgƒT[ƒrƒX‚ÌƒCƒ“ƒ^[ƒtƒF[ƒX
+    // AIãƒãƒ£ãƒƒãƒˆã‚µãƒ¼ãƒ“ã‚¹ã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹
     public interface ChatAiService
     {
         /// <summary>
-        /// —˜—p‰Â”\‚Èƒ‚ƒfƒ‹ƒŠƒXƒg‚ğæ“¾‚·‚é
+        /// åˆ©ç”¨å¯èƒ½ãªãƒ¢ãƒ‡ãƒ«ãƒªã‚¹ãƒˆã‚’å–å¾—ã™ã‚‹
         /// </summary>
-        /// <param name="reload">ƒLƒƒƒbƒVƒ…‚ğ–³‹‚µ‚ÄÄæ“¾‚·‚éê‡‚Ítrue</param>
+        /// <param name="reload">ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’ç„¡è¦–ã—ã¦å†å–å¾—ã™ã‚‹å ´åˆã¯true</param>
         /// <returns></returns>
         public Task<string[]> GetAvailableModels( bool reload );
 
-        // AI‚Éƒ`ƒƒƒbƒgƒƒbƒZ[ƒW‚ğ‘—M‚·‚é
+        // AIã«ãƒãƒ£ãƒƒãƒˆãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’é€ä¿¡ã™ã‚‹
         public Task<string?> SendMessageAsync(string message);
 
-        // ƒ`ƒƒƒbƒg—š—ğ‚ğƒNƒŠƒA‚·‚é
+        // ãƒãƒ£ãƒƒãƒˆå±¥æ­´ã‚’ã‚¯ãƒªã‚¢ã™ã‚‹
         public void ClearConversation();
 
-        public string EndPoint { get; set; } // © protected ‚ğ public ‚É•ÏX
+        public string EndPoint { get; set; } // â† protected ã‚’ public ã«å¤‰æ›´
     }
 
     public abstract class ChatAiServiceBase : ChatAiService
@@ -38,7 +39,7 @@ namespace DesktopAiMascot.aiservice
 
             try
             {
-                // OpenAI APIŒİŠ·‚ÌmodelsƒGƒ“ƒhƒ|ƒCƒ“ƒg‚ğŒÄ‚Ño‚·
+                // OpenAI APIäº’æ›ã®modelsã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆã‚’å‘¼ã³å‡ºã™
                 var url = EndPoint.TrimEnd('/') + "/models";
                 
                 using var client = new HttpClient();
@@ -67,7 +68,7 @@ namespace DesktopAiMascot.aiservice
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"GetAvailableModels Error: {ex.Message}");
+                Debug.WriteLine($"GetAvailableModels Error: {ex.Message}");
                 return Array.Empty<string>();
             }
         }
@@ -76,6 +77,6 @@ namespace DesktopAiMascot.aiservice
 
         public abstract void ClearConversation();
 
-        public abstract string EndPoint { get; set; } // © protected ‚ğ public ‚É•ÏX
+        public abstract string EndPoint { get; set; } // â† protected ã‚’ public ã«å¤‰æ›´
     }
 }

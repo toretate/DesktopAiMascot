@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using DesktopAiMascot.aiservice;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.views
 {
@@ -48,7 +49,7 @@ namespace DesktopAiMascot.views
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error populating Voice AI combo: {ex.Message}");
+                Debug.WriteLine($"Error populating Voice AI combo: {ex.Message}");
             }
         }
     }

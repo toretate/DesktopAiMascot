@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -226,30 +227,30 @@ namespace DesktopAiMascot.Wpf
         {
             try
             {
-                Console.WriteLine($"[TTS] TTS生成を開始します。テキスト長: {text.Length}文字");
+                Debug.WriteLine($"[TTS] TTS生成を開始します。テキスト長: {text.Length}文字");
 
                 var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
-                Console.WriteLine($"[TTS] マスコット名: {mascotName}");
+                Debug.WriteLine($"[TTS] マスコット名: {mascotName}");
 
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string voiceDir = Path.Combine(baseDir, "tmp", "voice", mascotName);
                 if (!Directory.Exists(voiceDir))
                 {
                     Directory.CreateDirectory(voiceDir);
-                    Console.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
+                    Debug.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
                 }
 
                 string fileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
                 string voiceFilePath = Path.Combine(voiceDir, fileName);
-                Console.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
+                Debug.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
 
-                Console.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
+                Debug.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
                 var ttsService = new StyleBertVits2Service();
                 byte[] audioData = await ttsService.SynthesizeAsync(text);
-                Console.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
+                Debug.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
 
                 await File.WriteAllBytesAsync(voiceFilePath, audioData);
-                Console.WriteLine($"[TTS] 音声ファイルを保存しました: {voiceFilePath}");
+                Debug.WriteLine($"[TTS] 音声ファイルを保存しました: {voiceFilePath}");
 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -260,21 +261,21 @@ namespace DesktopAiMascot.Wpf
                         if (!msg.isUserMessage() && string.IsNullOrEmpty(msg.VoiceFilePath))
                         {
                             msg.VoiceFilePath = voiceFilePath;
-                            Console.WriteLine($"[TTS] メッセージに音声ファイルパスを設定しました");
+                            Debug.WriteLine($"[TTS] メッセージに音声ファイルパスを設定しました");
                             break;
                         }
                     }
 
                     messagesPanel.PlayVoiceFile(voiceFilePath);
-                    Console.WriteLine($"[TTS] 音声を自動再生しました");
+                    Debug.WriteLine($"[TTS] 音声を自動再生しました");
                 });
 
-                Console.WriteLine($"[TTS] TTS生成が正常に完了しました");
+                Debug.WriteLine($"[TTS] TTS生成が正常に完了しました");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
-                Console.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
+                Debug.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
+                Debug.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
             }
         }
 

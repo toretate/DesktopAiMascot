@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Drawing;
 using System.Text.Json;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.aiservice
 {
@@ -24,7 +25,7 @@ namespace DesktopAiMascot.aiservice
         {
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                System.Console.WriteLine("Google AI API key not found. Set environment variable 'DESKTOPAIMASCOT_GOOGLE_API_KEY' or put the key in '%APPDATA%\\DesktopAiMascot\\apikey.txt'.");
+                Debug.WriteLine("Google AI API key not found. Set environment variable 'DESKTOPAIMASCOT_GOOGLE_API_KEY' or put the key in '%APPDATA%\\DesktopAiMascot\\apikey.txt'.");
             }
         }
 
@@ -109,19 +110,19 @@ namespace DesktopAiMascot.aiservice
 
                             // Some responses put images under candidates[].content.parts[].image or similar
                             // Fallback to overlay
-                            System.Console.WriteLine("No image data found in Gemini response, falling back to local generation.");
+                            Debug.WriteLine("No image data found in Gemini response, falling back to local generation.");
                             return CreateOverlayImage(prompt, image);
                         }
                         catch (Exception ex)
                         {
-                            System.Console.WriteLine($"Failed to parse Gemini response: {ex.Message}");
+                            Debug.WriteLine($"Failed to parse Gemini response: {ex.Message}");
                             return CreateOverlayImage(prompt, image);
                         }
                     }
                     else
                     {
                         // Log
-                        System.Console.WriteLine($"Gemini API request failed: {resp.StatusCode} {respBody}");
+                        Debug.WriteLine($"Gemini API request failed: {resp.StatusCode} {respBody}");
 
                         // Try parse retry info from JSON body
                         double? delaySeconds = null;
@@ -178,7 +179,7 @@ namespace DesktopAiMascot.aiservice
                         if (delaySeconds.HasValue)
                         {
                             var waited = Math.Max(0.5, Math.Min(120, delaySeconds.Value));
-                            System.Console.WriteLine($"Gemini API rate-limited. Waiting {waited:F1}s before retry (attempt {attempt}/{maxAttempts}).");
+                            Debug.WriteLine($"Gemini API rate-limited. Waiting {waited:F1}s before retry (attempt {attempt}/{maxAttempts}).");
                             Task.Delay(TimeSpan.FromSeconds(waited)).GetAwaiter().GetResult();
                             continue;
                         }
@@ -187,13 +188,13 @@ namespace DesktopAiMascot.aiservice
                             var backoff = Math.Min(30.0, Math.Pow(2, attempt));
                             var jitter = new Random().NextDouble() * 0.5;
                             var wait = backoff + jitter;
-                            System.Console.WriteLine($"Gemini API non-success ({resp.StatusCode}). Retrying in {wait:F1}s (attempt {attempt}/{maxAttempts}).");
+                            Debug.WriteLine($"Gemini API non-success ({resp.StatusCode}). Retrying in {wait:F1}s (attempt {attempt}/{maxAttempts}).");
                             Task.Delay(TimeSpan.FromSeconds(wait)).GetAwaiter().GetResult();
                             continue;
                         }
                         else
                         {
-                            System.Console.WriteLine("Gemini API retries exhausted, falling back to local generation.");
+                            Debug.WriteLine("Gemini API retries exhausted, falling back to local generation.");
                             return CreateOverlayImage(prompt, image);
                         }
                     }
@@ -204,7 +205,7 @@ namespace DesktopAiMascot.aiservice
             }
             catch (Exception ex)
             {
-                System.Console.WriteLine($"Error calling Gemini API: {ex.Message}");
+                Debug.WriteLine($"Error calling Gemini API: {ex.Message}");
                 return CreateOverlayImage(prompt, image);
             }
         }

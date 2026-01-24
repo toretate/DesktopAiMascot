@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Diagnostics;
 using System.Diagnostics;
 
 namespace DesktopAiMascot.aiservice
@@ -57,7 +58,7 @@ namespace DesktopAiMascot.aiservice
 
                 var json = JsonSerializer.Serialize(requestObj);
                 Debug.WriteLine("FoundryLocal request JSON:\n" + json);
-                Console.WriteLine("FoundryLocal request JSON:\n" + json);
+                Debug.WriteLine("FoundryLocal request JSON:\n" + json);
 
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 

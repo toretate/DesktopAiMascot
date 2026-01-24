@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Dynamic;
+using System.Diagnostics;
 
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -90,13 +91,13 @@ namespace DesktopAiMascot.mascots
                     catch (Exception ex)
                     {
                         // ignore individual mascot load errors but write to console for debugging
-                        Console.WriteLine($"Failed to load mascot from '{dir}': {ex.Message}");
+                        Debug.WriteLine($"Failed to load mascot from '{dir}': {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"MascotManager.Load error: {ex.Message}");
+                Debug.WriteLine($"MascotManager.Load error: {ex.Message}");
             }
         }
 

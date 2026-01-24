@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using DesktopAiMascot.aiservice;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.views
 {
@@ -80,7 +81,7 @@ namespace DesktopAiMascot.views
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to update model list: {ex.Message}");
+                Debug.WriteLine($"Failed to update model list: {ex.Message}");
             }
             finally
             {
@@ -123,7 +124,7 @@ namespace DesktopAiMascot.views
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error populating LLM engine combo: {ex.Message}");
+                Debug.WriteLine($"Error populating LLM engine combo: {ex.Message}");
             }
         }
     }

@@ -47,7 +47,7 @@ namespace DesktopAiMascot.aiservice
 
             var chatClient = client.GetChatClient(llmModel);
 
-            // ƒ`ƒƒƒbƒgƒƒbƒZ[ƒW‚Ì\’z
+            // ãƒãƒ£ãƒƒãƒˆãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã®æ§‹ç¯‰
             var messages = new List<OpenAI.Chat.ChatMessage>
             {
                 new SystemChatMessage(SystemPrompt ?? LoadSystemPrompt() ?? "You are a helpful assistant."),
@@ -66,7 +66,7 @@ namespace DesktopAiMascot.aiservice
                 }
             }
 
-            // ƒŒƒXƒ|ƒ“ƒX‚ğæ“¾‚·‚é
+            // ãƒ¬ã‚¹ãƒãƒ³ã‚¹ã‚’å–å¾—ã™ã‚‹
             try
             {
                 var response = await chatClient.CompleteChatAsync(messages);

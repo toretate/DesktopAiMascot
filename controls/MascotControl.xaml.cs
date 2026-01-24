@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using DesktopAiMascot.mascots;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.Controls
 {
@@ -38,7 +39,7 @@ namespace DesktopAiMascot.Controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error updating mascot image: {ex.Message}");
+                Debug.WriteLine($"Error updating mascot image: {ex.Message}");
             }
             finally
             {
@@ -63,7 +64,7 @@ namespace DesktopAiMascot.Controls
             {
                 using (var memoryStream = new MemoryStream())
                 {
-                    // PNGƒtƒH[ƒ}ƒbƒg‚Å•Û‘¶‚µ‚ÄƒAƒ‹ƒtƒ@ƒ`ƒƒƒ“ƒlƒ‹‚Æ•i¿‚ğ•Û
+                    // PNGãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆã§ä¿å­˜ã—ã¦ã‚¢ãƒ«ãƒ•ã‚¡ãƒãƒ£ãƒ³ãƒãƒ«ã¨å“è³ªã‚’ä¿æŒ
                     bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
                     memoryStream.Position = 0;
 
@@ -71,7 +72,7 @@ namespace DesktopAiMascot.Controls
                     bitmapImage.BeginInit();
                     bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
                     bitmapImage.StreamSource = memoryStream;
-                    // ‚•i¿‚ÈƒfƒR[ƒfƒBƒ“ƒO‚ğ—LŒø‰»
+                    // é«˜å“è³ªãªãƒ‡ã‚³ãƒ¼ãƒ‡ã‚£ãƒ³ã‚°ã‚’æœ‰åŠ¹åŒ–
                     bitmapImage.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
                     bitmapImage.EndInit();
 

@@ -4,6 +4,7 @@ using DesktopAiMascot.Controls;
 using DesktopAiMascot.mascots;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Media;
@@ -142,7 +143,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"保存エラー: {ex.Message}");
+                Debug.WriteLine($"保存エラー: {ex.Message}");
             }
         }
 
@@ -160,7 +161,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"読み込みエラー: {ex.Message}");
+                Debug.WriteLine($"読み込みエラー: {ex.Message}");
             }
 
             return null;
@@ -185,7 +186,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"クリップボードコピーエラー: {ex.Message}");
+                Debug.WriteLine($"クリップボードコピーエラー: {ex.Message}");
             }
         }
 
@@ -210,7 +211,7 @@ namespace DesktopAiMascot.controls
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"クリップボードコピーエラー: {ex.Message}");
+                    Debug.WriteLine($"クリップボードコピーエラー: {ex.Message}");
                 }
             }
         }
@@ -274,7 +275,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音声再生エラー: {ex.Message}");
+                Debug.WriteLine($"音声再生エラー: {ex.Message}");
             }
         }
 
@@ -338,7 +339,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音声再生エラー: {ex.Message}");
+                Debug.WriteLine($"音声再生エラー: {ex.Message}");
                 if (currentPlayer != null)
                 {
                     try
@@ -416,7 +417,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ボタン画像更新エラー: {ex.Message}");
+                Debug.WriteLine($"ボタン画像更新エラー: {ex.Message}");
             }
         }
 
@@ -454,7 +455,7 @@ namespace DesktopAiMascot.controls
         {
             try
             {
-                Console.WriteLine($"[TTS] 再生ボタンクリック: TTS生成を開始します。テキスト: {msg.Text}");
+                Debug.WriteLine($"[TTS] 再生ボタンクリック: TTS生成を開始します。テキスト: {msg.Text}");
 
                 // マスコット名を取得
                 var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
@@ -466,16 +467,11 @@ namespace DesktopAiMascot.controls
                 if (!Directory.Exists(voiceDir))
                 {
                     Directory.CreateDirectory(voiceDir);
-                    Console.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
+                    Debug.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
                 }
 
-                // ファイル名を生成（タイムスタンプベース）
-                string fileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
-                string voiceFilePath = Path.Combine(voiceDir, fileName);
-                Console.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
-
-                // StyleBertVits2Serviceを使用してTTSを実行
-                Console.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
+                // StyleBertVits2Serviceを使用してTTSをストリーミングで実行
+                Debug.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
                 var ttsService = new StyleBertVits2Service();
                 byte[] audioData = await ttsService.SynthesizeAsync(msg.Text);
                 Console.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
@@ -500,8 +496,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[TTS] TTS生成エラー: {ex.Message}");
-                Console.WriteLine($"[TTS] スタックトレース: {ex.StackTrace}");
+                Debug.WriteLine($"[TTS] WAVファイル解析エラー: {ex.Message}");
             }
         }
 
@@ -533,7 +528,7 @@ namespace DesktopAiMascot.controls
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"スクロールエラー: {ex.Message}");
+                Debug.WriteLine($"スクロールエラー: {ex.Message}");
             }
         }
 

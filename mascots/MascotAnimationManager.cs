@@ -4,7 +4,7 @@ using System.Windows.Threading;
 namespace DesktopAiMascot.mascots
 {
     /// <summary>
-    /// ƒ}ƒXƒRƒbƒg‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ğŠÇ—‚·‚éƒVƒ“ƒOƒ‹ƒgƒ“ƒNƒ‰ƒX
+    /// ãƒã‚¹ã‚³ãƒƒãƒˆã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ç®¡ç†ã™ã‚‹ã‚·ãƒ³ã‚°ãƒ«ãƒˆãƒ³ã‚¯ãƒ©ã‚¹
     /// </summary>
     public class MascotAnimationManager
     {
@@ -21,7 +21,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// ƒAƒjƒ[ƒVƒ‡ƒ“ƒ^ƒCƒ}[‚ğ“o˜^
+        /// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚¿ã‚¤ãƒãƒ¼ã‚’ç™»éŒ²
         /// </summary>
         public void RegisterAnimationTimer(DispatcherTimer timer)
         {
@@ -29,7 +29,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// ƒAƒjƒ[ƒVƒ‡ƒ“‚ğˆê’â~
+        /// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ä¸€æ™‚åœæ­¢
         /// </summary>
         public void PauseAnimation()
         {
@@ -41,7 +41,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// ƒAƒjƒ[ƒVƒ‡ƒ“‚ğÄŠJ
+        /// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’å†é–‹
         /// </summary>
         public void ResumeAnimation()
         {
@@ -53,7 +53,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// ƒAƒjƒ[ƒVƒ‡ƒ“‚ªˆê’â~’†‚©‚Ç‚¤‚©
+        /// ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãŒä¸€æ™‚åœæ­¢ä¸­ã‹ã©ã†ã‹
         /// </summary>
         public bool IsPaused => isPaused;
     }

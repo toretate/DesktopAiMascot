@@ -1,4 +1,4 @@
-﻿using DesktopAiMascot.mascots;
+using DesktopAiMascot.mascots;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -90,7 +91,7 @@ namespace DesktopAiMascot
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Config load failed: {ex.Message}");
+                Debug.WriteLine($"Config load failed: {ex.Message}");
             }
         }
 
@@ -109,7 +110,7 @@ namespace DesktopAiMascot
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Config save failed: {ex.Message}");
+                Debug.WriteLine($"Config save failed: {ex.Message}");
             }
         }
     }

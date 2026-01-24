@@ -4,15 +4,16 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using ImageMagick;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace DesktopAiMascot.mascots
 {
     /**
-     * ƒ}ƒXƒRƒbƒg‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚ğ•\‚·ƒNƒ‰ƒX
+     * ãƒã‚¹ã‚³ãƒƒãƒˆã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’è¡¨ã™ã‚¯ãƒ©ã‚¹
      */
     public class Mascot : IDisposable
     {
-        // Œ»İ‚Ìƒ}ƒXƒRƒbƒgƒ‚ƒfƒ‹
+        // ç¾åœ¨ã®ãƒã‚¹ã‚³ãƒƒãƒˆãƒ¢ãƒ‡ãƒ«
         public MascotModel? Model { get; private set; }
         public Point Position { get; set; }
         public Size Size { get; set; }
@@ -32,16 +33,16 @@ namespace DesktopAiMascot.mascots
 
         public void Reload(MascotModel newModel)
         {
-            Model?.Dispose();    // ƒLƒƒƒbƒVƒ…”jŠü
+            Model?.Dispose();    // ã‚­ãƒ£ãƒƒã‚·ãƒ¥ç ´æ£„
 
             Model = newModel;
             images = newModel.LoadImages();
             
             // Log for debugging
-            Console.WriteLine($"Mascot reloaded: {newModel.Name}, {frameCount} images.");
+            Debug.WriteLine($"Mascot reloaded: {newModel.Name}, {frameCount} images.");
         }
 
-        // •`‰æ
+        // æç”»
         public void Draw(Graphics g)
         {
             // Save/restore graphics state to avoid side-effects
@@ -58,12 +59,12 @@ namespace DesktopAiMascot.mascots
                 if (images != null && images.Length > 0 && images[CurrentFrame] != null)
                 {
                     var img = images[CurrentFrame];
-                    // ƒAƒXƒyƒNƒg”ä‚ğˆÛ‚µ‚Â‚ÂASize“à‚Éû‚ß‚é (Contain)
+                    // ã‚¢ã‚¹ãƒšã‚¯ãƒˆæ¯”ã‚’ç¶­æŒã—ã¤ã¤ã€Sizeå†…ã«åã‚ã‚‹ (Contain)
                     float ratio = Math.Min((float)Size.Width / img.Width, (float)Size.Height / img.Height);
                     int w = (int)(img.Width * ratio);
                     int h = (int)(img.Height * ratio);
 
-                    // ’†‰›‘µ‚¦
+                    // ä¸­å¤®æƒãˆ
                     int x = Position.X + (Size.Width - w) / 2;
                     int y = Position.Y + (Size.Height - h) / 2;
 

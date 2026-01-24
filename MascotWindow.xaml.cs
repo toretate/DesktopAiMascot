@@ -9,12 +9,13 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Diagnostics;
 
 namespace DesktopAiMascot
 {
     public partial class MascotWindow : Window
     {
-        private readonly string DEFAULT_MODEL_NAME = "AIƒAƒVƒXƒ^ƒ“ƒg";
+        private readonly string DEFAULT_MODEL_NAME = "AIã‚¢ã‚·ã‚¹ã‚¿ãƒ³ãƒˆ";
 
         private NotifyIcon notifyIcon;
         private ContextMenuStrip contextMenu;
@@ -56,7 +57,7 @@ namespace DesktopAiMascot
 
             SetupNotifyIcon();
 
-            // ƒ}ƒXƒRƒbƒg‰Šú‰»
+            // ãƒã‚¹ã‚³ãƒƒãƒˆåˆæœŸåŒ–
             mascot = new Mascot(new System.Drawing.Point(220, 0), new System.Drawing.Size(imageWidth, imageHeight));
             this.MascotControl.Initialize(mascot);
 
@@ -67,20 +68,20 @@ namespace DesktopAiMascot
                 SaveModelName();
             };
 
-            // InteractionPanel‚Ìƒhƒ‰ƒbƒOˆÚ“®ƒCƒxƒ“ƒg‚ğˆ—BƒEƒBƒ“ƒhƒE‚ğ“®‚©‚·
+            // InteractionPanelã®ãƒ‰ãƒ©ãƒƒã‚°ç§»å‹•ã‚¤ãƒ™ãƒ³ãƒˆã‚’å‡¦ç†ã€‚ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’å‹•ã‹ã™
             this.InteractionPanel.RequestDragMove += (s, e) =>
             {
                 try
                 {
                     if (Mouse.LeftButton == MouseButtonState.Pressed)
                     {
-                        // ƒhƒ‰ƒbƒOŠJn‚ÉƒAƒjƒ[ƒVƒ‡ƒ“‚ğˆê’â~
+                        // ãƒ‰ãƒ©ãƒƒã‚°é–‹å§‹æ™‚ã«ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ä¸€æ™‚åœæ­¢
                         if (animationTimer != null && animationTimer.IsEnabled)
                         {
                             animationTimer.Stop();
                         }
                         this.DragMove();
-                        // ƒhƒ‰ƒbƒOI—¹Œã‚ÉƒAƒjƒ[ƒVƒ‡ƒ“‚ğÄŠJ
+                        // ãƒ‰ãƒ©ãƒƒã‚°çµ‚äº†å¾Œã«ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’å†é–‹
                         if (animationTimer != null && !animationTimer.IsEnabled)
                         {
                             animationTimer.Start();
@@ -116,7 +117,7 @@ namespace DesktopAiMascot
                 }
             });
 
-            // InteractionPanelã‚Åƒ}ƒEƒX‘€ì’†‚ÍƒAƒjƒ[ƒVƒ‡ƒ“‚ğˆê’â~
+            // InteractionPanelä¸Šã§ãƒã‚¦ã‚¹æ“ä½œä¸­ã¯ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ä¸€æ™‚åœæ­¢
             this.InteractionPanel.MouseEnter += (s, e) =>
             {
                 MascotAnimationManager.Instance.PauseAnimation();
@@ -132,7 +133,7 @@ namespace DesktopAiMascot
             animationTimer.Tick += AnimationTimer_Tick;
             animationTimer.Start();
 
-            // ƒAƒjƒ[ƒVƒ‡ƒ“ƒ}ƒl[ƒWƒƒ[‚Éƒ^ƒCƒ}[‚ğ“o˜^
+            // ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒãƒãƒ¼ã‚¸ãƒ£ãƒ¼ã«ã‚¿ã‚¤ãƒãƒ¼ã‚’ç™»éŒ²
             MascotAnimationManager.Instance.RegisterAnimationTimer(animationTimer);
 
             this.Loaded += MascotWindow_Loaded;
@@ -159,14 +160,14 @@ namespace DesktopAiMascot
 
                 this.Left = loc.X;
                 this.Top = loc.Y;
-                Console.WriteLine($"Applied saved location to window: {loc.X},{loc.Y}");
+                Debug.WriteLine($"Applied saved location to window: {loc.X},{loc.Y}");
             }
             else
             {
                 var workArea = SystemParameters.WorkArea;
                 this.Left = workArea.Right - this.Width;
                 this.Top = workArea.Bottom - this.Height;
-                Console.WriteLine($"Applied default location to window: {this.Left},{this.Top}");
+                Debug.WriteLine($"Applied default location to window: {this.Left},{this.Top}");
             }
 
             this.MascotControl?.UpdateMascotImage();
@@ -258,11 +259,11 @@ namespace DesktopAiMascot
                 {
                     isDragging = true;
                     potentialClick = false;
-                    // ƒhƒ‰ƒbƒO’†‚ÍƒAƒjƒ[ƒVƒ‡ƒ“‚ğˆê’â~‚µ‚ÄƒpƒtƒH[ƒ}ƒ“ƒX‚ğŒüã
+                    // ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã¯ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‚’ä¸€æ™‚åœæ­¢ã—ã¦ãƒ‘ãƒ•ã‚©ãƒ¼ãƒãƒ³ã‚¹ã‚’å‘ä¸Š
                     if (animationTimer != null && animationTimer.IsEnabled)
                     {
                         animationTimer.Stop();
-                        Console.WriteLine("Animation stopped during drag");
+                        Debug.WriteLine("Animation stopped during drag");
                     }
                 }
             }
@@ -326,7 +327,7 @@ namespace DesktopAiMascot
             {
                 systemConfig.MascotName = MascotManager.Instance.CurrentModel.Name;
                 systemConfig.Save();
-                Console.WriteLine($"Saved model name: {systemConfig.MascotName}");
+                Debug.WriteLine($"Saved model name: {systemConfig.MascotName}");
             }
         }
 
@@ -344,7 +345,7 @@ namespace DesktopAiMascot
         {
             systemConfig.WindowPosition = new System.Drawing.Point((int)p.X, (int)p.Y);
             systemConfig.Save();
-            Console.WriteLine($"Saved location: {p.X},{p.Y}");
+            Debug.WriteLine($"Saved location: {p.X},{p.Y}");
         }
     }
 }

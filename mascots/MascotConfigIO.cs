@@ -5,11 +5,11 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace DesktopAiMascot.mascots
 {
-    // YAML ‚Ì“Ç‚İæ‚èE‰ğÍ‚¨‚æ‚Ñ MascotConfig ‚Æ‚Ì‘ŠŒİ•ÏŠ·‚ğ’S“–‚·‚éƒ†[ƒeƒBƒŠƒeƒB
+    // YAML ã®èª­ã¿å–ã‚Šãƒ»è§£æãŠã‚ˆã³ MascotConfig ã¨ã®ç›¸äº’å¤‰æ›ã‚’æ‹…å½“ã™ã‚‹ãƒ¦ãƒ¼ãƒ†ã‚£ãƒªãƒ†ã‚£
     internal static class MascotConfigIO
     {
         /// <summary>
-        /// w’è‚³‚ê‚½ƒpƒX‚Ìƒtƒ@ƒCƒ‹‚©‚ç YAML ‚ğ“Ç‚İ‚İAMascotConfig ƒIƒuƒWƒFƒNƒg‚ğì¬‚µ‚Ü‚·B
+        /// æŒ‡å®šã•ã‚ŒãŸãƒ‘ã‚¹ã®ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ YAML ã‚’èª­ã¿è¾¼ã¿ã€MascotConfig ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆã—ã¾ã™ã€‚
         /// </summary>
         public static MascotConfig LoadFromFile(string path)
         {
@@ -30,7 +30,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// YAML •¶š—ñ‚©‚ç MascotConfig ƒIƒuƒWƒFƒNƒg‚ğì¬‚µ‚Ü‚·B
+        /// YAML æ–‡å­—åˆ—ã‹ã‚‰ MascotConfig ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ä½œæˆã—ã¾ã™ã€‚
         /// </summary>
         public static MascotConfig Load(string yaml)
         {
@@ -52,7 +52,7 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// MascotConfig ƒIƒuƒWƒFƒNƒg‚ğ YAML •¶š—ñ‚É•ÏŠ·‚µ‚Ü‚·B
+        /// MascotConfig ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã‚’ YAML æ–‡å­—åˆ—ã«å¤‰æ›ã—ã¾ã™ã€‚
         /// </summary>
         public static string Save(MascotConfig config)
         {
@@ -64,20 +64,20 @@ namespace DesktopAiMascot.mascots
         }
 
         /// <summary>
-        /// YAML ‚©‚çƒ}ƒXƒRƒbƒg‚Ìİ’èi–¼‘OAƒVƒXƒeƒ€ƒvƒƒ“ƒvƒgj‚ğ‰ğÍ‚µ‚Ü‚·B
+        /// YAML ã‹ã‚‰ãƒã‚¹ã‚³ãƒƒãƒˆã®è¨­å®šï¼ˆåå‰ã€ã‚·ã‚¹ãƒ†ãƒ ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆï¼‰ã‚’è§£æã—ã¾ã™ã€‚
         /// </summary>
         public static (string Name, string Prompt) ParseFromYaml(string yaml, string defaultName)
         {
             var config = Load(yaml);
 
-            // –¼‘O‚ğæ“¾
+            // åå‰ã‚’å–å¾—
             string name = config.SystemPrompt.Profile.Name;
             if (string.IsNullOrWhiteSpace(name))
             {
                 name = defaultName;
             }
 
-            // ƒvƒƒ“ƒvƒg•¶š—ñ‚ğ¶¬iSystemPromptˆÈ‰º‚Ì“à—e‚ğYAML‰»‚µ‚½‚à‚Ìj
+            // ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆæ–‡å­—åˆ—ã‚’ç”Ÿæˆï¼ˆSystemPromptä»¥ä¸‹ã®å†…å®¹ã‚’YAMLåŒ–ã—ãŸã‚‚ã®ï¼‰
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
