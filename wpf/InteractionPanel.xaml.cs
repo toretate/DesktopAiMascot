@@ -15,8 +15,8 @@ using DesktopAiMascot.mascots;
 namespace DesktopAiMascot.Wpf
 {
     /// <summary>
-    /// InteractionPanel.xaml ‚Ì‘ŠŒİì—pƒƒWƒbƒN
-    /// WPF”Å‚ÌƒCƒ“ƒ^ƒ‰ƒNƒVƒ‡ƒ“ƒpƒlƒ‹
+    /// InteractionPanel.xaml ã®ç›¸äº’ä½œç”¨ãƒ­ã‚¸ãƒƒã‚¯
+    /// WPFç‰ˆã®ã‚¤ãƒ³ã‚¿ãƒ©ã‚¯ã‚·ãƒ§ãƒ³ãƒ‘ãƒãƒ«
     /// </summary>
     public partial class InteractionPanel : System.Windows.Controls.UserControl
     {
@@ -76,7 +76,7 @@ namespace DesktopAiMascot.Wpf
         {
             if (e.ChangedButton == MouseButton.Left)
             {
-                // WPFƒEƒBƒ“ƒhƒE“à‚Ìê‡
+                // WPFã‚¦ã‚£ãƒ³ãƒ‰ã‚¦å†…ã®å ´åˆ
                 var window = Window.GetWindow(this);
                 if (window != null)
                 {
@@ -86,12 +86,12 @@ namespace DesktopAiMascot.Wpf
                     }
                     catch (InvalidOperationException)
                     {
-                        // DragMove‚Í¶ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚Ä‚¢‚éŠÔ‚Ì‚İ—LŒø
+                        // DragMoveã¯å·¦ãƒœã‚¿ãƒ³ãŒæŠ¼ã•ã‚Œã¦ã„ã‚‹é–“ã®ã¿æœ‰åŠ¹
                     }
                 }
                 else
                 {
-                    // ElementHost“à‚ÅƒzƒXƒg‚³‚ê‚Ä‚¢‚éê‡AeForm‚É’Ê’m
+                    // ElementHostå†…ã§ãƒ›ã‚¹ãƒˆã•ã‚Œã¦ã„ã‚‹å ´åˆã€è¦ªFormã«é€šçŸ¥
                     RequestDragMove?.Invoke(this, EventArgs.Empty);
                 }
             }
@@ -134,7 +134,7 @@ namespace DesktopAiMascot.Wpf
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"İ’èƒ_ƒCƒAƒƒOƒGƒ‰[: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"è¨­å®šãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã‚¨ãƒ©ãƒ¼: {ex.Message}");
             }
         }
 
@@ -227,30 +227,30 @@ namespace DesktopAiMascot.Wpf
         {
             try
             {
-                Debug.WriteLine($"[TTS] TTS¶¬‚ğŠJn‚µ‚Ü‚·BƒeƒLƒXƒg’·: {text.Length}•¶š");
+                Debug.WriteLine($"[TTS] TTSç”Ÿæˆã‚’é–‹å§‹ã—ã¾ã™ã€‚ãƒ†ã‚­ã‚¹ãƒˆé•·: {text.Length}æ–‡å­—");
 
                 var mascotName = MascotManager.Instance.CurrentModel?.Name ?? "default";
-                Debug.WriteLine($"[TTS] ƒ}ƒXƒRƒbƒg–¼: {mascotName}");
+                Debug.WriteLine($"[TTS] ãƒã‚¹ã‚³ãƒƒãƒˆå: {mascotName}");
 
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string voiceDir = Path.Combine(baseDir, "tmp", "voice", mascotName);
                 if (!Directory.Exists(voiceDir))
                 {
                     Directory.CreateDirectory(voiceDir);
-                    Debug.WriteLine($"[TTS] ƒfƒBƒŒƒNƒgƒŠ‚ğì¬‚µ‚Ü‚µ‚½: {voiceDir}");
+                    Debug.WriteLine($"[TTS] ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ä½œæˆã—ã¾ã—ãŸ: {voiceDir}");
                 }
 
                 string fileName = $"voice_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
                 string voiceFilePath = Path.Combine(voiceDir, fileName);
-                Debug.WriteLine($"[TTS] ‰¹ºƒtƒ@ƒCƒ‹•Û‘¶æ: {voiceFilePath}");
+                Debug.WriteLine($"[TTS] éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜å…ˆ: {voiceFilePath}");
 
-                Debug.WriteLine($"[TTS] StyleBertVits2Service‚ÉƒŠƒNƒGƒXƒg‚ğ‘—M‚µ‚Ü‚·...");
+                Debug.WriteLine($"[TTS] StyleBertVits2Serviceã«ãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚’é€ä¿¡ã—ã¾ã™...");
                 var ttsService = new StyleBertVits2Service();
                 byte[] audioData = await ttsService.SynthesizeAsync(text);
-                Debug.WriteLine($"[TTS] ‰¹ºƒf[ƒ^‚ğóM‚µ‚Ü‚µ‚½BƒTƒCƒY: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
+                Debug.WriteLine($"[TTS] éŸ³å£°ãƒ‡ãƒ¼ã‚¿ã‚’å—ä¿¡ã—ã¾ã—ãŸã€‚ã‚µã‚¤ã‚º: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
 
                 await File.WriteAllBytesAsync(voiceFilePath, audioData);
-                Debug.WriteLine($"[TTS] ‰¹ºƒtƒ@ƒCƒ‹‚ğ•Û‘¶‚µ‚Ü‚µ‚½: {voiceFilePath}");
+                Debug.WriteLine($"[TTS] éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä¿å­˜ã—ã¾ã—ãŸ: {voiceFilePath}");
 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -261,21 +261,21 @@ namespace DesktopAiMascot.Wpf
                         if (!msg.isUserMessage() && string.IsNullOrEmpty(msg.VoiceFilePath))
                         {
                             msg.VoiceFilePath = voiceFilePath;
-                            Debug.WriteLine($"[TTS] ƒƒbƒZ[ƒW‚É‰¹ºƒtƒ@ƒCƒ‹ƒpƒX‚ğİ’è‚µ‚Ü‚µ‚½");
+                            Debug.WriteLine($"[TTS] ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã«éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’è¨­å®šã—ã¾ã—ãŸ");
                             break;
                         }
                     }
 
                     messagesPanel.PlayVoiceFile(voiceFilePath);
-                    Debug.WriteLine($"[TTS] ‰¹º‚ğ©“®Ä¶‚µ‚Ü‚µ‚½");
+                    Debug.WriteLine($"[TTS] éŸ³å£°ã‚’è‡ªå‹•å†ç”Ÿã—ã¾ã—ãŸ");
                 });
 
-                Debug.WriteLine($"[TTS] TTS¶¬‚ª³í‚ÉŠ®—¹‚µ‚Ü‚µ‚½");
+                Debug.WriteLine($"[TTS] TTSç”ŸæˆãŒæ­£å¸¸ã«å®Œäº†ã—ã¾ã—ãŸ");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TTS] TTS¶¬ƒGƒ‰[: {ex.Message}");
-                Debug.WriteLine($"[TTS] ƒXƒ^ƒbƒNƒgƒŒ[ƒX: {ex.StackTrace}");
+                Debug.WriteLine($"[TTS] TTSç”Ÿæˆã‚¨ãƒ©ãƒ¼: {ex.Message}");
+                Debug.WriteLine($"[TTS] ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒ¬ãƒ¼ã‚¹: {ex.StackTrace}");
             }
         }
 
