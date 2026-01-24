@@ -1,4 +1,4 @@
-﻿using DesktopAiMascot.aiservice;
+using DesktopAiMascot.aiservice;
 using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.Controls;
 using DesktopAiMascot.mascots;
@@ -22,6 +22,7 @@ namespace DesktopAiMascot.controls
         public event EventHandler? RequestDragMove;
         
         private SoundPlayer? currentPlayer = null;
+        private ChatMessage? currentPlayingMessage = null;
 
         public MessageListPanel()
         {
@@ -221,9 +222,22 @@ namespace DesktopAiMascot.controls
         {
             if (sender is System.Windows.Controls.Button button && button.Tag is ChatMessage msg)
             {
+                // 再生中のメッセージと同じ場合は停止
+                if (currentPlayingMessage == msg && currentPlayer != null)
+                {
+                    StopCurrentPlayback();
+                    return;
+                }
+
+                // 異なるメッセージの場合は、現在の再生を停止してから新しいメッセージを再生
+                if (currentPlayer != null)
+                {
+                    StopCurrentPlayback();
+                }
+
                 if (!string.IsNullOrEmpty(msg.VoiceFilePath) && File.Exists(msg.VoiceFilePath))
                 {
-                    PlayVoiceFileInternal(msg.VoiceFilePath);
+                    PlayVoiceFileInternal(msg.VoiceFilePath, msg);
                 }
                 else
                 {
@@ -241,7 +255,21 @@ namespace DesktopAiMascot.controls
             {
                 if (File.Exists(filePath))
                 {
-                    Dispatcher.Invoke(() => PlayVoiceFileInternal(filePath));
+                    Dispatcher.Invoke(() =>
+                    {
+                        // ファイルパスから該当するメッセージを検索
+                        ChatMessage? targetMessage = null;
+                        foreach (var item in chatMessageListBox.Items)
+                        {
+                            if (item is ChatMessage msg && msg.VoiceFilePath == filePath)
+                            {
+                                targetMessage = msg;
+                                break;
+                            }
+                        }
+                        
+                        PlayVoiceFileInternal(filePath, targetMessage);
+                    });
                 }
             }
             catch (Exception ex)
@@ -253,7 +281,7 @@ namespace DesktopAiMascot.controls
         /// <summary>
         /// 音声ファイルを再生（内部処理）
         /// </summary>
-        private void PlayVoiceFileInternal(string filePath)
+        private void PlayVoiceFileInternal(string filePath, ChatMessage? message)
         {
             try
             {
@@ -271,7 +299,41 @@ namespace DesktopAiMascot.controls
                     }
 
                     currentPlayer = new SoundPlayer(filePath);
+                    currentPlayingMessage = message;
+                    
+                    // 同期的に読み込んで再生
+                    currentPlayer.Load();
+                    
+                    // ボタンの画像を停止ボタンに変更（読み込み完了後に確実に更新）
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdatePlayButtonImage(message, true);
+                    }, System.Windows.Threading.DispatcherPriority.Render);
+                    
+                    // 再生開始
                     currentPlayer.Play();
+                    
+                    // WAVファイルの長さを取得して、再生完了後にボタンを戻す
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // WAVファイルの長さを推定（簡易版）
+                            var fileInfo = new FileInfo(filePath);
+                            int estimatedDurationMs = (int)(fileInfo.Length / 44.1); // 44.1kHz, 16bit, stereo の場合の概算
+                            
+                            await Task.Delay(estimatedDurationMs);
+                            
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (currentPlayingMessage == message)
+                                {
+                                    StopCurrentPlayback();
+                                }
+                            });
+                        }
+                        catch { }
+                    });
                 }
             }
             catch (Exception ex)
@@ -286,7 +348,103 @@ namespace DesktopAiMascot.controls
                     catch { }
                     currentPlayer = null;
                 }
+                currentPlayingMessage = null;
+                UpdatePlayButtonImage(message, false);
             }
+        }
+
+        /// <summary>
+        /// 現在の再生を停止
+        /// </summary>
+        private void StopCurrentPlayback()
+        {
+            if (currentPlayer != null)
+            {
+                try
+                {
+                    currentPlayer.Stop();
+                    currentPlayer.Dispose();
+                }
+                catch { }
+                currentPlayer = null;
+            }
+
+            var message = currentPlayingMessage;
+            currentPlayingMessage = null;
+            
+            // ボタンの画像を再生ボタンに戻す
+            UpdatePlayButtonImage(message, false);
+        }
+
+        /// <summary>
+        /// 再生ボタンの画像を更新
+        /// </summary>
+        private void UpdatePlayButtonImage(ChatMessage? message, bool isPlaying)
+        {
+            if (message == null) return;
+
+            try
+            {
+                // ListBoxの全アイテムをスキャンして該当するボタンを見つける
+                foreach (var item in chatMessageListBox.Items)
+                {
+                    if (item == message)
+                    {
+                        var container = chatMessageListBox.ItemContainerGenerator.ContainerFromItem(item) as System.Windows.Controls.ListBoxItem;
+                        if (container != null)
+                        {
+                            var button = FindVisualChild<System.Windows.Controls.Button>(container, "PlayButton");
+                            if (button != null)
+                            {
+                                var template = button.Template;
+                                if (template != null)
+                                {
+                                    var image = template.FindName("ButtonImage", button) as System.Windows.Controls.Image;
+                                    if (image != null)
+                                    {
+                                        string imagePath = isPlaying 
+                                            ? "/assets/icons/PlayStopButton_x2.png" 
+                                            : "/assets/icons/PlayButton_x2.png";
+                                        image.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(imagePath, UriKind.Relative));
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ボタン画像更新エラー: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// ビジュアルツリーから指定した名前の子要素を検索
+        /// </summary>
+        private static T? FindVisualChild<T>(System.Windows.DependencyObject parent, string childName) where T : System.Windows.DependencyObject
+        {
+            if (parent == null) return null;
+
+            int childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                
+                if (child is T typedChild && (child as System.Windows.FrameworkElement)?.Name == childName)
+                {
+                    return typedChild;
+                }
+
+                var foundChild = FindVisualChild<T>(child, childName);
+                if (foundChild != null)
+                {
+                    return foundChild;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -336,7 +494,7 @@ namespace DesktopAiMascot.controls
                 });
 
                 // 音声を再生
-                PlayVoiceFileInternal(voiceFilePath);
+                PlayVoiceFileInternal(voiceFilePath, msg);
 
                 Console.WriteLine($"[TTS] TTS生成と再生が正常に完了しました");
             }
@@ -387,16 +545,7 @@ namespace DesktopAiMascot.controls
             ChatHistory.MessageAdded -= OnMessageAdded;
             ChatHistory.MessagesLoaded -= OnMessagesLoaded;
 
-            if (currentPlayer != null)
-            {
-                try
-                {
-                    currentPlayer.Stop();
-                    currentPlayer.Dispose();
-                }
-                catch { }
-                currentPlayer = null;
-            }
+            StopCurrentPlayback();
         }
     }
 }

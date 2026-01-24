@@ -55,7 +55,7 @@ d:DesignHeight="450" d:DesignWidth="800"
                                 </Style>
                             </DockPanel.Style>
                             
-                            <!-- 再生ボタン -->
+                            <!-- 再生/停止ボタン -->
                             <Button x:Name="PlayButton"
                                     DockPanel.Dock="Right"
                                     Width="20"
@@ -70,7 +70,8 @@ d:DesignHeight="450" d:DesignWidth="800"
                                     <ControlTemplate TargetType="Button">
                                         <Border Background="{TemplateBinding Background}"
                                                 CornerRadius="4">
-                                            <Image Source="/assets/icons/PlayButton_x2.png"
+                                            <Image x:Name="ButtonImage"
+                                                   Source="/assets/icons/PlayButton_x2.png"
                                                    Stretch="Uniform"
                                                    Width="20"
                                                    Height="20"/>
