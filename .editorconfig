@@ -1,0 +1,33 @@
+root = true
+
+# すべてのファイルに適用
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# ファイル
+[*.cs]
+charset = utf-8
+end_of_line = crlf
+
+# XAML ファイル
+[*.xaml]
+charset = utf-8
+end_of_line = crlf
+
+# XML ファイル
+[*.{xml,csproj,props,targets}]
+charset = utf-8
+end_of_line = crlf
+
+# JSON ファイル
+[*.json]
+charset = utf-8
+end_of_line = crlf
+
+# Markdown ファイル
+[*.md]
+charset = utf-8
+end_of_line = crlf
