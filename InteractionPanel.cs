@@ -30,9 +30,17 @@ namespace DesktopAiMascot
             // Initialize designer-created controls
             InitializeComponent();
 
+            // Assign WPF control to ElementHost (done here to avoid designer errors)
+            wpfMessagesPanel = new DesktopAiMascot.controls.MessageListPanel();
+            messagesPanelHost.Child = wpfMessagesPanel;
+
             // Enable transparent painting
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
-            this.BackColor = Color.FromArgb(128, Color.White); // 半透明の背景
+            //this.BackColor = Color.FromArgb(176, Color.White); // 半透明の背景 (B0)
+            this.BackColor = Color.Transparent;
+
+            // メッセージパネルの背景職を透明に設定
+            messagesPanelHost.BackColor = messagesPanelHost.Parent?.BackColor ?? Color.Transparent;
 
             // Use an emoji-capable font so emoji render correctly (Segoe UI Emoji on Windows)
             // messageFont is kept private as it's not intended to be modified by the designer

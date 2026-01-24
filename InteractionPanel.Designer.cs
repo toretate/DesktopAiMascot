@@ -33,7 +33,6 @@ namespace DesktopAiMascot
             clearBtn = new ToolStripButton();
             settingsButton = new ToolStripButton();
             messagesPanelHost = new ElementHost();
-            wpfMessagesPanel = new DesktopAiMascot.controls.MessageListPanel();
             inputBox = new ChatInputBox();
             topToolStrip.SuspendLayout();
             SuspendLayout();
@@ -68,12 +67,12 @@ namespace DesktopAiMascot
             // messagesPanelHost
             // 
             messagesPanelHost.BackColor = Color.Transparent;
+            messagesPanelHost.BackColorTransparent = true;
             messagesPanelHost.Dock = DockStyle.Fill;
             messagesPanelHost.Location = new Point(0, 25);
             messagesPanelHost.Name = "messagesPanelHost";
             messagesPanelHost.Size = new Size(205, 283);
             messagesPanelHost.TabIndex = 1;
-            messagesPanelHost.Child = wpfMessagesPanel;
             messagesPanelHost.ChildChanged += messagesPanelHost_ChildChanged;
             // 
             // inputBox

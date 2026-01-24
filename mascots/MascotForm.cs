@@ -4,6 +4,7 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 
 namespace DesktopAiMascot.mascots
 {
@@ -33,7 +34,8 @@ namespace DesktopAiMascot.mascots
         private string bubbleText = string.Empty;
         private bool bubbleVisible = false;
 
-        private InteractionPanel interactionPanel;
+        private ElementHost interactionPanelHost;
+        private DesktopAiMascot.Wpf.InteractionPanel interactionPanel;
 
         public MascotForm()
         {
@@ -76,11 +78,18 @@ namespace DesktopAiMascot.mascots
             // Ensure Windows doesn't override our Location when the form is first shown
             this.StartPosition = FormStartPosition.Manual;
 
-            // Create interaction panel on the left side
-            interactionPanel = new InteractionPanel();
-            interactionPanel.Size = new Size(210, imageHeight);
-            interactionPanel.Location = new Point(4, 0);
-            interactionPanel.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
+            // Create interaction panel on the left side (using WPF version)
+            interactionPanel = new DesktopAiMascot.Wpf.InteractionPanel();
+            
+            // Host the WPF control in Windows Forms using ElementHost
+            interactionPanelHost = new ElementHost();
+            interactionPanelHost.Child = interactionPanel;
+            interactionPanelHost.Size = new Size(210, imageHeight);
+            interactionPanelHost.Location = new Point(4, 0);
+            interactionPanelHost.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
+            interactionPanelHost.BackColor = Color.Transparent;
+            interactionPanelHost.BackColorTransparent = true;
+            
             // マスコット変更時の処理
             interactionPanel.MascotChanged += (s, model) =>
             {
@@ -89,7 +98,7 @@ namespace DesktopAiMascot.mascots
                 SaveModelName();
                 this.Invalidate();
             };
-            this.Controls.Add(interactionPanel);
+            this.Controls.Add(interactionPanelHost);
 
             // 初期マスコットモデルの読み込み
             var modelName = LoadModelName();
