@@ -112,7 +112,7 @@ namespace DesktopAiMascot.Wpf
         {
             try
             {
-                var dialogContent = new DesktopAiMascot.Views.SettingsForm();
+                var dialogContent = new DesktopAiMascot.views.SettingsForm();
                 
                 dialogContent.MascotChanged += (s, m) => MascotChanged?.Invoke(this, m);
                 dialogContent.LlmServiceChanged += (s, name) => UpdateChatService(name);
@@ -121,21 +121,16 @@ namespace DesktopAiMascot.Wpf
                     dialogContent.GetMascotImage = _settingsImageProvider;
                 }
 
-                var dlg = new DesktopAiMascot.Views.SettingsDialog(dialogContent);
-                var parentForm = System.Windows.Forms.Application.OpenForms.Count > 0 
-                    ? System.Windows.Forms.Application.OpenForms[0] 
-                    : null;
+                var dlg = new DesktopAiMascot.views.SettingsDialog(dialogContent);
+                
+                // WPFウィンドウの親を設定
+                var parentWindow = Window.GetWindow(this);
+                if (parentWindow != null)
+                {
+                    dlg.Owner = parentWindow;
+                }
 
-                if (parentForm != null)
-                {
-                    dlg.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-                    dlg.ShowDialog(parentForm);
-                }
-                else
-                {
-                    dlg.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-                    dlg.ShowDialog();
-                }
+                dlg.ShowDialog();
             }
             catch (Exception ex)
             {
