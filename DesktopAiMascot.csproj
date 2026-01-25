@@ -7,7 +7,55 @@
 	<UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Windows x64向けのみに絞り込む -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <!-- 日本語と英語のみを含める（他の言語リソースを除外） -->
+    <SatelliteResourceLanguages>ja;en</SatelliteResourceLanguages>
+    <!-- 単一ファイル発行を有効化 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- ネイティブDLLやassetsは単一ファイルに含めない（互換性のため） -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
   </PropertyGroup>
+  
+  <!-- トリミングから除外するアセンブリ（リフレクション使用など） -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Windows.Forms" />
+    <TrimmerRootAssembly Include="PresentationFramework" />
+    <TrimmerRootAssembly Include="WindowsBase" />
+    <TrimmerRootAssembly Include="YamlDotNet" />
+  </ItemGroup>
+
+  <!-- 不要なランタイムアセットを除外 -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="false" />
+  </ItemGroup>
+  
+  <!-- Linux、macOS、その他のプラットフォームのネイティブライブラリを除外 -->
+  <Target Name="RemoveUnusedRuntimes" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" 
+        Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('linux')) Or
+                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('osx')) Or
+                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('unix')) Or
+                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-arm')) Or
+                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-x86'))" />
+    </ItemGroup>
+  </Target>
+  
+  <!-- 不要なファイルを除外（Publish後） -->
+  <Target Name="RemoveUnusedFiles" AfterTargets="Publish">
+    <ItemGroup>
+      <!-- デバッグ用のPDBファイルを削除 -->
+      <FilesToDelete Include="$(PublishDir)**\*.pdb" />
+      <!-- XMLドキュメントファイルを削除 -->
+      <FilesToDelete Include="$(PublishDir)**\*.xml" />
+    </ItemGroup>
+    <Delete Files="@(FilesToDelete)" />
+    <Message Text="不要なファイルを削除しました" Importance="high" />
+  </Target>
+
 
   <ItemGroup>
     <Reference Include="WindowsFormsIntegration" />
