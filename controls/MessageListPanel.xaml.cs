@@ -510,9 +510,14 @@ namespace DesktopAiMascot.controls
                     Debug.WriteLine($"[TTS] ディレクトリを作成しました: {voiceDir}");
                 }
 
-                // StyleBertVits2Serviceを使用してTTSをストリーミングで実行
-                Debug.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
-                var ttsService = new StyleBertVits2Service();
+                // VoiceAiManagerのCurrentServiceを使用してTTSをストリーミングで実行
+                Debug.WriteLine($"[TTS] VoiceAiServiceにリクエストを送信します...");
+                var ttsService = VoiceAiManager.Instance.CurrentService;
+                if (ttsService == null)
+                {
+                    Debug.WriteLine($"[TTS] CurrentServiceが設定されていません。");
+                    return;
+                }
                 
                 var chunkFiles = new List<string>();
                 int chunkIndex = 0;

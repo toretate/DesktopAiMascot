@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace DesktopAiMascot.aiservice.voice
 {
@@ -16,10 +17,31 @@ namespace DesktopAiMascot.aiservice.voice
     internal class StyleBertVits2Service : AiVoiceServiceBase
     {
         const string SERVICE_URL = "http://127.0.0.1:5000";
-        private readonly HttpClient _httpClient;
+        private HttpClient _httpClient;
 
         public override string Name => "StyleBertVits2";
         public override string EndPoint => _httpClient.BaseAddress?.ToString() ?? SERVICE_URL;
+
+        private string _url = string.Empty;
+        public new string Url
+        {
+            get => _url;
+            set
+            {
+                _url = value;
+                if (!string.IsNullOrEmpty(value))
+                {
+                    try
+                    {
+                        _httpClient.BaseAddress = new Uri(value);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Failed to set base address: {ex.Message}");
+                    }
+                }
+            }
+        }
 
         public StyleBertVits2Service(string? baseUrl = null)
         {
@@ -29,6 +51,80 @@ namespace DesktopAiMascot.aiservice.voice
                 baseUrl = SERVICE_URL;
             }
             _httpClient.BaseAddress = new Uri(baseUrl);
+            _url = baseUrl;
+        }
+
+        public override async Task<byte[]> SynthesizeAsync(string text)
+        {
+            int modelId = 6;
+            int speakerId = 0;
+            
+            if (!string.IsNullOrEmpty(Model))
+            {
+                modelId = ParseModelId(Model);
+            }
+            if (!string.IsNullOrEmpty(Speaker))
+            {
+                speakerId = ParseSpeakerId(Speaker);
+            }
+            
+            return await SynthesizeAsync(text, modelId, speakerId);
+        }
+
+        public override async IAsyncEnumerable<byte[]> SynthesizeStreamAsync(string text)
+        {
+            int modelId = 6;
+            int speakerId = 0;
+            
+            if (!string.IsNullOrEmpty(Model))
+            {
+                modelId = ParseModelId(Model);
+            }
+            if (!string.IsNullOrEmpty(Speaker))
+            {
+                speakerId = ParseSpeakerId(Speaker);
+            }
+            
+            await foreach (var chunk in SynthesizeStreamAsync(text, modelId, speakerId))
+            {
+                yield return chunk;
+            }
+        }
+
+        public override async Task<string[]> GetAvailableModels()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("models");
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return new[] { "0", "1", "2", "3", "4", "5", "6" };
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to get models: {ex.Message}");
+            }
+            return Array.Empty<string>();
+        }
+
+        public override async Task<string[]> GetAvailableSpeakers()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("speakers");
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return new[] { "0", "1", "2", "3", "4", "5" };
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to get speakers: {ex.Message}");
+            }
+            return Array.Empty<string>();
         }
 
         /// <summary>
@@ -259,6 +355,46 @@ namespace DesktopAiMascot.aiservice.voice
             {
                 throw new Exception($"GetStatus Failed: {ex.Message}", ex);
             }
+        }
+
+        private async Task<StyleBertVits2Info?> GetServerInfoAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("/models/info");
+                if (response.IsSuccessStatusCode)
+                {
+                    var info = await response.Content.ReadFromJsonAsync<StyleBertVits2Info>();
+                    return info;
+                }
+                else
+                {
+                    Debug.WriteLine($"[TTS] /models/info request failed: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TTS] /models/info error: {ex.Message}");
+            }
+            return null;
+        }
+
+        private int ParseModelId(string modelStr)
+        {
+            if (string.IsNullOrEmpty(modelStr)) return 0;
+            var parts = modelStr.Split(':');
+            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int modelId)) return modelId;
+            if (int.TryParse(modelStr, out int directId)) return directId;
+            return 0;
+        }
+
+        private int ParseSpeakerId(string speakerStr)
+        {
+            if (string.IsNullOrEmpty(speakerStr)) return 0;
+            var parts = speakerStr.Split(':');
+            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int speakerId)) return speakerId;
+            if (int.TryParse(speakerStr, out int directId)) return directId;
+            return 0;
         }
     }
 }

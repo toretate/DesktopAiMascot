@@ -9,12 +9,33 @@ namespace DesktopAiMascot.aiservice.voice
 {
     interface AiVoiceService
     {
+        Task<byte[]> SynthesizeAsync(string text);
+        IAsyncEnumerable<byte[]> SynthesizeStreamAsync(string text);
+        Task<string[]> GetAvailableModels();
+        Task<string[]> GetAvailableSpeakers();
     }
 
     public abstract class AiVoiceServiceBase : AiVoiceService
     {
         public abstract string Name { get; }
         public abstract string EndPoint { get; }
+        
+        public string Url { get; set; } = string.Empty;
+        public string Model { get; set; } = string.Empty;
+        public string Speaker { get; set; } = string.Empty;
+
+        public abstract Task<byte[]> SynthesizeAsync(string text);
+        public abstract IAsyncEnumerable<byte[]> SynthesizeStreamAsync(string text);
+
+        public virtual Task<string[]> GetAvailableModels()
+        {
+            return Task.FromResult(Array.Empty<string>());
+        }
+
+        public virtual Task<string[]> GetAvailableSpeakers()
+        {
+            return Task.FromResult(Array.Empty<string>());
+        }
 
         protected const int MAX_TEXT_LENGTH = 100;
 

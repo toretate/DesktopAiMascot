@@ -59,6 +59,9 @@ namespace DesktopAiMascot
         public string MascotName { get; set; } = "AIアシスタント";
         public string LlmService { get; set; } = "LM Studio";
         public string VoiceService { get; set; } = "Style Bert Vits 2";
+        public string VoiceServiceUrl { get; set; } = "http://127.0.0.1:5000";
+        public string VoiceServiceModel { get; set; } = "";
+        public string VoiceServiceSpeaker { get; set; } = "";
         public string ImageService { get; set; } = "ComfyUI";
         public string MovieService { get; set; } = "ComfyUI";
         public string ModelName { get; set; } = "gpt-3.5-turbo";
@@ -98,6 +101,9 @@ namespace DesktopAiMascot
                     this.ModelName = loaded.ModelName;
                     this.LlmService = loaded.LlmService;
                     this.VoiceService = loaded.VoiceService;
+                    this.VoiceServiceUrl = loaded.VoiceServiceUrl;
+                    this.VoiceServiceModel = loaded.VoiceServiceModel;
+                    this.VoiceServiceSpeaker = loaded.VoiceServiceSpeaker;
                     this.ImageService = loaded.ImageService;
                     this.MovieService = loaded.MovieService;
                 }

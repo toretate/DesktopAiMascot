@@ -244,8 +244,14 @@ namespace DesktopAiMascot.Wpf
                 string voiceFilePath = Path.Combine(voiceDir, fileName);
                 Debug.WriteLine($"[TTS] 音声ファイル保存先: {voiceFilePath}");
 
-                Debug.WriteLine($"[TTS] StyleBertVits2Serviceにリクエストを送信します...");
-                var ttsService = new StyleBertVits2Service();
+                Debug.WriteLine($"[TTS] VoiceAiServiceにリクエストを送信します...");
+                var ttsService = VoiceAiManager.Instance.CurrentService;
+                if (ttsService == null)
+                {
+                    Debug.WriteLine($"[TTS] CurrentServiceが設定されていません。");
+                    return;
+                }
+                
                 byte[] audioData = await ttsService.SynthesizeAsync(text);
                 Debug.WriteLine($"[TTS] 音声データを受信しました。サイズ: {audioData.Length} bytes ({audioData.Length / 1024.0:F2} KB)");
 

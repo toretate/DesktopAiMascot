@@ -100,6 +100,7 @@ namespace DesktopAiMascot
                 mascot.Reload(mManager.CurrentModel!);
             }
 
+            VoiceAiManager.Instance.Load();
             if (!string.IsNullOrEmpty(systemConfig.VoiceService) && VoiceAiManager.Instance.VoiceAiServices.ContainsKey(systemConfig.VoiceService))
             {
                 VoiceAiManager.Instance.CurrentService = VoiceAiManager.Instance.VoiceAiServices[systemConfig.VoiceService];
