@@ -1,11 +1,12 @@
 <UserControl x:Class="DesktopAiMascot.views.VoiceAiPropertyPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:DesktopAiMascot.views"
-             mc:Ignorable="d" 
-             d:DesignHeight="500" d:DesignWidth="480">
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+xmlns:local="clr-namespace:DesktopAiMascot.views"
+mc:Ignorable="d" 
+d:DesignHeight="500" d:DesignWidth="480"
+Loaded="VoiceAiPropertyPage_Loaded">
     <GroupBox Header="Voice AI" Padding="10">
         <StackPanel>
             <ComboBox x:Name="voiceAiComboBox" 
@@ -40,7 +41,13 @@
 
             <Label Content="Speaker" FontSize="11" Padding="0" Margin="0,0,0,2"/>
             <ComboBox x:Name="voiceAiSpeakerComboBox" 
-                      Height="25"/>
+                      Height="25"
+                      Margin="0,0,0,10"/>
+
+            <Button x:Name="saveVoiceToMascotButton" 
+                    Content="マスコットにVoiceを設定"
+                    Height="30"
+                    Click="SaveVoiceToMascotButton_Click"/>
         </StackPanel>
     </GroupBox>
 </UserControl>

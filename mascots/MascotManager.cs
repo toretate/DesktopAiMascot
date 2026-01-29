@@ -70,6 +70,7 @@ namespace DesktopAiMascot.mascots
                         string configPath = Path.Combine(dir, "config.yaml");
                         string name = Path.GetFileName(dir);
                         string prompt = string.Empty;
+                        MascotConfig config = new MascotConfig();
 
                         if (File.Exists(configPath))
                         {
@@ -77,6 +78,7 @@ namespace DesktopAiMascot.mascots
                             var parsed = MascotConfigIO.ParseFromYaml(yaml, name);
                             name = parsed.Name;
                             prompt = parsed.Prompt;
+                            config = parsed.Config;
                         }
 
                         // Collect image files in the mascot folder. Store paths relative to application base
@@ -86,7 +88,24 @@ namespace DesktopAiMascot.mascots
                             .Select(p => Path.GetRelativePath(baseDir, p))
                             .ToArray();
 
-                        MascotModels.Add(name, new MascotModel(name, prompt ?? string.Empty, images));
+                        var model = new MascotModel(name, prompt ?? string.Empty, images, configPath);
+                        model.Config = config;
+                        MascotModels.Add(name, model);
+                        
+                        // Voice設定をログ出力
+                        Debug.WriteLine($"[MascotManager] マスコット「{name}」をロードしました: ConfigPath={configPath}");
+                        if (config.Voice != null && config.Voice.Count > 0)
+                        {
+                            Debug.WriteLine($"[MascotManager] Voice設定が見つかりました:");
+                            foreach (var kvp in config.Voice)
+                            {
+                                Debug.WriteLine($"[MascotManager]   - {kvp.Key}: Model={kvp.Value.Model}, Speaker={kvp.Value.Speaker}");
+                            }
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[MascotManager] Voice設定はありません");
+                        }
                     }
                     catch (Exception ex)
                     {

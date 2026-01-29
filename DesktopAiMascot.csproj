@@ -82,6 +82,9 @@
     <Compile Remove="新しいフォルダー\**" />
     <EmbeddedResource Remove="新しいフォルダー\**" />
     <None Remove="新しいフォルダー\**" />
+    <Compile Remove="DesktopAiMascotTest\**" />
+    <EmbeddedResource Remove="DesktopAiMascotTest\**" />
+    <None Remove="DesktopAiMascotTest\**" />
   </ItemGroup>
 
   <ItemGroup>

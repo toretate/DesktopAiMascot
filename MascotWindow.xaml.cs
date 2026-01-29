@@ -106,6 +106,9 @@ namespace DesktopAiMascot
                 VoiceAiManager.Instance.CurrentService = VoiceAiManager.Instance.VoiceAiServices[systemConfig.VoiceService];
             }
 
+            // 起動時に現在のマスコットのVoice設定を適用
+            ApplyVoiceConfigForCurrentMascot();
+
             this.InteractionPanel.SetSettingsMascotImageProvider(() =>
             {
                 try
@@ -347,6 +350,73 @@ namespace DesktopAiMascot
             systemConfig.WindowPosition = new System.Drawing.Point((int)p.X, (int)p.Y);
             systemConfig.Save();
             Debug.WriteLine($"Saved location: {p.X},{p.Y}");
+        }
+
+        /// <summary>
+        /// 現在のマスコットに保存されているVoice設定を適用します
+        /// </summary>
+        private void ApplyVoiceConfigForCurrentMascot()
+        {
+            try
+            {
+                var currentMascot = MascotManager.Instance.CurrentModel;
+                if (currentMascot == null)
+                {
+                    Debug.WriteLine("[MascotWindow] CurrentModelがnullのため、Voice設定の適用をスキップ");
+                    return;
+                }
+                
+                Debug.WriteLine($"[MascotWindow] ========== Voice設定の適用開始（起動時） ==========");
+                Debug.WriteLine($"[MascotWindow] マスコット: {currentMascot.Name}");
+                
+                var currentService = VoiceAiManager.Instance.CurrentService;
+                if (currentService == null)
+                {
+                    Debug.WriteLine("[MascotWindow] Voice AIサービスが選択されていません");
+                    return;
+                }
+                
+                Debug.WriteLine($"[MascotWindow] 現在のVoice AIサービス: {currentService.Name}");
+                
+                // マスコットのVoice設定を取得
+                if (currentMascot.Config.Voice != null &&
+                    currentMascot.Config.Voice.TryGetValue(currentService.Name, out var voiceConfig))
+                {
+                    Debug.WriteLine($"[MascotWindow] ✓ マスコットに{currentService.Name}のVoice設定が見つかりました");
+                    Debug.WriteLine($"[MascotWindow]   - モデル: {voiceConfig.Model}");
+                    Debug.WriteLine($"[MascotWindow]   - スピーカー: {voiceConfig.Speaker}");
+
+                    // モデルとスピーカーを設定
+                    if (!string.IsNullOrEmpty(voiceConfig.Model))
+                    {
+                        Debug.WriteLine($"[MascotWindow] サービスのモデルを '{currentService.Model}' から '{voiceConfig.Model}' に変更");
+                        currentService.Model = voiceConfig.Model;
+                        SystemConfig.Instance.VoiceServiceModel = voiceConfig.Model;
+                    }
+
+                    if (!string.IsNullOrEmpty(voiceConfig.Speaker))
+                    {
+                        Debug.WriteLine($"[MascotWindow] サービスのスピーカーを '{currentService.Speaker}' から '{voiceConfig.Speaker}' に変更");
+                        currentService.Speaker = voiceConfig.Speaker;
+                        SystemConfig.Instance.VoiceServiceSpeaker = voiceConfig.Speaker;
+                    }
+
+                    SystemConfig.Instance.Save();
+                    Debug.WriteLine($"[MascotWindow] ✓ Voice設定をSystemConfigに保存しました");
+                }
+                else
+                {
+                    Debug.WriteLine($"[MascotWindow] ✗ マスコット「{currentMascot.Name}」には「{currentService.Name}」のVoice設定がありません");
+                    Debug.WriteLine($"[MascotWindow] デフォルトのVoice設定を使用します");
+                }
+                
+                Debug.WriteLine($"[MascotWindow] ========== Voice設定の適用完了（起動時） ==========");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotWindow] ✗ Voice設定の適用エラー: {ex.Message}");
+                Debug.WriteLine($"[MascotWindow] スタックトレース: {ex.StackTrace}");
+            }
         }
     }
 }

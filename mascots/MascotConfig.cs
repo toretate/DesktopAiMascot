@@ -11,6 +11,13 @@ namespace DesktopAiMascot.mascots
         /// システムプロンプト設定
         /// </summary>
         public SystemPrompt SystemPrompt { get; set; } = new SystemPrompt();
+
+        /// <summary>
+        /// Voice AI サービスごとのモデルとスピーカー設定
+        /// キー: Voice AI Service名 (例: "StyleBertVits2")
+        /// 値: そのサービスのモデルとスピーカー設定
+        /// </summary>
+        public Dictionary<string, VoiceServiceConfig> Voice { get; set; } = new Dictionary<string, VoiceServiceConfig>();
     }
 
     /// <summary>
@@ -63,5 +70,21 @@ namespace DesktopAiMascot.mascots
     {
         public string User { get; set; } = string.Empty;
         public string Assistant { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Voice AI サービスの設定（モデルとスピーカー）
+    /// </summary>
+    public class VoiceServiceConfig
+    {
+        /// <summary>
+        /// モデル名（例: "jvnv-F1-jp"）
+        /// </summary>
+        public string Model { get; set; } = string.Empty;
+
+        /// <summary>
+        /// スピーカー名（例: "あみたろ"）
+        /// </summary>
+        public string Speaker { get; set; } = string.Empty;
     }
 }

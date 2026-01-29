@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -95,6 +96,28 @@ namespace DesktopAiMascot.views
                     {
                         voiceAiPropertyPage = new VoiceAiPropertyPage();
                         propertyPagesContainer.Children.Add(voiceAiPropertyPage);
+                        
+                        // マスコット変更イベントをVoiceAiPropertyPageに接続
+                        MascotChanged += async (s, mascot) =>
+                        {
+                            Debug.WriteLine($"[SettingsForm] MascotChangedイベント発火: 新しいマスコット = {mascot.Name}");
+                            if (voiceAiPropertyPage != null && voiceAiPropertyPage.IsVisible)
+                            {
+                                Debug.WriteLine($"[SettingsForm] VoiceAiPropertyPageが表示中のため、Voice設定をリロードします");
+                                await voiceAiPropertyPage.ReloadVoiceConfig();
+                            }
+                            else
+                            {
+                                if (voiceAiPropertyPage == null)
+                                {
+                                    Debug.WriteLine($"[SettingsForm] VoiceAiPropertyPageがnullのため、リロードをスキップ");
+                                }
+                                else if (!voiceAiPropertyPage.IsVisible)
+                                {
+                                    Debug.WriteLine($"[SettingsForm] VoiceAiPropertyPageが非表示のため、リロードをスキップ");
+                                }
+                            }
+                        };
                     }
                     voiceAiPropertyPage.Visibility = Visibility.Visible;
                     break;

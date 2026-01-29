@@ -58,15 +58,16 @@ namespace DesktopAiMascot.mascots
         {
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults)
                 .Build();
 
             return serializer.Serialize(config);
         }
 
         /// <summary>
-        /// YAML からマスコットの設定（名前、システムプロンプト）を解析します。
+        /// YAML からマスコットの設定（名前、システムプロンプト、Config全体）を解析します。
         /// </summary>
-        public static (string Name, string Prompt) ParseFromYaml(string yaml, string defaultName)
+        public static (string Name, string Prompt, MascotConfig Config) ParseFromYaml(string yaml, string defaultName)
         {
             var config = Load(yaml);
 
@@ -84,7 +85,45 @@ namespace DesktopAiMascot.mascots
 
             string prompt = serializer.Serialize(config.SystemPrompt);
 
-            return (name, prompt);
+            return (name, prompt, config);
+        }
+
+        /// <summary>
+        /// MascotConfig オブジェクトを YAML ファイルに保存します。
+        /// </summary>
+        public static void SaveToYaml(MascotConfig config, string path)
+        {
+            try
+            {
+                string yaml = Save(config);
+                
+                // デバッグ用：生成されたYAMLをログ出力
+                System.Diagnostics.Debug.WriteLine($"[MascotConfigIO] 保存するYAML:\n{yaml}");
+                System.Diagnostics.Debug.WriteLine($"[MascotConfigIO] 保存先: {path}");
+                
+                // Voice設定の内容を確認
+                if (config.Voice != null && config.Voice.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MascotConfigIO] Voice設定の数: {config.Voice.Count}");
+                    foreach (var kvp in config.Voice)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MascotConfigIO] Voice[{kvp.Key}]: Model={kvp.Value.Model}, Speaker={kvp.Value.Speaker}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[MascotConfigIO] Voice設定が空です");
+                }
+                
+                File.WriteAllText(path, yaml);
+                System.Diagnostics.Debug.WriteLine($"[MascotConfigIO] ファイルへの書き込み完了");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save config to {path}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Exception: {ex}");
+                throw;
+            }
         }
     }
 }

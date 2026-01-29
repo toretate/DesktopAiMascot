@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -19,6 +20,9 @@ namespace DesktopAiMascot.aiservice.voice
     {
         const string SERVICE_URL = "http://127.0.0.1:5000";
         private HttpClient _httpClient;
+        private StyleBertVits2Info? _cachedModelsInfo;
+        private Dictionary<string, string> _modelNameToId = new Dictionary<string, string>();
+        private Dictionary<string, string> _speakerNameToId = new Dictionary<string, string>();
 
         public override string Name => "StyleBertVits2";
         public override string EndPoint => _httpClient.BaseAddress?.ToString() ?? SERVICE_URL;
@@ -72,6 +76,8 @@ namespace DesktopAiMascot.aiservice.voice
                 speakerId = ParseSpeakerId(Speaker);
             }
             
+            Debug.WriteLine($"[TTS] 音声合成開始 - モデル: {Model} (ID: {modelId}), スピーカー: {Speaker} (ID: {speakerId})");
+            
             return await SynthesizeAsync(text, modelId, speakerId);
         }
 
@@ -89,6 +95,8 @@ namespace DesktopAiMascot.aiservice.voice
                 speakerId = ParseSpeakerId(Speaker);
             }
             
+            Debug.WriteLine($"[TTS] ストリーミング音声合成開始 - モデル: {Model} (ID: {modelId}), スピーカー: {Speaker} (ID: {speakerId})");
+            
             await foreach (var chunk in SynthesizeStreamAsync(text, modelId, speakerId))
             {
                 yield return chunk;
@@ -99,11 +107,29 @@ namespace DesktopAiMascot.aiservice.voice
         {
             try
             {
-                var response = await _httpClient.GetAsync("models/info");
-                if (response.IsSuccessStatusCode)
+                var info = await GetServerInfoAsync();
+                if (info != null && info.Count > 0)
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return new[] { "0", "1", "2", "3", "4", "5", "6" };
+                    _cachedModelsInfo = info;
+                    _modelNameToId.Clear();
+                    var models = new List<string>();
+                    
+                    foreach (var kvp in info)
+                    {
+                        var modelId = kvp.Key;
+                        var modelInfo = kvp.Value;
+                        
+                        // model_pathからmodel_assets直下のディレクトリ名を抽出
+                        string modelName = ExtractModelName(modelInfo.ModelPath);
+                        
+                        // マッピングを保存
+                        _modelNameToId[modelName] = modelId;
+                        
+                        // モデル名のみを追加
+                        models.Add(modelName);
+                    }
+                    
+                    return models.ToArray();
                 }
             }
             catch (Exception ex)
@@ -117,11 +143,39 @@ namespace DesktopAiMascot.aiservice.voice
         {
             try
             {
-                var response = await _httpClient.GetAsync("speakers");
-                if (response.IsSuccessStatusCode)
+                // 現在選択されているモデルのIDを取得
+                int currentModelId = 0;
+                if (!string.IsNullOrEmpty(Model))
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return new[] { "0", "1", "2", "3", "4", "5" };
+                    currentModelId = ParseModelId(Model);
+                }
+                
+                // キャッシュがない場合は取得
+                if (_cachedModelsInfo == null)
+                {
+                    _cachedModelsInfo = await GetServerInfoAsync();
+                }
+                
+                if (_cachedModelsInfo != null && _cachedModelsInfo.ContainsKey(currentModelId.ToString()))
+                {
+                    var modelInfo = _cachedModelsInfo[currentModelId.ToString()];
+                    _speakerNameToId.Clear();
+                    var speakers = new List<string>();
+                    
+                    // id2spkのkeyを使用してスピーカーリストを作成
+                    foreach (var kvp in modelInfo.Id2Spk.OrderBy(k => int.Parse(k.Key)))
+                    {
+                        var speakerId = kvp.Key;
+                        var speakerName = kvp.Value;
+                        
+                        // マッピングを保存
+                        _speakerNameToId[speakerName] = speakerId;
+                        
+                        // スピーカー名のみを追加
+                        speakers.Add(speakerName);
+                    }
+                    
+                    return speakers.ToArray();
                 }
             }
             catch (Exception ex)
@@ -355,19 +409,97 @@ namespace DesktopAiMascot.aiservice.voice
         private int ParseModelId(string modelStr)
         {
             if (string.IsNullOrEmpty(modelStr)) return 0;
+            
+            // マッピングから検索
+            if (_modelNameToId.TryGetValue(modelStr, out string? modelId))
+            {
+                if (int.TryParse(modelId, out int id))
+                    return id;
+            }
+            
+            // 後方互換性のため、"0: モデル名" の形式にも対応
             var parts = modelStr.Split(':');
-            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int modelId)) return modelId;
-            if (int.TryParse(modelStr, out int directId)) return directId;
+            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int parsedId))
+                return parsedId;
+            
+            // 直接数値の場合
+            if (int.TryParse(modelStr, out int directId))
+                return directId;
+            
             return 0;
         }
 
         private int ParseSpeakerId(string speakerStr)
         {
             if (string.IsNullOrEmpty(speakerStr)) return 0;
+            
+            // マッピングから検索
+            if (_speakerNameToId.TryGetValue(speakerStr, out string? speakerId))
+            {
+                if (int.TryParse(speakerId, out int id))
+                    return id;
+            }
+            
+            // 後方互換性のため、"0: スピーカー名" の形式にも対応
             var parts = speakerStr.Split(':');
-            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int speakerId)) return speakerId;
-            if (int.TryParse(speakerStr, out int directId)) return directId;
+            if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int parsedId))
+                return parsedId;
+            
+            // 直接数値の場合
+            if (int.TryParse(speakerStr, out int directId))
+                return directId;
+            
             return 0;
+        }
+
+        /// <summary>
+        /// model_pathからmodel_assets直下のディレクトリ名を抽出します。
+        /// 例: "model_assets/jvnv-F1-jp/jvnv-F1-jp_e160_s14000.safetensors" → "jvnv-F1-jp"
+        /// </summary>
+        private string ExtractModelName(string modelPath)
+        {
+            if (string.IsNullOrEmpty(modelPath))
+                return "Unknown";
+            
+            try
+            {
+                // パスの区切り文字を統一（Windows/Linuxの両方に対応）
+                var normalizedPath = modelPath.Replace('\\', '/');
+                
+                // model_assetsの位置を探す
+                var modelAssetsIndex = normalizedPath.IndexOf("model_assets/", StringComparison.OrdinalIgnoreCase);
+                if (modelAssetsIndex >= 0)
+                {
+                    // model_assets/ の後ろからディレクトリ名を取得
+                    var afterModelAssets = normalizedPath.Substring(modelAssetsIndex + "model_assets/".Length);
+                    var firstSlashIndex = afterModelAssets.IndexOf('/');
+                    
+                    if (firstSlashIndex > 0)
+                    {
+                        return afterModelAssets.Substring(0, firstSlashIndex);
+                    }
+                    else
+                    {
+                        // スラッシュがない場合はそのまま返す
+                        return afterModelAssets;
+                    }
+                }
+                
+                // model_assetsが見つからない場合は、最後のディレクトリ名を返す
+                var parts = normalizedPath.Split('/');
+                if (parts.Length >= 2)
+                {
+                    // ファイル名の前のディレクトリ名を返す
+                    return parts[parts.Length - 2];
+                }
+                
+                return Path.GetFileNameWithoutExtension(modelPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to extract model name from path: {modelPath}, Error: {ex.Message}");
+                return "Unknown";
+            }
         }
 
         private async Task<StyleBertVits2Info?> GetServerInfoAsync()
