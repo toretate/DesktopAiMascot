@@ -8,6 +8,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
+using DesktopAiMascot.aiservice.voice.schemas;
 
 namespace DesktopAiMascot.aiservice.voice
 {
@@ -46,6 +47,9 @@ namespace DesktopAiMascot.aiservice.voice
         public StyleBertVits2Service(string? baseUrl = null)
         {
             _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            
             if (string.IsNullOrEmpty(baseUrl))
             {
                 baseUrl = SERVICE_URL;
@@ -95,7 +99,7 @@ namespace DesktopAiMascot.aiservice.voice
         {
             try
             {
-                var response = await _httpClient.GetAsync("models");
+                var response = await _httpClient.GetAsync("models/info");
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
@@ -304,60 +308,10 @@ namespace DesktopAiMascot.aiservice.voice
         }
 
         /// <summary>
-        /// サーバーの情報を取得します。 (/info)
+        /// モデル情報の取得を行います。 (/models/info)
         /// </summary>
-        /// <returns>JSON形式のサーバー情報</returns>
-        public async Task<string> GetInfoAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("/info");
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"GetInfo Failed: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// モデルの再読み込みを行います。 (/refresh)
-        /// </summary>
-        /// <returns>JSON形式のレスポンス</returns>
-        public async Task<string> RefreshAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("/refresh");
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Refresh Failed: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// サーバーの状態を取得します。 (/status)
-        /// </summary>
-        /// <returns>JSON形式のステータス情報</returns>
-        public async Task<string> GetStatusAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("/status");
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"GetStatus Failed: {ex.Message}", ex);
-            }
-        }
-
-        private async Task<StyleBertVits2Info?> GetServerInfoAsync()
+        /// <returns>モデル情報</returns>
+        public async Task<StyleBertVits2Info?> GetModelInfoAsync()
         {
             try
             {
@@ -379,6 +333,25 @@ namespace DesktopAiMascot.aiservice.voice
             return null;
         }
 
+        /// <summary>
+        /// モデルの再読み込みを行います。 (/models/refresh)
+        /// </summary>
+        /// <returns>JSON形式のレスポンス</returns>
+        public async Task<string> ModelRefreshAsync()
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync("/models/refresh", null);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Refresh Failed: {ex.Message}", ex);
+            }
+        }
+
+
         private int ParseModelId(string modelStr)
         {
             if (string.IsNullOrEmpty(modelStr)) return 0;
@@ -395,6 +368,149 @@ namespace DesktopAiMascot.aiservice.voice
             if (parts.Length > 0 && int.TryParse(parts[0].Trim(), out int speakerId)) return speakerId;
             if (int.TryParse(speakerStr, out int directId)) return directId;
             return 0;
+        }
+
+        private async Task<StyleBertVits2Info?> GetServerInfoAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("/models/info");
+                if (response.IsSuccessStatusCode)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    
+                    var info = await response.Content.ReadFromJsonAsync<StyleBertVits2Info>(options);
+                    return info;
+                }
+                else
+                {
+                    Debug.WriteLine($"[TTS] /models/info request failed: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TTS] /models/info error: {ex.Message}");
+                Debug.WriteLine($"[TTS] Exception: {ex}");
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// VoiceRequestスキーマを使用して音声合成を行います。
+        /// </summary>
+        /// <param name="request">音声合成リクエスト</param>
+        /// <returns>WAVデータのバイト配列</returns>
+        public async Task<byte[]> SynthesizeAsync(VoiceRequest request)
+        {
+            return await SynthesizeAsync(
+                text: request.Text,
+                modelId: request.ModelId,
+                speakerId: request.SpeakerId,
+                style: request.Style ?? "Neutral",
+                sdpRatio: request.SdpRatio,
+                noise: request.Noise,
+                noiseW: request.Noisew,
+                length: request.Length,
+                language: request.Language,
+                encoding: request.Encoding ?? "utf-8"
+            );
+        }
+
+        /// <summary>
+        /// VoiceRequestスキーマを使用してストリーミング音声合成を行います。
+        /// </summary>
+        /// <param name="request">音声合成リクエスト</param>
+        /// <returns>WAVデータのチャンク</returns>
+        public async IAsyncEnumerable<byte[]> SynthesizeStreamAsync(VoiceRequest request)
+        {
+            await foreach (var chunk in SynthesizeStreamAsync(
+                text: request.Text,
+                modelId: request.ModelId,
+                speakerId: request.SpeakerId,
+                style: request.Style ?? "Neutral",
+                sdpRatio: request.SdpRatio,
+                noise: request.Noise,
+                noiseW: request.Noisew,
+                length: request.Length,
+                language: request.Language,
+                encoding: request.Encoding ?? "utf-8"
+            ))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <summary>
+        /// サーバーのステータスを取得します（型付きレスポンス）。
+        /// </summary>
+        /// <returns>ステータス情報</returns>
+        public async Task<StatusResponse?> GetStatusTypedAsync()
+        {
+            try
+            {
+                Debug.WriteLine("[TTS] Requesting /status...");
+                var response = await _httpClient.GetAsync("/status");
+                Debug.WriteLine($"[TTS] Status code: {response.StatusCode}");
+                
+                response.EnsureSuccessStatusCode();
+                
+                var content = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[TTS] Response content: {content}");
+                
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                
+                var result = await response.Content.ReadFromJsonAsync<StatusResponse>(options);
+                Debug.WriteLine($"[TTS] Deserialized result is null: {result == null}");
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"GetStatus Failed: {ex.Message}");
+                Debug.WriteLine($"Exception: {ex}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// モデルの再読み込みを行います（型付きレスポンス）。
+        /// </summary>
+        /// <returns>リフレッシュ結果</returns>
+        public async Task<RefreshResponse?> RefreshTypedAsync()
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync("/models/refresh", null);
+                response.EnsureSuccessStatusCode();
+                
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                
+                return await response.Content.ReadFromJsonAsync<RefreshResponse>(options);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Refresh Failed: {ex.Message}");
+                Debug.WriteLine($"Exception: {ex}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// ロードされたモデル情報を取得します（型付きレスポンス）。
+        /// </summary>
+        /// <returns>モデル情報</returns>
+        public async Task<StyleBertVits2Info?> GetModelsInfoTypedAsync()
+        {
+            return await GetServerInfoAsync();
         }
     }
 }

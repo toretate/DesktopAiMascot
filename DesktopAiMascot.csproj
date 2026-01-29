@@ -18,6 +18,11 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
   </PropertyGroup>
+
+  <!-- テストプロジェクトに internal メンバーを公開 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DesktopAiMascotTest" />
+  </ItemGroup>
   
   <!-- トリミングから除外するアセンブリ（リフレクション使用など） -->
   <ItemGroup>
@@ -35,12 +40,7 @@
   <!-- Linux、macOS、その他のプラットフォームのネイティブライブラリを除外 -->
   <Target Name="RemoveUnusedRuntimes" AfterTargets="ResolveAssemblyReferences">
     <ItemGroup>
-      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" 
-        Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('linux')) Or
-                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('osx')) Or
-                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('unix')) Or
-                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-arm')) Or
-                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-x86'))" />
+      <RuntimeCopyLocalItems Remove="@(RuntimeCopyLocalItems)" Condition="$([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('linux')) Or&#xD;&#xA;                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('osx')) Or&#xD;&#xA;                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('unix')) Or&#xD;&#xA;                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-arm')) Or&#xD;&#xA;                   $([System.String]::Copy('%(RuntimeCopyLocalItems.DestinationSubDirectory)').Contains('win-x86'))" />
     </ItemGroup>
   </Target>
   
