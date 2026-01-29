@@ -21,10 +21,10 @@ namespace DesktopAiMascotTest.aiservice.voice
             _output = output;
         }
 
-        #region ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ÆƒvƒƒpƒeƒB‚ÌƒeƒXƒg
+        #region ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã¨ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã®ãƒ†ã‚¹ãƒˆ
 
         [Fact]
-        public void ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚Åƒx[ƒXURL‚ª–¢w’è‚Ìê‡_ƒfƒtƒHƒ‹ƒgURL‚ªİ’è‚³‚ê‚é()
+        public void ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§ãƒ™ãƒ¼ã‚¹URLãŒæœªæŒ‡å®šã®å ´åˆ_ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆURLãŒè¨­å®šã•ã‚Œã‚‹()
         {
             var service = new StyleBertVits2Service();
             
@@ -33,7 +33,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public void ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ÅƒJƒXƒ^ƒ€URL‚ğw’è‚µ‚½ê‡_w’è‚µ‚½URL‚ªİ’è‚³‚ê‚é()
+        public void ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã§ã‚«ã‚¹ã‚¿ãƒ URLã‚’æŒ‡å®šã—ãŸå ´åˆ_æŒ‡å®šã—ãŸURLãŒè¨­å®šã•ã‚Œã‚‹()
         {
             var customUrl = "http://192.168.1.100:8080";
             var service = new StyleBertVits2Service(customUrl);
@@ -43,7 +43,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public void URLƒvƒƒpƒeƒB‚ÉV‚µ‚¢URL‚ğİ’è‚µ‚½ê‡_ƒx[ƒXƒAƒhƒŒƒX‚ªXV‚³‚ê‚é()
+        public void URLãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã«æ–°ã—ã„URLã‚’è¨­å®šã—ãŸå ´åˆ_ãƒ™ãƒ¼ã‚¹ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒæ›´æ–°ã•ã‚Œã‚‹()
         {
             var service = new StyleBertVits2Service();
             var newUrl = "http://test.local:9999";
@@ -55,7 +55,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public void –³Œø‚ÈURL‚ğİ’è‚µ‚½ê‡_ƒGƒ‰[‚È‚­ˆ—‚³‚ê‚é()
+        public void ç„¡åŠ¹ãªURLã‚’è¨­å®šã—ãŸå ´åˆ_ã‚¨ãƒ©ãƒ¼ãªãå‡¦ç†ã•ã‚Œã‚‹()
         {
             var service = new StyleBertVits2Service();
             var invalidUrl = "not-a-valid-url";
@@ -67,26 +67,37 @@ namespace DesktopAiMascotTest.aiservice.voice
 
         #endregion
 
-        #region ƒ‚ƒfƒ‹‚Æ˜bÒ‚Ìæ“¾ƒeƒXƒg
+        #region ãƒ¢ãƒ‡ãƒ«ã¨è©±è€…ã®å–å¾—ãƒ†ã‚¹ãƒˆ
 
         [Fact]
-        public async Task —˜—p‰Â”\‚Èƒ‚ƒfƒ‹æ“¾_ƒfƒtƒHƒ‹ƒgƒ‚ƒfƒ‹‚ğ•Ô‚·()
+        public async Task åˆ©ç”¨å¯èƒ½ãªãƒ¢ãƒ‡ãƒ«å–å¾—_ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆãƒ¢ãƒ‡ãƒ«ã‚’è¿”ã™()
         {
+            // ç¾åœ¨ã®å®Ÿè£…ã§ã¯ /models/info ã‹ã‚‰ãƒ¢ãƒ‡ãƒ«æƒ…å ±ã‚’å–å¾—ã™ã‚‹
+            var mockModelInfo = @"{
+                ""0"": {
+                    ""config_path"": ""model_assets/test-model/config.json"",
+                    ""model_path"": ""model_assets/test-model/model.safetensors"",
+                    ""device"": ""cpu"",
+                    ""spk2id"": {""test-speaker"": 0},
+                    ""id2spk"": {""0"": ""test-speaker""},
+                    ""style2id"": {""Neutral"": 0}
+                }
+            }";
+
             var service = CreateServiceWithMockHttpClient(
-                "/models",
+                "/models/info",
                 HttpStatusCode.OK,
-                "[]"
+                mockModelInfo
             );
 
             var models = await service.GetAvailableModels();
             
             Assert.NotEmpty(models);
-            Assert.Contains("0", models);
-            Assert.Contains("6", models);
+            Assert.Contains("test-model", models);
         }
 
         [Fact]
-        public async Task —˜—p‰Â”\‚Èƒ‚ƒfƒ‹æ“¾‚ÅƒŠƒNƒGƒXƒg‚ª¸”s‚µ‚½ê‡_‹ó‚Ì”z—ñ‚ğ•Ô‚·()
+        public async Task åˆ©ç”¨å¯èƒ½ãªãƒ¢ãƒ‡ãƒ«å–å¾—ã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆãŒå¤±æ•—ã—ãŸå ´åˆ_ç©ºã®é…åˆ—ã‚’è¿”ã™()
         {
             var service = CreateServiceWithMockHttpClient(
                 "/models",
@@ -100,23 +111,23 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task —˜—p‰Â”\‚È˜bÒæ“¾_ƒfƒtƒHƒ‹ƒg˜bÒ‚ğ•Ô‚·()
+        public async Task åˆ©ç”¨å¯èƒ½ãªè©±è€…å–å¾—_ãƒ¢ãƒ‡ãƒ«ãŒè¨­å®šã•ã‚Œã¦ã„ãªã„å ´åˆã¯ç©ºã®é…åˆ—ã‚’è¿”ã™()
         {
+            // ãƒ¢ãƒ‡ãƒ«æƒ…å ±ãŒãªã„çŠ¶æ…‹ã§è©±è€…ã‚’å–å¾—ã—ã‚ˆã†ã¨ã™ã‚‹ã¨ã€ç©ºã®é…åˆ—ãŒè¿”ã•ã‚Œã‚‹
             var service = CreateServiceWithMockHttpClient(
-                "/speakers",
+                "/models/info",
                 HttpStatusCode.OK,
-                "[]"
+                "{}"  // ç©ºã®ãƒ¢ãƒ‡ãƒ«æƒ…å ±
             );
 
             var speakers = await service.GetAvailableSpeakers();
             
-            Assert.NotEmpty(speakers);
-            Assert.Contains("0", speakers);
-            Assert.Contains("5", speakers);
+            // ãƒ¢ãƒ‡ãƒ«ãŒè¨­å®šã•ã‚Œã¦ã„ãªã„å ´åˆã¯ç©ºã®é…åˆ—ãŒè¿”ã•ã‚Œã‚‹
+            Assert.Empty(speakers);
         }
 
         [Fact]
-        public async Task —˜—p‰Â”\‚È˜bÒæ“¾‚ÅƒŠƒNƒGƒXƒg‚ª¸”s‚µ‚½ê‡_‹ó‚Ì”z—ñ‚ğ•Ô‚·()
+        public async Task åˆ©ç”¨å¯èƒ½ãªè©±è€…å–å¾—ã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆãŒå¤±æ•—ã—ãŸå ´åˆ_ç©ºã®é…åˆ—ã‚’è¿”ã™()
         {
             var service = CreateServiceWithMockHttpClient(
                 "/speakers",
@@ -131,10 +142,10 @@ namespace DesktopAiMascotTest.aiservice.voice
 
         #endregion
 
-        #region API ƒGƒ“ƒhƒ|ƒCƒ“ƒg‚ÌƒeƒXƒg (Œ^•t‚«ƒŒƒXƒ|ƒ“ƒX)
+        #region API ã‚¨ãƒ³ãƒ‰ãƒã‚¤ãƒ³ãƒˆã®ãƒ†ã‚¹ãƒˆ (å‹ä»˜ããƒ¬ã‚¹ãƒãƒ³ã‚¹)
 
         [Fact]
-        public async Task ƒ‚ƒfƒ‹î•ñæ“¾_ƒ‚ƒfƒ‹î•ñ‚ğ•Ô‚·()
+        public async Task ãƒ¢ãƒ‡ãƒ«æƒ…å ±å–å¾—_ãƒ¢ãƒ‡ãƒ«æƒ…å ±ã‚’è¿”ã™()
         {
             var mockModelInfo = new StyleBertVits2Info
             {
@@ -164,7 +175,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒ‚ƒfƒ‹î•ñæ“¾‚ÅƒŠƒNƒGƒXƒg‚ª¸”s‚µ‚½ê‡_null‚ğ•Ô‚·()
+        public async Task ãƒ¢ãƒ‡ãƒ«æƒ…å ±å–å¾—ã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆãŒå¤±æ•—ã—ãŸå ´åˆ_nullã‚’è¿”ã™()
         {
             var service = CreateServiceWithMockHttpClient(
                 "/models/info",
@@ -178,7 +189,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒŠƒtƒŒƒbƒVƒ…_¬Œ÷ƒŒƒXƒ|ƒ“ƒX‚ğ•Ô‚·()
+        public async Task ãƒªãƒ•ãƒ¬ãƒƒã‚·ãƒ¥_æˆåŠŸãƒ¬ã‚¹ãƒãƒ³ã‚¹ã‚’è¿”ã™()
         {
             var mockResponse = new RefreshResponse
             {
@@ -200,7 +211,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒŠƒtƒŒƒbƒVƒ…‚ÅƒŠƒNƒGƒXƒg‚ª¸”s‚µ‚½ê‡_null‚ğ•Ô‚·()
+        public async Task ãƒªãƒ•ãƒ¬ãƒƒã‚·ãƒ¥ã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆãŒå¤±æ•—ã—ãŸå ´åˆ_nullã‚’è¿”ã™()
         {
             var service = CreateServiceWithMockHttpClient(
                 "/models/refresh",
@@ -214,7 +225,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒe[ƒ^ƒXæ“¾_ƒT[ƒo[ƒXƒe[ƒ^ƒX‚ğ•Ô‚·()
+        public async Task ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹å–å¾—_ã‚µãƒ¼ãƒãƒ¼ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚’è¿”ã™()
         {
             var mockStatus = new StatusResponse
             {
@@ -256,7 +267,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒe[ƒ^ƒXæ“¾‚ÅƒŠƒNƒGƒXƒg‚ª¸”s‚µ‚½ê‡_null‚ğ•Ô‚·()
+        public async Task ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹å–å¾—ã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆãŒå¤±æ•—ã—ãŸå ´åˆ_nullã‚’è¿”ã™()
         {
             var service = CreateServiceWithMockHttpClient(
                 "/status",
@@ -271,12 +282,12 @@ namespace DesktopAiMascotTest.aiservice.voice
 
         #endregion
 
-        #region ‰¹º‡¬‚ÌƒeƒXƒg
+        #region éŸ³å£°åˆæˆã®ãƒ†ã‚¹ãƒˆ
 
         [Fact]
-        public async Task ‰¹º‡¬‚Å’Z‚¢ƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_‰¹ºƒf[ƒ^‚ğ•Ô‚·()
+        public async Task éŸ³å£°åˆæˆã§çŸ­ã„ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_éŸ³å£°ãƒ‡ãƒ¼ã‚¿ã‚’è¿”ã™()
         {
-            var testText = "‚±‚ñ‚É‚¿‚Í";
+            var testText = "ã“ã‚“ã«ã¡ã¯";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var mockHandler = new Mock<HttpMessageHandler>();
@@ -301,7 +312,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚Å‹ó‚ÌƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_‹ó‚Ì”z—ñ‚ğ•Ô‚·()
+        public async Task éŸ³å£°åˆæˆã§ç©ºã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_ç©ºã®é…åˆ—ã‚’è¿”ã™()
         {
             var service = new StyleBertVits2Service(TEST_BASE_URL);
 
@@ -311,9 +322,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚ÅŠ´î•\Œ»‚ğŠÜ‚ŞƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_Š´î•\Œ»‚ªƒtƒBƒ‹ƒ^‚³‚ê‚é()
+        public async Task éŸ³å£°åˆæˆã§æ„Ÿæƒ…è¡¨ç¾ã‚’å«ã‚€ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_æ„Ÿæƒ…è¡¨ç¾ãŒãƒ•ã‚£ãƒ«ã‚¿ã•ã‚Œã‚‹()
         {
-            var testText = "(Î‚¢‚È‚ª‚ç)‚±‚ñ‚É‚¿‚Í";
+            var testText = "(ç¬‘ã„ãªãŒã‚‰)ã“ã‚“ã«ã¡ã¯";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var mockHandler = new Mock<HttpMessageHandler>();
@@ -338,9 +349,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚ÅŠ´î•\Œ»‚Ì‚İ‚ÌƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_‹ó‚Ì”z—ñ‚ğ•Ô‚·()
+        public async Task éŸ³å£°åˆæˆã§æ„Ÿæƒ…è¡¨ç¾ã®ã¿ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_ç©ºã®é…åˆ—ã‚’è¿”ã™()
         {
-            var testText = "(Î)";
+            var testText = "(ç¬‘)";
             var service = new StyleBertVits2Service(TEST_BASE_URL);
 
             var result = await service.SynthesizeAsync(testText);
@@ -349,9 +360,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚Åƒ‚ƒfƒ‹ID‚Æ˜bÒID‚ğw’è‚µ‚½ê‡_w’è‚µ‚½ƒpƒ‰ƒ[ƒ^‚ªg—p‚³‚ê‚é()
+        public async Task éŸ³å£°åˆæˆã§ãƒ¢ãƒ‡ãƒ«IDã¨è©±è€…IDã‚’æŒ‡å®šã—ãŸå ´åˆ_æŒ‡å®šã—ãŸãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãŒä½¿ç”¨ã•ã‚Œã‚‹()
         {
-            var testText = "ƒeƒXƒg";
+            var testText = "ãƒ†ã‚¹ãƒˆ";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var (service, getCapturedRequest) = CreateServiceWithCaptureHandler(expectedAudioData);
@@ -371,19 +382,19 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚Å–¼‘O•t‚«ID‚ğw’è‚µ‚½ê‡_ID•”•ª‚ªƒp[ƒX‚³‚ê‚é()
+        public async Task éŸ³å£°åˆæˆã§åå‰ä»˜ãIDã‚’æŒ‡å®šã—ãŸå ´åˆ_IDéƒ¨åˆ†ãŒãƒ‘ãƒ¼ã‚¹ã•ã‚Œã‚‹()
         {
-            // ‚±‚ÌƒeƒXƒg‚Í ParseModelId ‚Æ ParseSpeakerId ƒƒ\ƒbƒh‚Ì“®ì‚ğŠm”F‚µ‚Ü‚·
-            // ’¼Úƒpƒ‰ƒ[ƒ^w’è‚µ‚ÄA"5:ƒ‚ƒfƒ‹–¼" ‚Ì‚æ‚¤‚ÈŒ`®‚ªƒp[ƒX‚³‚ê‚é‚±‚Æ‚ğŒŸØ‚µ‚Ü‚·
-            var testText = "ƒeƒXƒg";
+            // ã“ã®ãƒ†ã‚¹ãƒˆã¯ ParseModelId ã¨ ParseSpeakerId ãƒ¡ã‚½ãƒƒãƒ‰ã®å‹•ä½œã‚’ç¢ºèªã—ã¾ã™
+            // ç›´æ¥ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿æŒ‡å®šã—ã¦ã€"5:ãƒ¢ãƒ‡ãƒ«å" ã®ã‚ˆã†ãªå½¢å¼ãŒãƒ‘ãƒ¼ã‚¹ã•ã‚Œã‚‹ã“ã¨ã‚’æ¤œè¨¼ã—ã¾ã™
+            var testText = "ãƒ†ã‚¹ãƒˆ";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var (service, getCapturedRequest) = CreateServiceWithCaptureHandler(expectedAudioData);
             
-            // SynthesizeAsync ‚ÌƒI[ƒo[ƒ[ƒh‚ğ’¼ÚŒÄ‚Ño‚µ‚ÄA
-            // ParseModelId("5:ƒ‚ƒfƒ‹–¼") ‚Æ ParseSpeakerId("1:˜bÒ–¼") ‚ª
-            // ³‚µ‚­ 5 ‚Æ 1 ‚ğ•Ô‚·‚±‚Æ‚ğŠm”F‚·‚é‘ã‚í‚è‚ÉA
-            // ’¼Ú model_id=5, speaker_id=1 ‚ğ“n‚µ‚ÄA‚»‚ê‚ª URL ‚ÉŠÜ‚Ü‚ê‚é‚±‚Æ‚ğŠm”F
+            // SynthesizeAsync ã®ã‚ªãƒ¼ãƒãƒ¼ãƒ­ãƒ¼ãƒ‰ã‚’ç›´æ¥å‘¼ã³å‡ºã—ã¦ã€
+            // ParseModelId("5:ãƒ¢ãƒ‡ãƒ«å") ã¨ ParseSpeakerId("1:è©±è€…å") ãŒ
+            // æ­£ã—ã 5 ã¨ 1 ã‚’è¿”ã™ã“ã¨ã‚’ç¢ºèªã™ã‚‹ä»£ã‚ã‚Šã«ã€
+            // ç›´æ¥ model_id=5, speaker_id=1 ã‚’æ¸¡ã—ã¦ã€ãã‚ŒãŒ URL ã«å«ã¾ã‚Œã‚‹ã“ã¨ã‚’ç¢ºèª
             var result = await service.SynthesizeAsync(
                 text: testText,
                 modelId: 5,
@@ -399,9 +410,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ‰¹º‡¬‚ÅƒT[ƒo[‚ªƒGƒ‰[‚ğ•Ô‚µ‚½ê‡_—áŠO‚ğƒXƒ[‚·‚é()
+        public async Task éŸ³å£°åˆæˆã§ã‚µãƒ¼ãƒãƒ¼ãŒã‚¨ãƒ©ãƒ¼ã‚’è¿”ã—ãŸå ´åˆ_ä¾‹å¤–ã‚’ã‚¹ãƒ­ãƒ¼ã™ã‚‹()
         {
-            var testText = "ƒGƒ‰[ƒeƒXƒg";
+            var testText = "ã‚¨ãƒ©ãƒ¼ãƒ†ã‚¹ãƒˆ";
             
             var mockHandler = new Mock<HttpMessageHandler>();
             mockHandler.Protected()
@@ -421,9 +432,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒgƒŠ[ƒ~ƒ“ƒO‰¹º‡¬‚Å’Z‚¢ƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_1‚Â‚Ìƒ`ƒƒƒ“ƒN‚ğ•Ô‚·()
+        public async Task ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°éŸ³å£°åˆæˆã§çŸ­ã„ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_1ã¤ã®ãƒãƒ£ãƒ³ã‚¯ã‚’è¿”ã™()
         {
-            var testText = "‚±‚ñ‚É‚¿‚Í";
+            var testText = "ã“ã‚“ã«ã¡ã¯";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var mockHandler = new Mock<HttpMessageHandler>();
@@ -451,7 +462,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒgƒŠ[ƒ~ƒ“ƒO‰¹º‡¬‚Å‹ó‚ÌƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_ƒ`ƒƒƒ“ƒN‚ğ•Ô‚³‚È‚¢()
+        public async Task ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°éŸ³å£°åˆæˆã§ç©ºã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_ãƒãƒ£ãƒ³ã‚¯ã‚’è¿”ã•ãªã„()
         {
             var service = new StyleBertVits2Service(TEST_BASE_URL);
 
@@ -465,9 +476,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒgƒŠ[ƒ~ƒ“ƒO‰¹º‡¬‚ÅŠ´î•\Œ»‚ğŠÜ‚ŞƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_Š´î•\Œ»‚ªƒtƒBƒ‹ƒ^‚³‚ê‚é()
+        public async Task ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°éŸ³å£°åˆæˆã§æ„Ÿæƒ…è¡¨ç¾ã‚’å«ã‚€ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_æ„Ÿæƒ…è¡¨ç¾ãŒãƒ•ã‚£ãƒ«ã‚¿ã•ã‚Œã‚‹()
         {
-            var testText = "i‹Á‚¢‚Äj‚È‚ñ‚ÆI";
+            var testText = "ï¼ˆé©šã„ã¦ï¼‰ãªã‚“ã¨ï¼";
             var expectedAudioData = new byte[] { 0x52, 0x49, 0x46, 0x46 };
             
             var mockHandler = new Mock<HttpMessageHandler>();
@@ -496,9 +507,9 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         [Fact]
-        public async Task ƒXƒgƒŠ[ƒ~ƒ“ƒO‰¹º‡¬‚ÅŠ´î•\Œ»‚Ì‚İ‚ÌƒeƒLƒXƒg‚ğw’è‚µ‚½ê‡_ƒ`ƒƒƒ“ƒN‚ğ•Ô‚³‚È‚¢()
+        public async Task ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°éŸ³å£°åˆæˆã§æ„Ÿæƒ…è¡¨ç¾ã®ã¿ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’æŒ‡å®šã—ãŸå ´åˆ_ãƒãƒ£ãƒ³ã‚¯ã‚’è¿”ã•ãªã„()
         {
-            var testText = "yÎŠçz";
+            var testText = "ã€ç¬‘é¡”ã€‘";
             var service = new StyleBertVits2Service(TEST_BASE_URL);
 
             var chunks = new List<byte[]>();
@@ -512,10 +523,10 @@ namespace DesktopAiMascotTest.aiservice.voice
 
         #endregion
 
-        #region ƒwƒ‹ƒp[ƒƒ\ƒbƒh
+        #region ãƒ˜ãƒ«ãƒ‘ãƒ¼ãƒ¡ã‚½ãƒƒãƒ‰
 
         /// <summary>
-        /// w’è‚³‚ê‚½ƒpƒX‚É‘Î‚µ‚ÄƒŒƒXƒ|ƒ“ƒX‚ğ•Ô‚·ƒ‚ƒbƒNƒT[ƒrƒX‚ğì¬‚µ‚Ü‚·
+        /// æŒ‡å®šã•ã‚ŒãŸãƒ‘ã‚¹ã«å¯¾ã—ã¦ãƒ¬ã‚¹ãƒãƒ³ã‚¹ã‚’è¿”ã™ãƒ¢ãƒƒã‚¯ã‚µãƒ¼ãƒ“ã‚¹ã‚’ä½œæˆã—ã¾ã™
         /// </summary>
         private StyleBertVits2Service CreateServiceWithMockHttpClient(
             string expectedPath,
@@ -539,7 +550,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         /// <summary>
-        /// ƒJƒXƒ^ƒ€ƒ‚ƒbƒNƒnƒ“ƒhƒ‰[‚ğg—p‚µ‚ÄƒT[ƒrƒX‚ğì¬‚µ‚Ü‚·
+        /// ã‚«ã‚¹ã‚¿ãƒ ãƒ¢ãƒƒã‚¯ãƒãƒ³ãƒ‰ãƒ©ãƒ¼ã‚’ä½¿ç”¨ã—ã¦ã‚µãƒ¼ãƒ“ã‚¹ã‚’ä½œæˆã—ã¾ã™
         /// </summary>
         private StyleBertVits2Service CreateServiceWithMockHandler(Mock<HttpMessageHandler> mockHandler)
         {
@@ -558,7 +569,7 @@ namespace DesktopAiMascotTest.aiservice.voice
         }
 
         /// <summary>
-        /// ‚·‚×‚Ä‚ÌƒŠƒNƒGƒXƒg‚ğƒLƒƒƒvƒ`ƒƒ‚µ‚ÄƒŒƒXƒ|ƒ“ƒX‚ğ•Ô‚·ƒ‚ƒbƒNƒT[ƒrƒX‚ğì¬‚µ‚Ü‚·
+        /// ã™ã¹ã¦ã®ãƒªã‚¯ã‚¨ã‚¹ãƒˆã‚’ã‚­ãƒ£ãƒ—ãƒãƒ£ã—ã¦ãƒ¬ã‚¹ãƒãƒ³ã‚¹ã‚’è¿”ã™ãƒ¢ãƒƒã‚¯ã‚µãƒ¼ãƒ“ã‚¹ã‚’ä½œæˆã—ã¾ã™
         /// </summary>
         private (StyleBertVits2Service Service, Func<HttpRequestMessage?> GetCapturedRequest) CreateServiceWithCaptureHandler(byte[] responseData)
         {
