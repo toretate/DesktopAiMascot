@@ -35,6 +35,9 @@ namespace DesktopAiMascot
 
         private DispatcherTimer animationTimer;
         private int animationTickCount = 0;
+        
+        // 位置保存用のタイマー（連続的な位置変更中の保存を避ける）
+        private DispatcherTimer locationSaveTimer;
 
         public MascotWindow()
         {
@@ -135,7 +138,10 @@ namespace DesktopAiMascot
             animationTimer = new DispatcherTimer(DispatcherPriority.Background);
             animationTimer.Interval = TimeSpan.FromMilliseconds(150);
             animationTimer.Tick += AnimationTimer_Tick;
-            animationTimer.Start();
+            
+            // アニメーションを一時的にOFF（パフォーマンス改善のため）
+            // animationTimer.Start();
+            Debug.WriteLine("[MascotWindow] アニメーションは一時的に無効化されています");
 
             // アニメーションマネージャーにタイマーを登録
             MascotAnimationManager.Instance.RegisterAnimationTimer(animationTimer);

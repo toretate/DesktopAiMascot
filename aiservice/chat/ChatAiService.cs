@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace DesktopAiMascot.aiservice
+namespace DesktopAiMascot.aiservice.chat
 {
     // AIチャットサービスのインターフェース
     public interface ChatAiService
@@ -14,8 +14,8 @@ namespace DesktopAiMascot.aiservice
         /// 利用可能なモデルリストを取得する
         /// </summary>
         /// <param name="reload">キャッシュを無視して再取得する場合はtrue</param>
-        /// <returns></returns>
-        public Task<string[]> GetAvailableModels( bool reload );
+        /// <returns>ModelDisplayItemの配列</returns>
+        public Task<ModelDisplayItem[]> GetAvailableModels( bool reload );
 
         // AIにチャットメッセージを送信する
         public Task<string?> SendMessageAsync(string message);
@@ -28,9 +28,9 @@ namespace DesktopAiMascot.aiservice
 
     public abstract class ChatAiServiceBase : ChatAiService
     {
-        private string[]? _cachedModels;
+        private ModelDisplayItem[]? _cachedModels;
 
-        public async Task<string[]> GetAvailableModels( bool reload )
+        public virtual async Task<ModelDisplayItem[]> GetAvailableModels( bool reload )
         {
             if (!reload && _cachedModels != null)
             {
@@ -47,7 +47,7 @@ namespace DesktopAiMascot.aiservice
                 
                 if (!response.IsSuccessStatusCode)
                 {
-                    return Array.Empty<string>();
+                    return Array.Empty<ModelDisplayItem>();
                 }
                 
                 var json = await response.Content.ReadAsStringAsync();
@@ -55,21 +55,23 @@ namespace DesktopAiMascot.aiservice
                 
                 if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
                 {
-                    _cachedModels = data.EnumerateArray()
+                    var models = data.EnumerateArray()
                         .Select(element => element.TryGetProperty("id", out var id) ? id.GetString() : null)
                         .Where(id => !string.IsNullOrEmpty(id))
                         .Cast<string>()
+                        .Select(id => new ModelDisplayItem(id))
                         .ToArray();
 
+                    _cachedModels = models;
                     return _cachedModels;
                 }
                 
-                return Array.Empty<string>();
+                return Array.Empty<ModelDisplayItem>();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"GetAvailableModels Error: {ex.Message}");
-                return Array.Empty<string>();
+                return Array.Empty<ModelDisplayItem>();
             }
         }
 

@@ -25,6 +25,8 @@
             <Label Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2"/>
             <ComboBox x:Name="chatAiModelComboBox" 
                       Height="25"
+                      DisplayMemberPath="DisplayName"
+                      SelectedValuePath="Id"
                       SelectionChanged="ChatAiModelComboBox_SelectionChanged"/>
         </StackPanel>
     </GroupBox>

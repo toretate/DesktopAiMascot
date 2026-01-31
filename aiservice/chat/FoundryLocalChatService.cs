@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Diagnostics;
 using System.Diagnostics;
 
-namespace DesktopAiMascot.aiservice
+namespace DesktopAiMascot.aiservice.chat
 {
     public class FoundryLocalChatService : ChatAiServiceBase
     {

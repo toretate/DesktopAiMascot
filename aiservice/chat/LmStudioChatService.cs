@@ -14,7 +14,7 @@ using OpenAI.Chat;
 using System.ClientModel;
 using DesktopAiMascot.mascots;
 
-namespace DesktopAiMascot.aiservice
+namespace DesktopAiMascot.aiservice.chat
 {
 
     public class LmStudioChatService : ChatAiServiceBase

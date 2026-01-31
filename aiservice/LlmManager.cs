@@ -1,3 +1,4 @@
+using DesktopAiMascot.aiservice.chat;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -24,8 +25,8 @@ namespace DesktopAiMascot.aiservice
             {
                 { "LM Studio" },
                 { "Foundry Local" },
-                { "Open AI (未実装)" },
-                { "Chat GPT (未実装)" },
+                { "Gemini (AI Studio)" },
+                { "Gemini (Google Cloud)" },
             }
         };
 
@@ -38,6 +39,14 @@ namespace DesktopAiMascot.aiservice
             else if (serviceName == "LM Studio")
             {
                 return new LmStudioChatService();
+            }
+            else if (serviceName == "Gemini (AI Studio)" || serviceName == "Google AI Studio")
+            {
+                return new GoogleAiStudioChatService();
+            }
+            else if (serviceName == "Gemini (Google Cloud)")
+            {
+                return new GoogleCloudChatService();
             }
             return null;
         }

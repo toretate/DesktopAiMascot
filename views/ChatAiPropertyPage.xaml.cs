@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.aiservice.chat;
 using System.Diagnostics;
 
 namespace DesktopAiMascot.views
@@ -19,10 +20,12 @@ namespace DesktopAiMascot.views
 
         private void ChatAiModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (chatAiModelComboBox.SelectedItem is string modelName)
+            if (chatAiModelComboBox.SelectedItem is ModelDisplayItem modelItem)
             {
-                SystemConfig.Instance.ModelName = modelName;
+                // IDを保存（表示名ではなくモデルIDを保存）
+                SystemConfig.Instance.ModelName = modelItem.Id;
                 SystemConfig.Instance.Save();
+                Debug.WriteLine($"[ChatAiPropertyPage] Saved model ID: {modelItem.Id} (Display: {modelItem.DisplayName})");
             }
         }
 
@@ -52,9 +55,12 @@ namespace DesktopAiMascot.views
             try
             {
                 var service = LlmManager.CreateService(serviceName);
-                if (service != null && !string.IsNullOrEmpty(service.EndPoint))
+                if (service != null)
                 {
-                    chatAiUrlTextField.Text = service.EndPoint;
+                    if (!string.IsNullOrEmpty(service.EndPoint))
+                    {
+                        chatAiUrlTextField.Text = service.EndPoint;
+                    }
                     
                     var models = await service.GetAvailableModels(false);
                     
@@ -62,21 +68,30 @@ namespace DesktopAiMascot.views
                     {
                         chatAiModelComboBox.ItemsSource = models;
                         
-                        string current = SystemConfig.Instance.ModelName;
-                        var match = models.FirstOrDefault(m => string.Equals(m, current, StringComparison.OrdinalIgnoreCase));
+                        string currentModelId = SystemConfig.Instance.ModelName;
+                        
+                        // IDで一致するモデルを探す
+                        var match = models.FirstOrDefault(m => string.Equals(m.Id, currentModelId, StringComparison.OrdinalIgnoreCase));
                         if (match != null)
                         {
                             chatAiModelComboBox.SelectedItem = match;
+                            Debug.WriteLine($"[ChatAiPropertyPage] Selected model: {match.DisplayName} (ID: {match.Id})");
                         }
                         else 
                         {
-                             chatAiModelComboBox.SelectedIndex = 0;
+                            chatAiModelComboBox.SelectedIndex = 0;
+                            Debug.WriteLine($"[ChatAiPropertyPage] Model ID '{currentModelId}' not found, selecting first model");
                         }
                     }
                     else
                     {
                         chatAiModelComboBox.ItemsSource = null;
+                        Debug.WriteLine($"[ChatAiPropertyPage] No models available for service: {serviceName}");
                     }
+                }
+                else
+                {
+                    Debug.WriteLine($"[ChatAiPropertyPage] Failed to create service: {serviceName}");
                 }
             }
             catch (Exception ex)
