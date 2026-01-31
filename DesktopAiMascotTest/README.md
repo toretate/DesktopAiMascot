@@ -1,132 +1,132 @@
 # DesktopAiMascotTest
 
-‚±‚ÌƒfƒBƒŒƒNƒgƒŠ‚É‚ÍADesktopAiMascot ƒvƒƒWƒFƒNƒg‚ÌƒeƒXƒgƒR[ƒh‚ªŠÜ‚Ü‚ê‚Ä‚¢‚Ü‚·B
+ã“ã®ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã«ã¯ã€DesktopAiMascot ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®ãƒ†ã‚¹ãƒˆã‚³ãƒ¼ãƒ‰ãŒå«ã¾ã‚Œã¦ã„ã¾ã™ã€‚
 
-## ƒeƒXƒgƒvƒƒWƒFƒNƒg‚Ì\¬
+## ãƒ†ã‚¹ãƒˆãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®æ§‹æˆ
 
-- **’P‘ÌƒeƒXƒg (Unit Tests)**: ƒ‚ƒbƒNEƒXƒ^ƒu‚ðŽg—p‚µ‚ÄAŒÂ•Ê‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg‚ðƒeƒXƒg‚µ‚Ü‚·
-- **“‡ƒeƒXƒg (Integration Tests)**: ŽÀÛ‚ÌƒT[ƒrƒX‚Æ‚ÌÚ‘±‚ðƒeƒXƒg‚µ‚Ü‚·iSkip ‘®«•t‚«j
+- **å˜ä½“ãƒ†ã‚¹ãƒˆ (Unit Tests)**: ãƒ¢ãƒƒã‚¯ãƒ»ã‚¹ã‚¿ãƒ–ã‚’ä½¿ç”¨ã—ã¦ã€å€‹åˆ¥ã®ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’ãƒ†ã‚¹ãƒˆã—ã¾ã™
+- **çµ±åˆãƒ†ã‚¹ãƒˆ (Integration Tests)**: å®Ÿéš›ã®ã‚µãƒ¼ãƒ“ã‚¹ã¨ã®æŽ¥ç¶šã‚’ãƒ†ã‚¹ãƒˆã—ã¾ã™ï¼ˆSkip å±žæ€§ä»˜ãï¼‰
 
-## ƒeƒXƒg‚ÌŽÀs
+## ãƒ†ã‚¹ãƒˆã®å®Ÿè¡Œ
 
-### ‚·‚×‚Ä‚ÌƒeƒXƒg‚ðŽÀs
+### ã™ã¹ã¦ã®ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
 
 ```powershell
 cd ..\DesktopAiMascotTest
 dotnet test
 ```
 
-### Visual Studio‚©‚çŽÀs
+### Visual Studioã‹ã‚‰å®Ÿè¡Œ
 
-1. ƒ\ƒŠƒ…[ƒVƒ‡ƒ“ƒGƒNƒXƒvƒ[ƒ‰[‚ÅƒeƒXƒgƒvƒƒWƒFƒNƒg‚ð‰EƒNƒŠƒbƒN
-2. uƒeƒXƒg‚ÌŽÀsv‚ð‘I‘ð
+1. ã‚½ãƒªãƒ¥ãƒ¼ã‚·ãƒ§ãƒ³ã‚¨ã‚¯ã‚¹ãƒ—ãƒ­ãƒ¼ãƒ©ãƒ¼ã§ãƒ†ã‚¹ãƒˆãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã‚’å³ã‚¯ãƒªãƒƒã‚¯
+2. ã€Œãƒ†ã‚¹ãƒˆã®å®Ÿè¡Œã€ã‚’é¸æŠž
 
-### “Á’è‚ÌƒeƒXƒgƒNƒ‰ƒX‚ðŽÀs
+### ç‰¹å®šã®ãƒ†ã‚¹ãƒˆã‚¯ãƒ©ã‚¹ã‚’å®Ÿè¡Œ
 
 ```powershell
 dotnet test --filter "FullyQualifiedName~StyleBertVits2ServiceTests"
 ```
 
-## ƒJƒoƒŒƒbƒWƒŒƒ|[ƒg‚Ì¶¬
+## ã‚«ãƒãƒ¬ãƒƒã‚¸ãƒ¬ãƒãƒ¼ãƒˆã®ç”Ÿæˆ
 
 ```powershell
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-## StyleBertVits2Service ‚ÌƒeƒXƒg
+## StyleBertVits2Service ã®ãƒ†ã‚¹ãƒˆ
 
-### ’P‘ÌƒeƒXƒg (`StyleBertVits2ServiceTests.cs`)
+### å˜ä½“ãƒ†ã‚¹ãƒˆ (`StyleBertVits2ServiceTests.cs`)
 
-ˆÈ‰º‚Ì‹@”\‚ðƒeƒXƒg‚µ‚Ü‚·:
+ä»¥ä¸‹ã®æ©Ÿèƒ½ã‚’ãƒ†ã‚¹ãƒˆã—ã¾ã™:
 
-- ƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ÆURLÝ’è
-- ƒ‚ƒfƒ‹‚ÆƒXƒs[ƒJ[‚ÌŽæ“¾
-- ƒT[ƒo[î•ñAƒXƒe[ƒ^ƒXAƒŠƒtƒŒƒbƒVƒ…API
-- ‰¹º‡¬ (’Z‚¢ƒeƒLƒXƒgAŠ´îƒtƒBƒ‹ƒ^ƒŠƒ“ƒO)
-- ƒXƒgƒŠ[ƒ~ƒ“ƒO‰¹º‡¬
-- ƒGƒ‰[ƒnƒ“ƒhƒŠƒ“ƒO
-- ƒ‚ƒfƒ‹ID‚ÆƒXƒs[ƒJ[ID‚Ìƒp[ƒX
+- ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ã¨URLè¨­å®š
+- ãƒ¢ãƒ‡ãƒ«ã¨ã‚¹ãƒ”ãƒ¼ã‚«ãƒ¼ã®å–å¾—
+- ã‚µãƒ¼ãƒãƒ¼æƒ…å ±ã€ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã€ãƒªãƒ•ãƒ¬ãƒƒã‚·ãƒ¥API
+- éŸ³å£°åˆæˆ (çŸ­ã„ãƒ†ã‚­ã‚¹ãƒˆã€æ„Ÿæƒ…ãƒ•ã‚£ãƒ«ã‚¿ãƒªãƒ³ã‚°)
+- ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°éŸ³å£°åˆæˆ
+- ã‚¨ãƒ©ãƒ¼ãƒãƒ³ãƒ‰ãƒªãƒ³ã‚°
+- ãƒ¢ãƒ‡ãƒ«IDã¨ã‚¹ãƒ”ãƒ¼ã‚«ãƒ¼IDã®ãƒ‘ãƒ¼ã‚¹
 
-### “‡ƒeƒXƒg (`StyleBertVits2ServiceIntegrationTests.cs`)
+### çµ±åˆãƒ†ã‚¹ãƒˆ (`StyleBertVits2ServiceIntegrationTests.cs`)
 
-ŽÀÛ‚ÌStyleBertVits2ƒT[ƒo[‚Æ‚Ì’ÊM‚ðƒeƒXƒg‚µ‚Ü‚·:
+å®Ÿéš›ã®StyleBertVits2ã‚µãƒ¼ãƒãƒ¼ã¨ã®é€šä¿¡ã‚’ãƒ†ã‚¹ãƒˆã—ã¾ã™:
 
-- ƒT[ƒo[î•ñ‚ÌŽæ“¾
-- ŽÀÛ‚Ì‰¹º‡¬
-- ’·‚¢ƒeƒLƒXƒg‚Ì•ªŠ„ˆ—
-- ƒXƒgƒŠ[ƒ~ƒ“ƒO‡¬
-- ƒJƒXƒ^ƒ€ƒpƒ‰ƒ[ƒ^‚Å‚Ì‡¬
+- ã‚µãƒ¼ãƒãƒ¼æƒ…å ±ã®å–å¾—
+- å®Ÿéš›ã®éŸ³å£°åˆæˆ
+- é•·ã„ãƒ†ã‚­ã‚¹ãƒˆã®åˆ†å‰²å‡¦ç†
+- ã‚¹ãƒˆãƒªãƒ¼ãƒŸãƒ³ã‚°åˆæˆ
+- ã‚«ã‚¹ã‚¿ãƒ ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã§ã®åˆæˆ
 
-**’ˆÓ**: “‡ƒeƒXƒg‚ÍƒfƒtƒHƒ‹ƒg‚ÅƒXƒLƒbƒv‚³‚ê‚Ü‚·B
+**æ³¨æ„**: çµ±åˆãƒ†ã‚¹ãƒˆã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã§ã‚¹ã‚­ãƒƒãƒ—ã•ã‚Œã¾ã™ã€‚
 
-### “‡ƒeƒXƒg‚ðŽÀs‚·‚é•û–@
+### çµ±åˆãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œã™ã‚‹æ–¹æ³•
 
-“‡ƒeƒXƒg‚ðŽÀs‚·‚é‚É‚ÍAŠÂ‹«•Ï” `RUN_INTEGRATION_TESTS=true` ‚ðÝ’è‚µ‚Ä‚­‚¾‚³‚¢B
+çµ±åˆãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œã™ã‚‹ã«ã¯ã€ç’°å¢ƒå¤‰æ•° `RUN_INTEGRATION_TESTS=true` ã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚
 
 #### Windows (PowerShell)
 ```powershell
-# ŠÂ‹«•Ï”‚ðÝ’è
+# ç’°å¢ƒå¤‰æ•°ã‚’è¨­å®š
 $env:RUN_INTEGRATION_TESTS="true"
 
-# ƒeƒXƒg‚ðŽÀs
+# ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
 dotnet test
 ```
 
-#### Windows (ƒRƒ}ƒ“ƒhƒvƒƒ“ƒvƒg)
+#### Windows (ã‚³ãƒžãƒ³ãƒ‰ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆ)
 ```cmd
 set RUN_INTEGRATION_TESTS=true
 dotnet test
 ```
 
-#### Visual Studio ‚©‚çŽÀs
-1. ƒeƒXƒgƒGƒNƒXƒvƒ[ƒ‰[‚ðŠJ‚­
-2. ŠÂ‹«•Ï”‚ðÝ’è:
-   - `ƒc[ƒ‹` ¨ `ƒIƒvƒVƒ‡ƒ“` ¨ `ƒeƒXƒg` ¨ `ŠÂ‹«•Ï”`
-   - ‚Ü‚½‚ÍAƒvƒƒWƒFƒNƒg‚Ì‹N“®Ý’è‚ÅŠÂ‹«•Ï”‚ðÝ’è
-3. StyleBertVits2ƒT[ƒo[‚ð `http://127.0.0.1:5000` ‚Å‹N“®
-4. ƒeƒXƒg‚ðŽÀs
+#### Visual Studio ã‹ã‚‰å®Ÿè¡Œ
+1. ãƒ†ã‚¹ãƒˆã‚¨ã‚¯ã‚¹ãƒ—ãƒ­ãƒ¼ãƒ©ãƒ¼ã‚’é–‹ã
+2. ç’°å¢ƒå¤‰æ•°ã‚’è¨­å®š:
+   - `ãƒ„ãƒ¼ãƒ«` â†’ `ã‚ªãƒ—ã‚·ãƒ§ãƒ³` â†’ `ãƒ†ã‚¹ãƒˆ` â†’ `ç’°å¢ƒå¤‰æ•°`
+   - ã¾ãŸã¯ã€ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã®èµ·å‹•è¨­å®šã§ç’°å¢ƒå¤‰æ•°ã‚’è¨­å®š
+3. StyleBertVits2ã‚µãƒ¼ãƒãƒ¼ã‚’ `http://127.0.0.1:5000` ã§èµ·å‹•
+4. ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
 
-“‡ƒeƒXƒgŽÀs‚Ì**‘O’ñðŒ**:
-- StyleBertVits2ƒT[ƒo[‚ª `http://127.0.0.1:5000` ‚Å‹N“®‚µ‚Ä‚¢‚é‚±‚Æ
-- ƒT[ƒo[‚ª³í‚É“®ì‚µ‚Ä‚¢‚é‚±‚Æ
+çµ±åˆãƒ†ã‚¹ãƒˆå®Ÿè¡Œã®**å‰ææ¡ä»¶**:
+- StyleBertVits2ã‚µãƒ¼ãƒãƒ¼ãŒ `http://127.0.0.1:5000` ã§èµ·å‹•ã—ã¦ã„ã‚‹ã“ã¨
+- ã‚µãƒ¼ãƒãƒ¼ãŒæ­£å¸¸ã«å‹•ä½œã—ã¦ã„ã‚‹ã“ã¨
 
-## Žg—p‚µ‚Ä‚¢‚éƒeƒXƒgƒtƒŒ[ƒ€ƒ[ƒN
+## ä½¿ç”¨ã—ã¦ã„ã‚‹ãƒ†ã‚¹ãƒˆãƒ•ãƒ¬ãƒ¼ãƒ ãƒ¯ãƒ¼ã‚¯
 
-- **xUnit**: ƒeƒXƒgƒtƒŒ[ƒ€ƒ[ƒN
-- **Moq**: ƒ‚ƒbƒNƒ‰ƒCƒuƒ‰ƒŠ
-- **coverlet**: ƒR[ƒhƒJƒoƒŒƒbƒWƒc[ƒ‹
+- **xUnit**: ãƒ†ã‚¹ãƒˆãƒ•ãƒ¬ãƒ¼ãƒ ãƒ¯ãƒ¼ã‚¯
+- **Moq**: ãƒ¢ãƒƒã‚¯ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
+- **coverlet**: ã‚³ãƒ¼ãƒ‰ã‚«ãƒãƒ¬ãƒƒã‚¸ãƒ„ãƒ¼ãƒ«
 
-## ƒeƒXƒg‚Ì’Ç‰Á•û–@
+## ãƒ†ã‚¹ãƒˆã®è¿½åŠ æ–¹æ³•
 
-1. “KØ‚ÈƒfƒBƒŒƒNƒgƒŠ‚ÉƒeƒXƒgƒNƒ‰ƒXƒtƒ@ƒCƒ‹‚ðì¬
-2. `[Fact]` ‘®«‚ðŽg—p‚µ‚ÄƒeƒXƒgƒƒ\ƒbƒh‚ð’è‹`
-3. `dotnet test` ‚ÅƒeƒXƒg‚ðŽÀs
+1. é©åˆ‡ãªãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã«ãƒ†ã‚¹ãƒˆã‚¯ãƒ©ã‚¹ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ä½œæˆ
+2. `[Fact]` å±žæ€§ã‚’ä½¿ç”¨ã—ã¦ãƒ†ã‚¹ãƒˆãƒ¡ã‚½ãƒƒãƒ‰ã‚’å®šç¾©
+3. `dotnet test` ã§ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
 
-### ƒeƒXƒgƒƒ\ƒbƒh‚Ì–½–¼‹K‘¥
+### ãƒ†ã‚¹ãƒˆãƒ¡ã‚½ãƒƒãƒ‰ã®å‘½åè¦å‰‡
 
 ```
-[ƒeƒXƒg‘ÎÛƒƒ\ƒbƒh]_[ƒeƒXƒgðŒ]_[Šú‘Ò‚³‚ê‚éŒ‹‰Ê]
+[ãƒ†ã‚¹ãƒˆå¯¾è±¡ãƒ¡ã‚½ãƒƒãƒ‰]_[ãƒ†ã‚¹ãƒˆæ¡ä»¶]_[æœŸå¾…ã•ã‚Œã‚‹çµæžœ]
 ```
 
-—á:
+ä¾‹:
 ```csharp
 [Fact]
 public async Task SynthesizeAsync_WithShortText_ReturnsAudioData()
 {
-    // ƒeƒXƒgƒR[ƒh
+    // ãƒ†ã‚¹ãƒˆã‚³ãƒ¼ãƒ‰
 }
 ```
 
-## ƒgƒ‰ƒuƒ‹ƒVƒ…[ƒeƒBƒ“ƒO
+## ãƒˆãƒ©ãƒ–ãƒ«ã‚·ãƒ¥ãƒ¼ãƒ†ã‚£ãƒ³ã‚°
 
-### “‡ƒeƒXƒg‚ðŽÀs‚µ‚½‚¢ê‡
+### çµ±åˆãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œã—ãŸã„å ´åˆ
 
-1. StyleBertVits2ƒT[ƒo[‚ð‹N“®
-2. ƒT[ƒo[‚ÌURL‚ª `http://127.0.0.1:5000` ‚Å‚ ‚é‚±‚Æ‚ðŠm”F
-3. ƒeƒXƒgƒR[ƒh‚Ì `Skip` ‘®«‚ðíœ‚Ü‚½‚Í `Skip = null` ‚É•ÏX
-4. ƒeƒXƒg‚ðŽÀs
+1. StyleBertVits2ã‚µãƒ¼ãƒãƒ¼ã‚’èµ·å‹•
+2. ã‚µãƒ¼ãƒãƒ¼ã®URLãŒ `http://127.0.0.1:5000` ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèª
+3. ãƒ†ã‚¹ãƒˆã‚³ãƒ¼ãƒ‰ã® `Skip` å±žæ€§ã‚’å‰Šé™¤ã¾ãŸã¯ `Skip = null` ã«å¤‰æ›´
+4. ãƒ†ã‚¹ãƒˆã‚’å®Ÿè¡Œ
 
-### ƒrƒ‹ƒhƒGƒ‰[‚ª”­¶‚·‚éê‡
+### ãƒ“ãƒ«ãƒ‰ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã™ã‚‹å ´åˆ
 
 ```powershell
 dotnet clean
@@ -134,10 +134,10 @@ dotnet restore
 dotnet build
 ```
 
-## ƒeƒXƒg‚ÌŽÀsŒ‹‰Ê—á
+## ãƒ†ã‚¹ãƒˆã®å®Ÿè¡Œçµæžœä¾‹
 
 ```
-’P‘ÌƒeƒXƒg: 20ŒÂ ‚·‚×‚Ä¬Œ÷
-“‡ƒeƒXƒg: ƒXƒLƒbƒv
-ƒJƒoƒŒƒbƒW: 80%ˆÈã
+å˜ä½“ãƒ†ã‚¹ãƒˆ: 20å€‹ ã™ã¹ã¦æˆåŠŸ
+çµ±åˆãƒ†ã‚¹ãƒˆ: ã‚¹ã‚­ãƒƒãƒ—
+ã‚«ãƒãƒ¬ãƒƒã‚¸: 80%ä»¥ä¸Š
 ```
