@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.aiservice.chat;
 using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.Controls;
 using DesktopAiMascot.mascots;
@@ -99,13 +100,27 @@ namespace DesktopAiMascot.Wpf
 
         private void UpdateChatService(string serviceName)
         {
+            Debug.WriteLine($"[InteractionPanel] UpdateChatService called with: {serviceName}");
+            
             if (serviceName == "Foundry Local")
             {
                 ChatService = new FoundryLocalChatService(SystemConfig.Instance.ModelName);
+                Debug.WriteLine("[InteractionPanel] ChatService set to FoundryLocalChatService");
+            }
+            else if (serviceName == "Gemini (AI Studio)" || serviceName == "Google AI Studio")
+            {
+                ChatService = new GoogleAiStudioChatService();
+                Debug.WriteLine("[InteractionPanel] ChatService set to GoogleAiStudioChatService");
+            }
+            else if (serviceName == "Gemini (Google Cloud)")
+            {
+                ChatService = new GoogleCloudChatService();
+                Debug.WriteLine("[InteractionPanel] ChatService set to GoogleCloudChatService");
             }
             else
             {
                 ChatService = new LmStudioChatService();
+                Debug.WriteLine("[InteractionPanel] ChatService set to LmStudioChatService");
             }
         }
 
@@ -113,10 +128,18 @@ namespace DesktopAiMascot.Wpf
         {
             try
             {
+                // SettingsDialog表示前にアニメーションを停止
+                MascotAnimationManager.Instance.PauseAnimation();
+                Debug.WriteLine("[InteractionPanel] SettingsDialog表示のためアニメーションを一時停止");
+                
                 var dialogContent = new DesktopAiMascot.views.SettingsForm();
                 
                 dialogContent.MascotChanged += (s, m) => MascotChanged?.Invoke(this, m);
-                dialogContent.LlmServiceChanged += (s, name) => UpdateChatService(name);
+                dialogContent.LlmServiceChanged += (s, name) =>
+                {
+                    Debug.WriteLine($"[InteractionPanel] LlmServiceChanged event received: {name}");
+                    UpdateChatService(name);
+                };
                 if (_settingsImageProvider != null)
                 {
                     dialogContent.GetMascotImage = _settingsImageProvider;
@@ -131,10 +154,20 @@ namespace DesktopAiMascot.Wpf
                 }
 
                 dlg.ShowDialog();
+                
+                // ダイアログを閉じた後、設定ファイルから最新の設定を読み込んでサービスを更新
+                Debug.WriteLine($"[InteractionPanel] SettingsDialog closed. Current LlmService: {SystemConfig.Instance.LlmService}");
+                UpdateChatService(SystemConfig.Instance.LlmService);
+                
+                // SettingsDialog終了後にアニメーションを再開
+                MascotAnimationManager.Instance.ResumeAnimation();
+                Debug.WriteLine("[InteractionPanel] SettingsDialog終了のためアニメーションを再開");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"設定ダイアログエラー: {ex.Message}");
+                // エラー時もアニメーションを再開
+                MascotAnimationManager.Instance.ResumeAnimation();
             }
         }
 
