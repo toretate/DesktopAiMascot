@@ -1,0 +1,62 @@
+{
+  "accent_phrases": [
+    {
+      "moras": [
+        {
+          "text": "コ",
+          "consonant": "k",
+          "consonant_length": 0.08478326350450516,
+          "vowel": "o",
+          "vowel_length": 0.12704369425773621,
+          "pitch": 5.506003856658936
+        },
+        {
+          "text": "ン",
+          "consonant": null,
+          "consonant_length": null,
+          "vowel": "N",
+          "vowel_length": 0.08844256401062012,
+          "pitch": 5.472512245178223
+        },
+        {
+          "text": "ニ",
+          "consonant": "n",
+          "consonant_length": 0.07398250699043274,
+          "vowel": "i",
+          "vowel_length": 0.11345823109149933,
+          "pitch": 5.427858829498291
+        },
+        {
+          "text": "チ",
+          "consonant": "ch",
+          "consonant_length": 0.09604053199291229,
+          "vowel": "i",
+          "vowel_length": 0.10306996107101440,
+          "pitch": 5.423670768737793
+        },
+        {
+          "text": "ワ",
+          "consonant": "w",
+          "consonant_length": 0.07345813512802124,
+          "vowel": "a",
+          "vowel_length": 0.27945661544799805,
+          "pitch": 4.817142486572266
+        }
+      ],
+      "accent": 5,
+      "pause_mora": null,
+      "is_interrogative": false
+    }
+  ],
+  "speedScale": 1.0,
+  "pitchScale": 0.0,
+  "intonationScale": 1.0,
+  "volumeScale": 1.0,
+  "prePhonemeLength": 0.1,
+  "postPhonemeLength": 0.1,
+  "pauseLength": null,
+  "pauseLengthScale": 1.0,
+  "outputSamplingRate": 24000,
+  "outputStereo": false,
+  "kana": "コンニチワ"
+}

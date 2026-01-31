@@ -1,0 +1,16 @@
+{
+  "policy": "VoiceVoxの利用規約に従ってください。",
+  "portrait": "data:image/png;base64,iVBOR...",
+  "style_infos": [
+    {
+      "id": 2,
+      "icon": "data:image/png;base64,iVBOR...",
+      "portrait": "data:image/png;base64,iVBOR...",
+      "voice_samples": [
+        "data:audio/wav;base64,UklGR...",
+        "data:audio/wav;base64,UklGR...",
+        "data:audio/wav;base64,UklGR..."
+      ]
+    }
+  ]
+}

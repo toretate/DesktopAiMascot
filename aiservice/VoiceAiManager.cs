@@ -29,8 +29,11 @@ namespace DesktopAiMascot.aiservice
         {
             string name = String.Empty;
 
-            name = "Style Bert Vits 2";
+            name = "StyleBertVits2";
             VoiceAiServices.Add(name, new StyleBertVits2Service());
+            
+            name = "VoiceVox";
+            VoiceAiServices.Add(name, new VoiceVoxService());
         }
 
         public void Load()

@@ -405,6 +405,31 @@ namespace DesktopAiMascot.aiservice.voice
             }
         }
 
+        /// <summary>
+        /// StyleBertVits2サーバーが起動しているか確認します
+        /// GET /status (軽量なエンドポイント)
+        /// </summary>
+        public async Task<bool> IsServerAvailableAsync()
+        {
+            try
+            {
+                Debug.WriteLine($"[StyleBertVits2] 接続確認: GET /status");
+
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(3));
+                var response = await _httpClient.GetAsync("/status", cts.Token);
+                
+                bool isAvailable = response.IsSuccessStatusCode;
+                Debug.WriteLine($"[StyleBertVits2] サーバー状態: {(isAvailable ? "起動中" : "停止中")}");
+                
+                return isAvailable;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[StyleBertVits2] サーバー接続エラー: {ex.Message}");
+                return false;
+            }
+        }
+
 
         private int ParseModelId(string modelStr)
         {

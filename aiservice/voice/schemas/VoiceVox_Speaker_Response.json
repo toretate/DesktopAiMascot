@@ -1,0 +1,62 @@
+[
+  {
+    "name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff",
+    "styles": [
+      {
+        "name": "ノーマル",
+        "id": 2,
+        "type": "talk"
+      },
+      {
+        "name": "あまあま",
+        "id": 0,
+        "type": "talk"
+      },
+      {
+        "name": "ツンツン",
+        "id": 6,
+        "type": "talk"
+      },
+      {
+        "name": "セクシー",
+        "id": 4,
+        "type": "talk"
+      }
+    ],
+    "version": "0.25.1",
+    "supported_features": {
+      "permitted_synthesis_morphing": "ALL"
+    }
+  },
+  {
+    "name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9",
+    "styles": [
+      {
+        "name": "ノーマル",
+        "id": 3,
+        "type": "talk"
+      },
+      {
+        "name": "あまあま",
+        "id": 1,
+        "type": "talk"
+      },
+      {
+        "name": "ツンツン",
+        "id": 7,
+        "type": "talk"
+      },
+      {
+        "name": "セクシー",
+        "id": 5,
+        "type": "talk"
+      }
+    ],
+    "version": "0.25.1",
+    "supported_features": {
+      "permitted_synthesis_morphing": "ALL"
+    }
+  }
+]

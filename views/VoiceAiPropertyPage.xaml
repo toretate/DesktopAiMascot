@@ -6,9 +6,10 @@ xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 xmlns:local="clr-namespace:DesktopAiMascot.views"
 mc:Ignorable="d" 
 d:DesignHeight="500" d:DesignWidth="480"
-Loaded="VoiceAiPropertyPage_Loaded">
+Loaded="VoiceAiPropertyPage_Loaded" Background="{DynamicResource {x:Static SystemColors.WindowFrameBrushKey}}">
     <GroupBox Header="Voice AI" Padding="10">
         <StackPanel>
+            <Label Content="Voice AIサービス" FontSize="11" Padding="0" Margin="0,0,0,2"/>
             <ComboBox x:Name="voiceAiComboBox" 
                       Height="25"
                       Margin="0,0,0,10"
@@ -34,15 +35,65 @@ Loaded="VoiceAiPropertyPage_Loaded">
                         Click="VoiceAiRefreshButton_Click"/>
             </Grid>
 
-            <Label Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2"/>
-            <ComboBox x:Name="voiceAiModelComboBox" 
-                      Height="25"
-                      Margin="0,0,0,10"/>
+            <!-- StyleBertVits2専用設定 -->
+            <GroupBox x:Name="styleBertVits2SettingsGroup" 
+                      Header="StyleBertVits2 設定" 
+                      Padding="10" 
+                      Margin="0,0,0,10"
+                      Visibility="Collapsed">
+                <StackPanel>
+                    <!-- サーバー状態表示 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Label Content="サーバー状態:" FontSize="11" Padding="0" Margin="0,0,5,0"/>
+                        <Label x:Name="styleBertVits2ServerStatusLabel" 
+                               Content="確認中..." 
+                               FontSize="11" 
+                               Padding="0" 
+                               Foreground="Gray"/>
+                    </StackPanel>
+                    
+                    <Label Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="voiceAiModelComboBox" 
+                              Height="25"
+                              Margin="0,0,0,10"/>
 
-            <Label Content="Speaker" FontSize="11" Padding="0" Margin="0,0,0,2"/>
-            <ComboBox x:Name="voiceAiSpeakerComboBox" 
-                      Height="25"
-                      Margin="0,0,0,10"/>
+                    <Label Content="Speaker" FontSize="11" Padding="0" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="voiceAiSpeakerComboBox" 
+                              Height="25"
+                              Margin="0,0,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- VoiceVox専用設定 -->
+            <GroupBox x:Name="voiceVoxSettingsGroup" 
+                      Header="VoiceVox 設定" 
+                      Padding="10" 
+                      Margin="0,0,0,10"
+                      Visibility="Collapsed">
+                <StackPanel>
+                    <!-- サーバー状態表示 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Label Content="サーバー状態:" FontSize="11" Padding="0" Margin="0,0,5,0"/>
+                        <Label x:Name="voiceVoxServerStatusLabel" 
+                               Content="確認中..." 
+                               FontSize="11" 
+                               Padding="0" 
+                               Foreground="Gray"/>
+                    </StackPanel>
+                    
+                    <Label Content="Speaker (キャラクター)" FontSize="11" Padding="0" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="voiceVoxSpeakerComboBox" 
+                              Height="25"
+                              Margin="0,0,0,10"
+                              SelectionChanged="VoiceVoxSpeakerComboBox_SelectionChanged"/>
+
+                    <Label Content="Style (スタイル)" FontSize="11" Padding="0" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="voiceVoxStyleComboBox" 
+                              Height="25"
+                              Margin="0,0,0,0"
+                              SelectionChanged="VoiceVoxStyleComboBox_SelectionChanged"/>
+                </StackPanel>
+            </GroupBox>
 
             <Button x:Name="saveVoiceToMascotButton" 
                     Content="マスコットにVoiceを設定"

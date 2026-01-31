@@ -59,7 +59,13 @@ namespace DesktopAiMascot
         public string MascotName { get; set; } = "AIアシスタント";
         public string LlmService { get; set; } = "LM Studio";
         public string VoiceService { get; set; } = "Style Bert Vits 2";
+        
+        // 後方互換性のため残す（非推奨）
         public string VoiceServiceUrl { get; set; } = "http://127.0.0.1:5000";
+        
+        // サービス毎のURL辞書（推奨）
+        public Dictionary<string, string> VoiceServiceUrls { get; set; } = new Dictionary<string, string>();
+        
         public string VoiceServiceModel { get; set; } = "";
         public string VoiceServiceSpeaker { get; set; } = "";
         public string ImageService { get; set; } = "ComfyUI";
@@ -102,6 +108,7 @@ namespace DesktopAiMascot
                     this.LlmService = loaded.LlmService;
                     this.VoiceService = loaded.VoiceService;
                     this.VoiceServiceUrl = loaded.VoiceServiceUrl;
+                    this.VoiceServiceUrls = loaded.VoiceServiceUrls ?? new Dictionary<string, string>();
                     this.VoiceServiceModel = loaded.VoiceServiceModel;
                     this.VoiceServiceSpeaker = loaded.VoiceServiceSpeaker;
                     this.ImageService = loaded.ImageService;
@@ -197,5 +204,56 @@ namespace DesktopAiMascot
             
             return decrypted;
         }
+        
+        /// <summary>
+        /// 指定されたVoice AIサービスのURLを取得します。
+        /// サービス固有のURLがない場合は、サービスのデフォルトEndPointを返します。
+        /// </summary>
+        /// <param name="serviceName">サービス名</param>
+        /// <param name="defaultEndPoint">サービスのデフォルトエンドポイント</param>
+        /// <returns>サービスのURL</returns>
+        public string GetVoiceServiceUrl(string serviceName, string defaultEndPoint)
+        {
+            if (VoiceServiceUrls != null && VoiceServiceUrls.TryGetValue(serviceName, out string? url))
+            {
+                if (!string.IsNullOrEmpty(url))
+                {
+                    // 末尾のスラッシュを削除
+                    return url.TrimEnd('/');
+                }
+            }
+            
+            // 後方互換性: VoiceServiceUrlが設定されていて、現在のサービスと一致する場合
+            if (!string.IsNullOrEmpty(VoiceServiceUrl) && VoiceService == serviceName)
+            {
+                return VoiceServiceUrl.TrimEnd('/');
+            }
+            
+            // デフォルトエンドポイントを返す
+            return defaultEndPoint.TrimEnd('/');
+        }
+        
+        /// <summary>
+        /// 指定されたVoice AIサービスのURLを設定します。
+        /// </summary>
+        /// <param name="serviceName">サービス名</param>
+        /// <param name="url">URL</param>
+        public void SetVoiceServiceUrl(string serviceName, string url)
+        {
+            if (VoiceServiceUrls == null)
+            {
+                VoiceServiceUrls = new Dictionary<string, string>();
+            }
+            
+            // 末尾のスラッシュを削除して保存
+            VoiceServiceUrls[serviceName] = url?.TrimEnd('/') ?? string.Empty;
+            
+            // 後方互換性: VoiceServiceUrlも更新
+            if (VoiceService == serviceName)
+            {
+                VoiceServiceUrl = VoiceServiceUrls[serviceName];
+            }
+        }
     }
 }
+
