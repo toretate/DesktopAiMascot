@@ -108,8 +108,19 @@ namespace DesktopAiMascot.aiservice.chat
 
                 return txt;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("Foundry Localとの接続エラー");
+                return "Error: Foundry Localとの接続に失敗しました";
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Foundry Localとの接続エラー (タイムアウト)");
+                return "Error: Foundry Localとの接続がタイムアウトしました";
+            }
             catch (Exception ex)
             {
+                Debug.WriteLine($"Foundry Localとの接続エラー: {ex.Message}");
                 return $"Error: {ex.Message}";
             }
         }

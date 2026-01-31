@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using DesktopAiMascot.mascots;
@@ -86,10 +87,19 @@ namespace DesktopAiMascot.aiservice.chat
                 
                 return "Error: No response content from Google Cloud";
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("Google Cloudとの接続エラー");
+                return "Error: Google Cloudとの接続に失敗しました";
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Google Cloudとの接続エラー (タイムアウト)");
+                return "Error: Google Cloudとの接続がタイムアウトしました";
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"GoogleCloud error: {ex.Message}");
-                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Debug.WriteLine($"Google Cloudとの接続エラー: {ex.Message}");
                 return $"Error: {ex.Message}";
             }
         }

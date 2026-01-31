@@ -73,10 +73,7 @@ namespace DesktopAiMascot
         public string MascotName { get; set; } = "AIアシスタント";
         public string LlmService { get; set; } = "LM Studio";
         public string VoiceService { get; set; } = "Style Bert Vits 2";
-        
-        // 後方互換性のため残す（非推奨）
-        public string VoiceServiceUrl { get; set; } = "http://127.0.0.1:5000";
-        
+                
         // サービス毎のURL辞書（推奨）
         public Dictionary<string, string> VoiceServiceUrls { get; set; } = new Dictionary<string, string>();
         
@@ -122,7 +119,6 @@ namespace DesktopAiMascot
                     this.ModelName = loaded.ModelName;
                     this.LlmService = loaded.LlmService;
                     this.VoiceService = loaded.VoiceService;
-                    this.VoiceServiceUrl = loaded.VoiceServiceUrl;
                     this.VoiceServiceUrls = loaded.VoiceServiceUrls ?? new Dictionary<string, string>();
                     this.VoiceServiceModel = loaded.VoiceServiceModel;
                     this.VoiceServiceSpeaker = loaded.VoiceServiceSpeaker;
@@ -237,13 +233,7 @@ namespace DesktopAiMascot
                     return url.TrimEnd('/');
                 }
             }
-            
-            // 後方互換性: VoiceServiceUrlが設定されていて、現在のサービスと一致する場合
-            if (!string.IsNullOrEmpty(VoiceServiceUrl) && VoiceService == serviceName)
-            {
-                return VoiceServiceUrl.TrimEnd('/');
-            }
-            
+                        
             // デフォルトエンドポイントを返す
             return defaultEndPoint.TrimEnd('/');
         }
@@ -263,11 +253,6 @@ namespace DesktopAiMascot
             // 末尾のスラッシュを削除して保存
             VoiceServiceUrls[serviceName] = url?.TrimEnd('/') ?? string.Empty;
             
-            // 後方互換性: VoiceServiceUrlも更新
-            if (VoiceService == serviceName)
-            {
-                VoiceServiceUrl = VoiceServiceUrls[serviceName];
-            }
         }
     }
 }

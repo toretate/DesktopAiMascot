@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using DesktopAiMascot.mascots;
@@ -39,7 +40,7 @@ namespace DesktopAiMascot.aiservice.chat
                 }
 
                 Debug.WriteLine("[GoogleAiStudio] Fetching available models...");
-                
+
                 var models = new List<ModelDisplayItem>();
                 
                 var pager = await _client.Models.ListAsync();
@@ -56,7 +57,7 @@ namespace DesktopAiMascot.aiservice.chat
                             var displayItem = new ModelDisplayItem(cleanId, model.Thinking == true);
                             models.Add(displayItem);
                             
-                            Debug.WriteLine($"[GoogleAiStudio] Found model: {displayItem.DisplayName} (ID: {cleanId})");
+                            //Debug.WriteLine($"[GoogleAiStudio] Found model: {displayItem.DisplayName} (ID: {cleanId})");
                         }
                     }
                 }
@@ -70,25 +71,19 @@ namespace DesktopAiMascot.aiservice.chat
                 Debug.WriteLine($"[GoogleAiStudio] Successfully retrieved {models.Count} models");
                 return models.OrderBy(m => m.DisplayName).ToArray();
             }
-            catch (AggregateException agEx)
+            catch (HttpRequestException)
             {
-                Debug.WriteLine($"[GoogleAiStudio] AggregateException in GetAvailableModels:");
-                foreach (var ex in agEx.InnerExceptions)
-                {
-                    Debug.WriteLine($"  - {ex.GetType().Name}: {ex.Message}");
-                    Debug.WriteLine($"    Stack: {ex.StackTrace}");
-                }
+                Debug.WriteLine("Google AI Studioとの接続エラー");
+                return new[] { new ModelDisplayItem(DEFAULT_MODEL) };
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
                 return new[] { new ModelDisplayItem(DEFAULT_MODEL) };
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[GoogleAiStudio] Exception in GetAvailableModels: {ex.GetType().Name}");
-                Debug.WriteLine($"[GoogleAiStudio] Message: {ex.Message}");
-                Debug.WriteLine($"[GoogleAiStudio] Stack trace: {ex.StackTrace}");
-                if (ex.InnerException != null)
-                {
-                    Debug.WriteLine($"[GoogleAiStudio] Inner exception: {ex.InnerException.Message}");
-                }
+                Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
                 return new[] { new ModelDisplayItem(DEFAULT_MODEL) };
             }
         }
@@ -126,22 +121,19 @@ namespace DesktopAiMascot.aiservice.chat
                 Debug.WriteLine("[GoogleAiStudio] No response content from API");
                 return "Error: No response content from Google AI Studio";
             }
-            catch (AggregateException agEx)
+            catch (HttpRequestException)
             {
-                Debug.WriteLine($"[GoogleAiStudio] AggregateException in SendMessageAsync:");
-                var messages = new List<string>();
-                foreach (var ex in agEx.InnerExceptions)
-                {
-                    Debug.WriteLine($"  - {ex.GetType().Name}: {ex.Message}");
-                    messages.Add($"{ex.GetType().Name}: {ex.Message}");
-                }
-                return $"Error: Multiple errors occurred:\n{string.Join("\n", messages)}";
+                Debug.WriteLine("Google AI Studioとの接続エラー");
+                return "Error: Google AI Studioとの接続に失敗しました";
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
+                return "Error: Google AI Studioとの接続がタイムアウトしました";
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[GoogleAiStudio] Exception in SendMessageAsync: {ex.GetType().Name}");
-                Debug.WriteLine($"[GoogleAiStudio] Message: {ex.Message}");
-                Debug.WriteLine($"[GoogleAiStudio] Stack trace: {ex.StackTrace}");
+                Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
                 
                 if (ex.Message.Contains("429") || ex.Message.Contains("Rate limit"))
                 {

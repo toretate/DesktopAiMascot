@@ -72,8 +72,20 @@ namespace DesktopAiMascot.aiservice.chat
                 var response = await chatClient.CompleteChatAsync(messages);
                 var text = response.Value.Content[0].Text;
                 return text;
-            } catch (Exception ex)
+            }
+            catch (HttpRequestException)
             {
+                Debug.WriteLine("LmStudioとの接続エラー");
+                return "Error: LmStudioとの接続に失敗しました";
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("LmStudioとの接続エラー (タイムアウト)");
+                return "Error: LmStudioとの接続がタイムアウトしました";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"LmStudioとの接続エラー: {ex.Message}");
                 return $"Error: {ex.Message}";
             }
          }

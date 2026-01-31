@@ -6,7 +6,7 @@ xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 xmlns:local="clr-namespace:DesktopAiMascot.views"
 mc:Ignorable="d" 
 d:DesignHeight="500" d:DesignWidth="480"
-Loaded="VoiceAiPropertyPage_Loaded" Background="{DynamicResource {x:Static SystemColors.WindowFrameBrushKey}}">
+Loaded="VoiceAiPropertyPage_Loaded" Background="White">
     <GroupBox Header="Voice AI" Padding="10">
         <StackPanel>
             <Label Content="Voice AIサービス" FontSize="11" Padding="0" Margin="0,0,0,2"/>

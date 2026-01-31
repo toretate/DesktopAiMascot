@@ -42,7 +42,7 @@ namespace DesktopAiMascot.aiservice.voice
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Failed to set base address: {ex.Message}");
+                        Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
                     }
                 }
             }
@@ -132,9 +132,17 @@ namespace DesktopAiMascot.aiservice.voice
                     return models.ToArray();
                 }
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to get models: {ex.Message}");
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
             }
             return Array.Empty<string>();
         }
@@ -178,9 +186,17 @@ namespace DesktopAiMascot.aiservice.voice
                     return speakers.ToArray();
                 }
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to get speakers: {ex.Message}");
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
             }
             return Array.Empty<string>();
         }
@@ -351,13 +367,20 @@ namespace DesktopAiMascot.aiservice.voice
                 
                 return await response.Content.ReadAsByteArrayAsync();
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException)
             {
-                throw new Exception($"TTS Service Request Failed: {ex.Message}", ex);
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+                throw new Exception("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+                throw new Exception("StyleBertVits2との接続エラー (タイムアウト)");
             }
             catch (Exception ex)
             {
-                throw new Exception($"TTS Service Request Failed: {ex.Message}", ex);
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
+                throw new Exception($"StyleBertVits2との接続エラー: {ex.Message}");
             }
         }
 
@@ -380,9 +403,17 @@ namespace DesktopAiMascot.aiservice.voice
                     Debug.WriteLine($"[TTS] /models/info request failed: {response.StatusCode}");
                 }
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TTS] /models/info error: {ex.Message}");
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
             }
             return null;
         }
@@ -399,9 +430,20 @@ namespace DesktopAiMascot.aiservice.voice
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsStringAsync();
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+                throw new Exception("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+                throw new Exception("StyleBertVits2との接続エラー (タイムアウト)");
+            }
             catch (Exception ex)
             {
-                throw new Exception($"Refresh Failed: {ex.Message}", ex);
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
+                throw new Exception($"StyleBertVits2との接続エラー: {ex.Message}");
             }
         }
 
@@ -423,9 +465,19 @@ namespace DesktopAiMascot.aiservice.voice
                 
                 return isAvailable;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+                return false;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[StyleBertVits2] サーバー接続エラー: {ex.Message}");
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
                 return false;
             }
         }
@@ -547,10 +599,17 @@ namespace DesktopAiMascot.aiservice.voice
                     Debug.WriteLine($"[TTS] /models/info request failed: {response.StatusCode}");
                 }
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("StyleBertVits2との接続エラー (タイムアウト)");
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TTS] /models/info error: {ex.Message}");
-                Debug.WriteLine($"[TTS] Exception: {ex}");
+                Debug.WriteLine($"StyleBertVits2との接続エラー: {ex.Message}");
             }
             return null;
         }

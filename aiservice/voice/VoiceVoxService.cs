@@ -50,9 +50,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return speakers;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return null;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] GetSpeakersAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return null;
             }
         }
@@ -76,9 +86,19 @@ namespace DesktopAiMascot.aiservice.voice
                 Debug.WriteLine($"[VoiceVox] 話者 {speaker} の初期化に成功しました");
                 return true;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return false;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] InitializeSpeakerAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return false;
             }
         }
@@ -103,9 +123,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return isInitialized;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return false;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] IsInitializedSpeakerAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return false;
             }
         }
@@ -132,9 +162,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return audioQuery;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return null;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] CreateAudioQueryAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return null;
             }
         }
@@ -171,10 +211,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return audioData;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return null;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] SynthesisAsync エラー: {ex.Message}");
-                Debug.WriteLine($"[VoiceVox] スタックトレース: {ex.StackTrace}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return null;
             }
             finally
@@ -203,9 +252,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return speakerInfo;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return null;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] GetSpeakerInfoAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return null;
             }
         }
@@ -229,9 +288,19 @@ namespace DesktopAiMascot.aiservice.voice
 
                 return versions;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return null;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] GetCoreVersionsAsync エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return null;
             }
         }
@@ -255,9 +324,19 @@ namespace DesktopAiMascot.aiservice.voice
                 
                 return isAvailable;
             }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー");
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("VoiceVoxとの接続エラー (タイムアウト)");
+                return false;
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[VoiceVox] サーバー接続エラー: {ex.Message}");
+                Debug.WriteLine($"VoiceVoxとの接続エラー: {ex.Message}");
                 return false;
             }
         }

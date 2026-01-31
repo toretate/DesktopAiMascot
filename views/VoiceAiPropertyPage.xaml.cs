@@ -112,7 +112,6 @@ namespace DesktopAiMascot.views
                 if (!string.IsNullOrEmpty(urlText) && urlText != VoiceAiManager.Instance.CurrentService.Url)
                 {
                     VoiceAiManager.Instance.CurrentService.Url = urlText;
-                    SystemConfig.Instance.VoiceServiceUrl = urlText;
                     SystemConfig.Instance.Save();
                 }
 

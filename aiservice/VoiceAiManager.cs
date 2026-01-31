@@ -43,10 +43,6 @@ namespace DesktopAiMascot.aiservice
             {
                 CurrentService = service;
                 
-                if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceUrl))
-                {
-                    service.Url = SystemConfig.Instance.VoiceServiceUrl;
-                }
                 if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceModel))
                 {
                     service.Model = SystemConfig.Instance.VoiceServiceModel;
