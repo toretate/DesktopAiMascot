@@ -1,32 +1,90 @@
 <UserControl x:Class="DesktopAiMascot.views.ApiKeyPropertyPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:DesktopAiMascot.views"
-             mc:Ignorable="d" 
-             d:DesignHeight="500" d:DesignWidth="480">
-    <GroupBox Header="API Key" Padding="10">
-        <StackPanel>
-            <TextBox x:Name="apiKeyTextBox" 
-                     Height="25"
-                     Margin="0,0,0,10"
-                     AllowDrop="True"
-                     Tag="Google API KEY"/>
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+         xmlns:local="clr-namespace:DesktopAiMascot.views"
+         mc:Ignorable="d" 
+         d:DesignHeight="500" d:DesignWidth="480"
+         Background="White">
+    <StackPanel>
+        <!-- Google AI Studio Section -->
+        <GroupBox Header="Google AI Studio" Padding="10" Background="White" Margin="0,0,0,10">
+            <StackPanel>
+                <Label Content="API Key" 
+                       FontWeight="Bold"
+                       Margin="0,0,0,0"
+                       Padding="0"/>
+                <TextBox x:Name="aiStudioApiKeyTextBox" 
+                         Height="25"
+                         Margin="0,0,0,10"
+                         Tag="Google AI Studio API Key"
+                         VerticalContentAlignment="Center"/>
 
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="saveApiKeyButton" 
-                        Content="Save" 
-                        Width="75"
-                        Height="25"
-                        Margin="0,0,10,0"
-                        Click="SaveApiKeyButton_Click"/>
-                <Button x:Name="clearApiKeyButton" 
-                        Content="Clear" 
-                        Width="75"
-                        Height="25"
-                        Click="ClearApiKeyButton_Click"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="saveAiStudioButton" 
+                            Content="Save" 
+                            Width="75"
+                            Height="25"
+                            Margin="0,0,10,0"
+                            Click="SaveAiStudioButton_Click"/>
+                    <Button x:Name="clearAiStudioButton" 
+                            Content="Clear" 
+                            Width="75"
+                            Height="25"
+                            Click="ClearAiStudioButton_Click"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
-    </GroupBox>
+        </GroupBox>
+
+        <!-- Google Cloud Section -->
+        <GroupBox Header="Google Cloud (Vertex AI)" Padding="10" Background="White" Margin="0,0,0,10">
+            <StackPanel>
+                <Label Content="Project ID" 
+                       FontWeight="Bold"
+                       Margin="0,0,0,0"
+                       Padding="0"/>
+                <TextBox x:Name="projectIdTextBox" 
+                         Height="25"
+                         Margin="0,0,0,15"
+                         Tag="Google Cloud Project ID"
+                         VerticalContentAlignment="Center"/>
+
+                <Label Content="API Key" 
+                       FontWeight="Bold"
+                       Margin="0,0,0,0"
+                       Padding="0"/>
+                <TextBox x:Name="cloudApiKeyTextBox" 
+                         Height="25"
+                         Margin="0,0,0,15"
+                         Tag="Google Cloud API Key"
+                         VerticalContentAlignment="Center"/>
+
+                <Label Content="Region" 
+                       FontWeight="Bold"
+                       Margin="0,0,0,0"
+                       Padding="0"/>
+                <TextBox x:Name="regionTextBox" 
+                         Height="25"
+                         Margin="0,0,0,10"
+                         Tag="Region (e.g. us-central1)"
+                         VerticalContentAlignment="Center"
+                         Text="us-central1"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="saveCloudButton" 
+                            Content="Save" 
+                            Width="75"
+                            Height="25"
+                            Margin="0,0,10,0"
+                            Click="SaveCloudButton_Click"/>
+                    <Button x:Name="clearCloudButton" 
+                            Content="Clear" 
+                            Width="75"
+                            Height="25"
+                            Click="ClearCloudButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
 </UserControl>
