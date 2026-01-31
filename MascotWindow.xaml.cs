@@ -140,6 +140,9 @@ namespace DesktopAiMascot
             // アニメーションマネージャーにタイマーを登録
             MascotAnimationManager.Instance.RegisterAnimationTimer(animationTimer);
 
+            // 位置変更時に保存するイベントを登録
+            this.LocationChanged += MascotWindow_LocationChanged;
+
             this.Loaded += MascotWindow_Loaded;
             this.Closing += MascotWindow_Closing;
         }
@@ -175,6 +178,29 @@ namespace DesktopAiMascot
             }
 
             this.MascotControl?.UpdateMascotImage();
+        }
+
+        private void MascotWindow_LocationChanged(object sender, EventArgs e)
+        {
+            // 位置変更が連続的に発生するため、タイマーで遅延保存
+            // ドラッグ中は何度も発火するが、停止後1秒経過してから保存
+            locationSaveTimer?.Stop();
+            
+            locationSaveTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            
+            locationSaveTimer.Tick += (s, args) =>
+            {
+                locationSaveTimer.Stop();
+                
+                var currentLocation = new System.Windows.Point(this.Left, this.Top);
+                Debug.WriteLine($"[MascotWindow] 位置が変更されました: ({currentLocation.X}, {currentLocation.Y})");
+                SaveLocation(currentLocation);
+            };
+            
+            locationSaveTimer.Start();
         }
 
         private void SetupNotifyIcon()
@@ -213,11 +239,22 @@ namespace DesktopAiMascot
 
         private void MascotWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            Debug.WriteLine("[MascotWindow] ========== Closing イベント開始 ==========");
+            
             try
             {
-                SaveLocation(new System.Windows.Point(this.Left, this.Top));
+                // 位置保存タイマーを停止
+                locationSaveTimer?.Stop();
+                
+                // 最終位置を保存
+                var currentLocation = new System.Windows.Point(this.Left, this.Top);
+                Debug.WriteLine($"[MascotWindow] 現在の位置: ({currentLocation.X}, {currentLocation.Y})");
+                SaveLocation(currentLocation);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotWindow] 位置保存エラー: {ex.Message}");
+            }
 
             try
             {
@@ -235,6 +272,8 @@ namespace DesktopAiMascot
                 }
             }
             catch { }
+            
+            Debug.WriteLine("[MascotWindow] ========== Closing イベント終了 ==========");
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
@@ -338,10 +377,15 @@ namespace DesktopAiMascot
         private System.Windows.Point? LoadSavedLocation()
         {
             System.Drawing.Point point = systemConfig.WindowPosition;
-            if (point.X != 100 || point.Y != 100)
+            
+            // -1 は未設定を表す（初回起動時）
+            if (point.X >= 0 && point.Y >= 0)
             {
+                Debug.WriteLine($"[MascotWindow] 保存された位置を読み込みました: ({point.X}, {point.Y})");
                 return new System.Windows.Point(point.X, point.Y);
             }
+            
+            Debug.WriteLine($"[MascotWindow] 保存された位置がありません。デフォルト位置を使用します。");
             return null;
         }
 

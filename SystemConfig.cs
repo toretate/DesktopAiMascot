@@ -53,8 +53,22 @@ namespace DesktopAiMascot
         public Dictionary<string, string> EncryptedApiKeys { get; set; } = new Dictionary<string, string>();
         
 
-        // 位置情報
-        public Point WindowPosition = new Point() { X = 100, Y = 100 };
+        // 位置情報（個別プロパティとしてYAMLシリアライズ可能にする）
+        // -1 は「未設定」を表す（デフォルト位置を使用）
+        public int WindowPositionX { get; set; } = -1;
+        public int WindowPositionY { get; set; } = -1;
+        
+        // 後方互換性のため内部的にPointとして扱うプロパティ
+        [YamlIgnore]
+        public Point WindowPosition
+        {
+            get => new Point(WindowPositionX, WindowPositionY);
+            set
+            {
+                WindowPositionX = value.X;
+                WindowPositionY = value.Y;
+            }
+        }
 
         public string MascotName { get; set; } = "AIアシスタント";
         public string LlmService { get; set; } = "LM Studio";
@@ -102,7 +116,8 @@ namespace DesktopAiMascot
                         this.ApiKeys = loaded.ApiKeys;
                     }
                     
-                    this.WindowPosition = loaded.WindowPosition;
+                    this.WindowPositionX = loaded.WindowPositionX;
+                    this.WindowPositionY = loaded.WindowPositionY;
                     this.MascotName = loaded.MascotName;
                     this.ModelName = loaded.ModelName;
                     this.LlmService = loaded.LlmService;
