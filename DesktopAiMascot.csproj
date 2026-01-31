@@ -62,8 +62,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.GenAI" Version="0.13.1" />
-    <PackageReference Include="Google.Protobuf" Version="3.33.4" />
+    <PackageReference Include="Google.GenAI" Version="0.14.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.34.0-rc1" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.10.2" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.2.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.1.1-preview.1.25612.2" />
@@ -108,6 +108,7 @@
 
   <ItemGroup>
     <None Include=".github\workflows\build.yml" />
+    <None Include=".github\copilot-instructions.md" />
   </ItemGroup>
 
 </Project>
