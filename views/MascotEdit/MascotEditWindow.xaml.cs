@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Threading.Tasks;
+using DesktopAiMascot.aiservice;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -16,6 +19,7 @@ namespace DesktopAiMascot.views
         private MascotModel _mascotModel;
         private string _mascotDirectory;
         private List<MascotImageItem> _imageItems = new List<MascotImageItem>();
+        private GoogleAiStudioService _googleAiService;
 
         public MascotEditWindow(MascotModel mascotModel)
         {
@@ -24,6 +28,10 @@ namespace DesktopAiMascot.views
             
             // MascotModel から保存されているディレクトリパスを使用
             _mascotDirectory = _mascotModel.DirectoryPath;
+            
+            // GoogleAiStudioService を初期化
+            _googleAiService = new GoogleAiStudioService();
+            _googleAiService.Initialize();
             
             Debug.WriteLine($"[MascotEditWindow] MascotModel.DirectoryPath から取得: {_mascotDirectory}");
             
@@ -149,8 +157,8 @@ namespace DesktopAiMascot.views
                     Debug.WriteLine($"[MascotEditWindow] 画像アイテム追加: {fileName} ({imagePath})");
                 }
 
-                imageListView.ItemsSource = null; // バインディングをリセット
-                imageListView.ItemsSource = _imageItems;
+                mascotImageListView.ItemsSource = null; // バインディングをリセット
+                mascotImageListView.ItemsSource = _imageItems;
                 
                 Debug.WriteLine($"[MascotEditWindow] {_imageItems.Count}個の画像をListViewに設定しました");
             }
@@ -278,7 +286,7 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void RemoveBackgroundButton_Click(object sender, RoutedEventArgs e)
         {
-            if (imageListView.SelectedItem is MascotImageItem selectedItem)
+            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
             {
                 // TODO: 背景削除処理を実装
                 MessageBox.Show($"背景削除機能は将来実装予定です。\n選択画像: {selectedItem.FileName}", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -290,7 +298,7 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void GenerateEmotesButton_Click(object sender, RoutedEventArgs e)
         {
-            if (imageListView.SelectedItem is MascotImageItem selectedItem)
+            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
             {
                 // 表情差分作成ウィンドウを開く
                 var emoteWindow = new EmoteGenerationWindow(selectedItem.ImagePath);
@@ -307,9 +315,35 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void ImageListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            bool isSelected = imageListView.SelectedItem != null;
+            bool isSelected = mascotImageListView.SelectedItem != null;
             removeBackgroundButton.IsEnabled = isSelected;
             generateEmotesButton.IsEnabled = isSelected;
+            
+            // 選択された画像をfrontImageに表示
+            if (isSelected && mascotImageListView.SelectedItem is MascotImageItem selectedItem)
+            {
+                try
+                {
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bitmap.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+                    bitmap.UriSource = new Uri(selectedItem.ImagePath, UriKind.Absolute);
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    
+                    frontImage.Source = bitmap;
+                    Debug.WriteLine($"[MascotEditWindow] frontImageに画像を表示: {selectedItem.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[MascotEditWindow] frontImage表示エラー: {ex.Message}");
+                }
+            }
+            else
+            {
+                frontImage.Source = null;
+            }
         }
 
         /// <summary>
@@ -350,6 +384,204 @@ namespace DesktopAiMascot.views
         {
             DialogResult = false;
             Close();
+        }
+
+        /// <summary>
+        /// 左側画像クリック
+        /// </summary>
+        private void LeftImage_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (frontImage.Source == null)
+            {
+                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+            if (selectedItem == null) return;
+            
+            GenerateAngleImage("left", selectedItem.FileName, selectedItem.ImagePath, leftImage);
+        }
+
+        /// <summary>
+        /// 右側画像クリック
+        /// </summary>
+        private void RightImage_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (frontImage.Source == null)
+            {
+                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+            if (selectedItem == null) return;
+            
+            GenerateAngleImage("right", selectedItem.FileName, selectedItem.ImagePath, rightImage);
+        }
+
+        /// <summary>
+        /// 上側画像クリック
+        /// </summary>
+        private void AboveImage_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (frontImage.Source == null)
+            {
+                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+            if (selectedItem == null) return;
+            
+            GenerateAngleImage("above", selectedItem.FileName, selectedItem.ImagePath, aboveImage);
+        }
+
+        /// <summary>
+        /// 下側画像クリック
+        /// </summary>
+        private void BelowImage_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (frontImage.Source == null)
+            {
+                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+            if (selectedItem == null) return;
+            
+            GenerateAngleImage("below", selectedItem.FileName, selectedItem.ImagePath, belowImage);
+        }
+
+        /// <summary>
+        /// 背面画像クリック
+        /// </summary>
+        private void BehindImage_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (frontImage.Source == null)
+            {
+                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            
+            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+            if (selectedItem == null) return;
+            
+            GenerateAngleImage("behind", selectedItem.FileName, selectedItem.ImagePath, behindImage);
+        }
+
+        /// <summary>
+        /// 指定された方角から見た画像を生成
+        /// </summary>
+        /// <param name="from">方角 (left, right, above, below, behind)</param>
+        /// <param name="frontImageFileName">基準となる画像のファイル名</param>
+        /// <param name="frontImagePath">基準となる画像のフルパス</param>
+        /// <param name="targetImageControl">結果を表示するImageコントロール</param>
+        private async void GenerateAngleImage(string from, string frontImageFileName, string frontImagePath, System.Windows.Controls.Image targetImageControl)
+        {
+            try
+            {
+                // カーソルを待機状態に
+                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                
+                Debug.WriteLine($"[MascotEditWindow] 画像生成開始: from={from}, frontImage={frontImageFileName}");
+                
+                // 選択されたモデルを取得
+                string selectedModel = GetSelectedModel();
+                Debug.WriteLine($"[MascotEditWindow] 使用モデル: {selectedModel}");
+                
+                // Qwen3が選択されている場合はエラー
+                if (selectedModel == "qwen3-image-edit")
+                {
+                    MessageBox.Show("Qwen3 Image Editは現在サポートされていません。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                
+                // 方角に応じたプロンプトを生成
+                string prompt = GeneratePromptForAngle(from);
+                Debug.WriteLine($"[MascotEditWindow] プロンプト: {prompt}");
+                
+                // 基準画像を読み込み
+                System.Drawing.Image sourceImage;
+                using (var stream = new FileStream(frontImagePath, FileMode.Open, FileAccess.Read))
+                {
+                    sourceImage = System.Drawing.Image.FromStream(stream);
+                }
+                
+                // 画像生成を非同期実行
+                var resultImage = await Task.Run(() =>
+                {
+                    return _googleAiService.sendImageEditRequest(prompt, sourceImage, selectedModel);
+                });
+                
+                if (resultImage != null)
+                {
+                    // 生成された画像を保存
+                    string outputFileName = $"{Path.GetFileNameWithoutExtension(frontImageFileName)}_{from}.png";
+                    string outputPath = Path.Combine(_mascotDirectory, outputFileName);
+                    
+                    resultImage.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
+                    Debug.WriteLine($"[MascotEditWindow] 画像を保存: {outputPath}");
+                    
+                    // 生成された画像を表示
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bitmap.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+                    bitmap.UriSource = new Uri(outputPath, UriKind.Absolute);
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    
+                    targetImageControl.Source = bitmap;
+                    
+                    // 画像一覧を更新
+                    LoadImageList();
+                    
+                    MessageBox.Show($"{from}方向の画像を生成しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotEditWindow] 画像生成エラー: {ex.Message}");
+                MessageBox.Show($"画像生成に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // カーソルを元に戻す
+                System.Windows.Input.Mouse.OverrideCursor = null;
+            }
+        }
+
+        /// <summary>
+        /// 選択されたモデルを取得
+        /// </summary>
+        private string GetSelectedModel()
+        {
+            var selected = imageModelComboBox.SelectedIndex;
+            return selected switch
+            {
+                0 => "gemini-2.5-flash-image",  // NanoBanana - 画像生成対応の無料モデル
+                1 => "gemini-3-pro-image-preview",  // NanaBanana Pro - 高性能な画像生成モデル
+                2 => "qwen3-image-edit",
+                _ => "gemini-2.5-flash-image"
+            };
+        }
+
+        /// <summary>
+        /// 方角に応じたプロンプトを生成
+        /// </summary>
+        private string GeneratePromptForAngle(string from)
+        {
+            return from switch
+            {
+                "left" => "このキャラクターを左側から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、自然な角度で左側面が見えるように描いてください。",
+                "right" => "このキャラクターを右側から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、自然な角度で右側面が見えるように描いてください。",
+                "above" => "このキャラクターを上から見下ろした画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、頭頂部や肩が見えるように描いてください。",
+                "below" => "このキャラクターを下から見上げた画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、顎や下側が見えるように描いてください。",
+                "behind" => "このキャラクターを背面から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、後ろ姿が見えるように描いてください。",
+                _ => "このキャラクターの別の角度からの画像を生成してください。"
+            };
         }
     }
 

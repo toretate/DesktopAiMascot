@@ -34,7 +34,7 @@ namespace DesktopAiMascot.aiservice
             if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("API key is not configured.");
         }
 
-        public System.Drawing.Image sendImageEditRequest(string prompt, System.Drawing.Image? image)
+        public System.Drawing.Image sendImageEditRequest(string prompt, System.Drawing.Image? image, string modelName = "gemini-2.0-flash-exp")
         {
             if (string.IsNullOrWhiteSpace(apiKey)) throw new InvalidOperationException("API key is not configured.");
 
@@ -66,11 +66,10 @@ namespace DesktopAiMascot.aiservice
                 var json = JsonSerializer.Serialize(root);
                 using var contentHttp = new StringContent(json, Encoding.UTF8, "application/json");
 
-                // Endpoint: Gemini generateContent for image-capable model
-                var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent";
+                // Endpoint: 指定されたモデルを使用
+                var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent";
 
                 // Attach API key header
-                // Try to respect per-request API key header; remove any previous
                 // We'll implement retry/backoff for 429 statuses
                 const int maxAttempts = 3;
                 for (int attempt = 1; attempt <= maxAttempts; attempt++)
@@ -87,35 +86,83 @@ namespace DesktopAiMascot.aiservice
                     {
                         try
                         {
+                            // レスポンス全体をログ出力
+                            Debug.WriteLine($"[GoogleAiStudioService] Gemini API レスポンス: {respBody}");
+                            
                             using var doc = JsonDocument.Parse(respBody);
-                            var inlineData = doc.RootElement.GetProperty("candidates")[0]
-                                            .GetProperty("content")
-                                            .GetProperty("parts")
-                                            .EnumerateArray()
-                                            .FirstOrDefault(part => part.TryGetProperty("inlineData", out _))
-                                            ;
-                            var base64ImagenResultado = inlineData.GetProperty("inlineData")
-                                                            .GetProperty("data").GetString();
-
-
-                            // Try to find any base64 image data in response
-                            //if (TryFindBase64Image(rootElem, out var imageBytes) && imageBytes != null && imageBytes.Length > 0)
-                            if( !string.IsNullOrEmpty(base64ImagenResultado))
+                            var rootElement = doc.RootElement;
+                            
+                            // candidatesの存在確認
+                            if (!rootElement.TryGetProperty("candidates", out var candidates))
                             {
+                                Debug.WriteLine("[GoogleAiStudioService] レスポンスに candidates が含まれていません");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            var candidatesArray = candidates.EnumerateArray().ToArray();
+                            if (candidatesArray.Length == 0)
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] candidates が空です");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            var firstCandidate = candidatesArray[0];
+                            
+                            // contentの存在確認
+                            if (!firstCandidate.TryGetProperty("content", out var content))
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] candidate に content が含まれていません");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            // partsの存在確認
+                            if (!content.TryGetProperty("parts", out var partsArray))
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] content に parts が含まれていません");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            // inlineDataを持つpartを検索
+                            var inlineData = partsArray.EnumerateArray()
+                                .FirstOrDefault(part => part.TryGetProperty("inlineData", out _));
+                            
+                            if (inlineData.ValueKind == JsonValueKind.Undefined)
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] inlineData を持つ part が見つかりません");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            if (!inlineData.TryGetProperty("inlineData", out var inlineDataObj))
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] inlineData の取得に失敗しました");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            if (!inlineDataObj.TryGetProperty("data", out var dataProperty))
+                            {
+                                Debug.WriteLine("[GoogleAiStudioService] inlineData に data が含まれていません");
+                                return CreateOverlayImage(prompt, image);
+                            }
+                            
+                            var base64ImagenResultado = dataProperty.GetString();
+
+                            if (!string.IsNullOrEmpty(base64ImagenResultado))
+                            {
+                                Debug.WriteLine($"[GoogleAiStudioService] 画像データを取得しました (長さ: {base64ImagenResultado.Length})");
                                 var imageBytes = Convert.FromBase64String(base64ImagenResultado);
                                 using var ms2 = new MemoryStream(imageBytes);
                                 var resultImage = System.Drawing.Image.FromStream(ms2);
                                 return new Bitmap(resultImage);
                             }
 
-                            // Some responses put images under candidates[].content.parts[].image or similar
-                            // Fallback to overlay
-                            Debug.WriteLine("No image data found in Gemini response, falling back to local generation.");
+                            Debug.WriteLine("[GoogleAiStudioService] 画像データが空です");
                             return CreateOverlayImage(prompt, image);
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"Failed to parse Gemini response: {ex.Message}");
+                            Debug.WriteLine($"[GoogleAiStudioService] Gemini レスポンスパースエラー: {ex.Message}");
+                            Debug.WriteLine($"[GoogleAiStudioService] スタックトレース: {ex.StackTrace}");
+                            Debug.WriteLine($"[GoogleAiStudioService] レスポンス内容: {respBody}");
                             return CreateOverlayImage(prompt, image);
                         }
                     }
