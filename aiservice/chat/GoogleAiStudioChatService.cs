@@ -13,6 +13,7 @@ namespace DesktopAiMascot.aiservice.chat
     public class GoogleAiStudioChatService : ChatAiServiceBase
     {
         private const string DEFAULT_MODEL = "gemini-2.0-flash-exp";
+        private const string IMAGE_MODEL = "imagen-3.0-generate-001"; // Gemini 画像生成モデル
         private readonly Google.GenAI.Client? _client;
         
         public override string EndPoint { get; set; }
@@ -152,6 +153,127 @@ namespace DesktopAiMascot.aiservice.chat
             }
         }
 
+        /// <summary>
+        /// 画像とプロンプトを使用して画像を編集・生成する（NanoBanana対応）
+        /// HTTP APIを直接使用して実装
+        /// </summary>
+        /// <param name="images">入力画像のBase64エンコード文字列配列</param>
+        /// <param name="prompt">編集指示プロンプト</param>
+        /// <returns>生成された画像のBase64文字列</returns>
+        public override async Task<string?> SendMessageWithImagesAsync(string[] images, string prompt)
+        {
+            try
+            {
+                var apiKey = LoadApiKey();
+                if (string.IsNullOrWhiteSpace(apiKey))
+                {
+                    Debug.WriteLine("[GoogleAiStudio] API key is not configured.");
+                    return null;
+                }
+
+                Debug.WriteLine($"[GoogleAiStudio] 画像編集リクエスト開始 - 画像数: {images.Length}");
+                Debug.WriteLine($"[GoogleAiStudio] プロンプト: {prompt}");
+
+                // Gemini imagen-3.0-generate-001を使用
+                var modelName = IMAGE_MODEL;
+                var url = $"{EndPoint}models/{modelName}:generateContent?key={apiKey}";
+                
+                Debug.WriteLine($"[GoogleAiStudio] 使用モデル: {modelName}");
+
+                // リクエストボディを構築
+                var parts = new List<object>();
+                
+                // 画像を追加
+                foreach (var imageBase64 in images)
+                {
+                    parts.Add(new
+                    {
+                        inline_data = new
+                        {
+                            mime_type = "image/png",
+                            data = imageBase64
+                        }
+                    });
+                }
+                
+                // プロンプトを追加
+                parts.Add(new { text = prompt });
+                
+                var requestBody = new
+                {
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = parts.ToArray()
+                        }
+                    }
+                };
+
+                var jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody);
+                Debug.WriteLine($"[GoogleAiStudio] Request size: {jsonRequest.Length} bytes");
+
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+                var content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+                
+                var response = await httpClient.PostAsync(url, content);
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"[GoogleAiStudio] API Error ({response.StatusCode}): {jsonResponse}");
+                    return null;
+                }
+
+                Debug.WriteLine($"[GoogleAiStudio] Response received: {jsonResponse.Length} bytes");
+
+                // レスポンスから画像データを抽出
+                using var doc = System.Text.Json.JsonDocument.Parse(jsonResponse);
+                var root = doc.RootElement;
+                
+                if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+                {
+                    var firstCandidate = candidates[0];
+                    if (firstCandidate.TryGetProperty("content", out var contentObj))
+                    {
+                        if (contentObj.TryGetProperty("parts", out var partsArray) && partsArray.GetArrayLength() > 0)
+                        {
+                            foreach (var part in partsArray.EnumerateArray())
+                            {
+                                if (part.TryGetProperty("inline_data", out var inlineData))
+                                {
+                                    if (inlineData.TryGetProperty("data", out var data))
+                                    {
+                                        var imageBase64 = data.GetString();
+                                        Debug.WriteLine("[GoogleAiStudio] 画像生成成功");
+                                        return imageBase64;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Debug.WriteLine("[GoogleAiStudio] 画像生成失敗: レスポンスに画像データがありません");
+                return null;
+            }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー");
+                return null;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
+                return null;
+            }
+        }
+
         public override void ClearConversation()
         {
         }
@@ -189,3 +311,4 @@ namespace DesktopAiMascot.aiservice.chat
         }
     }
 }
+

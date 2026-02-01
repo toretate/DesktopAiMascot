@@ -88,12 +88,14 @@ namespace DesktopAiMascot.mascots
                             .Select(p => Path.GetRelativePath(baseDir, p))
                             .ToArray();
 
-                        var model = new MascotModel(name, prompt ?? string.Empty, images, configPath);
+                        // DirectoryPathを絶対パスとして保存
+                        var model = new MascotModel(name, prompt ?? string.Empty, images, configPath, dir);
                         model.Config = config;
                         MascotModels.Add(name, model);
                         
                         // Voice設定をログ出力
                         Debug.WriteLine($"[MascotManager] マスコット「{name}」をロードしました: ConfigPath={configPath}");
+                        Debug.WriteLine($"[MascotManager] DirectoryPath={dir}");
                         if (config.Voice != null && config.Voice.Count > 0)
                         {
                             Debug.WriteLine($"[MascotManager] Voice設定が見つかりました:");

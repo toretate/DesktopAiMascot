@@ -20,10 +20,18 @@ namespace DesktopAiMascot.aiservice.chat
         // AIにチャットメッセージを送信する
         public Task<string?> SendMessageAsync(string message);
 
+        /// <summary>
+        /// 画像とテキストを含むメッセージを送信する（画像編集用）
+        /// </summary>
+        /// <param name="images">画像データの配列（Base64エンコード文字列）</param>
+        /// <param name="prompt">プロンプト</param>
+        /// <returns>生成された画像のBase64文字列、またはテキストレスポンス</returns>
+        public Task<string?> SendMessageWithImagesAsync(string[] images, string prompt);
+
         // チャット履歴をクリアする
         public void ClearConversation();
 
-        public string EndPoint { get; set; } // ← protected を public に変更
+        public string EndPoint { get; set; }
     }
 
     public abstract class ChatAiServiceBase : ChatAiService
@@ -77,8 +85,17 @@ namespace DesktopAiMascot.aiservice.chat
 
         public abstract Task<string?> SendMessageAsync(string message);
 
+        /// <summary>
+        /// 画像とテキストを含むメッセージを送信する（デフォルト実装：未サポート）
+        /// </summary>
+        public virtual Task<string?> SendMessageWithImagesAsync(string[] images, string prompt)
+        {
+            Debug.WriteLine($"[ChatAiService] SendMessageWithImagesAsync is not supported by {this.GetType().Name}");
+            return Task.FromResult<string?>("Error: Image input is not supported by this service.");
+        }
+
         public abstract void ClearConversation();
 
-        public abstract string EndPoint { get; set; } // ← protected を public に変更
+        public abstract string EndPoint { get; set; }
     }
 }

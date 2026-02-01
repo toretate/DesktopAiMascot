@@ -1,6 +1,9 @@
 using DesktopAiMascot.mascots;
 using DesktopAiMascot.aiservice;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Diagnostics;
@@ -21,7 +24,8 @@ namespace DesktopAiMascot.views
                 {
                     MascotManager.Instance.Load();
                 }
-                PopulateMascotCombo();
+                PopulateMascotListView();
+                UpdateMascotInfoLabels();
             }
             catch { }
 
@@ -29,36 +33,45 @@ namespace DesktopAiMascot.views
             {
                 if (this.IsVisible)
                 {
-                    PopulateMascotCombo();
+                    PopulateMascotListView();
+                    UpdateMascotInfoLabels();
                 }
             };
+
+            // Editボタンのイベントハンドラを追加
+            editMascot.Click += EditMascot_Click;
         }
 
-        private void MascotChooseComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        /// <summary>
+        /// マスコット編集ボタンクリックイベント
+        /// </summary>
+        private void EditMascot_Click(object sender, RoutedEventArgs e)
         {
-            if (mascotChooseComboBox?.SelectedItem is string name)
+            var currentModel = MascotManager.Instance.CurrentModel;
+            
+            if (currentModel == null)
             {
-                Debug.WriteLine($"[MascotPropertyPage] マスコットが選択されました: {name}");
-                
-                SystemConfig.Instance.MascotName = name;
-                SystemConfig.Instance.Save();
+                System.Windows.MessageBox.Show("マスコットが選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-                var model = MascotManager.Instance.GetMascotByName(name);
-                if (model != null)
+            try
+            {
+                var editWindow = new MascotEditWindow(currentModel);
+                editWindow.Owner = Window.GetWindow(this);
+                
+                if (editWindow.ShowDialog() == true)
                 {
-                    Debug.WriteLine($"[MascotPropertyPage] MascotManager.Instance.CurrentModelを更新: {model.Name}");
-                    MascotManager.Instance.CurrentModel = model;
-                    
-                    // Voice設定を即座に適用
-                    ApplyVoiceConfigForMascot(model);
-                    
-                    Debug.WriteLine($"[MascotPropertyPage] MascotChangedイベントを発火します: {model.Name}");
-                    MascotChanged?.Invoke(this, model);
+                    // 編集後、マスコット一覧を再読み込み
+                    MascotManager.Instance.Load();
+                    PopulateMascotListView();
+                    UpdateMascotInfoLabels();
                 }
-                else
-                {
-                    Debug.WriteLine($"[MascotPropertyPage] マスコット '{name}' が見つかりませんでした");
-                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotPropertyPage] マスコット編集ウィンドウ起動エラー: {ex.Message}");
+                System.Windows.MessageBox.Show($"マスコット編集ウィンドウの起動に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -113,6 +126,9 @@ namespace DesktopAiMascot.views
                     Debug.WriteLine($"[MascotPropertyPage] デフォルトのVoice設定を使用します");
                 }
                 
+                // ラベルを更新
+                UpdateMascotInfoLabels();
+                
                 Debug.WriteLine($"[MascotPropertyPage] ========== Voice設定の適用完了 ==========");
             }
             catch (Exception ex)
@@ -122,23 +138,42 @@ namespace DesktopAiMascot.views
             }
         }
 
-        private void PopulateMascotCombo()
+        /// <summary>
+        /// mascotListViewにマスコット画像一覧を表示する
+        /// </summary>
+        private void PopulateMascotListView()
         {
             try
             {
-                if (mascotChooseComboBox == null) return;
+                if (mascotListView == null) return;
 
-                mascotChooseComboBox.SelectionChanged -= MascotChooseComboBox_SelectionChanged;
+                mascotListView.SelectionChanged -= MascotListView_SelectionChanged;
+                mascotListView.Items.Clear();
 
-                mascotChooseComboBox.Items.Clear();
-
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string? currentName = MascotManager.Instance.CurrentModel?.Name;
                 int selectedIndex = 0;
                 int index = 0;
 
                 foreach (var model in MascotManager.Instance.MascotModels.Values)
                 {
-                    mascotChooseComboBox.Items.Add(model.Name);
+                    // cover.pngのパスを検索
+                    string mascotDir = Path.Combine(baseDir, "assets", "mascots", model.Name);
+                    string coverPath = Path.Combine(mascotDir, "cover.png");
+                    
+                    // cover.pngが存在しない場合、最初の画像を使用
+                    if (!File.Exists(coverPath) && model.ImagePaths.Length > 0)
+                    {
+                        coverPath = Path.Combine(baseDir, model.ImagePaths[0]);
+                    }
+
+                    var displayItem = new MascotDisplayItem
+                    {
+                        Name = model.Name,
+                        CoverImagePath = File.Exists(coverPath) ? coverPath : string.Empty
+                    };
+
+                    mascotListView.Items.Add(displayItem);
 
                     if (!string.IsNullOrEmpty(currentName) && model.Name == currentName)
                     {
@@ -147,17 +182,141 @@ namespace DesktopAiMascot.views
                     index++;
                 }
 
-                if (mascotChooseComboBox.Items.Count > 0)
+                if (mascotListView.Items.Count > 0)
                 {
-                    mascotChooseComboBox.SelectedIndex = selectedIndex;
+                    mascotListView.SelectedIndex = selectedIndex;
                 }
 
-                mascotChooseComboBox.SelectionChanged += MascotChooseComboBox_SelectionChanged;
+                mascotListView.SelectionChanged += MascotListView_SelectionChanged;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error populating mascot combo: {ex.Message}");
+                Debug.WriteLine($"[MascotPropertyPage] mascotListViewの読み込みエラー: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// mascotListViewの選択変更イベント
+        /// </summary>
+        private void MascotListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (mascotListView?.SelectedItem is MascotDisplayItem displayItem)
+            {
+                Debug.WriteLine($"[MascotPropertyPage] ListViewでマスコットが選択されました: {displayItem.Name}");
+                
+                SystemConfig.Instance.MascotName = displayItem.Name;
+                SystemConfig.Instance.Save();
+
+                var model = MascotManager.Instance.GetMascotByName(displayItem.Name);
+                if (model != null)
+                {
+                    Debug.WriteLine($"[MascotPropertyPage] MascotManager.Instance.CurrentModelを更新: {model.Name}");
+                    MascotManager.Instance.CurrentModel = model;
+                    
+                    // Voice設定を即座に適用
+                    ApplyVoiceConfigForMascot(model);
+                    
+                    // ラベルを更新
+                    UpdateMascotInfoLabels();
+                    
+                    Debug.WriteLine($"[MascotPropertyPage] MascotChangedイベントを発火します: {model.Name}");
+                    MascotChanged?.Invoke(this, model);
+                }
+                else
+                {
+                    Debug.WriteLine($"[MascotPropertyPage] マスコット '{displayItem.Name}' が見つかりませんでした");
+                }
+            }
+        }
+
+        /// <summary>
+        /// マスコット情報ラベルを更新する
+        /// </summary>
+        private void UpdateMascotInfoLabels()
+        {
+            try
+            {
+                var currentModel = MascotManager.Instance.CurrentModel;
+                
+                // マスコット名
+                if (mascotNameLabel != null)
+                {
+                    mascotNameLabel.Text = currentModel?.Name ?? "未選択";
+                }
+
+                // 現在設定中の音声
+                if (currentVoiceLabel != null)
+                {
+                    var currentService = VoiceAiManager.Instance.CurrentService;
+                    if (currentService != null)
+                    {
+                        string voiceInfo = $"{currentService.Name}";
+                        
+                        if (!string.IsNullOrEmpty(currentService.Model))
+                        {
+                            voiceInfo += $"\nモデル: {currentService.Model}";
+                        }
+                        
+                        if (!string.IsNullOrEmpty(currentService.Speaker))
+                        {
+                            voiceInfo += $"\nスピーカー: {currentService.Speaker}";
+                        }
+                        
+                        currentVoiceLabel.Text = voiceInfo;
+                    }
+                    else
+                    {
+                        currentVoiceLabel.Text = "未設定";
+                    }
+                }
+
+                // スタイル（マスコットのConfig情報）
+                if (currentStyleLabel != null)
+                {
+                    if (currentModel != null && currentModel.Config.Voice != null)
+                    {
+                        var currentService = VoiceAiManager.Instance.CurrentService;
+                        if (currentService != null && 
+                            currentModel.Config.Voice.TryGetValue(currentService.Name, out var voiceConfig))
+                        {
+                            string styleInfo = $"{currentService.Name} 設定:";
+                            
+                            if (!string.IsNullOrEmpty(voiceConfig.Model))
+                            {
+                                styleInfo += $"\nモデル: {voiceConfig.Model}";
+                            }
+                            
+                            if (!string.IsNullOrEmpty(voiceConfig.Speaker))
+                            {
+                                styleInfo += $"\nスピーカー: {voiceConfig.Speaker}";
+                            }
+                            
+                            currentStyleLabel.Text = styleInfo;
+                        }
+                        else
+                        {
+                            currentStyleLabel.Text = "このマスコットには音声設定がありません";
+                        }
+                    }
+                    else
+                    {
+                        currentStyleLabel.Text = "未設定";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotPropertyPage] ラベル更新エラー: {ex.Message}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// mascotListViewに表示するマスコット情報
+    /// </summary>
+    public class MascotDisplayItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string CoverImagePath { get; set; } = string.Empty;
     }
 }

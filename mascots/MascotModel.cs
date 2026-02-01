@@ -15,13 +15,19 @@ namespace DesktopAiMascot.mascots
         public string[] ImagePaths { get; private set; } = Array.Empty<string>();
         public MascotConfig Config { get; set; } = new MascotConfig();
         public string ConfigPath { get; private set; } = string.Empty;
+        
+        /// <summary>
+        /// マスコットのディレクトリパス（ロード元のディレクトリ）
+        /// </summary>
+        public string DirectoryPath { get; private set; } = string.Empty;
 
-        public MascotModel(string name, string prompt, string[] images, string configPath = "")
+        public MascotModel(string name, string prompt, string[] images, string configPath = "", string directoryPath = "")
         {
             Name = name;
             Prompt = prompt;
             ImagePaths = images;
             ConfigPath = configPath;
+            DirectoryPath = directoryPath;
         }
 
         /** 画像キャッシュ */
@@ -126,3 +132,4 @@ namespace DesktopAiMascot.mascots
         }
     }
 }
+
