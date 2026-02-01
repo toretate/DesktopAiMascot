@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
-namespace DesktopAiMascot.views
+namespace DesktopAiMascot.views.MascotEdit
 {
     public partial class MascotEditWindow : Window
     {
@@ -217,7 +217,7 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void GenerateViewsButton_Click(object sender, RoutedEventArgs e)
         {
-            // TODO: 画像生成AIを使用してキャラクター視点画像を生成
+            // TODO: 視点画像生成ウィンドウを実装
             MessageBox.Show("この機能は将来実装予定です。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -280,7 +280,7 @@ namespace DesktopAiMascot.views
         {
             if (imageListView.SelectedItem is MascotImageItem selectedItem)
             {
-                // TODO: 背景削除処理を実装
+                // TODO: 背景削除ウィンドウを実装
                 MessageBox.Show($"背景削除機能は将来実装予定です。\n選択画像: {selectedItem.FileName}", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -293,7 +293,7 @@ namespace DesktopAiMascot.views
             if (imageListView.SelectedItem is MascotImageItem selectedItem)
             {
                 // 表情差分作成ウィンドウを開く
-                var emoteWindow = new EmoteGenerationWindow(selectedItem.ImagePath);
+                var emoteWindow = new MascotEdit.EmoteGenerationWindow(selectedItem.ImagePath);
                 emoteWindow.Owner = this;
                 emoteWindow.ShowDialog();
                 
@@ -344,7 +344,7 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// キャンセルボタン
+        /// キャセルボタン
         /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
