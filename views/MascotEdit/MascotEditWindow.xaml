@@ -27,7 +27,9 @@
                 <StackPanel Grid.Column="0" Margin="10">
                     <Border BorderBrush="LightGray" BorderThickness="1" 
                         Width="180" Height="180" Margin="0,0,0,0">
-                        <Image x:Name="coverImage" Stretch="Uniform" Height="178" VerticalAlignment="Top"/>
+                        <Image x:Name="coverImage" Stretch="Uniform" Height="178" VerticalAlignment="Top"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               RenderOptions.EdgeMode="Aliased"/>
                     </Border>
                     <Label Content="表示名" FontWeight="Bold" FontSize="12" Margin="0,0,0,0" Padding="0" />
                     <TextBox x:Name="displayNameTextBox" 
@@ -71,7 +73,9 @@
                                     Margin="120,120,0,0" 
                                     VerticalAlignment="Top" 
                                     Width="100">
-                                <Image x:Name="frontImage" Stretch="Uniform" Source="/assets/icons/angle_front_sample.png"/>
+                                <Image x:Name="frontImage" Stretch="Uniform" Source="/assets/icons/angle_front_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
 
                             <!-- 左: leftImage -->
@@ -85,7 +89,9 @@
                                     Cursor="Hand">
                                 <Image x:Name="leftImage" 
                                        Stretch="Uniform" 
-                                       MouseLeftButtonDown="LeftImage_Click" Source="/assets/icons/angle_left_sample.png"/>
+                                       MouseLeftButtonDown="LeftImage_Click" Source="/assets/icons/angle_left_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
 
                             <!-- 右: rightImage -->
@@ -99,7 +105,9 @@
                                     Cursor="Hand">
                                 <Image x:Name="rightImage" 
                                        Stretch="Uniform" 
-                                       MouseLeftButtonDown="RightImage_Click" Source="/assets/icons/angle_right_sample.png"/>
+                                       MouseLeftButtonDown="RightImage_Click" Source="/assets/icons/angle_right_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
 
                             <!-- 上: aboveImage -->
@@ -113,7 +121,9 @@
                                     Cursor="Hand">
                                 <Image x:Name="aboveImage" 
                                        Stretch="Uniform" 
-                                       MouseLeftButtonDown="AboveImage_Click" Source="/assets/icons/angle_above_sample.png"/>
+                                       MouseLeftButtonDown="AboveImage_Click" Source="/assets/icons/angle_above_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
 
                             <!-- 下: belowImage -->
@@ -127,7 +137,9 @@
                                     Cursor="Hand">
                                 <Image x:Name="belowImage" 
                                        Stretch="Uniform" 
-                                       MouseLeftButtonDown="BelowImage_Click" Source="/assets/icons/angle_bottom_sample.png"/>
+                                       MouseLeftButtonDown="BelowImage_Click" Source="/assets/icons/angle_bottom_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
 
                             <!-- 背面: behindImage -->
@@ -141,7 +153,9 @@
                                     Cursor="Hand">
                                 <Image x:Name="behindImage" 
                                        Stretch="Uniform" 
-                                       MouseLeftButtonDown="BehindImage_Click" Source="/assets/icons/angle_behind_sample.png"/>
+                                       MouseLeftButtonDown="BehindImage_Click" Source="/assets/icons/angle_behind_sample.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       RenderOptions.EdgeMode="Aliased"/>
                             </Border>
                             <Label Content="LEFT" HorizontalAlignment="Left" Height="13" Margin="49,224,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0"/>
                             <Label Content="TOP" HorizontalAlignment="Left" Height="13" Margin="98,56,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0" RenderTransformOrigin="0.5,0.5">
@@ -204,6 +218,13 @@
                             Margin="0,0,5,0"
                             IsEnabled="False"
                             Click="RemoveBackgroundButton_Click"/>
+                    <Button x:Name="restoreBackgroundButton" 
+                            Content="背景削除前に戻す" 
+                            Width="130" 
+                            Height="30"
+                            Margin="0,0,5,0"
+                            IsEnabled="False"
+                            Click="RestoreBackgroundButton_Click"/>
                     <Button x:Name="generateEmotesButton" 
                             Content="表情差分作成" 
                             Width="120" 
@@ -241,7 +262,9 @@
                                                Source="{Binding ImageSource}" 
                                                Stretch="Uniform"
                                                HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               RenderOptions.EdgeMode="Aliased"/>
 
                                         <TextBlock Grid.Row="1"
                                                    Text="{Binding FileName}" 

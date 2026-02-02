@@ -24,7 +24,7 @@
                 <ListView x:Name="mascotListView" 
                           Grid.Row="0"
                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          SelectionChanged="MascotListView_SelectionChanged">
+                          SelectionChanged="MascotListView_SelectionChanged" d:ItemsSource="{d:SampleData ItemCount=5}">
                     <ListView.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Vertical"/>
@@ -42,7 +42,10 @@
                                     <Image Source="{Binding CoverImagePath}" 
                                            Stretch="Uniform"
                                            HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           RenderOptions.BitmapScalingMode="Fant"
+                                           RenderOptions.EdgeMode="Aliased"
+										   />
                                     <TextBlock Text="{Binding Name}" 
                                                VerticalAlignment="Bottom" 
                                                HorizontalAlignment="Center"

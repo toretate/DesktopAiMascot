@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DesktopAiMascot.utils;
 
 namespace DesktopAiMascot.mascots
 {
@@ -32,6 +33,7 @@ namespace DesktopAiMascot.mascots
 
         /** 画像キャッシュ */
         private Image[] imageCache = [];
+        
         /** 画像をロードする */
         public Image[] LoadImages()
         {
@@ -46,7 +48,7 @@ namespace DesktopAiMascot.mascots
             foreach (var path in ImagePaths)
             {
                 string fullPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-                var img = LoadSingleImage(fullPath);
+                var img = ImageLoadHelper.LoadDrawingImageWithoutLock(fullPath);
                 if (img != null)
                 {
                     loadedList.Add(img);
@@ -54,21 +56,6 @@ namespace DesktopAiMascot.mascots
             }
             imageCache = loadedList.ToArray();
             return imageCache;
-        }
-
-        /** 短画像をロードする */
-        private Image? LoadSingleImage(string path)
-        {
-            try
-            {
-                if (!System.IO.File.Exists(path)) return null;
-                var img = Image.FromFile(path);
-                return img;
-            }
-            catch
-            {
-                return null;
-            }
         }
 
         /** キャッシュを破棄する */
