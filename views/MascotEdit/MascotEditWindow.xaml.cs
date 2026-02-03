@@ -15,6 +15,7 @@ using DesktopAiMascot.utils;
 using DesktopAiMascot.controls;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
+using DesktopAiMascot.views.MascotEdit;
 
 namespace DesktopAiMascot.views
 {
@@ -44,7 +45,36 @@ namespace DesktopAiMascot.views
                 Debug.WriteLine($"[MascotEditWindow] エラー: MascotModel.DirectoryPath が空です");
             }
             
+            // 背景削除サービスのコンボボックスを初期化
+            InitializeBackgroundRemovalServices();
+            
             LoadMascotData();
+        }
+
+        /// <summary>
+        /// 背景削除サービスのコンボボックスを初期化
+        /// </summary>
+        private void InitializeBackgroundRemovalServices()
+        {
+            try
+            {
+                var services = ImageAiManager.Instance.ImageAiServices.Values.ToList();
+                
+                if (services.Count > 0)
+                {
+                    backgroundRemovalServiceComboBox.ItemsSource = services;
+                    backgroundRemovalServiceComboBox.SelectedIndex = 0;
+                    Debug.WriteLine($"[MascotEditWindow] {services.Count}個の背景削除サービスを読み込みました");
+                }
+                else
+                {
+                    Debug.WriteLine("[MascotEditWindow] 利用可能な背景削除サービスがありません");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotEditWindow] 背景削除サービス初期化エラー: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -129,7 +159,20 @@ namespace DesktopAiMascot.views
                 // MascotModel側のフィルタリング処理を使用してディレクトリ内のファイルを取得
                 var allFiles = Directory.GetFiles(_mascotDirectory);
                 var imageItems = ImageLoadHelper.LoadImages(_mascotModel.Name, allFiles);
-                foreach( var item in imageItems)
+                
+                // 画像を並び替え: cover.* が先頭、その他はファイル名順
+                var sortedItems = imageItems
+                    .OrderBy(item => 
+                    {
+                        string fileNameWithoutExt = Path.GetFileNameWithoutExtension(item.FileName);
+                        // cover.* を先頭にするため、coverの場合は空文字列を返す
+                        return fileNameWithoutExt.Equals("cover", StringComparison.OrdinalIgnoreCase) 
+                            ? "" 
+                            : item.FileName;
+                    })
+                    .ToList();
+                
+                foreach(var item in sortedItems)
                 {
                     _imageItems.Add(item);
                 }
@@ -274,19 +317,21 @@ namespace DesktopAiMascot.views
                 
                 try
                 {
+                    // 選択されたサービスを取得
+                    var imageService = backgroundRemovalServiceComboBox.SelectedItem as ImageAiServiceBase;
+                    if (imageService == null)
+                    {
+                        MessageBox.Show("背景削除サービスが選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                    
+                    Debug.WriteLine($"[MascotEditWindow] 選択されたサービス: {imageService.Name}");
+                    
                     // カーソルを待機状態に
                     System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
                     removeBackgroundButton.IsEnabled = false;
 
                     Debug.WriteLine($"[MascotEditWindow] 背景削除処理を開始: {selectedFileName}");
-
-                    // 画像処理サービスを選択
-                    var imageService = await SelectImageServiceAsync();
-                    if (imageService == null)
-                    {
-                        Debug.WriteLine("[MascotEditWindow] 画像処理サービスが選択されませんでした");
-                        return;
-                    }
 
                     // 画像をBase64 Data URI形式で読み込み
                     string? imageData = ImageLoadHelper.LoadImageAsBase64DataUri(selectedImagePath);
@@ -728,106 +773,6 @@ namespace DesktopAiMascot.views
                 "behind" => "このキャラクターを背面から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、後ろ姿が見えるように描いてください。",
                 _ => "このキャラクターの別の角度からの画像を生成してください。"
             };
-        }
-
-        /// <summary>
-        /// 画像処理サービスを選択する
-        /// </summary>
-        private async Task<ImageAiServiceBase?> SelectImageServiceAsync()
-        {
-            try
-            {
-                var services = ImageAiManager.Instance.ImageAiServices.Values.ToList();
-
-                if (services.Count == 0)
-                {
-                    MessageBox.Show("利用可能な画像処理サービスがありません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return null;
-                }
-
-                // サービス選択ダイアログを表示
-                var dialog = new Window
-                {
-                    Title = "画像処理サービスを選択",
-                    Width = 400,
-                    Height = 300,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = this,
-                    ResizeMode = ResizeMode.NoResize
-                };
-
-                var stackPanel = new System.Windows.Controls.StackPanel { Margin = new Thickness(20) };
-
-                var label = new System.Windows.Controls.Label
-                {
-                    Content = "背景削除に使用するサービスを選択してください:",
-                    FontWeight = FontWeights.Bold,
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-                stackPanel.Children.Add(label);
-
-                var listBox = new System.Windows.Controls.ListBox
-                {
-                    Height = 150,
-                    Margin = new Thickness(0, 0, 0, 20)
-                };
-
-                foreach (var service in services)
-                {
-                    listBox.Items.Add(new System.Windows.Controls.ListBoxItem
-                    {
-                        Content = $"{service.Name} ({service.EndPoint})",
-                        Tag = service
-                    });
-                }
-
-                listBox.SelectedIndex = 0;
-                stackPanel.Children.Add(listBox);
-
-                var buttonPanel = new System.Windows.Controls.StackPanel
-                {
-                    Orientation = System.Windows.Controls.Orientation.Horizontal,
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Right
-                };
-
-                var okButton = new System.Windows.Controls.Button
-                {
-                    Content = "OK",
-                    Width = 80,
-                    Height = 30,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    IsDefault = true
-                };
-                okButton.Click += (s, e) => { dialog.DialogResult = true; dialog.Close(); };
-                buttonPanel.Children.Add(okButton);
-
-                var cancelButton = new System.Windows.Controls.Button
-                {
-                    Content = "キャンセル",
-                    Width = 80,
-                    Height = 30,
-                    IsCancel = true
-                };
-                cancelButton.Click += (s, e) => { dialog.DialogResult = false; dialog.Close(); };
-                buttonPanel.Children.Add(cancelButton);
-
-                stackPanel.Children.Add(buttonPanel);
-                dialog.Content = stackPanel;
-
-                if (dialog.ShowDialog() == true && listBox.SelectedItem is System.Windows.Controls.ListBoxItem selectedItem)
-                {
-                    var selectedService = selectedItem.Tag as ImageAiServiceBase;
-                    Debug.WriteLine($"[MascotEditWindow] 選択されたサービス: {selectedService?.Name}");
-                    return selectedService;
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] サービス選択エラー: {ex.Message}");
-                return null;
-            }
         }
     }
 

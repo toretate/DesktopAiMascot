@@ -5,13 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DesktopAiMascot.views"
         mc:Ignorable="d"
-        Title="マスコット編集" Height="815" Width="900"
+        Title="マスコット編集" Height="900" Width="900"
         WindowStartupLocation="CenterScreen"
         Background="White">
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" MinHeight="454"/>
-            <RowDefinition/>
+            <RowDefinition Height="790" MinHeight="454"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -19,52 +18,107 @@
         <GroupBox Header="基本情報" Grid.Row="0" Padding="0">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- カバー画像 -->
-                <StackPanel Grid.Column="0" Margin="10">
-                    <Border BorderBrush="LightGray" BorderThickness="1" 
-                        Width="180" Height="180" Margin="0,0,0,0">
-                        <Image x:Name="coverImage" Stretch="Uniform" Height="178" VerticalAlignment="Top"
+                <StackPanel Grid.Column="0" Margin="0">
+                    <!-- カバー画像表示 -->
+                    <GroupBox Width="180" Height="180" Margin="0,0,0,5">
+                        <GroupBox.Header>
+                            <Grid>
+                                <TextBlock Text="Cover" VerticalAlignment="Center"/>
+                            </Grid>
+                        </GroupBox.Header>
+                        <Image x:Name="coverImage" 
+                               Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                RenderOptions.EdgeMode="Aliased"/>
-                    </Border>
-                    <Label Content="表示名" FontWeight="Bold" FontSize="12" Margin="0,0,0,0" Padding="0" />
-                    <TextBox x:Name="displayNameTextBox" 
-                             Height="30" 
-                             FontSize="14"
-                             Margin="0,0,0,0"
-                             VerticalContentAlignment="Center"/>
-                    <Label Content="システムプロンプト" FontWeight="Bold" FontSize="12" Padding="0" Margin="0,0,0,5"/>
-                    <Button x:Name="editPromptButton" 
-                            Content="外部エディタで編集" 
-                            Height="35"
-                            Click="EditPromptButton_Click"
-                            Margin="0,0,0,15"/>
+
+                    </GroupBox>
+                                        
+                    <ListView x:Name="mascotImageListView"
+                        SelectionMode="Single"
+                        SelectionChanged="ImageListView_SelectionChanged" 
+                        d:ItemsSource="{d:SampleData ItemCount=5}"
+                        HorizontalContentAlignment="Center" 
+                        Height="581"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        ScrollViewer.CanContentScroll="False">
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical"/>
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="itemBorder"
+                                    BorderBrush="LightGray" 
+                                    BorderThickness="1" 
+                                    Margin="0,0,0,5" 
+                                    Padding="5"
+                                    Width="160"
+                                    Height="160"
+                                    HorizontalAlignment="Center">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="120"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Image Grid.Row="0"
+                                            Source="{Binding ImageSource}" 
+                                            Stretch="Uniform"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            RenderOptions.BitmapScalingMode="HighQuality"
+                                            RenderOptions.EdgeMode="Aliased"/>
+
+                                        <TextBlock Grid.Row="1"
+                                            Text="{Binding FileName}" 
+                                            TextAlignment="Center"
+                                            TextWrapping="Wrap"
+                                            FontSize="10"
+                                            Margin="0,5,0,0"/>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListViewItem}}}" Value="True">
+                                        <Setter TargetName="itemBorder" Property="BorderBrush" Value="DodgerBlue"/>
+                                        <Setter TargetName="itemBorder" Property="BorderThickness" Value="3"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </StackPanel>
 
                 <!-- 基本設定 -->
-                <StackPanel Grid.Column="1" Margin="5">
+                <StackPanel Grid.Column="1" Margin="5,0,0,0">
 
-                    <GroupBox x:Name="angleViewGroupBox" Height="412">
+                    <Label Content="名前" FontWeight="Bold" FontSize="12" Padding="0" />
+                    <TextBox x:Name="displayNameTextBox" 
+                        Height="30" 
+                        FontSize="14"
+                        VerticalContentAlignment="Center"/>
+
+                    <Label Content="プロフィールなど" FontWeight="Bold" FontSize="12" Padding="0"/>
+                    <Button x:Name="editPromptButton" 
+                        Content="外部エディタで編集" 
+                        Height="35"
+                        Click="EditPromptButton_Click"
+                            />
+
+                    <GroupBox x:Name="angleViewGroupBox" Height="360">
                         <GroupBox.Header>
                             <Grid>
-                                <TextBlock Text="三面図" VerticalAlignment="Center"/>
-                                <ComboBox x:Name="imageModelComboBox"
-                                          HorizontalAlignment="Right"
-                                          Width="180"
-                                          Margin="0,0,10,0"
-                                          SelectedIndex="0">
-                                    <ComboBoxItem Content="NanoBanana"/>
-                                    <ComboBoxItem Content="NanaBanana Pro"/>
-                                    <ComboBoxItem Content="Qwen3 Image Edit"/>
-                                </ComboBox>
+                                <TextBlock Text="図" VerticalAlignment="Center"/>
                             </Grid>
                         </GroupBox.Header>
 
-                        <Grid Height="388" VerticalAlignment="Top">
+                        <Grid Height="350" VerticalAlignment="Top">
                             <!-- 中央: frontImage -->
                             <Border BorderBrush="DodgerBlue" 
                                     BorderThickness="2" 
@@ -181,109 +235,61 @@
                                     </TransformGroup>
                                 </Label.RenderTransform>
                             </Label>
+
+                            <!-- 生成処理AI -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
+                                <Label>画像生成</Label>
+                                <ComboBox x:Name="imageModelComboBox"
+                                          Height="20"
+                                          Width="180"
+                                          Margin="0"
+                                          SelectedIndex="0">
+                                    <ComboBoxItem Content="Gemini - NanoBanana"/>
+                                    <ComboBoxItem Content="Gemini - NanaBanana Pro"/>
+                                    <ComboBoxItem Content="Comfy - Qwen3 Image Edit"/>
+                                </ComboBox>
+                            </StackPanel>
                         </Grid>
                     </GroupBox>
-
-                    <Label Content="画像生成" FontWeight="Bold" FontSize="12" Padding="0" Margin="0,0,0,5"/>
-                    <Button x:Name="generateViewsButton" 
-                            Content="キャラクター視点画像を生成" 
-                            Height="35"
-                            Click="GenerateViewsButton_Click"
-                            ToolTip="上下左右背面、左前、右前から見た画像を生成"/>
-
-                </StackPanel>
-            </Grid>
-        </GroupBox>
-
-        <!-- 画像一覧 -->
-        <GroupBox Header="画像一覧" Grid.Row="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- ツールバー -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button x:Name="addImageButton" 
+                    <StackPanel Orientation="Horizontal">
+                        <!-- 背景削除ボタン -->
+                        <Button x:Name="removeBackgroundButton" 
+                            Content="背景を削除" 
+                            Width="100" 
+                            Height="30"
+                            IsEnabled="False"
+                            Click="RemoveBackgroundButton_Click"/>
+                        
+                        <!-- 背景削除処理コンボボックス -->
+                        <Label Content="背景削除AI" FontWeight="Bold" FontSize="10" Padding="0,0,0,0" Margin="10,5,0,2"/>
+                        <ComboBox x:Name="backgroundRemovalServiceComboBox"
+                                  Width="150"
+                                  Height="25"
+                                  HorizontalAlignment="Left"
+                                  DisplayMemberPath="Name"
+                                  SelectedIndex="0"/>
+                        <Button x:Name="restoreBackgroundButton" 
+                            Content="背景削除前に戻す" 
+                            Width="130" 
+                            Height="30"
+                            IsEnabled="False"
+                            Click="RestoreBackgroundButton_Click"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="addImageButton" 
                             Content="画像を追加" 
                             Width="100" 
                             Height="30"
                             Margin="0,0,5,0"
                             Click="AddImageButton_Click"/>
-                    <Button x:Name="removeBackgroundButton" 
-                            Content="背景を削除" 
-                            Width="100" 
-                            Height="30"
-                            Margin="0,0,5,0"
-                            IsEnabled="False"
-                            Click="RemoveBackgroundButton_Click"/>
-                    <Button x:Name="restoreBackgroundButton" 
-                            Content="背景削除前に戻す" 
-                            Width="130" 
-                            Height="30"
-                            Margin="0,0,5,0"
-                            IsEnabled="False"
-                            Click="RestoreBackgroundButton_Click"/>
-                    <Button x:Name="generateEmotesButton" 
+                        <Button x:Name="generateEmotesButton" 
                             Content="表情差分作成" 
                             Width="120" 
                             Height="30"
                             IsEnabled="False"
                             Click="GenerateEmotesButton_Click"/>
+                    </StackPanel>
                 </StackPanel>
-
-                <!-- 画像アルバム表示 -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ListView x:Name="mascotImageListView" 
-                              SelectionMode="Single"
-                              SelectionChanged="ImageListView_SelectionChanged" d:ItemsSource="{d:SampleData ItemCount=5}">
-                        <ListView.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ListView.ItemsPanel>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border x:Name="itemBorder"
-                                        BorderBrush="LightGray" 
-                                        BorderThickness="1" 
-                                        Margin="5" 
-                                        Padding="5"
-                                        Width="140" 
-                                        Height="160">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="120"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <Image Grid.Row="0"
-                                               Source="{Binding ImageSource}" 
-                                               Stretch="Uniform"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               RenderOptions.BitmapScalingMode="HighQuality"
-                                               RenderOptions.EdgeMode="Aliased"/>
-
-                                        <TextBlock Grid.Row="1"
-                                                   Text="{Binding FileName}" 
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap"
-                                                   FontSize="10"
-                                                   Margin="0,5,0,0"/>
-                                    </Grid>
-                                </Border>
-                                <DataTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListViewItem}}" Value="True">
-                                        <Setter TargetName="itemBorder" Property="BorderBrush" Value="DodgerBlue"/>
-                                        <Setter TargetName="itemBorder" Property="BorderThickness" Value="3"/>
-                                    </DataTrigger>
-                                </DataTemplate.Triggers>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </ScrollViewer>
             </Grid>
         </GroupBox>
 
