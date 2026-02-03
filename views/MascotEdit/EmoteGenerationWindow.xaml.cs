@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 using MessageBox = System.Windows.MessageBox;
 using DesktopAiMascot.aiservice.chat;
 
-namespace DesktopAiMascot.views
+namespace DesktopAiMascot.views.MascotEdit
 {
     public partial class EmoteGenerationWindow : Window
     {
@@ -76,7 +76,7 @@ namespace DesktopAiMascot.views
                 bitmap.StreamSource = ms;
                 bitmap.EndInit();
             }
-            bitmap.Freeze(); // UIスレッド外で使用可能にする
+            bitmap.Freeze();
             
             return bitmap;
         }
@@ -89,90 +89,26 @@ namespace DesktopAiMascot.views
             // チャットマスコットとして必要な表情の一覧
             _emoteItems = new List<EmoteItem>
             {
-                new EmoteItem
-                {
-                    EmoteName = "通常",
-                    Description = "デフォルトの表情",
-                    Prompt = "neutral expression, calm, default face"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "笑顔",
-                    Description = "嬉しい時の表情",
-                    Prompt = "happy smile, joyful, cheerful expression"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "驚き",
-                    Description = "驚いた時の表情",
-                    Prompt = "surprised expression, wide eyes, open mouth"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "悲しみ",
-                    Description = "悲しい時の表情",
-                    Prompt = "sad expression, downcast eyes, tears"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "怒り",
-                    Description = "怒った時の表情",
-                    Prompt = "angry expression, furrowed brow, intense gaze"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "照れ",
-                    Description = "照れている表情",
-                    Prompt = "blushing, shy expression, embarrassed"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "困惑",
-                    Description = "困っている表情",
-                    Prompt = "confused expression, puzzled, uncertain"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "疲労",
-                    Description = "疲れている表情",
-                    Prompt = "tired expression, exhausted, weary"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "興奮",
-                    Description = "興奮している表情",
-                    Prompt = "excited expression, energetic, enthusiastic"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "思考",
-                    Description = "考えている表情",
-                    Prompt = "thinking expression, contemplative, pensive"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "不安",
-                    Description = "不安な表情",
-                    Prompt = "anxious expression, worried, nervous"
-                },
-                new EmoteItem
-                {
-                    EmoteName = "楽しい",
-                    Description = "楽しんでいる表情",
-                    Prompt = "playful expression, having fun, amused"
-                }
+                new EmoteItem { EmoteName = "通常", Description = "デフォルトの表情", Prompt = "neutral expression, calm, default face" },
+                new EmoteItem { EmoteName = "笑顔", Description = "嬉しい時の表情", Prompt = "happy smile, joyful, cheerful expression" },
+                new EmoteItem { EmoteName = "驚き", Description = "驚いた時の表情", Prompt = "surprised expression, wide eyes, open mouth" },
+                new EmoteItem { EmoteName = "悲しみ", Description = "悲しい時の表情", Prompt = "sad expression, downcast eyes, tears" },
+                new EmoteItem { EmoteName = "怒り", Description = "怒った時の表情", Prompt = "angry expression, furrowed brow, intense gaze" },
+                new EmoteItem { EmoteName = "照れ", Description = "照れている表情", Prompt = "blushing, shy expression, embarrassed" },
+                new EmoteItem { EmoteName = "困惑", Description = "困っている表情", Prompt = "confused expression, puzzled, uncertain" },
+                new EmoteItem { EmoteName = "疲労", Description = "疲れている表情", Prompt = "tired expression, exhausted, weary" },
+                new EmoteItem { EmoteName = "興奮", Description = "興奮している表情", Prompt = "excited expression, energetic, enthusiastic" },
+                new EmoteItem { EmoteName = "思考", Description = "考えている表情", Prompt = "thinking expression, contemplative, pensive" },
+                new EmoteItem { EmoteName = "不安", Description = "不安な表情", Prompt = "anxious expression, worried, nervous" },
+                new EmoteItem { EmoteName = "楽しい", Description = "楽しんでいる表情", Prompt = "playful expression, having fun, amused" }
             };
 
             emoteItemsControl.ItemsSource = _emoteItems;
         }
 
-        /// <summary>
-        /// 全ての表情を生成
-        /// </summary>
         private async void GenerateAllButton_Click(object sender, RoutedEventArgs e)
         {
             generateAllButton.IsEnabled = false;
-            
             try
             {
                 string aiService = (aiServiceComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
@@ -196,20 +132,15 @@ namespace DesktopAiMascot.views
             }
         }
 
-        /// <summary>
-        /// 個別の表情を生成
-        /// </summary>
         private void GenerateEmoteButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.Button button && button.Tag is EmoteItem emote)
             {
                 button.IsEnabled = false;
-                
                 try
                 {
                     string aiService = (aiServiceComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
                     string promptAdjust = promptAdjustTextBox.Text;
-
                     _ = GenerateEmoteAsync(emote, aiService, promptAdjust);
                 }
                 catch (Exception ex)
@@ -224,13 +155,9 @@ namespace DesktopAiMascot.views
             }
         }
 
-        /// <summary>
-        /// 表情を生成（非同期）
-        /// </summary>
         private async System.Threading.Tasks.Task GenerateEmoteAsync(EmoteItem emote, string aiService, string promptAdjust)
         {
             emote.StatusText = "生成中...";
-            
             try
             {
                 if (_chatService == null)
@@ -239,35 +166,24 @@ namespace DesktopAiMascot.views
                     return;
                 }
 
-                // 元画像をBase64に変換
                 string imageBase64 = ConvertImageToBase64(_sourceImagePath);
-                
-                // プロンプトを構築
                 string fullPrompt = $"Edit this image to show: {emote.Prompt}. {promptAdjust}";
                 
                 Debug.WriteLine($"[EmoteGenerationWindow] {aiService}で表情「{emote.EmoteName}」を生成中");
                 Debug.WriteLine($"[EmoteGenerationWindow] プロンプト: {fullPrompt}");
                 
-                // Gemini APIで画像を生成
-                var resultBase64 = await _chatService.SendMessageWithImagesAsync(
-                    new[] { imageBase64 }, 
-                    fullPrompt
-                );
+                var resultBase64 = await _chatService.SendMessageWithImagesAsync(new[] { imageBase64 }, fullPrompt);
                 
                 if (!string.IsNullOrEmpty(resultBase64))
                 {
-                    // 生成された画像をBitmapImageに変換
                     var generatedImage = ConvertBase64ToImage(resultBase64);
-                    
-                    // UIスレッドで画像を更新
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        emote.ImagePath = _sourceImagePath; // 一時的に元画像のパスを使用
-                        emote.GeneratedImageBase64 = resultBase64; // Base64データを保存
+                        emote.ImagePath = _sourceImagePath;
+                        emote.GeneratedImageBase64 = resultBase64;
                         emote.StatusText = "生成完了（未保存）";
                         emote.HasImage = true;
                     });
-                    
                     Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」の生成が完了しました");
                 }
                 else
@@ -283,9 +199,6 @@ namespace DesktopAiMascot.views
             }
         }
 
-        /// <summary>
-        /// 個別の表情を保存
-        /// </summary>
         private void SaveEmoteButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.Button button && button.Tag is EmoteItem emote)
@@ -298,21 +211,17 @@ namespace DesktopAiMascot.views
                         return;
                     }
 
-                    // 生成された画像をマスコットフォルダに保存
                     string mascotDir = Path.GetDirectoryName(_sourceImagePath) ?? "";
                     string fileName = $"emote_{emote.EmoteName.ToLowerInvariant()}.png";
                     string savePath = Path.Combine(mascotDir, fileName);
                     
-                    // Base64から画像バイトに変換
                     byte[] imageBytes = Convert.FromBase64String(emote.GeneratedImageBase64);
-                    
-                    // ファイルに保存
                     File.WriteAllBytes(savePath, imageBytes);
                     
                     Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」を保存: {savePath}");
                     
                     emote.StatusText = "保存済み";
-                    emote.ImagePath = savePath; // 保存されたパスを更新
+                    emote.ImagePath = savePath;
                     
                     MessageBox.Show($"表情「{emote.EmoteName}」を保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -324,9 +233,6 @@ namespace DesktopAiMascot.views
             }
         }
 
-        /// <summary>
-        /// 全て保存
-        /// </summary>
         private void SaveAllButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -339,10 +245,7 @@ namespace DesktopAiMascot.views
                     string fileName = $"emote_{emote.EmoteName.ToLowerInvariant()}.png";
                     string savePath = Path.Combine(mascotDir, fileName);
                     
-                    // Base64から画像バイトに変換
                     byte[] imageBytes = Convert.FromBase64String(emote.GeneratedImageBase64);
-                    
-                    // ファイルに保存
                     File.WriteAllBytes(savePath, imageBytes);
                     
                     emote.StatusText = "保存済み";
@@ -360,18 +263,12 @@ namespace DesktopAiMascot.views
             }
         }
 
-        /// <summary>
-        /// 閉じるボタン
-        /// </summary>
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
     }
 
-    /// <summary>
-    /// 表情アイテム
-    /// </summary>
     public class EmoteItem : INotifyPropertyChanged
     {
         private string _imagePath = string.Empty;
@@ -381,10 +278,6 @@ namespace DesktopAiMascot.views
         public string EmoteName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Prompt { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// 生成された画像のBase64文字列
-        /// </summary>
         public string GeneratedImageBase64 { get; set; } = string.Empty;
 
         public string ImagePath
