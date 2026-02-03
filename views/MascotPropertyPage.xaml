@@ -39,7 +39,7 @@
                                     Width="90" 
                                     Height="90">
                                 <Grid>
-                                    <Image Source="{Binding CoverImagePath}" 
+                                    <Image Source="{Binding CoverImage}" 
                                            Stretch="Uniform"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"

@@ -19,7 +19,7 @@ namespace DesktopAiMascot.mascots
         public Size Size { get; set; }
         public int CurrentFrame { get; private set; }
         private int frameCount = 1;
-        private Image[]? images;
+        private MascotImageItem[]? images;
         private bool disposed = false;
 
         public Mascot(Point position, Size size)
@@ -39,7 +39,7 @@ namespace DesktopAiMascot.mascots
             images = newModel.LoadImages();
             
             // Log for debugging
-            Debug.WriteLine($"Mascot reloaded: {newModel.Name}, {frameCount} images.");
+            Debug.WriteLine($"Mascot reloaded: {newModel.Name}, {images?.Length ?? 0} images.");
         }
 
         // 描画
@@ -58,17 +58,21 @@ namespace DesktopAiMascot.mascots
 
                 if (images != null && images.Length > 0 && images[CurrentFrame] != null)
                 {
-                    var img = images[CurrentFrame];
-                    // アスペクト比を維持しつつ、Size内に収める (Contain)
-                    float ratio = Math.Min((float)Size.Width / img.Width, (float)Size.Height / img.Height);
-                    int w = (int)(img.Width * ratio);
-                    int h = (int)(img.Height * ratio);
+                    var imgItem = images[CurrentFrame];
+                    var img = imgItem?.Image;
+                    if (img != null)
+                    {
+                        // アスペクト比を維持しつつ、Size内に収める (Contain)
+                        float ratio = Math.Min((float)Size.Width / img.Width, (float)Size.Height / img.Height);
+                        int w = (int)(img.Width * ratio);
+                        int h = (int)(img.Height * ratio);
 
-                    // 中央揃え
-                    int x = Position.X + (Size.Width - w) / 2;
-                    int y = Position.Y + (Size.Height - h) / 2;
+                        // 中央揃え
+                        int x = Position.X + (Size.Width - w) / 2;
+                        int y = Position.Y + (Size.Height - h) / 2;
 
-                    g.DrawImage(img, x, y, w, h);
+                        g.DrawImage(img, x, y, w, h);
+                    }
                 }
                 else
                 {
@@ -95,14 +99,14 @@ namespace DesktopAiMascot.mascots
         }
 
         // Return a clone of the currently displayed image (or null if none).
-        public Image? GetCurrentImageClone()
+        public System.Drawing.Image? GetCurrentImageClone()
         {
             try
             {
                 if (images == null || images.Length == 0) return null;
                 var current = images[CurrentFrame];
-                if (current == null) return null;
-                return new Bitmap(current);
+                if (current?.Image == null) return null;
+                return new Bitmap(current.Image);
             }
             catch
             {

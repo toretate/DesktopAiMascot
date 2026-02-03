@@ -1,5 +1,6 @@
 using DesktopAiMascot.mascots;
 using DesktopAiMascot.aiservice;
+using DesktopAiMascot.utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -318,5 +319,52 @@ namespace DesktopAiMascot.views
     {
         public string Name { get; set; } = string.Empty;
         public string CoverImagePath { get; set; } = string.Empty;
+        
+        private System.Windows.Media.Imaging.BitmapSource? _cachedCoverImage;
+
+        /// <summary>
+        /// cover.pngをBitmapSourceとして取得（WPFのFileSource直接参照ではなく、ファイルロック防止）
+        /// </summary>
+        public System.Windows.Media.Imaging.BitmapSource? CoverImage
+        {
+            get
+            {
+                // キャッシュがあればそれを返す
+                if (_cachedCoverImage != null)
+                {
+                    return _cachedCoverImage;
+                }
+
+                // デザイナーモードでは null を返す
+                if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(new System.Windows.DependencyObject()))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    // ImageLoadHelper を使用してサムネイル版の BitmapSource を読み込む
+                    var bitmap = ImageLoadHelper.LoadBitmapThumbnail(CoverImagePath, 80, 80);
+                    if (bitmap != null)
+                    {
+                        // キャッシュに保存
+                        _cachedCoverImage = bitmap;
+                        return bitmap;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[MascotDisplayItem] Cover画像読み込みエラー ({Name}): {ex.Message}");
+                }
+
+                return null;
+            }
+        }
+
+        public void Dispose()
+        {
+            // キャッシュされた画像を解放
+            _cachedCoverImage = null;
+        }
     }
 }

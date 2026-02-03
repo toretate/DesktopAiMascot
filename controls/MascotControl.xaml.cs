@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using DesktopAiMascot.mascots;
+using DesktopAiMascot.utils;
 using System.Diagnostics;
 
 namespace DesktopAiMascot.Controls
@@ -34,12 +35,29 @@ namespace DesktopAiMascot.Controls
                 var image = mascot?.GetCurrentImageClone();
                 if (image != null)
                 {
-                    MascotImage.Source = ConvertToBitmapSource(image);
+                    // using で image を確実に破棄（毎フレーム実行されるためメモリリーク防止）
+                    using (image)
+                    {
+                        var bitmapSource = ImageLoadHelper.ConvertDrawingImageToBitmapSource(image);
+                        if (bitmapSource != null)
+                        {
+                            MascotImage.Source = bitmapSource;
+                            Debug.WriteLine($"[MascotControl] マスコット画像を更新: サイズ={image.Width}x{image.Height}, フレーム={mascot?.CurrentFrame}");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[MascotControl] BitmapSource変換に失敗しました");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[MascotControl] マスコット画像がnullです");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating mascot image: {ex.Message}");
+                Debug.WriteLine($"[MascotControl] マスコット画像更新エラー: {ex.Message}");
             }
             finally
             {
@@ -56,31 +74,6 @@ namespace DesktopAiMascot.Controls
         {
             mascot?.Reload(model);
             UpdateMascotImage();
-        }
-
-        private BitmapSource ConvertToBitmapSource(System.Drawing.Image image)
-        {
-            using (var bitmap = new Bitmap(image))
-            {
-                using (var memoryStream = new MemoryStream())
-                {
-                    // PNGフォーマットで保存してアルファチャンネルと品質を保持
-                    bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
-                    memoryStream.Position = 0;
-
-                    var bitmapImage = new BitmapImage();
-                    bitmapImage.BeginInit();
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.StreamSource = memoryStream;
-                    // 高品質なデコーディングを有効化
-                    bitmapImage.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
-                    bitmapImage.EndInit();
-
-                    // Freeze to improve performance by making the bitmap immutable
-                    bitmapImage.Freeze();
-                    return bitmapImage;
-                }
-            }
         }
     }
 }

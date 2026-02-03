@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using DesktopAiMascot.aiservice;
 using DesktopAiMascot.aiservice.image;
 using DesktopAiMascot.utils;
+using DesktopAiMascot.controls;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -88,7 +89,8 @@ namespace DesktopAiMascot.views
                 
                 Debug.WriteLine($"[MascotEditWindow] カバー画像パス: {coverPath}");
                 
-                var image = ImageLoadHelper.LoadBitmapImageWithoutLock(coverPath);
+                // サムネイル版を使用（180x180ピクセル）
+                var image = ImageLoadHelper.LoadBitmapThumbnail(coverPath, 180, 180);
                 if (image != null)
                 {
                     coverImage.Source = image;
@@ -124,47 +126,12 @@ namespace DesktopAiMascot.views
 
                 var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
                 
-                // マスコットディレクトリ内のすべてのファイルを取得
+                // MascotModel側のフィルタリング処理を使用してディレクトリ内のファイルを取得
                 var allFiles = Directory.GetFiles(_mascotDirectory);
-                Debug.WriteLine($"[MascotEditWindow] マスコットディレクトリ内のファイル数: {allFiles.Length}");
-                
-                foreach (var file in allFiles)
+                var imageItems = ImageLoadHelper.LoadImages(_mascotModel.Name, allFiles);
+                foreach( var item in imageItems)
                 {
-                    Debug.WriteLine($"[MascotEditWindow] ファイル: {Path.GetFileName(file)}");
-                }
-                
-                // 画像ファイルをフィルタリング（.back.を含むファイルは除外）
-                var imageFiles = allFiles
-                    .Where(f => imageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    .Where(f => !Path.GetFileName(f).Contains(".back."))
-                    .OrderBy(f => f)
-                    .ToArray();
-                
-                Debug.WriteLine($"[MascotEditWindow] 画像ファイル数: {imageFiles.Length}");
-
-                foreach (var imagePath in imageFiles)
-                {
-                    var fileName = Path.GetFileName(imagePath);
-                    var item = new MascotImageItem
-                    {
-                        ImagePath = imagePath,
-                        FileName = fileName
-                    };
-                    
                     _imageItems.Add(item);
-                    
-                    Debug.WriteLine($"[MascotEditWindow] 画像アイテム追加: {fileName} ({imagePath})");
-                    
-                    // ImageSourceプロパティを呼び出して、読み込みをテスト
-                    var testImage = item.ImageSource;
-                    if (testImage != null)
-                    {
-                        Debug.WriteLine($"[MascotEditWindow] 画像読み込み確認OK: {fileName}");
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[MascotEditWindow] 画像読み込み確認NG: {fileName}");
-                    }
                 }
 
                 // ObservableCollectionを使用しているので、一度だけ設定すればよい
@@ -174,6 +141,7 @@ namespace DesktopAiMascot.views
                 }
                 
                 Debug.WriteLine($"[MascotEditWindow] {_imageItems.Count}個の画像をListViewに設定しました");
+
             }
             catch (Exception ex)
             {
@@ -324,7 +292,7 @@ namespace DesktopAiMascot.views
                     string? imageData = ImageLoadHelper.LoadImageAsBase64DataUri(selectedImagePath);
                     if (imageData == null)
                     {
-                        throw new InvalidOperationException("画像の読み込みに失敗しました。");
+                        throw new InvalidOperationException("画像の読み込みに失敗しました.");
                     }
 
                     Debug.WriteLine($"[MascotEditWindow] 画像データサイズ: {imageData.Length} 文字");
@@ -503,8 +471,8 @@ namespace DesktopAiMascot.views
                     var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}");
                     restoreBackgroundButton.IsEnabled = backupFiles.Length > 0;
                     
-                    // 選択された画像をfrontImageに表示
-                    var image = ImageLoadHelper.LoadBitmapImageWithoutLock(selectedItem.ImagePath);
+                    // 選択された画像をfrontImageに表示（サムネイル版、120x120ピクセル）
+                    var image = ImageLoadHelper.LoadBitmapThumbnail(selectedItem.ImagePath, 120, 120);
                     if (image != null)
                     {
                         frontImage.Source = image;
@@ -863,57 +831,4 @@ namespace DesktopAiMascot.views
         }
     }
 
-    /// <summary>
-    /// 画像一覧表示用のアイテム
-    /// </summary>
-    public class MascotImageItem
-    {
-        public string ImagePath { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        
-        private System.Windows.Media.Imaging.BitmapSource? _cachedImage;
-        
-        /// <summary>
-        /// 画像をBitmapSourceとして取得
-        /// </summary>
-        public System.Windows.Media.Imaging.BitmapSource? ImageSource
-        {
-            get
-            {
-                // キャッシュがあればそれを返す
-                if (_cachedImage != null)
-                {
-                    return _cachedImage;
-                }
-                
-                // デザイナーモードでは null を返す
-                if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(new System.Windows.DependencyObject()))
-                {
-                    return null;
-                }
-                
-                try
-                {
-                    var bitmap = ImageLoadHelper.LoadBitmapImageWithoutLock(ImagePath);
-                    if (bitmap != null)
-                    {
-                        // キャッシュに保存
-                        _cachedImage = bitmap;
-                        Debug.WriteLine($"[MascotImageItem] 画像読み込み成功: {FileName}");
-                        return bitmap;
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[MascotImageItem] ファイルが存在しません: {ImagePath}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[MascotImageItem] 画像読み込みエラー ({FileName}): {ex.Message}");
-                }
-                
-                return null;
-            }
-        }
-    }
 }

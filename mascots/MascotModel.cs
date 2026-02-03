@@ -32,38 +32,50 @@ namespace DesktopAiMascot.mascots
         }
 
         /** 画像キャッシュ */
-        private Image[] imageCache = [];
+        private MascotImageItem[] imageCache = [];
         
-        /** 画像をロードする */
-        public Image[] LoadImages()
+        /// <summary>
+        /// .back.*とtemp_*を除外したフィルタリング済みの画像ファイルパスを取得する
+        /// </summary>
+        /// <returns>フィルタリング済みの画像ファイルパスの配列</returns>
+        public string[] GetFilteredImagePaths()
+        {
+            return ImagePaths
+                .Where(path => !Path.GetFileName(path).Contains(".back."))
+                .Where(path => !Path.GetFileName(path).StartsWith("temp_"))
+                .ToArray();
+        }
+        
+        /// <summary>
+        /// マスコット画像をロードする
+        /// バックアップファイル（.back.*）と一時ファイル（temp_*）は除外される
+        /// </summary>
+        /// <returns>ロードされた画像アイテムの配列</returns>
+        public MascotImageItem[] LoadImages()
         {
             // キャッシュがあればそれを返す
-            if ( imageCache.Length != 0 )
+            if (imageCache.Length != 0)
             {
+                Debug.WriteLine($"[MascotModel] キャッシュから画像を返す: {Name}, 画像数={imageCache.Length}");
                 return imageCache;
             }
-
-            // 画像をロードしてキャッシュに保存する
-            var loadedList = new List<Image>();
-            foreach (var path in ImagePaths)
-            {
-                string fullPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-                var img = ImageLoadHelper.LoadDrawingImageWithoutLock(fullPath);
-                if (img != null)
-                {
-                    loadedList.Add(img);
-                }
-            }
-            imageCache = loadedList.ToArray();
+            
+            imageCache = ImageLoadHelper.LoadImages(Name, ImagePaths);
+            Debug.WriteLine($"[MascotModel] 画像読み込み完了: {Name}, 読み込み成功={imageCache.Length}/{ImagePaths.Length}");
             return imageCache;
         }
 
-        /** キャッシュを破棄する */
+        /// <summary>
+        /// キャッシュを破棄する
+        /// </summary>
         public void Dispose()
         {
             if (imageCache != null)
             {
-                foreach (var im in imageCache) im?.Dispose();
+                foreach (var im in imageCache)
+                {
+                    im?.Dispose();
+                }
                 imageCache = [];
             }
         }
