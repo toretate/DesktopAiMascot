@@ -1,0 +1,58 @@
+{
+  "1": {
+    "inputs": {
+      "image": "example.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "画像を読み込む"
+    }
+  },
+  "4": {
+    "inputs": {
+      "image": [
+        "9",
+        0
+      ],
+      "mask": [
+        "9",
+        1
+      ]
+    },
+    "class_type": "AILab_Preview",
+    "_meta": {
+      "title": "画像/マスク プレビュー (RMBG) 🖼️🎭"
+    }
+  },
+  "5": {
+    "inputs": {
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "SaveImageWebsocket",
+    "_meta": {
+      "title": "画像を保存するWebSocket"
+    }
+  },
+  "9": {
+    "inputs": {
+      "model": "BiRefNet-HR-matting",
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": false,
+      "background": "Alpha",
+      "background_color": "#222222",
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "BiRefNetRMBG",
+    "_meta": {
+      "title": "BiRefNet 背景削除 (RMBG)"
+    }
+  }
+}

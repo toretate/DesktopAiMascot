@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.aiservice.voice.schemas;
+using DesktopAiMascot.mascots;
 
 namespace DesktopAiMascot.aiservice
 {
@@ -43,13 +44,32 @@ namespace DesktopAiMascot.aiservice
             {
                 CurrentService = service;
                 
-                if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceModel))
+                // マスコット設定から voice 設定を読み込む
+                var currentModel = MascotManager.Instance.CurrentModel;
+                if (currentModel?.Config?.Voice != null && 
+                    currentModel.Config.Voice.TryGetValue(currentVoice, out var voiceConfig))
                 {
-                    service.Model = SystemConfig.Instance.VoiceServiceModel;
+                    // マスコットの config.yaml に voice 設定がある場合、それを優先
+                    if (!string.IsNullOrEmpty(voiceConfig.Model))
+                    {
+                        service.Model = voiceConfig.Model;
+                    }
+                    if (!string.IsNullOrEmpty(voiceConfig.Speaker))
+                    {
+                        service.Speaker = voiceConfig.Speaker;
+                    }
                 }
-                if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceSpeaker))
+                else
                 {
-                    service.Speaker = SystemConfig.Instance.VoiceServiceSpeaker;
+                    // マスコット設定がない場合、SystemConfig から読み込む
+                    if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceModel))
+                    {
+                        service.Model = SystemConfig.Instance.VoiceServiceModel;
+                    }
+                    if (!string.IsNullOrEmpty(SystemConfig.Instance.VoiceServiceSpeaker))
+                    {
+                        service.Speaker = SystemConfig.Instance.VoiceServiceSpeaker;
+                    }
                 }
             }
         }

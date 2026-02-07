@@ -4,7 +4,6 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace DesktopAiMascotTest.mascots
 {
@@ -14,21 +13,6 @@ namespace DesktopAiMascotTest.mascots
     /// </summary>
     public class MascotConfigIOTests
     {
-        /// <summary>
-        /// ローカル環境でのテストかどうかを判定
-        /// 環境変数 "MASCOT_TEST_LOCAL" が設定されている場合、プライベートマスコットもテスト対象
-        /// </summary>
-        private bool IsLocalTestEnvironment => 
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MASCOT_TEST_LOCAL"));
-
-        /// <summary>
-        /// 公開マスコット（GitHub で公開しているもの）を定義
-        /// </summary>
-        private static readonly HashSet<string> PublicMascots = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "default"
-        };
-
         private string GetMascotConfigPath(string mascotName)
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -43,52 +27,6 @@ namespace DesktopAiMascotTest.mascots
                 throw new FileNotFoundException($"config.yaml not found: {configPath}");
             }
             return File.ReadAllText(configPath);
-        }
-
-        /// <summary>
-        /// assets/mascots フォルダから存在するすべてのマスコットを取得
-        /// </summary>
-        private static List<string> GetAvailableMascots()
-        {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var mascotsDir = Path.Combine(baseDir, "assets", "mascots");
-
-            if (!Directory.Exists(mascotsDir))
-            {
-                return new List<string>();
-            }
-
-            return Directory.GetDirectories(mascotsDir)
-                .Select(dir => Path.GetFileName(dir))
-                .Where(name => !string.IsNullOrEmpty(name))
-                .ToList();
-        }
-
-        /// <summary>
-        /// Theory テスト用のマスコットリスト取得メソッド
-        /// 実行時に assets/mascots フォルダをスキャンして、テスト対象マスコットを取得
-        /// </summary>
-        public static IEnumerable<object[]> GetTargetMascotsForTheory()
-        {
-            var isLocal = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MASCOT_TEST_LOCAL"));
-            var availableMascots = GetAvailableMascots();
-
-            IEnumerable<string> targetMascots;
-
-            if (isLocal)
-            {
-                // ローカル環境：存在するすべてのマスコットをテスト対象
-                targetMascots = availableMascots.OrderBy(m => m);
-            }
-            else
-            {
-                // CI環境：公開マスコットのみ
-                targetMascots = availableMascots
-                    .Where(m => PublicMascots.Contains(m))
-                    .OrderBy(m => m);
-            }
-
-            return targetMascots.Select(m => new object[] { m });
         }
 
         [Theory]
@@ -142,10 +80,7 @@ namespace DesktopAiMascotTest.mascots
             var (_, prompt, _) = MascotConfigIO.ParseFromYaml(yaml, mascotName);
 
             // Assert
-            // プロンプトには以下の要素を含むはず
             Assert.Contains("キャラクター名:", prompt);
-            
-            // 性格セクションが含まれるはず
             Assert.Contains("【", prompt);
             
             Debug.WriteLine($"[{mascotName}] プロンプト内容 (最初の300文字):");
@@ -171,11 +106,7 @@ namespace DesktopAiMascotTest.mascots
                 Assert.NotEmpty(trait);
             }
             
-            Debug.WriteLine($"[{mascotName}] 性格特性:");
-            foreach (var trait in config.SystemPrompt.Personality)
-            {
-                Debug.WriteLine($"  - {trait}");
-            }
+            Debug.WriteLine($"[{mascotName}] 性格特性数: {config.SystemPrompt.Personality.Count}");
         }
 
         [Theory]
@@ -210,13 +141,11 @@ namespace DesktopAiMascotTest.mascots
             Assert.NotNull(config.Voice);
             
             Debug.WriteLine($"[{mascotName}] Voice設定数: {config.Voice?.Count ?? 0}");
-            if (config.Voice != null && config.Voice.Count > 0)
-            {
-                foreach (var kvp in config.Voice)
-                {
-                    Debug.WriteLine($"[{mascotName}]   {kvp.Key}: Model={kvp.Value.Model}, Speaker={kvp.Value.Speaker}");
-                }
-            }
         }
+
+        /// <summary>
+        /// Theory テスト用のマスコットリスト取得メソッド
+        /// </summary>
+        public static IEnumerable<object[]> GetTargetMascotsForTheory() => MascotTestHelper.GetTargetMascotsForTheory();
     }
 }

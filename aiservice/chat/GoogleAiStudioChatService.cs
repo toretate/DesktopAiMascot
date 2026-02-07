@@ -278,6 +278,57 @@ namespace DesktopAiMascot.aiservice.chat
         {
         }
 
+        /// <summary>
+        /// システムプロンプトとユーザープロンプトを明示的に指定してメッセージを送信する
+        /// 会話履歴を保持せず、1回限りのリクエストを行う
+        /// </summary>
+        public override async Task<string?> SendOneShotMessageAsync(string systemPrompt, string userPrompt)
+        {
+            try
+            {
+                if (_client == null)
+                {
+                    Debug.WriteLine("[GoogleAiStudio] Client is not initialized.");
+                    return "Error: Google AI API key is not configured. Please set the API key in settings.";
+                }
+
+                var modelName = SystemConfig.Instance.ModelName ?? DEFAULT_MODEL;
+                Debug.WriteLine($"[GoogleAiStudio] SendOneShotMessageAsync - Model: {modelName}");
+
+                // システムプロンプトとユーザープロンプトを結合
+                var fullMessage = $"{systemPrompt}\n\n{userPrompt}";
+                
+                var response = await _client.Models.GenerateContentAsync(modelName, fullMessage);
+                
+                if (response?.Candidates != null && response.Candidates.Count > 0)
+                {
+                    var candidate = response.Candidates[0];
+                    if (candidate?.Content?.Parts != null && candidate.Content.Parts.Count > 0)
+                    {
+                        return candidate.Content.Parts[0].Text;
+                    }
+                }
+                
+                Debug.WriteLine("[GoogleAiStudio] No response content from API");
+                return "Error: No response content from Google AI Studio";
+            }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー");
+                return "Error: Google AI Studioとの接続に失敗しました";
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
+                return "Error: Google AI Studioとの接続がタイムアウトしました";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
+                return $"Error: {ex.Message}";
+            }
+        }
+
         private static string? LoadSystemPrompt()
         {
             var model = MascotManager.Instance.CurrentModel;

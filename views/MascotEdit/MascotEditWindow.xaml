@@ -105,152 +105,88 @@
                         VerticalContentAlignment="Center"/>
 
                     <Label Content="プロフィールなど" FontWeight="Bold" FontSize="12" Padding="0"/>
-                    <Button x:Name="editPromptButton" 
-                        Content="外部エディタで編集" 
-                        Height="35"
-                        Click="EditPromptButton_Click"
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="80"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Label x:Name="editPromptButton" 
+                            Content="設定ファイル：" 
+                            Height="30"
+                            Grid.Column="0"
                             />
+                        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1">
+                            <TextBlock x:Name="mascotConfigTextBox"></TextBlock>
+                        </Border>
+                        <Button x:Name="profileEditButton" 
+                            Content="エディタ起動" 
+                            Height="30"
+                            Grid.Column="2"
+                            Click="EditPromptButton_Click"
+                            />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="80"></ColumnDefinition>
+                            <ColumnDefinition Width="100"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Label x:Name="generateProfileFromFileButton" 
+                            Content="ファイルからプロフィールを生成：" 
+                            Height="30"
+                            />
+                        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1">
+                            <TextBlock x:Name="generateProfileFromFileTextField"
+                                       AllowDrop="True"
+                                       PreviewDragOver="GenerateProfileFromFileTextField_PreviewDragOver"
+                                       Drop="GenerateProfileFromFileTextField_Drop"/>
+                        </Border>
+                        <Button x:Name="generateProfileFileChooserButton" 
+                            Content="生成" 
+                            Height="30"
+                            Grid.Column="2"
+                            Click="GenerateProfileFileChooserButton_Click"
+                            />
+                        <ComboBox x:Name="generateProfileModelComboBox"
+                                  Width="100"
+                                  HorizontalAlignment="Left"
+                                  DisplayMemberPath="Name"
+                                  SelectedIndex="0"
+                                  Grid.Column="3"
+                                  />
+                    </Grid>
 
-                    <GroupBox x:Name="angleViewGroupBox" Height="360">
-                        <GroupBox.Header>
-                            <Grid>
-                                <TextBlock Text="図" VerticalAlignment="Center"/>
-                            </Grid>
-                        </GroupBox.Header>
-
-                        <Grid Height="350" VerticalAlignment="Top">
-                            <!-- 中央: frontImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="120,120,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="100">
-                                <Image x:Name="frontImage" Stretch="Uniform" Source="/assets/icons/angle_front_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-
-                            <!-- 左: leftImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="10,120,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="100"
-                                    Cursor="Hand">
-                                <Image x:Name="leftImage" 
-                                       Stretch="Uniform" 
-                                       MouseLeftButtonDown="LeftImage_Click" Source="/assets/icons/angle_left_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-
-                            <!-- 右: rightImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="230,120,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="96"
-                                    Cursor="Hand">
-                                <Image x:Name="rightImage" 
-                                       Stretch="Uniform" 
-                                       MouseLeftButtonDown="RightImage_Click" Source="/assets/icons/angle_right_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-
-                            <!-- 上: aboveImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="120,10,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="100"
-                                    Cursor="Hand">
-                                <Image x:Name="aboveImage" 
-                                       Stretch="Uniform" 
-                                       MouseLeftButtonDown="AboveImage_Click" Source="/assets/icons/angle_above_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-
-                            <!-- 下: belowImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="120,230,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="100"
-                                    Cursor="Hand">
-                                <Image x:Name="belowImage" 
-                                       Stretch="Uniform" 
-                                       MouseLeftButtonDown="BelowImage_Click" Source="/assets/icons/angle_bottom_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-
-                            <!-- 背面: behindImage -->
-                            <Border BorderBrush="DodgerBlue" 
-                                    BorderThickness="2" 
-                                    HorizontalAlignment="Left" 
-                                    Height="100" 
-                                    Margin="340,120,0,0" 
-                                    VerticalAlignment="Top" 
-                                    Width="100"
-                                    Cursor="Hand">
-                                <Image x:Name="behindImage" 
-                                       Stretch="Uniform" 
-                                       MouseLeftButtonDown="BehindImage_Click" Source="/assets/icons/angle_behind_sample.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"
-                                       RenderOptions.EdgeMode="Aliased"/>
-                            </Border>
-                            <Label Content="LEFT" HorizontalAlignment="Left" Height="13" Margin="49,224,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0"/>
-                            <Label Content="TOP" HorizontalAlignment="Left" Height="13" Margin="98,56,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0" RenderTransformOrigin="0.5,0.5">
-                                <Label.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform/>
-                                        <SkewTransform/>
-                                        <RotateTransform Angle="90"/>
-                                        <TranslateTransform/>
-                                    </TransformGroup>
-                                </Label.RenderTransform>
-                            </Label>
-                            <Label Content="RIGHT" HorizontalAlignment="Left" Height="12" Margin="263,225,0,0" VerticalAlignment="Top" Width="30" FontSize="10" Padding="0"/>
-                            <Label Content="BEHIND" HorizontalAlignment="Left" Height="12" Margin="372,226,0,0" VerticalAlignment="Top" Width="36" FontSize="10" Padding="0"/>
-                            <Label Content="BOTTOM
-                                   " HorizontalAlignment="Left" Height="13" Margin="88,276,0,0" VerticalAlignment="Top" Width="42" FontSize="10" Padding="0" RenderTransformOrigin="0.5,0.5">
-                                <Label.RenderTransform>
-                                    <TransformGroup>
-                                        <ScaleTransform/>
-                                        <SkewTransform/>
-                                        <RotateTransform Angle="90"/>
-                                        <TranslateTransform/>
-                                    </TransformGroup>
-                                </Label.RenderTransform>
-                            </Label>
-
-                            <!-- 生成処理AI -->
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
-                                <Label>画像生成</Label>
-                                <ComboBox x:Name="imageModelComboBox"
-                                          Height="20"
-                                          Width="180"
-                                          Margin="0"
-                                          SelectedIndex="0">
-                                    <ComboBoxItem Content="Gemini - NanoBanana"/>
-                                    <ComboBoxItem Content="Gemini - NanaBanana Pro"/>
-                                    <ComboBoxItem Content="Comfy - Qwen3 Image Edit"/>
-                                </ComboBox>
-                            </StackPanel>
-                        </Grid>
-                    </GroupBox>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="460"></ColumnDefinition>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <GroupBox x:Name="angleViewGroupBox" Height="360">
+                            <GroupBox.Header>
+                                <Grid>
+                                    <TextBlock Text="図" VerticalAlignment="Center"/>
+                                </Grid>
+                            </GroupBox.Header>
+                            <local:AngleViewControl x:Name="angleViewControl" Height="350" VerticalAlignment="Top"/>
+                        </GroupBox>
+                        <GroupBox x:Name="profileGroupBox" Grid.Column="1" Height="360" Margin="5,0,0,0">
+                            <GroupBox.Header>
+                                <Grid>
+                                    <TextBlock Text="プロフィール" VerticalAlignment="Center"/>
+                                </Grid>
+                            </GroupBox.Header>
+                            <TextBox
+                                x:Name="profileTextBlock"
+                                AcceptsReturn="True"
+                                TextWrapping="Wrap"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled"
+                                Padding="0" Margin="0"
+                                />
+                        </GroupBox>
+                    </Grid>
                     <StackPanel Orientation="Horizontal">
                         <!-- 背景削除ボタン -->
                         <Button x:Name="removeBackgroundButton" 

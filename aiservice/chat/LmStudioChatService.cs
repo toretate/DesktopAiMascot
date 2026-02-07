@@ -76,9 +76,7 @@ namespace DesktopAiMascot.aiservice.chat
             Debug.WriteLine("=== LmStudio 送信開始 ===");
             Debug.WriteLine($"モデル: {llmModel}");
             Debug.WriteLine($"エンドポイント: {endpoint}");
-            Debug.WriteLine($"システムプロンプト: {systemPrompt}");
             Debug.WriteLine($"ユーザーメッセージ: {message}");
-            Debug.WriteLine($"チャット履歴数: {chatHistory.Count()}");
 
             // レスポンスを取得する
             try
