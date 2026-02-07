@@ -57,6 +57,9 @@ namespace DesktopAiMascot.mascots
             {
                 string baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 string mascotsDir = Path.Combine(baseDir, "assets", "mascots");
+                Debug.WriteLine($"[MascotManager.Load] mascotsDir: {mascotsDir}");
+                Debug.WriteLine($"[MascotManager.Load] mascotsDir exists: {Directory.Exists(mascotsDir)}");
+                
                 if (!Directory.Exists(mascotsDir)) return;
 
                 // parsing is delegated to MascotConfigParser
@@ -72,13 +75,20 @@ namespace DesktopAiMascot.mascots
                         string prompt = string.Empty;
                         MascotConfig config = new MascotConfig();
 
+                        Debug.WriteLine($"[MascotManager.Load] マスコットディレクトリ: {name}, configPath: {configPath}");
+                        Debug.WriteLine($"[MascotManager.Load] config.yaml exists: {File.Exists(configPath)}");
+
                         if (File.Exists(configPath))
                         {
                             string yaml = File.ReadAllText(configPath);
+                            Debug.WriteLine($"[MascotManager.Load] YAML読み込み完了: 長さ={yaml.Length}");
+                            
                             var parsed = MascotConfigIO.ParseFromYaml(yaml, name);
                             name = parsed.Name;
                             prompt = parsed.Prompt;
                             config = parsed.Config;
+                            
+                            Debug.WriteLine($"[MascotManager.Load] パース完了: name={name}, prompt長さ={prompt?.Length ?? 0}");
                         }
 
                         // Collect image files in the mascot folder. Store paths relative to application base
