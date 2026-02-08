@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "image": "example.png"
+      "image": "cover.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -38,7 +38,7 @@
   },
   "9": {
     "inputs": {
-      "model": "BiRefNet-HR-matting",
+      "model": "BiRefNet_toonout",
       "mask_blur": 0,
       "mask_offset": 0,
       "invert_output": false,
