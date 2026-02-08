@@ -122,19 +122,57 @@ namespace DesktopAiMascot.aiservice.chat
                 Debug.WriteLine("[GoogleAiStudio] No response content from API");
                 return "Error: No response content from Google AI Studio";
             }
+            catch (Google.GenAI.ClientError ex)
+            {
+                Debug.WriteLine($"[GoogleAiStudio] ClientError発生");
+                Debug.WriteLine($"[GoogleAiStudio] Message: {ex.Message}");
+                Debug.WriteLine($"[GoogleAiStudio] InnerException: {ex.InnerException?.Message ?? "None"}");
+                
+                // ステータスコードが取得可能な場合は出力
+                if (ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode.HasValue)
+                {
+                    Debug.WriteLine($"[GoogleAiStudio] StatusCode: {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode.Value})");
+                }
+                
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
+                
+                // ユーザーフレンドリーなエラーメッセージを返す
+                if (ex.Message.Contains("404") || ex.Message.Contains("not found"))
+                {
+                    return $"Error: モデル '{SystemConfig.Instance.ModelName}' が見つかりません。設定画面で有効なモデルを選択してください。";
+                }
+                else if (ex.Message.Contains("400"))
+                {
+                    return $"Error: 無効なリクエストです。モデルが利用できない可能性があります。";
+                }
+                else if (ex.Message.Contains("429") || ex.Message.Contains("Rate limit"))
+                {
+                    return "Error: レート制限を超えました。しばらく待ってから再試行してください。";
+                }
+                else if (ex.Message.Contains("401") || ex.Message.Contains("403"))
+                {
+                    return "Error: APIキーが無効です。設定画面でAPIキーを確認してください。";
+                }
+                
+                return $"Error: Google AI Studioとの接続に失敗しました ({ex.Message})";
+            }
             catch (HttpRequestException)
             {
                 Debug.WriteLine("Google AI Studioとの接続エラー");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return "Error: Google AI Studioとの接続に失敗しました";
             }
             catch (TaskCanceledException)
             {
                 Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return "Error: Google AI Studioとの接続がタイムアウトしました";
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
+                Debug.WriteLine($"[GoogleAiStudio] Exception Type: {ex.GetType().Name}");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 
                 if (ex.Message.Contains("429") || ex.Message.Contains("Rate limit"))
                 {
@@ -312,19 +350,43 @@ namespace DesktopAiMascot.aiservice.chat
                 Debug.WriteLine("[GoogleAiStudio] No response content from API");
                 return "Error: No response content from Google AI Studio";
             }
+            catch (Google.GenAI.ClientError ex)
+            {
+                Debug.WriteLine($"[GoogleAiStudio] ClientError発生 (SendOneShotMessageAsync)");
+                Debug.WriteLine($"[GoogleAiStudio] Message: {ex.Message}");
+                Debug.WriteLine($"[GoogleAiStudio] InnerException: {ex.InnerException?.Message ?? "None"}");
+                
+                if (ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode.HasValue)
+                {
+                    Debug.WriteLine($"[GoogleAiStudio] StatusCode: {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode.Value})");
+                }
+                
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
+                
+                if (ex.Message.Contains("404") || ex.Message.Contains("not found"))
+                {
+                    return $"Error: モデル '{SystemConfig.Instance.ModelName}' が見つかりません。";
+                }
+                
+                return $"Error: Google AI Studioとの接続に失敗しました ({ex.Message})";
+            }
             catch (HttpRequestException)
             {
                 Debug.WriteLine("Google AI Studioとの接続エラー");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return "Error: Google AI Studioとの接続に失敗しました";
             }
             catch (TaskCanceledException)
             {
                 Debug.WriteLine("Google AI Studioとの接続エラー (タイムアウト)");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return "Error: Google AI Studioとの接続がタイムアウトしました";
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Google AI Studioとの接続エラー: {ex.Message}");
+                Debug.WriteLine($"[GoogleAiStudio] Exception Type: {ex.GetType().Name}");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return $"Error: {ex.Message}";
             }
         }
