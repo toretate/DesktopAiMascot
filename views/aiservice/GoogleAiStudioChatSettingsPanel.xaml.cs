@@ -151,7 +151,7 @@ namespace DesktopAiMascot.views.aiservice
         private ModelDisplayItem[] FilterChatModels(ModelDisplayItem[] allModels)
         {
             var chatOnlyModels = allModels
-                .Where(m => !IsChatExclusiveModel(m.Id))
+                .Where(m => !IsChatExclusiveModel(m))
                 .ToArray();
             
             Debug.WriteLine($"[GoogleAiStudioChatSettingsPanel] Filtered models: {allModels.Length} → {chatOnlyModels.Length}");
@@ -159,26 +159,20 @@ namespace DesktopAiMascot.views.aiservice
         }
 
         /// <summary>
-        /// チャット用途ではないモデルを判定
+        /// チャット用途ではないモデルを判定（DisplayName ベース）
         /// </summary>
-        private bool IsChatExclusiveModel(string modelId)
+        private bool IsChatExclusiveModel(ModelDisplayItem model)
         {
-            var lowerModelId = modelId.ToLower();
+            var displayName = model.DisplayName;
             
-            // 画像生成モデル
-            if (lowerModelId.Contains("imagen"))
+            // DisplayName に特殊用途のタグが含まれているかチェック
+            if (displayName.Contains("[音声]"))
                 return true;
             
-            // テキスト音声変換モデル
-            if (lowerModelId.Contains("speech") || lowerModelId.Contains("tts"))
+            if (displayName.Contains("[埋込]"))
                 return true;
             
-            // 埋め込みモデル
-            if (lowerModelId.Contains("embedding"))
-                return true;
-            
-            // その他のマルチモーダルモデル（生成以外）
-            if (lowerModelId.Contains("retrieval") || lowerModelId.Contains("indexing"))
+            if (displayName.Contains("[画像]") || displayName.Contains("[画像生成]"))
                 return true;
             
             return false;
