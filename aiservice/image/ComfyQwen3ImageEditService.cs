@@ -18,21 +18,39 @@ namespace DesktopAiMascot.aiservice.image
     {
         private const string WorkflowFileName = "qwen3_image_edit_workflow.json";
         private const string AngleWorkflowFileName = "qwen3_image_edit_with_angle_workflow.json";
-        private const string PositiveTitleMarker = "Positive";
+        
+        // ワークフローノードID
+        private const string ImageInputNodeId = "41";
+        private const string PromptInputNodeId = "89:68";
+        
+        // API エンドポイント
+        private const string UploadImageEndpoint = "/api/upload/image";
+        private const string PromptEndpoint = "/api/prompt";
+        private const string HistoryEndpoint = "/history";
+        private const string ViewEndpoint = "/view";
+        
+        // ポーリング設定
+        private const int TimeoutSeconds = 300;
+        private const int PollIntervalMs = 3000;
+        
+        // 画像タイプ
+        private const string ImageTypeOutput = "output";
+        private const string ImageTypeInput = "input";
+        
         private readonly HttpClient _httpClient;
         private readonly string _clientId = Guid.NewGuid().ToString();
         private string _baseUrl = "http://127.0.0.1:8188";
         private readonly Random _random = new Random();
 
-        private string PostImageApi => $"{_baseUrl}/api/upload/image";
-        private string PostWorkflowApi => $"{_baseUrl}/api/prompt";
+        private string PostImageApi => $"{_baseUrl}{UploadImageEndpoint}";
+        private string PostWorkflowApi => $"{_baseUrl}{PromptEndpoint}";
 
         public override string Name => "Comfy - Qwen3ImageEdit";
         public override string EndPoint => _baseUrl;
 
         public ComfyQwen3ImageEditService()
         {
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(300) };
+            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(TimeoutSeconds) };
             Url = _baseUrl;
         }
 
@@ -55,23 +73,30 @@ namespace DesktopAiMascot.aiservice.image
                 using var content = new MultipartFormDataContent();
                 var imageContent = new ByteArrayContent(imageBytes);
                 imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-                content.Add(imageContent, "image", "qwen3_edit_source.png");    // -F "image=@..."
-                content.Add(new StringContent("input"), "type");                // -F type=input
-                content.Add(new StringContent("true"), "overwrite");            // -F overwrite=true
+                content.Add(imageContent, "image", "qwen3_edit_source.png");
+                content.Add(new StringContent(ImageTypeInput), "type");
+                content.Add(new StringContent("true"), "overwrite");
 
-                var url = PostImageApi;
-                Debug.WriteLine($"[ComfyQwen3ImageEditService] POST {url}");
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] POST {PostImageApi}");
 
-                var response = await _httpClient.PostAsync(url, content);
+                var response = await _httpClient.PostAsync(PostImageApi, content);
                 response.EnsureSuccessStatusCode();
 
                 var responseJson = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(responseJson);
                 if (doc.RootElement.TryGetProperty("name", out var nameElement))
                 {
-                    return nameElement.GetString();
+                    var uploadedName = nameElement.GetString();
+                    Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像アップロード成功: {uploadedName}");
+                    return uploadedName;
                 }
 
+                Debug.WriteLine("[ComfyQwen3ImageEditService] アップロードレスポンスにnameが含まれていません");
+                return null;
+            }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像アップロードエラー(接続): {ex.Message}");
                 return null;
             }
             catch (Exception ex)
@@ -163,7 +188,7 @@ namespace DesktopAiMascot.aiservice.image
                     "aiservice", "image", "comfy_workflows", workflowFileName
                 );
 
-                Debug.WriteLine($"[ComfyQwen3ImageEditService] ワークフローテンプレートパス: {workflowPath}");
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] ワークフロー読み込み: {workflowPath}");
 
                 if (!File.Exists(workflowPath))
                 {
@@ -173,16 +198,10 @@ namespace DesktopAiMascot.aiservice.image
 
                 var workflow = await ComfyWorkflow.Load(workflowPath);
 
-                // 画像inputにBind
-                workflow.SetImageInput("41", uploadedFilename);
-
-                // prompt入力にBind
-                workflow.SetTextPrompt("89:68", prompt);
-
-                // SeedをランダムにBind
+                workflow.SetImageInput(ImageInputNodeId, uploadedFilename);
+                workflow.SetTextPrompt(PromptInputNodeId, prompt);
                 workflow.SetSeed(_random.Next(1, 10000000));
 
-                // WorkflowDataを取得してDictionary<string, object>に変換
                 var workflowData = workflow.GetWorkflow();
                 var result = new Dictionary<string, object>();
                 
@@ -191,6 +210,7 @@ namespace DesktopAiMascot.aiservice.image
                     result[kvp.Key] = kvp.Value;
                 }
 
+                Debug.WriteLine("[ComfyQwen3ImageEditService] ワークフロー生成完了");
                 return result;
             }
             catch (Exception ex)
@@ -216,19 +236,26 @@ namespace DesktopAiMascot.aiservice.image
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = PostWorkflowApi;
-                Debug.WriteLine($"[ComfyQwen3ImageEditService] POST {url}");
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] POST {PostWorkflowApi}");
 
-                var response = await _httpClient.PostAsync(url, content);
+                var response = await _httpClient.PostAsync(PostWorkflowApi, content);
                 response.EnsureSuccessStatusCode();
 
                 var responseJson = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(responseJson);
                 if (doc.RootElement.TryGetProperty("prompt_id", out var promptIdElement))
                 {
-                    return promptIdElement.GetString();
+                    var promptId = promptIdElement.GetString();
+                    Debug.WriteLine($"[ComfyQwen3ImageEditService] ワークフロー送信成功 PromptID: {promptId}");
+                    return promptId;
                 }
 
+                Debug.WriteLine("[ComfyQwen3ImageEditService] レスポンスにprompt_idが含まれていません");
+                return null;
+            }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] ワークフロー送信エラー(接続): {ex.Message}");
                 return null;
             }
             catch (Exception ex)
@@ -243,27 +270,23 @@ namespace DesktopAiMascot.aiservice.image
         /// </summary>
         private async Task<string?> WaitForCompletionAsync(string promptId)
         {
-            const int timeoutSeconds = 300;
-            const int pollIntervalMs = 3000; // 3秒ごとにポーリング
             var startTime = DateTime.Now;
 
             Debug.WriteLine($"[ComfyQwen3ImageEditService] PromptID: {promptId} の完了を待機中");
 
-            while ((DateTime.Now - startTime).TotalSeconds < timeoutSeconds)
+            while ((DateTime.Now - startTime).TotalSeconds < TimeoutSeconds)
             {
-                await Task.Delay(pollIntervalMs);
+                await Task.Delay(PollIntervalMs);
 
                 try
                 {
-                    // ローカルComfyUIではhistoryエンドポイントをポーリング
-                    var historyUrl = $"{_baseUrl}/history/{promptId}";
+                    var historyUrl = $"{_baseUrl}{HistoryEndpoint}/{promptId}";
                     var response = await _httpClient.GetAsync(historyUrl);
                     response.EnsureSuccessStatusCode();
 
                     var json = await response.Content.ReadAsStringAsync();
                     using var doc = JsonDocument.Parse(json);
 
-                    // history/{promptId}は直接そのpromptIdのデータを返す
                     if (doc.RootElement.TryGetProperty(promptId, out var historyData))
                     {
                         // statusをチェック（存在する場合）
@@ -272,7 +295,6 @@ namespace DesktopAiMascot.aiservice.image
                             if (statusData.TryGetProperty("completed", out var completed) && completed.GetBoolean())
                             {
                                 Debug.WriteLine("[ComfyQwen3ImageEditService] ステータスで完了を確認");
-                                return await GetCompletedImageAsync(promptId);
                             }
                         }
 
@@ -280,36 +302,15 @@ namespace DesktopAiMascot.aiservice.image
                         if (historyData.TryGetProperty("outputs", out var outputs) && outputs.ValueKind == JsonValueKind.Object)
                         {
                             Debug.WriteLine("[ComfyQwen3ImageEditService] 出力が生成されました");
-                            
-                            foreach (var output in outputs.EnumerateObject())
+                            var imageBase64 = await ExtractImageFromOutputsAsync(outputs);
+                            if (imageBase64 != null)
                             {
-                                if (output.Value.TryGetProperty("images", out var images) &&
-                                    images.ValueKind == JsonValueKind.Array &&
-                                    images.GetArrayLength() > 0)
-                                {
-                                    var firstImage = images[0];
-                                    if (firstImage.TryGetProperty("filename", out var filenameElement))
-                                    {
-                                        var filename = filenameElement.GetString();
-                                        var subfolder = firstImage.TryGetProperty("subfolder", out var subfolderElement) ? 
-                                            subfolderElement.GetString() ?? "" : "";
-                                        var type = firstImage.TryGetProperty("type", out var typeElement) ? 
-                                            typeElement.GetString() ?? "output" : "output";
-
-                                        Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像ファイル: {filename}");
-                                        var imageData = await DownloadOutputAsync(filename, subfolder, type);
-                                        if (imageData != null)
-                                        {
-                                            return ConvertImageToBase64(imageData);
-                                        }
-                                    }
-                                }
+                                return imageBase64;
                             }
                         }
                     }
                     else
                     {
-                        // まだhistoryに登録されていない（実行待ち or 実行中）
                         Debug.WriteLine($"[ComfyQwen3ImageEditService] PromptID: {promptId} はまだ実行中です");
                     }
                 }
@@ -327,7 +328,7 @@ namespace DesktopAiMascot.aiservice.image
                 }
             }
 
-            Debug.WriteLine($"[ComfyQwen3ImageEditService] タイムアウト: ジョブが {timeoutSeconds}秒以内に完了しませんでした");
+            Debug.WriteLine($"[ComfyQwen3ImageEditService] タイムアウト: ジョブが {TimeoutSeconds}秒以内に完了しませんでした");
             return null;
         }
 
@@ -338,7 +339,7 @@ namespace DesktopAiMascot.aiservice.image
         {
             try
             {
-                var url = $"{_baseUrl}/history/{promptId}";
+                var url = $"{_baseUrl}{HistoryEndpoint}/{promptId}";
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
@@ -349,28 +350,7 @@ namespace DesktopAiMascot.aiservice.image
                 {
                     if (historyData.TryGetProperty("outputs", out var outputs))
                     {
-                        // すべての出力ノードを処理
-                        foreach (var output in outputs.EnumerateObject())
-                        {
-                            // images, video, audio などの出力タイプをチェック
-                            if (output.Value.TryGetProperty("images", out var images) &&
-                                images.GetArrayLength() > 0)
-                            {
-                                var firstImage = images[0];
-                                var filename = firstImage.GetProperty("filename").GetString();
-                                var subfolder = firstImage.GetProperty("subfolder").GetString() ?? "";
-                                var type = firstImage.GetProperty("type").GetString() ?? "output";
-                                if( type == "output" && filename != null )
-                                {
-                                    var imageData = await DownloadOutputAsync(filename, subfolder, type);
-                                    if (imageData != null)
-                                    {
-                                        return ConvertImageToBase64(imageData);
-                                    }
-                                }
-
-                            }
-                        }
+                        return await ExtractImageFromOutputsAsync(outputs);
                     }
                 }
 
@@ -385,32 +365,64 @@ namespace DesktopAiMascot.aiservice.image
         }
 
         /// <summary>
+        /// outputs JSON から画像を抽出してBase64に変換する
+        /// </summary>
+        private async Task<string?> ExtractImageFromOutputsAsync(JsonElement outputs)
+        {
+            foreach (var output in outputs.EnumerateObject())
+            {
+                if (output.Value.TryGetProperty("images", out var images) &&
+                    images.ValueKind == JsonValueKind.Array &&
+                    images.GetArrayLength() > 0)
+                {
+                    var firstImage = images[0];
+                    if (firstImage.TryGetProperty("filename", out var filenameElement))
+                    {
+                        var filename = filenameElement.GetString();
+                        var subfolder = firstImage.TryGetProperty("subfolder", out var subfolderElement) ? 
+                            subfolderElement.GetString() ?? "" : "";
+                        var type = firstImage.TryGetProperty("type", out var typeElement) ? 
+                            typeElement.GetString() ?? ImageTypeOutput : ImageTypeOutput;
+
+                        if (type == ImageTypeOutput && filename != null)
+                        {
+                            Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像ファイル: {filename}");
+                            var imageData = await DownloadOutputAsync(filename, subfolder, type);
+                            if (imageData != null)
+                            {
+                                return ConvertImageToBase64(imageData);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        /// <summary>
         /// ComfyUIから画像をダウンロードする（302リダイレクト対応）
         /// </summary>
-        private async Task<byte[]?> DownloadOutputAsync(string filename, string subfolder = "", string outputType = "output")
+        private async Task<byte[]?> DownloadOutputAsync(string filename, string subfolder = "", string outputType = ImageTypeOutput)
         {
             try
             {
                 if (string.IsNullOrEmpty(filename))
                 {
+                    Debug.WriteLine("[ComfyQwen3ImageEditService] ファイル名が指定されていません");
                     return null;
                 }
 
-                // クエリパラメータを構築
-                var queryParams = new Dictionary<string, string>
+                var queryString = BuildQueryString(new Dictionary<string, string>
                 {
                     { "filename", filename },
                     { "subfolder", subfolder },
                     { "type", outputType }
-                };
-
-                var queryString = string.Join("&", queryParams.Select(kvp => 
-                    $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
-                var url = $"{_baseUrl}/view?{queryString}";
+                });
+                var url = $"{_baseUrl}{ViewEndpoint}?{queryString}";
 
                 Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像ダウンロード: {url}");
 
-                // リダイレクトを手動処理するために HttpCompletionOption.ResponseHeadersRead を使用
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
@@ -435,11 +447,25 @@ namespace DesktopAiMascot.aiservice.image
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsByteArrayAsync();
             }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像ダウンロードエラー(接続): {ex.Message}");
+                return null;
+            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[ComfyQwen3ImageEditService] 画像ダウンロードエラー: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// クエリ文字列を構築する
+        /// </summary>
+        private string BuildQueryString(Dictionary<string, string> parameters)
+        {
+            return string.Join("&", parameters.Select(kvp => 
+                $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
         }
 
         /// <summary>
