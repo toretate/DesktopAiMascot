@@ -1,0 +1,80 @@
+<UserControl x:Class="DesktopAiMascot.views.aiservice.LmStudioChatSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DesktopAiMascot.views.aiservice"
+             mc:Ignorable="d" 
+             d:DesignHeight="208.861" d:DesignWidth="257.911"
+             Background="White"
+             >
+	<StackPanel>
+		<Grid Margin="0,0,0,8">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="50"/>
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="15" />
+				<RowDefinition Height="20" />
+			</Grid.RowDefinitions>
+
+			<Label Content="Endpoint" FontSize="11" Padding="0" Margin="0" FontWeight="Bold" Grid.Column="0" Grid.Row="0"/>
+			<TextBlock x:Name="serverStatusTextBlock" 
+					   Text="接続確認中..."
+					   FontSize="8"
+					   Foreground="Gray"
+					   TextAlignment="Right"
+					   VerticalAlignment="Center"
+					   Margin="0,0,0,0"
+					   Grid.Column="1" Grid.Row="0"/>
+
+			<TextBox x:Name="endpointTextField"
+					 Text="http://127.0.0.1:1234/v1/"
+					 Margin="0,0,0,0"
+					 TextChanged="EndpointTextField_TextChanged"
+					 Grid.Row="1" Grid.Column="0"
+					 />
+			<Button x:Name="updateButton" Content="更新"
+					Grid.Row="1" Grid.Column="2"
+					Click="UpdateButton_Click">
+			</Button>
+		</Grid>
+
+		<Grid Margin="0,0,0,8">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="50"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="20" />
+			</Grid.RowDefinitions>
+
+			<Label Content="AI Model" FontSize="11" Padding="0"  FontWeight="Bold" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+			<ComboBox x:Name="chatAiModelComboBox"
+					  Grid.Column="1"
+					  Grid.Row="0"
+					  DisplayMemberPath="DisplayName"
+					  SelectedValuePath="Id"
+					  SelectionChanged="ChatAiModelComboBox_SelectionChanged"
+					  d:ItemsSource="{d:SampleData ItemCount=3}"
+					  VerticalAlignment="Center"
+					  />
+		</Grid>
+		<GroupBox Height="117" Header="Server Settings" Padding="0" Margin="0">
+			<Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="50"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="20" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+				<Label Content="API Key：" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="10" Padding="0" Margin="0" />
+				<TextBox Grid.Column="1" FontSize="10" Text="TextBlock" VerticalAlignment="Center" Width="200" Margin="0,0,0,0" />
+			</Grid>
+		</GroupBox>
+
+	</StackPanel>
+</UserControl>

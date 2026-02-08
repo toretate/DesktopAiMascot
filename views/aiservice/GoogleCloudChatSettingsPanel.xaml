@@ -1,0 +1,58 @@
+<UserControl x:Class="DesktopAiMascot.views.aiservice.GoogleCloudChatSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DesktopAiMascot.views.aiservice"
+             mc:Ignorable="d" 
+             d:DesignHeight="280" d:DesignWidth="300"
+             Background="White"
+             >
+    <StackPanel>
+        <Label Content="API Key" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <TextBox x:Name="apiKeyTextBox" 
+                 Height="25"
+                 LostFocus="ApiKeyTextBox_LostFocus"
+                 Margin="0,0,0,10"/>
+
+        <Label Content="Project ID" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <TextBox x:Name="projectIdTextField" 
+                 Height="25"
+                 Margin="0,0,0,10"
+                 TextChanged="ProjectIdTextField_TextChanged"/>
+
+        <Label Content="Region (Optional)" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <TextBox x:Name="regionTextField" 
+                 Height="25"
+                 Text="us-central1"
+                 Margin="0,0,0,10"
+                 TextChanged="RegionTextField_TextChanged"/>
+
+        <TextBlock Text="Google Cloud Platform の資格情報を設定してください。" 
+                   FontSize="10" 
+                   Foreground="Gray" 
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"/>
+
+        <Label Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <Grid Margin="0,0,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="50"/>
+            </Grid.ColumnDefinitions>
+            <ComboBox x:Name="chatAiModelComboBox" 
+                      Height="25"
+                      DisplayMemberPath="DisplayName"
+                      SelectedValuePath="Id"
+                      SelectionChanged="ChatAiModelComboBox_SelectionChanged"
+                      d:ItemsSource="{d:SampleData ItemCount=3}"
+                      Grid.Column="0"/>
+            <Button x:Name="refreshModelsButton" 
+                    Content="更新" 
+                    Height="25"
+                    Margin="5,0,0,0"
+                    Click="RefreshModelsButton_Click"
+                    Grid.Column="1"/>
+        </Grid>
+    </StackPanel>
+</UserControl>

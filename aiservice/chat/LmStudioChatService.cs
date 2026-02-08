@@ -112,6 +112,37 @@ namespace DesktopAiMascot.aiservice.chat
 
         }
 
+        /// <summary>
+        /// サーバーが起動しているか確認する
+        /// </summary>
+        public async Task<bool> IsServerAvailableAsync()
+        {
+            try
+            {
+                using (var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) })
+                {
+                    // モデル一覧を取得して、サーバーの応答性を確認
+                    var response = await httpClient.GetAsync($"{EndPoint}models");
+                    return response.IsSuccessStatusCode;
+                }
+            }
+            catch (HttpRequestException)
+            {
+                Debug.WriteLine("[LmStudioChatService] Server not available: HttpRequestException");
+                return false;
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("[LmStudioChatService] Server not available: TaskCanceledException (timeout)");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LmStudioChatService] Server check failed: {ex.Message}");
+                return false;
+            }
+        }
+
         private static string? LoadSystemPrompt()
         {
             var model = MascotManager.Instance.CurrentModel;

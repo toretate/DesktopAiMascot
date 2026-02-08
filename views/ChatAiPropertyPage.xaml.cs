@@ -18,17 +18,6 @@ namespace DesktopAiMascot.views
             PopulateLlmEngineCombo();
         }
 
-        private void ChatAiModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (chatAiModelComboBox.SelectedItem is ModelDisplayItem modelItem)
-            {
-                // IDを保存（表示名ではなくモデルIDを保存）
-                SystemConfig.Instance.ModelName = modelItem.Id;
-                SystemConfig.Instance.Save();
-                Debug.WriteLine($"[ChatAiPropertyPage] Saved model ID: {modelItem.Id} (Display: {modelItem.DisplayName})");
-            }
-        }
-
         private void LlmAiEngineComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedItem = llmAiEngineComboBox.SelectedItem;
@@ -43,64 +32,46 @@ namespace DesktopAiMascot.views
                         SystemConfig.Instance.LlmService = llmName;
                         SystemConfig.Instance.Save();
                         LlmServiceChanged?.Invoke(this, llmName);
-                        UpdateModelList(llmName);
+                        
+                        // サービスに応じてUIを切り替え
+                        SwitchServicePanel(llmName);
                     }
                 }
             }
         }
-        
-        private async void UpdateModelList(string serviceName)
+
+        /// <summary>
+        /// 選択されたサービスに応じてUIパネルを切り替える
+        /// </summary>
+        private void SwitchServicePanel(string serviceName)
         {
-            chatAiModelComboBox.IsEnabled = false;
-            try
+            // すべてのパネルを非表示
+            lmStudioPanel.Visibility = Visibility.Collapsed;
+            foundryLocalPanel.Visibility = Visibility.Collapsed;
+            googleAiStudioPanel.Visibility = Visibility.Collapsed;
+            googleCloudPanel.Visibility = Visibility.Collapsed;
+
+            // 選択されたサービスに応じてパネルを表示
+            switch (serviceName)
             {
-                var service = LlmManager.CreateService(serviceName);
-                if (service != null)
-                {
-                    if (!string.IsNullOrEmpty(service.EndPoint))
-                    {
-                        chatAiUrlTextField.Text = service.EndPoint;
-                    }
-                    
-                    var models = await service.GetAvailableModels(false);
-                    
-                    if (models != null && models.Length > 0)
-                    {
-                        chatAiModelComboBox.ItemsSource = models;
-                        
-                        string currentModelId = SystemConfig.Instance.ModelName;
-                        
-                        // IDで一致するモデルを探す
-                        var match = models.FirstOrDefault(m => string.Equals(m.Id, currentModelId, StringComparison.OrdinalIgnoreCase));
-                        if (match != null)
-                        {
-                            chatAiModelComboBox.SelectedItem = match;
-                            Debug.WriteLine($"[ChatAiPropertyPage] Selected model: {match.DisplayName} (ID: {match.Id})");
-                        }
-                        else 
-                        {
-                            chatAiModelComboBox.SelectedIndex = 0;
-                            Debug.WriteLine($"[ChatAiPropertyPage] Model ID '{currentModelId}' not found, selecting first model");
-                        }
-                    }
-                    else
-                    {
-                        chatAiModelComboBox.ItemsSource = null;
-                        Debug.WriteLine($"[ChatAiPropertyPage] No models available for service: {serviceName}");
-                    }
-                }
-                else
-                {
-                    Debug.WriteLine($"[ChatAiPropertyPage] Failed to create service: {serviceName}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to update model list: {ex.Message}");
-            }
-            finally
-            {
-                chatAiModelComboBox.IsEnabled = true;
+                case "LM Studio":
+                    lmStudioPanel.Visibility = Visibility.Visible;
+                    lmStudioPanel.UpdateModelList(serviceName);
+                    break;
+
+                case "Foundry Local":
+                    foundryLocalPanel.Visibility = Visibility.Visible;
+                    break;
+
+                case "Gemini (AI Studio)":
+                    googleAiStudioPanel.Visibility = Visibility.Visible;
+                    googleAiStudioPanel.UpdateModelList(serviceName);
+                    break;
+
+                case "Gemini (Google Cloud)":
+                    googleCloudPanel.Visibility = Visibility.Visible;
+                    googleCloudPanel.UpdateModelList(serviceName);
+                    break;
             }
         }
 
@@ -134,7 +105,7 @@ namespace DesktopAiMascot.views
                 
                 if (!string.IsNullOrEmpty(currentLlm))
                 {
-                    UpdateModelList(currentLlm);
+                    SwitchServicePanel(currentLlm);
                 }
             }
             catch (Exception ex)
@@ -149,3 +120,4 @@ namespace DesktopAiMascot.views
         public string Name { get; set; } = "";
     }
 }
+

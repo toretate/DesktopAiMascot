@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DesktopAiMascot.views"
+             xmlns:aiservice="clr-namespace:DesktopAiMascot.views.aiservice"
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="480"
 			 Background="White"
@@ -17,17 +18,17 @@
                       SelectedValuePath="Name"
                       SelectionChanged="LlmAiEngineComboBox_SelectionChanged"/>
 
-            <Label Content="URL" FontSize="11" Padding="0" Margin="0,0,0,2"/>
-            <TextBox x:Name="chatAiUrlTextField" 
-                     Height="25"
-                     Margin="0,0,0,10"/>
+            <!-- LM Studio設定パネル -->
+            <aiservice:LmStudioChatSettingsPanel x:Name="lmStudioPanel" Margin="0,0,0,0" Visibility="Collapsed"/>
 
-            <Label Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2"/>
-            <ComboBox x:Name="chatAiModelComboBox" 
-                      Height="25"
-                      DisplayMemberPath="DisplayName"
-                      SelectedValuePath="Id"
-                      SelectionChanged="ChatAiModelComboBox_SelectionChanged"/>
+            <!-- Foundry Local設定パネル -->
+            <aiservice:FoundryLocalChatSettingsPanel x:Name="foundryLocalPanel" Margin="0,0,0,0" Visibility="Collapsed"/>
+
+            <!-- Google AI Studio設定パネル -->
+            <aiservice:GoogleAiStudioChatSettingsPanel x:Name="googleAiStudioPanel" Margin="0,0,0,0" Visibility="Collapsed"/>
+
+            <!-- Google Cloud設定パネル -->
+            <aiservice:GoogleCloudChatSettingsPanel x:Name="googleCloudPanel" Margin="0,0,0,0" Visibility="Collapsed"/>
         </StackPanel>
     </GroupBox>
 </UserControl>

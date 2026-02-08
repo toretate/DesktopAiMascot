@@ -1,0 +1,52 @@
+<UserControl x:Class="DesktopAiMascot.views.aiservice.GoogleAiStudioChatSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DesktopAiMascot.views.aiservice"
+             mc:Ignorable="d" 
+             d:DesignHeight="250" d:DesignWidth="300"
+             Background="White"
+             >
+	<StackPanel>
+
+		<Label Content="API Key" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+		<TextBox x:Name="apiKeyTextBox" 
+                     Height="25"
+                     LostFocus="ApiKeyTextBox_LostFocus"
+                     Margin="0,0,0,10"/>
+
+		<Grid Margin="0,0,0,0">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="70"/>
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="20" />
+				<RowDefinition Height="20" />
+			</Grid.RowDefinitions>
+			<Label
+				Grid.Row="0" Grid.Column="0"
+				Content="AI Model" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+			<CheckBox x:Name="FilterModelsCheckBox"
+				Grid.Row="0" Grid.Column="1" Content="Textのみ" IsChecked="True"
+				Checked="FilterModelsCheckBox_Changed"
+				Unchecked="FilterModelsCheckBox_Changed"
+				/>
+				
+
+			<ComboBox x:Name="chatAiModelComboBox" 
+                      Grid.Row="1" Grid.Column="0"
+                      DisplayMemberPath="DisplayName"
+                      SelectedValuePath="Id"
+                      SelectionChanged="ChatAiModelComboBox_SelectionChanged"
+                      d:ItemsSource="{d:SampleData ItemCount=3}"
+					  />
+			<Button x:Name="refreshModelsButton" 
+					Grid.Row="1" Grid.Column="1"
+                    Content="更新"
+                    Click="RefreshModelsButton_Click"
+                    />
+		</Grid>
+	</StackPanel>
+</UserControl>

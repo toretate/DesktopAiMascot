@@ -82,6 +82,11 @@ namespace DesktopAiMascot
         public string ImageService { get; set; } = "ComfyUI";
         public string MovieService { get; set; } = "ComfyUI";
         public string ModelName { get; set; } = "gpt-3.5-turbo";
+        
+        // Chat AI サービス設定
+        public string ChatAiEndpoint { get; set; } = "";
+        public string GoogleCloudProjectId { get; set; } = "";
+        public string GoogleCloudRegion { get; set; } = "us-central1";
 
         public void Load()
         {
@@ -124,6 +129,9 @@ namespace DesktopAiMascot
                     this.VoiceServiceSpeaker = loaded.VoiceServiceSpeaker;
                     this.ImageService = loaded.ImageService;
                     this.MovieService = loaded.MovieService;
+                    this.ChatAiEndpoint = loaded.ChatAiEndpoint ?? "";
+                    this.GoogleCloudProjectId = loaded.GoogleCloudProjectId ?? "";
+                    this.GoogleCloudRegion = loaded.GoogleCloudRegion ?? "us-central1";
                 }
             }
             catch (Exception ex)

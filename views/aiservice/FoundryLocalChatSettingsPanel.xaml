@@ -1,0 +1,31 @@
+<UserControl x:Class="DesktopAiMascot.views.aiservice.FoundryLocalChatSettingsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DesktopAiMascot.views.aiservice"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="300"
+             Background="White"
+             >
+    <StackPanel>
+        <Label Content="Endpoint URL" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <TextBox x:Name="endpointTextField" 
+                 Height="25"
+                 Text="http://127.0.0.1:49834/v1"
+                 Margin="0,0,0,10"
+                 TextChanged="EndpointTextField_TextChanged"/>
+
+        <Label Content="Model / Endpoint" FontSize="11" Padding="0" Margin="0,0,0,2" FontWeight="Bold"/>
+        <TextBox x:Name="modelNameTextField" 
+                 Height="25"
+                 Margin="0,0,0,10"
+                 TextChanged="ModelNameTextField_TextChanged"/>
+
+        <TextBlock Text="モデル ID または URL を入力してください。" 
+                   FontSize="10" 
+                   Foreground="Gray" 
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"/>
+    </StackPanel>
+</UserControl>
