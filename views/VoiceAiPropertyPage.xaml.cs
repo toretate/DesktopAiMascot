@@ -152,7 +152,7 @@ namespace DesktopAiMascot.views
             }
         }
 
-        private async System.Threading.Tasks.Task UpdateModelAndSpeakerList(aiservice.voice.AiVoiceServiceBase service)
+        private async System.Threading.Tasks.Task UpdateModelAndSpeakerList(AiVoiceServiceBase service)
         {
             try
             {
@@ -326,7 +326,7 @@ namespace DesktopAiMascot.views
             }
         }
 
-        private async System.Threading.Tasks.Task UpdateSpeakerList(aiservice.voice.AiVoiceServiceBase service)
+        private async System.Threading.Tasks.Task UpdateSpeakerList(AiVoiceServiceBase service)
         {
             try
             {
@@ -891,4 +891,5 @@ namespace DesktopAiMascot.views
         public VoiceVoxSpeakerStyle Style { get; set; } = new VoiceVoxSpeakerStyle();
     }
 }
+
 
