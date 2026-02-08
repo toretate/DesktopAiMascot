@@ -6,12 +6,11 @@
         xmlns:local="clr-namespace:DesktopAiMascot.views"
         mc:Ignorable="d"
         Title="マスコット編集" Height="900" Width="900"
-        WindowStartupLocation="CenterScreen"
         Background="White">
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="790" MinHeight="454"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="454"/>
+            <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
 
         <!-- ヘッダー：カバー画像と基本情報 -->
@@ -23,9 +22,14 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- カバー画像 -->
-                <StackPanel Grid.Column="0" Margin="0">
+                <Grid Grid.Column="0" Margin="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
                     <!-- カバー画像表示 -->
-                    <GroupBox Width="180" Height="180" Margin="0,0,0,5">
+                    <GroupBox Grid.Row="0" Width="180" Height="180" Margin="0,0,0,5">
                         <GroupBox.Header>
                             <Grid>
                                 <TextBlock Text="Cover" VerticalAlignment="Center"/>
@@ -37,16 +41,15 @@
                                RenderOptions.EdgeMode="Aliased"/>
 
                     </GroupBox>
-                                        
-                    <ListView x:Name="mascotImageListView"
+                    <ListView Grid.Row="1" 
+                        x:Name="mascotImageListView"
                         SelectionMode="Single"
                         SelectionChanged="ImageListView_SelectionChanged" 
                         d:ItemsSource="{d:SampleData ItemCount=5}"
                         HorizontalContentAlignment="Center" 
-                        Height="581"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        ScrollViewer.CanContentScroll="False">
+                        ScrollViewer.VerticalScrollBarVisibility="Visible"
+                        ScrollViewer.CanContentScroll="True">
                         <ListView.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Vertical"/>
@@ -93,7 +96,7 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
-                </StackPanel>
+                </Grid>
 
                 <!-- 基本設定 -->
                 <StackPanel Grid.Column="1" Margin="5,0,0,0">

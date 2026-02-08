@@ -153,15 +153,19 @@ namespace DesktopAiMascot.Wpf
                     dlg.Owner = parentWindow;
                 }
 
-                dlg.ShowDialog();
-                
-                // ダイアログを閉じた後、設定ファイルから最新の設定を読み込んでサービスを更新
-                Debug.WriteLine($"[InteractionPanel] SettingsDialog closed. Current LlmService: {SystemConfig.Instance.LlmService}");
-                UpdateChatService(SystemConfig.Instance.LlmService);
-                
-                // SettingsDialog終了後にアニメーションを再開
-                MascotAnimationManager.Instance.ResumeAnimation();
-                Debug.WriteLine("[InteractionPanel] SettingsDialog終了のためアニメーションを再開");
+                // ダイアログをクローズする際の処理をイベントハンドラで処理
+                dlg.Closed += (s, e) =>
+                {
+                    // ダイアログを閉じた後、設定ファイルから最新の設定を読み込んでサービスを更新
+                    Debug.WriteLine($"[InteractionPanel] SettingsDialog closed. Current LlmService: {SystemConfig.Instance.LlmService}");
+                    UpdateChatService(SystemConfig.Instance.LlmService);
+                    
+                    // SettingsDialog終了後にアニメーションを再開
+                    MascotAnimationManager.Instance.ResumeAnimation();
+                    Debug.WriteLine("[InteractionPanel] SettingsDialog終了のためアニメーションを再開");
+                };
+
+                dlg.Show();
             }
             catch (Exception ex)
             {

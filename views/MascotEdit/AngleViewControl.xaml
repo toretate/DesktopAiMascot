@@ -124,8 +124,8 @@
         </Label>
 
         <!-- 生成処理AI -->
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right">
-            <Label>画像生成</Label>
+        <StackPanel Orientation="Vertical" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0">
+            <Label FontWeight="Bold" FontSize="8" Height="12" Content="画像生成" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
             <ComboBox x:Name="imageModelComboBox"
                       Height="20"
                       Width="180"

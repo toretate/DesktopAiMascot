@@ -61,13 +61,16 @@ namespace DesktopAiMascot.views
                 var editWindow = new MascotEditWindow(currentModel);
                 editWindow.Owner = Window.GetWindow(this);
                 
-                if (editWindow.ShowDialog() == true)
+                // ウィンドウをクローズする際の処理をイベントハンドラで処理
+                editWindow.Closed += (s, e) =>
                 {
                     // 編集後、マスコット一覧を再読み込み
                     MascotManager.Instance.Load();
                     PopulateMascotListView();
                     UpdateMascotInfoLabels();
-                }
+                };
+
+                editWindow.Show();
             }
             catch (Exception ex)
             {

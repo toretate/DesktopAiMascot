@@ -657,7 +657,6 @@ namespace DesktopAiMascot.views
                 Debug.WriteLine($"[MascotEditWindow] マスコット情報を保存しました: {newName}");
                 MessageBox.Show("マスコット情報を保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
                 
-                DialogResult = true;
                 Close();
             }
             catch (Exception ex)
@@ -690,7 +689,6 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
             Close();
         }
 
