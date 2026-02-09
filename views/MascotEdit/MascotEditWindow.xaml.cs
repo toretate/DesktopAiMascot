@@ -13,10 +13,8 @@ using DesktopAiMascot.aiservice;
 using DesktopAiMascot.aiservice.image;
 using DesktopAiMascot.utils;
 using DesktopAiMascot.controls;
-using DesktopAiMascot.skills;
-using MessageBox = System.Windows.MessageBox;
-using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using DesktopAiMascot.views.MascotEdit;
+using MessageBox = System.Windows.MessageBox;
 
 namespace DesktopAiMascot.views
 {
@@ -25,110 +23,28 @@ namespace DesktopAiMascot.views
         private MascotModel _mascotModel;
         private string _mascotDirectory;
         private ObservableCollection<MascotImageItem> _imageItems = new ObservableCollection<MascotImageItem>();
-        private GoogleAiStudioService _googleAiService;
-        private ComfyQwen3ImageEditService _comfyQwen3ImageEditService;
-        private RemoveBGImage _removeBgImage;
-        private GenerateAngleImage _angleImageGenerator;
-        private MascotConfig _mascotConfig = new MascotConfig();
-        private string _configPath = string.Empty;
+
 
         public MascotEditWindow(MascotModel mascotModel)
         {
             InitializeComponent();
             _mascotModel = mascotModel;
-            
+
             // MascotModel から保存されているディレクトリパスを使用
             _mascotDirectory = _mascotModel.DirectoryPath;
-            _configPath = Path.Combine(_mascotDirectory, "config.yaml");
-            
-            // GoogleAiStudioService を初期化
-            _googleAiService = new GoogleAiStudioService();
-            _googleAiService.Initialize();
-            _comfyQwen3ImageEditService = new ComfyQwen3ImageEditService();
-            _removeBgImage = new RemoveBGImage(_mascotDirectory);
-            _angleImageGenerator = new GenerateAngleImage(_googleAiService, _comfyQwen3ImageEditService);
-            
+
             Debug.WriteLine($"[MascotEditWindow] MascotModel.DirectoryPath から取得: {_mascotDirectory}");
-            
+
             if (string.IsNullOrEmpty(_mascotDirectory))
             {
                 Debug.WriteLine($"[MascotEditWindow] エラー: MascotModel.DirectoryPath が空です");
             }
 
-            angleViewControl.LeftImageClick += LeftImage_Click;
-            angleViewControl.RightImageClick += RightImage_Click;
-            angleViewControl.AboveImageClick += AboveImage_Click;
-            angleViewControl.BelowImageClick += BelowImage_Click;
-            angleViewControl.BehindImageClick += BehindImage_Click;
-            angleViewControl.ImageModelComboBox.SelectionChanged += AngleImageModelComboBox_SelectionChanged;
-            if (SystemConfig.Instance.AngleImageModelIndex >= 0 &&
-                SystemConfig.Instance.AngleImageModelIndex < angleViewControl.ImageModelComboBox.Items.Count)
-            {
-                angleViewControl.ImageModelComboBox.SelectedIndex = SystemConfig.Instance.AngleImageModelIndex;
-            }
-            
-            // 背景削除サービスのコンボボックスを初期化
-            InitializeBackgroundRemovalServices();
-            
-            // プロフィール生成用のLLMサービスを初期化
-            InitializeGenerateProfileModelComboBox();
-            
+            // UserControlの初期化
+            mascotEditSettingControl.Initialize(_mascotModel);
+            mascotEditSettingControl.RequestReloadImageList += (s, e) => LoadImageList();
+
             LoadMascotData();
-        }
-
-        /// <summary>
-        /// プロフィール生成用のLLMサービスを初期化
-        /// </summary>
-        private void InitializeGenerateProfileModelComboBox()
-        {
-            try
-            {
-                var serviceTable = LlmManager.GetAvailableLlmServices;
-                var services = new List<LlmServiceInfo>();
-                foreach (System.Data.DataRow row in serviceTable.Rows)
-                {
-                    services.Add(new LlmServiceInfo { Name = row["Name"]?.ToString() ?? string.Empty });
-                }
-
-                generateProfileModelComboBox.ItemsSource = services;
-
-                if (services.Count > 0)
-                {
-                    string currentLlm = SystemConfig.Instance.LlmService;
-                    var matchingService = services.FirstOrDefault(s => s.Name == currentLlm);
-                    generateProfileModelComboBox.SelectedItem = matchingService ?? services[0];
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] プロフィール生成LLM初期化エラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 背景削除サービスのコンボボックスを初期化
-        /// </summary>
-        private void InitializeBackgroundRemovalServices()
-        {
-            try
-            {
-                var services = ImageAiManager.Instance.ImageAiServices.Values.ToList();
-                
-                if (services.Count > 0)
-                {
-                    backgroundRemovalServiceComboBox.ItemsSource = services;
-                    backgroundRemovalServiceComboBox.SelectedIndex = 0;
-                    Debug.WriteLine($"[MascotEditWindow] {services.Count}個の背景削除サービスを読み込みました");
-                }
-                else
-                {
-                    Debug.WriteLine("[MascotEditWindow] 利用可能な背景削除サービスがありません");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] 背景削除サービス初期化エラー: {ex.Message}");
-            }
         }
 
         /// <summary>
@@ -140,11 +56,6 @@ namespace DesktopAiMascot.views
             {
                 Debug.WriteLine($"[MascotEditWindow] ========== マスコットデータ読み込み開始 ==========");
                 Debug.WriteLine($"[MascotEditWindow] マスコット名: {_mascotModel.Name}");
-                Debug.WriteLine($"[MascotEditWindow] マスコットディレクトリ: {_mascotDirectory}");
-                Debug.WriteLine($"[MascotEditWindow] ディレクトリ存在確認: {Directory.Exists(_mascotDirectory)}");
-                
-                // 表示名を設定
-                displayNameTextBox.Text = _mascotModel.Name;
 
                 // カバー画像を読み込み
                 LoadCoverImage();
@@ -152,9 +63,6 @@ namespace DesktopAiMascot.views
                 // 画像一覧を読み込み
                 LoadImageList();
 
-                // システムプロンプトを読み込み
-                LoadSystemPrompt();
-                
                 Debug.WriteLine($"[MascotEditWindow] ========== マスコットデータ読み込み完了 ==========");
             }
             catch (Exception ex)
@@ -166,37 +74,6 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// システムプロンプトを読み込んで表示する
-        /// </summary>
-        private void LoadSystemPrompt()
-        {
-            try
-            {
-                if (File.Exists(_configPath))
-                {
-                    _mascotConfig = MascotConfigIO.LoadFromFile(_configPath);
-                    profileTextBlock.Text = MascotConfigIO.SaveSystemPrompt(_mascotConfig.SystemPrompt);
-                    mascotConfigTextBox.Text = Path.GetFileName(_configPath);
-                    editPromptButton.Content = _configPath;
-                    Debug.WriteLine("[MascotEditWindow] システムプロンプトを読み込みました");
-                }
-                else
-                {
-                    _mascotConfig = new MascotConfig();
-                    profileTextBlock.Text = MascotConfigIO.SaveSystemPrompt(_mascotConfig.SystemPrompt);
-                    mascotConfigTextBox.Text = Path.GetFileName(_configPath);
-                    editPromptButton.Content = _configPath;
-                    Debug.WriteLine("[MascotEditWindow] config.yaml が存在しないため空のプロンプトを表示します");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] システムプロンプト読み込みエラー: {ex.Message}");
-                profileTextBlock.Text = string.Empty;
-            }
-        }
-
-        /// <summary>
         /// カバー画像を読み込む（cover.png固定）
         /// </summary>
         private void LoadCoverImage()
@@ -204,23 +81,15 @@ namespace DesktopAiMascot.views
             try
             {
                 string coverPath = Path.Combine(_mascotDirectory, "cover.png");
-                
+
                 Debug.WriteLine($"[MascotEditWindow] カバー画像パス: {coverPath}");
-                
+
                 // サムネイル版を使用（180x180ピクセル）
                 var image = ImageLoadHelper.LoadBitmapThumbnail(coverPath, 180, 180);
                 if (image != null)
                 {
                     coverImage.Source = image;
                     Debug.WriteLine("[MascotEditWindow] カバー画像を読み込みました");
-                    
-                    // angleViewControlのFrontImageにもcover.pngを設定（120x120ピクセル）
-                    var frontImage = ImageLoadHelper.LoadBitmapThumbnail(coverPath, 120, 120);
-                    if (frontImage != null)
-                    {
-                        angleViewControl.FrontImage.Source = frontImage;
-                        Debug.WriteLine("[MascotEditWindow] cover.pngをFrontImageに設定しました");
-                    }
                 }
                 else
                 {
@@ -241,7 +110,7 @@ namespace DesktopAiMascot.views
             try
             {
                 _imageItems.Clear();
-                
+
                 if (!Directory.Exists(_mascotDirectory))
                 {
                     Debug.WriteLine($"[MascotEditWindow] マスコットディレクトリが存在しません: {_mascotDirectory}");
@@ -251,7 +120,7 @@ namespace DesktopAiMascot.views
                 Debug.WriteLine($"[MascotEditWindow] 画像一覧を読み込み中: {_mascotDirectory}");
 
                 var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
-                
+
                 // MascotModel側のフィルタリング処理を使用してディレクトリ内のファイルを取得
                 var allFiles = Directory.GetFiles(_mascotDirectory);
                 var imageItems = ImageLoadHelper.LoadImages(_mascotModel.Name, allFiles);
@@ -277,7 +146,7 @@ namespace DesktopAiMascot.views
                 {
                     mascotImageListView.ItemsSource = _imageItems;
                 }
-                
+
                 Debug.WriteLine($"[MascotEditWindow] {_imageItems.Count}個の画像をListViewに設定しました");
 
             }
@@ -289,295 +158,17 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// 外部エディタでシステムプロンプトを編集
-        /// </summary>
-        private void EditPromptButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                Debug.WriteLine($"[MascotEditWindow] config.yaml パス: {_configPath}");
-                Debug.WriteLine($"[MascotEditWindow] ディレクトリ: {_mascotDirectory}");
-                Debug.WriteLine($"[MascotEditWindow] ディレクトリ存在確認: {Directory.Exists(_mascotDirectory)}");
-                
-                if (!File.Exists(_configPath))
-                {
-                    Debug.WriteLine($"[MascotEditWindow] config.yaml が見つかりません");
-                    
-                    if (Directory.Exists(_mascotDirectory))
-                    {
-                        var files = Directory.GetFiles(_mascotDirectory);
-                        Debug.WriteLine($"[MascotEditWindow] ディレクトリ内のファイル:");
-                        foreach (var file in files)
-                        {
-                            Debug.WriteLine($"  - {Path.GetFileName(file)}");
-                        }
-                    }
-                    
-                    MessageBox.Show($"config.yamlが見つかりません。\n\nパス: {_configPath}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                Debug.WriteLine($"[MascotEditWindow] config.yaml を外部エディタで開きます");
-                
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = _configPath,
-                    UseShellExecute = true
-                });
-
-                Debug.WriteLine($"[MascotEditWindow] config.yamlを外部エディタで開きました: {_configPath}");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] 外部エディタ起動エラー: {ex.Message}");
-                Debug.WriteLine($"[MascotEditWindow] スタックトレース: {ex.StackTrace}");
-                MessageBox.Show($"外部エディタの起動に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        /// <summary>
-        /// キャラクター視点画像を生成
-        /// </summary>
-        private void GenerateViewsButton_Click(object sender, RoutedEventArgs e)
-        {
-            // TODO: 画像生成AIを使用してキャラクター視点画像を生成
-            MessageBox.Show("この機能は将来実装予定です。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        /// <summary>
-        /// 画像を追加
-        /// </summary>
-        private void AddImageButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var openFileDialog = new OpenFileDialog
-                {
-                    Title = "画像を選択",
-                    Filter = "画像ファイル (*.png;*.jpg;*.jpeg;*.gif;*.webp)|*.png;*.jpg;*.jpeg;*.gif;*.webp",
-                    Multiselect = true
-                };
-
-                if (openFileDialog.ShowDialog() == true)
-                {
-                    foreach (var sourceFile in openFileDialog.FileNames)
-                    {
-                        string fileName = Path.GetFileName(sourceFile);
-                        string destPath = Path.Combine(_mascotDirectory, fileName);
-
-                        // ファイル名の重複を避ける
-                        if (File.Exists(destPath))
-                        {
-                            string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
-                            string extension = Path.GetExtension(fileName);
-                            int counter = 1;
-                            
-                            while (File.Exists(destPath))
-                            {
-                                fileName = $"{nameWithoutExt}_{counter}{extension}";
-                                destPath = Path.Combine(_mascotDirectory, fileName);
-                                counter++;
-                            }
-                        }
-
-                        // ファイルをコピー
-                        File.Copy(sourceFile, destPath);
-                        Debug.WriteLine($"[MascotEditWindow] 画像を追加: {destPath}");
-                    }
-
-                    // 画像一覧を再読み込み
-                    LoadImageList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] 画像追加エラー: {ex.Message}");
-                MessageBox.Show($"画像の追加に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        /// <summary>
-        /// 背景を削除
-        /// </summary>
-        private async void RemoveBackgroundButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
-            {
-                string selectedImagePath = selectedItem.ImagePath;
-                string selectedFileName = selectedItem.FileName;
-                
-                try
-                {
-                    // 選択されたサービスを取得
-                    var imageService = backgroundRemovalServiceComboBox.SelectedItem as ImageAiServiceBase;
-                    if (imageService == null)
-                    {
-                        MessageBox.Show("背景削除サービスが選択されていません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-                    
-                    Debug.WriteLine($"[MascotEditWindow] 選択されたサービス: {imageService.Name}");
-                    
-                    // カーソルを待機状態に
-                    System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-                    removeBackgroundButton.IsEnabled = false;
-
-                    // 背景削除処理を非同期で実行
-                    string? backupFileName = await _removeBgImage.ExecuteAsync(selectedImagePath, imageService);
-
-                    if (!string.IsNullOrEmpty(backupFileName))
-                    {
-                        // 画像一覧を再読み込み
-                        LoadImageList();
-
-                        MessageBox.Show($"背景を削除しました。\n元のファイルは {backupFileName} としてバックアップされました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show("背景削除処理に失敗しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[MascotEditWindow] 背景削除エラー: {ex.Message}");
-                    Debug.WriteLine($"[MascotEditWindow] スタックトレース: {ex.StackTrace}");
-                    MessageBox.Show($"背景削除処理に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                finally
-                {
-                    // カーソルを元に戻す
-                    System.Windows.Input.Mouse.OverrideCursor = null;
-                    removeBackgroundButton.IsEnabled = true;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 背景削除前の画像に戻す
-        /// </summary>
-        private void RestoreBackgroundButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
-            {
-                try
-                {
-                    string directory = Path.GetDirectoryName(selectedItem.ImagePath) ?? "";
-                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(selectedItem.ImagePath);
-                    string extension = Path.GetExtension(selectedItem.ImagePath);
-
-                    // 最新のバックアップファイルを検索
-                    var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}")
-                        .OrderByDescending(f => f)
-                        .ToArray();
-
-                    if (backupFiles.Length == 0)
-                    {
-                        MessageBox.Show("バックアップファイルが見つかりませんでした。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                        return;
-                    }
-
-                    string latestBackup = backupFiles[0];
-                    string backupFileName = Path.GetFileName(latestBackup);
-
-                    // 確認ダイアログ
-                    var result = MessageBox.Show(
-                        $"背景削除前の画像に戻しますか？\n\nバックアップファイル: {backupFileName}\n\n現在の画像は失われます。",
-                        "確認",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question);
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        // 画像のロックを解放
-                        angleViewControl.FrontImage.Source = null;
-                        coverImage.Source = null;
-                        
-                        // ガベージコレクションを実行
-                        GC.Collect();
-                        GC.WaitForPendingFinalizers();
-                        GC.Collect();
-                        
-                        // 少し待機
-                        System.Threading.Thread.Sleep(100);
-                        
-                        // バックアップファイルで元のファイルを上書き
-                        File.Copy(latestBackup, selectedItem.ImagePath, true);
-                        Debug.WriteLine($"[MascotEditWindow] バックアップファイルで復元: {latestBackup} -> {selectedItem.ImagePath}");
-
-                        // バックアップファイルを削除
-                        File.Delete(latestBackup);
-                        Debug.WriteLine($"[MascotEditWindow] バックアップファイルを削除: {latestBackup}");
-
-                        // 画像一覧を再読み込み
-                        LoadImageList();
-
-                        MessageBox.Show("背景削除前の画像に戻しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[MascotEditWindow] 画像復元エラー: {ex.Message}");
-                    MessageBox.Show($"画像の復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 表情差分作成
-        /// </summary>
-        private void GenerateEmotesButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
-            {
-                // 表情差分作成ウィンドウを開く
-                var emoteWindow = new EmoteGenerationWindow(selectedItem.ImagePath);
-                emoteWindow.Owner = this;
-                emoteWindow.ShowDialog();
-                
-                // ウィンドウを閉じた後、画像一覧を再読み込み
-                LoadImageList();
-            }
-        }
-
-        /// <summary>
         /// 画像選択変更イベント
         /// </summary>
         private void ImageListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            bool isSelected = mascotImageListView.SelectedItem != null;
-            removeBackgroundButton.IsEnabled = isSelected;
-            generateEmotesButton.IsEnabled = isSelected;
-            
-            // 選択された画像にバックアップファイルが存在するか確認
-            if (isSelected && mascotImageListView.SelectedItem is MascotImageItem selectedItem)
+            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
             {
-                try
-                {
-                    string directory = Path.GetDirectoryName(selectedItem.ImagePath) ?? "";
-                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(selectedItem.ImagePath);
-                    string extension = Path.GetExtension(selectedItem.ImagePath);
-                    
-                    var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}");
-                    restoreBackgroundButton.IsEnabled = backupFiles.Length > 0;
-                    
-                    // 選択された画像をfrontImageに表示（サムネイル版、120x120ピクセル）
-                    var image = ImageLoadHelper.LoadBitmapThumbnail(selectedItem.ImagePath, 120, 120);
-                    if (image != null)
-                    {
-                        angleViewControl.FrontImage.Source = image;
-                        Debug.WriteLine($"[MascotEditWindow] frontImageに画像を表示: {selectedItem.FileName}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[MascotEditWindow] frontImage表示エラー: {ex.Message}");
-                    restoreBackgroundButton.IsEnabled = false;
-                }
+                mascotEditSettingControl.SelectedMascotImage = selectedItem;
             }
             else
             {
-                angleViewControl.FrontImage.Source = null;
-                restoreBackgroundButton.IsEnabled = false;
+                mascotEditSettingControl.SelectedMascotImage = null;
             }
         }
 
@@ -589,8 +180,8 @@ namespace DesktopAiMascot.views
             try
             {
                 // 表示名が変更された場合の処理
-                string newName = displayNameTextBox.Text.Trim();
-                
+                string newName = mascotEditSettingControl.GetDisplayName();
+
                 if (string.IsNullOrEmpty(newName))
                 {
                     MessageBox.Show("表示名を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -598,13 +189,13 @@ namespace DesktopAiMascot.views
                 }
 
                 // システムプロンプトを保存
-                SaveSystemPrompt();
+                mascotEditSettingControl.SaveConfig();
 
-                // TODO: 表示名の変更処理（config.yamlの更新など）
-                
+                // TODO: 表示名の変更処理（config.yamlの更新など、必要であれば実装）
+
                 Debug.WriteLine($"[MascotEditWindow] マスコット情報を保存しました: {newName}");
                 MessageBox.Show("マスコット情報を保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
-                
+
                 Close();
             }
             catch (Exception ex)
@@ -615,309 +206,12 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// システムプロンプトを保存する
-        /// </summary>
-        private void SaveSystemPrompt()
-        {
-            try
-            {
-                _mascotConfig.SystemPrompt = MascotConfigIO.LoadSystemPrompt(profileTextBlock.Text);
-                MascotConfigIO.SaveToYaml(_mascotConfig, _configPath);
-                Debug.WriteLine("[MascotEditWindow] システムプロンプトを保存しました");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] システムプロンプト保存エラー: {ex.Message}");
-                throw;
-            }
-        }
-
-        /// <summary>
         /// キャンセルボタン
         /// </summary>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
-
-        /// <summary>
-        /// 左側画像クリック
-        /// </summary>
-        private void LeftImage_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (angleViewControl.FrontImage.Source == null)
-            {
-                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-            if (selectedItem == null) return;
-            
-            GenerateAngleImage("left", selectedItem.FileName, selectedItem.ImagePath, angleViewControl.LeftImage);
-        }
-
-        /// <summary>
-        /// 右側画像クリック
-        /// </summary>
-        private void RightImage_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (angleViewControl.FrontImage.Source == null)
-            {
-                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-            if (selectedItem == null) return;
-            
-            GenerateAngleImage("right", selectedItem.FileName, selectedItem.ImagePath, angleViewControl.RightImage);
-        }
-
-        /// <summary>
-        /// 上側画像クリック
-        /// </summary>
-        private void AboveImage_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (angleViewControl.FrontImage.Source == null)
-            {
-                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-            if (selectedItem == null) return;
-            
-            GenerateAngleImage("above", selectedItem.FileName, selectedItem.ImagePath, angleViewControl.AboveImage);
-        }
-
-        /// <summary>
-        /// 下側画像クリック
-        /// </summary>
-        private void BelowImage_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (angleViewControl.FrontImage.Source == null)
-            {
-                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-            if (selectedItem == null) return;
-            
-            GenerateAngleImage("below", selectedItem.FileName, selectedItem.ImagePath, angleViewControl.BelowImage);
-        }
-
-        /// <summary>
-        /// 背面画像クリック
-        /// </summary>
-        private void BehindImage_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (angleViewControl.FrontImage.Source == null)
-            {
-                MessageBox.Show("先に画像一覧から画像を選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-            
-            var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-            if (selectedItem == null) return;
-            
-            GenerateAngleImage("behind", selectedItem.FileName, selectedItem.ImagePath, angleViewControl.BehindImage);
-        }
-
-        /// <summary>
-        /// 指定された方角から見た画像を生成
-        /// </summary>
-        /// <param name="from">方角 (left, right, above, below, behind)</param>
-        /// <param name="frontImageFileName">基準となる画像のファイル名</param>
-        /// <param name="frontImagePath">基準となる画像のフルパス</param>
-        /// <param name="targetImageControl">結果を表示するImageコントロール</param>
-        private async void GenerateAngleImage(string from, string frontImageFileName, string frontImagePath, System.Windows.Controls.Image targetImageControl)
-        {
-            try
-            {
-                // カーソルを待機状態に
-                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-                angleViewControl.SetAngleStatus(from, "生成中...");
-                
-                Debug.WriteLine($"[MascotEditWindow] 画像生成開始: from={from}, frontImage={frontImageFileName}");
-                
-                // 選択されたモデルを取得
-                string selectedModel = GetSelectedModel();
-                Debug.WriteLine($"[MascotEditWindow] 使用モデル: {selectedModel}");
-
-                var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
-                string selectedImagePath = selectedItem?.ImagePath ?? frontImagePath;
-                string selectedFileName = selectedItem?.FileName ?? frontImageFileName;
-
-                var outputPath = await _angleImageGenerator.ExecuteAsync(
-                    from,
-                    selectedModel,
-                    selectedImagePath,
-                    _mascotDirectory,
-                    selectedFileName);
-
-                if (!string.IsNullOrEmpty(outputPath))
-                {
-                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                    bitmap.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
-                    bitmap.UriSource = new Uri(outputPath, UriKind.Absolute);
-                    bitmap.EndInit();
-                    bitmap.Freeze();
-                    
-                    targetImageControl.Source = bitmap;
-                    
-                    // 画像一覧を更新
-                    LoadImageList();
-                    
-                    MessageBox.Show($"{from}方向の画像を生成しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show("画像生成に失敗しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] 画像生成エラー: {ex.Message}");
-                MessageBox.Show($"画像生成に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                angleViewControl.SetAngleStatus(from, null);
-                // カーソルを元に戻す
-                System.Windows.Input.Mouse.OverrideCursor = null;
-            }
-        }
-
-        /// <summary>
-        /// 選択されたモデルを取得
-        /// </summary>
-        private string GetSelectedModel()
-        {
-            var selected = angleViewControl.ImageModelComboBox.SelectedIndex;
-            return selected switch
-            {
-                0 => "gemini-2.5-flash-image",  // NanoBanana - 画像生成対応の無料モデル
-                1 => "gemini-3-pro-image-preview",  // NanaBanana Pro - 高性能な画像生成モデル
-                2 => "qwen3-image-edit",
-                _ => "gemini-2.5-flash-image"
-            };
-        }
-
-        private void AngleImageModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            SystemConfig.Instance.AngleImageModelIndex = angleViewControl.ImageModelComboBox.SelectedIndex;
-            SystemConfig.Instance.Save();
-            Debug.WriteLine($"[MascotEditWindow] 角度画像生成のモデルを保存: {SystemConfig.Instance.AngleImageModelIndex}");
-        }
-
-        /// <summary>
-        /// プロフィール生成ファイルのドラッグオーバー
-        /// </summary>
-        private void GenerateProfileFromFileTextField_PreviewDragOver(object sender, System.Windows.DragEventArgs e)
-        {
-            e.Handled = true;
-            e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
-                ? System.Windows.DragDropEffects.Copy
-                : System.Windows.DragDropEffects.None;
-        }
-
-        /// <summary>
-        /// プロフィール生成ファイルのドロップ
-        /// </summary>
-        private void GenerateProfileFromFileTextField_Drop(object sender, System.Windows.DragEventArgs e)
-        {
-            try
-            {
-                if (e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
-                {
-                    var files = e.Data.GetData(System.Windows.DataFormats.FileDrop) as string[];
-                    if (files != null && files.Length > 0)
-                    {
-                        generateProfileFromFileTextField.Text = files[0];
-                        Debug.WriteLine($"[MascotEditWindow] プロフィール生成ファイルを設定: {files[0]}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] ファイルドロップエラー: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// プロフィール生成処理
-        /// </summary>
-        private async void GenerateProfileFileChooserButton_Click(object sender, RoutedEventArgs e)
-        {
-            string filePath = generateProfileFromFileTextField.Text?.Trim() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                MessageBox.Show("ファイルパスを指定してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (!File.Exists(filePath))
-            {
-                MessageBox.Show("指定されたファイルが見つかりません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            if (generateProfileModelComboBox.SelectedItem is not LlmServiceInfo selectedService)
-            {
-                MessageBox.Show("LLMサービスを選択してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            try
-            {
-                if (string.Equals(selectedService.Name, "LM Studio", StringComparison.OrdinalIgnoreCase))
-                {
-                    SystemConfig.Instance.ModelName = "qwen/qwen3-vl-8b";
-                    SystemConfig.Instance.Save();
-                    Debug.WriteLine("[MascotEditWindow] LM Studio モデルを qwen/qwen3-vl-8b に設定しました");
-                }
-
-                var service = LlmManager.CreateService(selectedService.Name);
-                if (service == null)
-                {
-                    MessageBox.Show("LLMサービスの初期化に失敗しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                Debug.WriteLine($"[MascotEditWindow] プロフィール生成開始: service={selectedService.Name}, file={filePath}");
-
-                generateProfileFileChooserButton.IsEnabled = false;
-                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-
-                var skill = new GenerateProfileSkill(service);
-                var result = await skill.GenerateProfileFromTextAsync(filePath, "expand");
-
-                if (!string.IsNullOrWhiteSpace(result))
-                {
-                    profileTextBlock.Text = result;
-                    Debug.WriteLine($"[MascotEditWindow] プロフィール生成完了: {result.Length}文字");
-                }
-                else
-                {
-                    MessageBox.Show("プロフィール生成に失敗しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] プロフィール生成エラー: {ex.Message}");
-                MessageBox.Show($"プロフィール生成に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                System.Windows.Input.Mouse.OverrideCursor = null;
-                generateProfileFileChooserButton.IsEnabled = true;
-            }
-        }
-
     }
-
 }
+

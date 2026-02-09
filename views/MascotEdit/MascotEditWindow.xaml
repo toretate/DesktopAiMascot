@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DesktopAiMascot.views"
+        xmlns:mascotEdit="clr-namespace:DesktopAiMascot.views.MascotEdit"
         mc:Ignorable="d"
         Title="マスコット編集" Height="900" Width="900"
         Background="White">
@@ -99,136 +100,11 @@
                 </Grid>
 
                 <!-- 基本設定 -->
-                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                <mascotEdit:MascotEditSettingControl 
+                    x:Name="mascotEditSettingControl" 
+                    Grid.Column="1" 
+                    Margin="5,0,0,0"/>
 
-                    <Label Content="名前" FontWeight="Bold" FontSize="12" Padding="0" />
-                    <TextBox x:Name="displayNameTextBox" 
-                        Height="30" 
-                        FontSize="14"
-                        VerticalContentAlignment="Center"/>
-
-                    <Label Content="プロフィールなど" FontWeight="Bold" FontSize="12" Padding="0"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"></ColumnDefinition>
-                            <ColumnDefinition Width="*"></ColumnDefinition>
-                            <ColumnDefinition Width="80"></ColumnDefinition>
-                        </Grid.ColumnDefinitions>
-                        <Label x:Name="editPromptButton" 
-                            Content="設定ファイル：" 
-                            Height="30"
-                            Grid.Column="0"
-                            />
-                        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1">
-                            <TextBlock x:Name="mascotConfigTextBox"></TextBlock>
-                        </Border>
-                        <Button x:Name="profileEditButton" 
-                            Content="エディタ起動" 
-                            Height="30"
-                            Grid.Column="2"
-                            Click="EditPromptButton_Click"
-                            />
-                    </Grid>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"></ColumnDefinition>
-                            <ColumnDefinition Width="*"></ColumnDefinition>
-                            <ColumnDefinition Width="80"></ColumnDefinition>
-                            <ColumnDefinition Width="100"></ColumnDefinition>
-                        </Grid.ColumnDefinitions>
-                        <Label x:Name="generateProfileFromFileButton" 
-                            Content="ファイルからプロフィールを生成：" 
-                            Height="30"
-                            />
-                        <Border BorderBrush="Black" BorderThickness="1" Grid.Column="1">
-                            <TextBlock x:Name="generateProfileFromFileTextField"
-                                       AllowDrop="True"
-                                       PreviewDragOver="GenerateProfileFromFileTextField_PreviewDragOver"
-                                       Drop="GenerateProfileFromFileTextField_Drop"/>
-                        </Border>
-                        <Button x:Name="generateProfileFileChooserButton" 
-                            Content="生成" 
-                            Height="30"
-                            Grid.Column="2"
-                            Click="GenerateProfileFileChooserButton_Click"
-                            />
-                        <ComboBox x:Name="generateProfileModelComboBox"
-                                  Width="100"
-                                  HorizontalAlignment="Left"
-                                  DisplayMemberPath="Name"
-                                  SelectedIndex="0"
-                                  Grid.Column="3"
-                                  />
-                    </Grid>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="460"></ColumnDefinition>
-                            <ColumnDefinition Width="*"></ColumnDefinition>
-                        </Grid.ColumnDefinitions>
-                        <GroupBox x:Name="angleViewGroupBox" Height="360">
-                            <GroupBox.Header>
-                                <Grid>
-                                    <TextBlock Text="図" VerticalAlignment="Center"/>
-                                </Grid>
-                            </GroupBox.Header>
-                            <local:AngleViewControl x:Name="angleViewControl" Height="350" VerticalAlignment="Top"/>
-                        </GroupBox>
-                        <GroupBox x:Name="profileGroupBox" Grid.Column="1" Height="360" Margin="5,0,0,0">
-                            <GroupBox.Header>
-                                <Grid>
-                                    <TextBlock Text="プロフィール" VerticalAlignment="Center"/>
-                                </Grid>
-                            </GroupBox.Header>
-                            <TextBox
-                                x:Name="profileTextBlock"
-                                AcceptsReturn="True"
-                                TextWrapping="Wrap"
-                                VerticalScrollBarVisibility="Auto"
-                                HorizontalScrollBarVisibility="Disabled"
-                                Padding="0" Margin="0"
-                                />
-                        </GroupBox>
-                    </Grid>
-                    <StackPanel Orientation="Horizontal">
-                        <!-- 背景削除ボタン -->
-                        <Button x:Name="removeBackgroundButton" 
-                            Content="背景を削除" 
-                            Width="100" 
-                            Height="30"
-                            IsEnabled="False"
-                            Click="RemoveBackgroundButton_Click"/>
-                        
-                        <!-- 背景削除処理コンボボックス -->
-                        <Label Content="背景削除AI" FontWeight="Bold" FontSize="10" Padding="0,0,0,0" Margin="10,5,0,2"/>
-                        <ComboBox x:Name="backgroundRemovalServiceComboBox"
-                                  Width="150"
-                                  Height="25"
-                                  HorizontalAlignment="Left"
-                                  DisplayMemberPath="Name"
-                                  SelectedIndex="0"/>
-                        <Button x:Name="restoreBackgroundButton" 
-                            Content="背景削除前に戻す" 
-                            Width="130" 
-                            Height="30"
-                            IsEnabled="False"
-                            Click="RestoreBackgroundButton_Click"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Name="addImageButton" 
-                            Content="画像を追加" 
-                            Width="100" 
-                            Height="30"
-                            Margin="0,0,5,0"
-                            Click="AddImageButton_Click"/>
-                        <Button x:Name="generateEmotesButton" 
-                            Content="表情差分作成" 
-                            Width="120" 
-                            Height="30"
-                            IsEnabled="False"
-                            Click="GenerateEmotesButton_Click"/>
-                    </StackPanel>
-                </StackPanel>
             </Grid>
         </GroupBox>
 
