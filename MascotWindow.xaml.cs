@@ -101,6 +101,8 @@ namespace DesktopAiMascot
             if (mManager.CurrentModel != null)
             {
                 mascot.Reload(mManager.CurrentModel!);
+                // MascotControlにもReloadを通知してcover.pngを表示
+                this.MascotControl.ReloadMascot(mManager.CurrentModel);
             }
 
             VoiceAiManager.Instance.Load();
@@ -183,7 +185,8 @@ namespace DesktopAiMascot
                 Debug.WriteLine($"Applied default location to window: {this.Left},{this.Top}");
             }
 
-            this.MascotControl?.UpdateMascotImage();
+            // UpdateMascotImage()の呼び出しを削除
+            // cover.pngを表示し続ける（アニメーションが開始されると自動的に切り替わる）
         }
 
         private void MascotWindow_LocationChanged(object sender, EventArgs e)
@@ -465,7 +468,7 @@ namespace DesktopAiMascot
             catch (Exception ex)
             {
                 Debug.WriteLine($"[MascotWindow] ✗ Voice設定の適用エラー: {ex.Message}");
-                Debug.WriteLine($"[MascotWindow] スタックトレース: {ex.StackTrace}");
+                Debug.WriteLine($"[MascotWindow] 스택 추적: {ex.StackTrace}");
             }
         }
     }

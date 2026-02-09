@@ -25,6 +25,39 @@ namespace DesktopAiMascot.views
         public System.Windows.Controls.Image BehindImage => behindImage;
         public System.Windows.Controls.ComboBox ImageModelComboBox => imageModelComboBox;
 
+        public void SetAngleStatus(string angle, string? status)
+        {
+            var targetName = angle switch
+            {
+                "left" => "leftStatusText",
+                "right" => "rightStatusText",
+                "above" => "aboveStatusText",
+                "below" => "belowStatusText",
+                "behind" => "behindStatusText",
+                _ => null
+            };
+
+            if (string.IsNullOrEmpty(targetName))
+            {
+                return;
+            }
+
+            if (FindName(targetName) is not TextBlock target)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                target.Text = string.Empty;
+                target.Visibility = System.Windows.Visibility.Collapsed;
+                return;
+            }
+
+            target.Text = status;
+            target.Visibility = System.Windows.Visibility.Visible;
+        }
+
         private void LeftImage_Click(object sender, MouseButtonEventArgs e)
         {
             LeftImageClick?.Invoke(this, e);

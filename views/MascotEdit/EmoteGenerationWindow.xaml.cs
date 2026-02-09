@@ -8,14 +8,17 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using MessageBox = System.Windows.MessageBox;
 using DesktopAiMascot.aiservice.chat;
+using DesktopAiMascot.aiservice.image;
 
 namespace DesktopAiMascot.views.MascotEdit
 {
     public partial class EmoteGenerationWindow : Window
     {
+        private const string ComfyQwen3ImageEditServiceName = "Comfy - Qwen3ImageEdit";
         private string _sourceImagePath;
         private List<EmoteItem> _emoteItems = new List<EmoteItem>();
         private GoogleAiStudioChatService? _chatService;
+        private ComfyQwen3ImageEditService? _comfyQwen3Service;
 
         public EmoteGenerationWindow(string sourceImagePath)
         {
@@ -24,6 +27,7 @@ namespace DesktopAiMascot.views.MascotEdit
             
             // GoogleAiStudioChatServiceを初期化
             _chatService = new GoogleAiStudioChatService();
+            _comfyQwen3Service = new ComfyQwen3ImageEditService();
             
             LoadSourceImage();
             InitializeEmoteList();
@@ -160,29 +164,69 @@ namespace DesktopAiMascot.views.MascotEdit
             emote.StatusText = "生成中...";
             try
             {
-                if (_chatService == null)
-                {
-                    emote.StatusText = "エラー: サービスが初期化されていません";
-                    return;
-                }
-
                 string imageBase64 = ConvertImageToBase64(_sourceImagePath);
                 string fullPrompt = $"Edit this image to show: {emote.Prompt}. {promptAdjust}";
                 
                 Debug.WriteLine($"[EmoteGenerationWindow] {aiService}で表情「{emote.EmoteName}」を生成中");
                 Debug.WriteLine($"[EmoteGenerationWindow] プロンプト: {fullPrompt}");
-                
-                var resultBase64 = await _chatService.SendMessageWithImagesAsync(new[] { imageBase64 }, fullPrompt);
+
+                string? resultBase64;
+                if (aiService == ComfyQwen3ImageEditServiceName)
+                {
+                    if (_comfyQwen3Service == null)
+                    {
+                        emote.StatusText = "エラー: サービスが初期化されていません";
+                        return;
+                    }
+
+                    resultBase64 = await _comfyQwen3Service.EditImageAsync(imageBase64, fullPrompt);
+                }
+                else
+                {
+                    if (_chatService == null)
+                    {
+                        emote.StatusText = "エラー: サービスが初期化されていません";
+                        return;
+                    }
+
+                    resultBase64 = await _chatService.SendMessageWithImagesAsync(new[] { imageBase64 }, fullPrompt);
+                }
                 
                 if (!string.IsNullOrEmpty(resultBase64))
                 {
-                    var generatedImage = ConvertBase64ToImage(resultBase64);
+                    // 生成された画像をBase64で保存
+                    emote.GeneratedImageBase64 = resultBase64;
+                    
+                    // UIスレッドで画像を更新
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        emote.ImagePath = _sourceImagePath;
-                        emote.GeneratedImageBase64 = resultBase64;
-                        emote.StatusText = "生成完了（未保存）";
-                        emote.HasImage = true;
+                        try
+                        {
+                            var generatedImage = ConvertBase64ToImage(resultBase64);
+                            // 一時的に画像を表示するために、メモリストリームに保存して表示
+                            var bitmap = new BitmapImage();
+                            bitmap.BeginInit();
+                            byte[] imageBytes = Convert.FromBase64String(resultBase64);
+                            using (var ms = new MemoryStream(imageBytes))
+                            {
+                                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                                bitmap.StreamSource = ms;
+                                bitmap.EndInit();
+                            }
+                            bitmap.Freeze();
+                            
+                            // URI形式で画像を表示することはできないため、別の方法を使用
+                            emote.ImagePath = "generated"; // プレースホルダー
+                            emote.GeneratedBitmapImage = bitmap;
+                            emote.StatusText = "生成完了（未保存）";
+                            emote.HasImage = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[EmoteGenerationWindow] 画像変換エラー: {ex.Message}");
+                            emote.StatusText = "生成完了（表示失敗）";
+                            emote.HasImage = true;
+                        }
                     });
                     Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」の生成が完了しました");
                 }
@@ -274,6 +318,7 @@ namespace DesktopAiMascot.views.MascotEdit
         private string _imagePath = string.Empty;
         private string _statusText = "未生成";
         private bool _hasImage = false;
+        private BitmapImage? _generatedBitmapImage = null;
 
         public string EmoteName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
@@ -287,6 +332,17 @@ namespace DesktopAiMascot.views.MascotEdit
             {
                 _imagePath = value;
                 OnPropertyChanged(nameof(ImagePath));
+            }
+        }
+
+        public BitmapImage? GeneratedBitmapImage
+        {
+            get => _generatedBitmapImage;
+            set
+            {
+                _generatedBitmapImage = value;
+                OnPropertyChanged(nameof(GeneratedBitmapImage));
+               OnPropertyChanged(nameof(DisplayImage));
             }
         }
 
@@ -309,6 +365,42 @@ namespace DesktopAiMascot.views.MascotEdit
                 OnPropertyChanged(nameof(HasImage));
             }
         }
+
+       /// <summary>
+       /// 表示用画像（GeneratedBitmapImageが優先、なければImagePathから読み込み）
+       /// </summary>
+       public BitmapImage? DisplayImage
+       {
+           get
+           {
+               // 生成された画像がある場合はそれを返す
+               if (_generatedBitmapImage != null)
+               {
+                   return _generatedBitmapImage;
+               }
+
+               // ImagePathがある場合は画像を読み込む
+               if (!string.IsNullOrEmpty(_imagePath) && File.Exists(_imagePath))
+               {
+                   try
+                   {
+                       var bitmap = new BitmapImage();
+                       bitmap.BeginInit();
+                       bitmap.UriSource = new Uri(_imagePath, UriKind.Absolute);
+                       bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                       bitmap.EndInit();
+                       bitmap.Freeze();
+                       return bitmap;
+                   }
+                   catch
+                   {
+                       return null;
+                   }
+               }
+
+               return null;
+           }
+       }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

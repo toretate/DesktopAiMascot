@@ -82,6 +82,7 @@ namespace DesktopAiMascot
         public string ImageService { get; set; } = "ComfyUI";
         public string MovieService { get; set; } = "ComfyUI";
         public string ModelName { get; set; } = "gpt-3.5-turbo";
+        public int AngleImageModelIndex { get; set; } = 0;
         
         // Chat AI サービス設定
         public string ChatAiEndpoint { get; set; } = "";
@@ -132,6 +133,7 @@ namespace DesktopAiMascot
                     this.ChatAiEndpoint = loaded.ChatAiEndpoint ?? "";
                     this.GoogleCloudProjectId = loaded.GoogleCloudProjectId ?? "";
                     this.GoogleCloudRegion = loaded.GoogleCloudRegion ?? "us-central1";
+                    this.AngleImageModelIndex = loaded.AngleImageModelIndex;
                 }
             }
             catch (Exception ex)

@@ -38,6 +38,7 @@
                               SelectedIndex="0">
                         <ComboBoxItem Content="Nano Banana"/>
                         <ComboBoxItem Content="Nano Banana Pro"/>
+                        <ComboBoxItem Content="Comfy - Qwen3ImageEdit"/>
                     </ComboBox>
 
                     <Label Content="プロンプト調整" FontWeight="Bold" FontSize="12" Padding="0" Margin="0,0,0,5"/>
@@ -96,14 +97,22 @@
                                             Width="180" 
                                             Height="180">
                                         <Grid>
-                                            <Image Source="{Binding ImagePath}" 
+                                           <Image Source="{Binding DisplayImage}" 
                                                    Stretch="Uniform"/>
+                                            <!-- 生成中ラベル -->
                                             <TextBlock Text="{Binding StatusText}"
                                                        VerticalAlignment="Center"
                                                        HorizontalAlignment="Center"
-                                                       Background="#80FFFFFF"
-                                                       Padding="10"
-                                                       FontSize="12"/>
+                                                       Background="#C0000000"
+                                                       Foreground="White"
+                                                       Padding="15,10"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       TextAlignment="Center">
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect Color="Black" BlurRadius="3" Opacity="0.8"/>
+                                                </TextBlock.Effect>
+                                            </TextBlock>
                                         </Grid>
                                     </Border>
 

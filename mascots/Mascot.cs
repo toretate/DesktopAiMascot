@@ -20,6 +20,7 @@ namespace DesktopAiMascot.mascots
         public int CurrentFrame { get; private set; }
         private int frameCount = 1;
         private MascotImageItem[]? images;
+        private System.Drawing.Image? coverImage;
         private bool disposed = false;
 
         public Mascot(Point position, Size size)
@@ -40,6 +41,38 @@ namespace DesktopAiMascot.mascots
             
             // Log for debugging
             Debug.WriteLine($"Mascot reloaded: {newModel.Name}, {images?.Length ?? 0} images.");
+        }
+
+        /// <summary>
+        /// cover.pngを読み込む
+        /// </summary>
+        public System.Drawing.Image? LoadCoverImage()
+        {
+            if (Model == null) return null;
+
+            try
+            {
+                string coverPath = Path.Combine(Model.DirectoryPath, "cover.png");
+                if (!File.Exists(coverPath))
+                {
+                    Debug.WriteLine($"[Mascot] cover.png not found: {coverPath}");
+                    return null;
+                }
+
+                if (coverImage != null)
+                {
+                    coverImage.Dispose();
+                }
+
+                coverImage = new Bitmap(coverPath);
+                Debug.WriteLine($"[Mascot] cover.png loaded: {coverPath}");
+                return coverImage;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Mascot] Error loading cover.png: {ex.Message}");
+                return null;
+            }
         }
 
         // 描画
@@ -98,7 +131,9 @@ namespace DesktopAiMascot.mascots
             return bounds.Contains(clickPoint);
         }
 
-        // Return a clone of the currently displayed image (or null if none).
+        /**
+         * 現在のフレームの画像のクローンを取得する
+         */
         public System.Drawing.Image? GetCurrentImageClone()
         {
             try
@@ -107,6 +142,22 @@ namespace DesktopAiMascot.mascots
                 var current = images[CurrentFrame];
                 if (current?.Image == null) return null;
                 return new Bitmap(current.Image);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// cover.pngのクローンを取得する
+        /// </summary>
+        public System.Drawing.Image? GetCoverImageClone()
+        {
+            try
+            {
+                if (coverImage == null) return null;
+                return new Bitmap(coverImage);
             }
             catch
             {
@@ -126,6 +177,12 @@ namespace DesktopAiMascot.mascots
                     im?.Dispose();
                 }
                 images = null;
+            }
+
+            if (coverImage != null)
+            {
+                coverImage.Dispose();
+                coverImage = null;
             }
 
             GC.SuppressFinalize(this);

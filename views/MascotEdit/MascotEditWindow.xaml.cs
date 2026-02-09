@@ -26,6 +26,9 @@ namespace DesktopAiMascot.views
         private string _mascotDirectory;
         private ObservableCollection<MascotImageItem> _imageItems = new ObservableCollection<MascotImageItem>();
         private GoogleAiStudioService _googleAiService;
+        private ComfyQwen3ImageEditService _comfyQwen3ImageEditService;
+        private RemoveBGImage _removeBgImage;
+        private GenerateAngleImage _angleImageGenerator;
         private MascotConfig _mascotConfig = new MascotConfig();
         private string _configPath = string.Empty;
 
@@ -41,6 +44,9 @@ namespace DesktopAiMascot.views
             // GoogleAiStudioService を初期化
             _googleAiService = new GoogleAiStudioService();
             _googleAiService.Initialize();
+            _comfyQwen3ImageEditService = new ComfyQwen3ImageEditService();
+            _removeBgImage = new RemoveBGImage(_mascotDirectory);
+            _angleImageGenerator = new GenerateAngleImage(_googleAiService, _comfyQwen3ImageEditService);
             
             Debug.WriteLine($"[MascotEditWindow] MascotModel.DirectoryPath から取得: {_mascotDirectory}");
             
@@ -54,6 +60,12 @@ namespace DesktopAiMascot.views
             angleViewControl.AboveImageClick += AboveImage_Click;
             angleViewControl.BelowImageClick += BelowImage_Click;
             angleViewControl.BehindImageClick += BehindImage_Click;
+            angleViewControl.ImageModelComboBox.SelectionChanged += AngleImageModelComboBox_SelectionChanged;
+            if (SystemConfig.Instance.AngleImageModelIndex >= 0 &&
+                SystemConfig.Instance.AngleImageModelIndex < angleViewControl.ImageModelComboBox.Items.Count)
+            {
+                angleViewControl.ImageModelComboBox.SelectedIndex = SystemConfig.Instance.AngleImageModelIndex;
+            }
             
             // 背景削除サービスのコンボボックスを初期化
             InitializeBackgroundRemovalServices();
@@ -201,6 +213,14 @@ namespace DesktopAiMascot.views
                 {
                     coverImage.Source = image;
                     Debug.WriteLine("[MascotEditWindow] カバー画像を読み込みました");
+                    
+                    // angleViewControlのFrontImageにもcover.pngを設定（120x120ピクセル）
+                    var frontImage = ImageLoadHelper.LoadBitmapThumbnail(coverPath, 120, 120);
+                    if (frontImage != null)
+                    {
+                        angleViewControl.FrontImage.Source = frontImage;
+                        Debug.WriteLine("[MascotEditWindow] cover.pngをFrontImageに設定しました");
+                    }
                 }
                 else
                 {
@@ -316,78 +336,6 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// 背景削除処理を非同期で実行
-        /// </summary>
-        private async Task<string?> ExecuteBackgroundRemovalAsync(string imagePath, ImageAiServiceBase imageService)
-        {
-            try
-            {
-                Debug.WriteLine($"[MascotEditWindow] 背景削除処理を開始: {imagePath}");
-
-                // 画像をBase64 Data URI形式で読み込み
-                string? imageData = ImageLoadHelper.LoadImageAsBase64DataUri(imagePath);
-                if (imageData == null)
-                {
-                    throw new InvalidOperationException("画像の読み込みに失敗しました.");
-                }
-
-                Debug.WriteLine($"[MascotEditWindow] 画像データサイズ: {imageData.Length} 文字");
-
-                // 背景削除処理を実行
-                ImageAiManager.Instance.CurrentService = imageService;
-                var result = await ImageAiManager.Instance.RemoveBackgroundAsync(imageData);
-
-                if (result != null)
-                {
-                    // Base64 Data URIからバイト配列に変換
-                    byte[]? resultBytes = ImageLoadHelper.ConvertBase64DataUriToBytes(result);
-                    if (resultBytes == null)
-                    {
-                        throw new InvalidOperationException("背景削除結果の変換に失敗しました。");
-                    }
-
-                    // バックアップファイル名を生成
-                    string backupFileName = FileOperationHelper.GenerateBackupFileName(imagePath);
-                    string backupPath = Path.Combine(_mascotDirectory, backupFileName);
-
-                    // ファイルハンドルを解放（念のため短時間待機）
-                    await FileOperationHelper.ReleaseFileHandlesAsync(500);
-                    
-                    // 一時ファイルに書き込む
-                    string tempFilePath = Path.Combine(_mascotDirectory, $"temp_{Guid.NewGuid()}.png");
-                    File.WriteAllBytes(tempFilePath, resultBytes);
-                    await Task.Delay(200);
-                    
-                    Debug.WriteLine($"[MascotEditWindow] 一時ファイルを作成: {tempFilePath}");
-                    
-                    // ファイルを置き換え（リトライロジック付き）
-                    bool replaceSuccess = await FileOperationHelper.ReplaceFileWithRetryAsync(
-                        tempFilePath, 
-                        imagePath, 
-                        backupPath);
-                    
-                    // 一時ファイルのクリーンアップ
-                    FileOperationHelper.CleanupTempFile(tempFilePath);
-
-                    if (!replaceSuccess)
-                    {
-                        throw new IOException("ファイルの置き換えに失敗しました。ファイルが他のプロセスによって使用されているか、アクセス権限がありません。");
-                    }
-
-                    return backupFileName;
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotEditWindow] 背景削除エラー: {ex.Message}");
-                Debug.WriteLine($"[MascotEditWindow] スタックトレース: {ex.StackTrace}");
-                return null;
-            }
-        }
-
-        /// <summary>
         /// キャラクター視点画像を生成
         /// </summary>
         private void GenerateViewsButton_Click(object sender, RoutedEventArgs e)
@@ -475,7 +423,7 @@ namespace DesktopAiMascot.views
                     removeBackgroundButton.IsEnabled = false;
 
                     // 背景削除処理を非同期で実行
-                    string? backupFileName = await ExecuteBackgroundRemovalAsync(selectedImagePath, imageService);
+                    string? backupFileName = await _removeBgImage.ExecuteAsync(selectedImagePath, imageService);
 
                     if (!string.IsNullOrEmpty(backupFileName))
                     {
@@ -790,47 +738,27 @@ namespace DesktopAiMascot.views
             {
                 // カーソルを待機状態に
                 System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                angleViewControl.SetAngleStatus(from, "生成中...");
                 
                 Debug.WriteLine($"[MascotEditWindow] 画像生成開始: from={from}, frontImage={frontImageFileName}");
                 
                 // 選択されたモデルを取得
                 string selectedModel = GetSelectedModel();
                 Debug.WriteLine($"[MascotEditWindow] 使用モデル: {selectedModel}");
-                
-                // Qwen3が選択されている場合はエラー
-                if (selectedModel == "qwen3-image-edit")
+
+                var selectedItem = mascotImageListView.SelectedItem as MascotImageItem;
+                string selectedImagePath = selectedItem?.ImagePath ?? frontImagePath;
+                string selectedFileName = selectedItem?.FileName ?? frontImageFileName;
+
+                var outputPath = await _angleImageGenerator.ExecuteAsync(
+                    from,
+                    selectedModel,
+                    selectedImagePath,
+                    _mascotDirectory,
+                    selectedFileName);
+
+                if (!string.IsNullOrEmpty(outputPath))
                 {
-                    MessageBox.Show("Qwen3 Image Editは現在サポートされていません。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-                
-                // 方角に応じたプロンプトを生成
-                string prompt = GeneratePromptForAngle(from);
-                Debug.WriteLine($"[MascotEditWindow] プロンプト: {prompt}");
-                
-                // 基準画像を読み込み
-                System.Drawing.Image sourceImage;
-                using (var stream = new FileStream(frontImagePath, FileMode.Open, FileAccess.Read))
-                {
-                    sourceImage = System.Drawing.Image.FromStream(stream);
-                }
-                
-                // 画像生成を非同期実行
-                var resultImage = await Task.Run(() =>
-                {
-                    return _googleAiService.sendImageEditRequest(prompt, sourceImage, selectedModel);
-                });
-                
-                if (resultImage != null)
-                {
-                    // 生成された画像を保存
-                    string outputFileName = $"{Path.GetFileNameWithoutExtension(frontImageFileName)}_{from}.png";
-                    string outputPath = Path.Combine(_mascotDirectory, outputFileName);
-                    
-                    resultImage.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
-                    Debug.WriteLine($"[MascotEditWindow] 画像を保存: {outputPath}");
-                    
-                    // 生成された画像を表示
                     var bitmap = new System.Windows.Media.Imaging.BitmapImage();
                     bitmap.BeginInit();
                     bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
@@ -846,6 +774,10 @@ namespace DesktopAiMascot.views
                     
                     MessageBox.Show($"{from}方向の画像を生成しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
+                else
+                {
+                    MessageBox.Show("画像生成に失敗しました。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -854,6 +786,7 @@ namespace DesktopAiMascot.views
             }
             finally
             {
+                angleViewControl.SetAngleStatus(from, null);
                 // カーソルを元に戻す
                 System.Windows.Input.Mouse.OverrideCursor = null;
             }
@@ -874,20 +807,11 @@ namespace DesktopAiMascot.views
             };
         }
 
-        /// <summary>
-        /// 方角に応じたプロンプトを生成
-        /// </summary>
-        private string GeneratePromptForAngle(string from)
+        private void AngleImageModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            return from switch
-            {
-                "left" => "このキャラクターを左側から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、自然な角度で左側面が見えるように描いてください。",
-                "right" => "このキャラクターを右側から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、自然な角度で右側面が見えるように描いてください。",
-                "above" => "このキャラクターを上から見下ろした画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、頭頂部や肩が見えるように描いてください。",
-                "below" => "このキャラクターを下から見上げた画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、顎や下側が見えるように描いてください。",
-                "behind" => "このキャラクターを背面から見た画像を生成してください。キャラクターの特徴（髪型、服装、色など）を維持し、後ろ姿が見えるように描いてください。",
-                _ => "このキャラクターの別の角度からの画像を生成してください。"
-            };
+            SystemConfig.Instance.AngleImageModelIndex = angleViewControl.ImageModelComboBox.SelectedIndex;
+            SystemConfig.Instance.Save();
+            Debug.WriteLine($"[MascotEditWindow] 角度画像生成のモデルを保存: {SystemConfig.Instance.AngleImageModelIndex}");
         }
 
         /// <summary>

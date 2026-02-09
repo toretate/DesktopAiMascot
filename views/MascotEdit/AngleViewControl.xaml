@@ -28,11 +28,23 @@
                 VerticalAlignment="Top" 
                 Width="100"
                 Cursor="Hand">
-            <Image x:Name="leftImage" 
-                   Stretch="Uniform" 
-                   MouseLeftButtonDown="LeftImage_Click" Source="/assets/icons/angle_left_sample.png"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
+            <Grid>
+                <Image x:Name="leftImage" 
+                       Stretch="Uniform" 
+                       MouseLeftButtonDown="LeftImage_Click" Source="/assets/icons/angle_left_sample.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock x:Name="leftStatusText"
+                           Background="#80000000"
+                           Foreground="White"
+                           FontSize="11"
+                           Padding="4"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Grid>
         </Border>
 
         <!-- 右: rightImage -->
@@ -44,11 +56,23 @@
                 VerticalAlignment="Top" 
                 Width="96"
                 Cursor="Hand">
-            <Image x:Name="rightImage" 
-                   Stretch="Uniform" 
-                   MouseLeftButtonDown="RightImage_Click" Source="/assets/icons/angle_right_sample.png"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
+            <Grid>
+                <Image x:Name="rightImage" 
+                       Stretch="Uniform" 
+                       MouseLeftButtonDown="RightImage_Click" Source="/assets/icons/angle_right_sample.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock x:Name="rightStatusText"
+                           Background="#80000000"
+                           Foreground="White"
+                           FontSize="11"
+                           Padding="4"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Grid>
         </Border>
 
         <!-- 上: aboveImage -->
@@ -60,11 +84,23 @@
                 VerticalAlignment="Top" 
                 Width="100"
                 Cursor="Hand">
-            <Image x:Name="aboveImage" 
-                   Stretch="Uniform" 
-                   MouseLeftButtonDown="AboveImage_Click" Source="/assets/icons/angle_above_sample.png"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
+            <Grid>
+                <Image x:Name="aboveImage" 
+                       Stretch="Uniform" 
+                       MouseLeftButtonDown="AboveImage_Click" Source="/assets/icons/angle_above_sample.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock x:Name="aboveStatusText"
+                           Background="#80000000"
+                           Foreground="White"
+                           FontSize="11"
+                           Padding="4"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Grid>
         </Border>
 
         <!-- 下: belowImage -->
@@ -76,11 +112,23 @@
                 VerticalAlignment="Top" 
                 Width="100"
                 Cursor="Hand">
-            <Image x:Name="belowImage" 
-                   Stretch="Uniform" 
-                   MouseLeftButtonDown="BelowImage_Click" Source="/assets/icons/angle_bottom_sample.png"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
+            <Grid>
+                <Image x:Name="belowImage" 
+                       Stretch="Uniform" 
+                       MouseLeftButtonDown="BelowImage_Click" Source="/assets/icons/angle_bottom_sample.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock x:Name="belowStatusText"
+                           Background="#80000000"
+                           Foreground="White"
+                           FontSize="11"
+                           Padding="4"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Grid>
         </Border>
 
         <!-- 背面: behindImage -->
@@ -92,11 +140,23 @@
                 VerticalAlignment="Top" 
                 Width="100"
                 Cursor="Hand">
-            <Image x:Name="behindImage" 
-                   Stretch="Uniform" 
-                   MouseLeftButtonDown="BehindImage_Click" Source="/assets/icons/angle_behind_sample.png"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   RenderOptions.EdgeMode="Aliased"/>
+            <Grid>
+                <Image x:Name="behindImage" 
+                       Stretch="Uniform" 
+                       MouseLeftButtonDown="BehindImage_Click" Source="/assets/icons/angle_behind_sample.png"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock x:Name="behindStatusText"
+                           Background="#80000000"
+                           Foreground="White"
+                           FontSize="11"
+                           Padding="4"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"
+                           IsHitTestVisible="False"/>
+            </Grid>
         </Border>
         <Label Content="LEFT" HorizontalAlignment="Left" Height="13" Margin="49,224,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0"/>
         <Label Content="TOP" HorizontalAlignment="Left" Height="13" Margin="98,56,0,0" VerticalAlignment="Top" Width="22" FontSize="10" Padding="0" RenderTransformOrigin="0.5,0.5">

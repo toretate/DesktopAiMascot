@@ -22,7 +22,51 @@ namespace DesktopAiMascot.Controls
         public void Initialize(Mascot mascot)
         {
             this.mascot = mascot;
-            UpdateMascotImage();
+            // 初期表示はReloadMascot()で行うため、ここでは何もしない
+            // （MascotWindow側でmascot.Reload()後にReloadMascot()が呼ばれる）
+        }
+
+        /// <summary>
+        /// cover.pngを表示する（初期表示用）
+        /// </summary>
+        public void UpdateCoverImage()
+        {
+            if (isUpdatingImage || mascot == null) return;
+
+            isUpdatingImage = true;
+            try
+            {
+                // cover.pngを読み込む
+                var image = mascot.LoadCoverImage();
+                if (image != null)
+                {
+                    using (image)
+                    {
+                        var bitmapSource = ImageLoadHelper.ConvertDrawingImageToBitmapSource(image);
+                        if (bitmapSource != null)
+                        {
+                            MascotImage.Source = bitmapSource;
+                            Debug.WriteLine($"[MascotControl] cover.png を表示しました: {mascot.Model?.Name}");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[MascotControl] BitmapSource変換に失敗しました");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[MascotControl] cover.pngが見つかりません");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotControl] cover.png 読み込みエラー: {ex.Message}");
+            }
+            finally
+            {
+                isUpdatingImage = false;
+            }
         }
 
         public void UpdateMascotImage()
@@ -73,7 +117,7 @@ namespace DesktopAiMascot.Controls
         public void ReloadMascot(MascotModel model)
         {
             mascot?.Reload(model);
-            UpdateMascotImage();
+            UpdateCoverImage();
         }
     }
 }

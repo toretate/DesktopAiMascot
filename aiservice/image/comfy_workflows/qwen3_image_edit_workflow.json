@@ -1,0 +1,262 @@
+{
+  "9": {
+    "inputs": {
+      "filename_prefix": "Qwen_Edit_2511",
+      "images": [
+        "89:8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "画像を保存"
+    }
+  },
+  "41": {
+    "inputs": {
+      "image": "example.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "画像を読み込む"
+    }
+  },
+  "94": {
+    "inputs": {
+      "upscale_method": "area",
+      "largest_size": 1280,
+      "image": [
+        "102",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToMaxDimension",
+    "_meta": {
+      "title": "画像最大寸法へのスケール"
+    }
+  },
+  "102": {
+    "inputs": {
+      "image": [
+        "104",
+        0
+      ],
+      "mask": [
+        "104",
+        1
+      ]
+    },
+    "class_type": "AILab_Preview",
+    "_meta": {
+      "title": "画像/マスク プレビュー (RMBG) \ud83d\uddbc\ufe0f\ud83c\udfad"
+    }
+  },
+  "104": {
+    "inputs": {
+      "model": "BiRefNet_toonout",
+      "mask_blur": 0,
+      "mask_offset": 0,
+      "invert_output": false,
+      "refine_foreground": true,
+      "background": "Color",
+      "background_color": "#ffffff",
+      "image": [
+        "41",
+        0
+      ]
+    },
+    "class_type": "BiRefNetRMBG",
+    "_meta": {
+      "title": "BiRefNet 背景削除 (RMBG)"
+    }
+  },
+  "89:69": {
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "89:91",
+        0
+      ],
+      "vae": [
+        "89:10",
+        0
+      ],
+      "image1": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "TextEncodeQwenImageEditPlus"
+    }
+  },
+  "89:10": {
+    "inputs": {
+      "vae_name": "qwen_image\\qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "VAEを読み込む"
+    }
+  },
+  "89:8": {
+    "inputs": {
+      "samples": [
+        "89:65",
+        0
+      ],
+      "vae": [
+        "89:10",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAEデコード"
+    }
+  },
+  "89:67": {
+    "inputs": {
+      "shift": 3.1,
+      "model": [
+        "89:99",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "モデルサンプリングオーラフロー"
+    }
+  },
+  "89:64": {
+    "inputs": {
+      "strength": 1,
+      "model": [
+        "89:67",
+        0
+      ]
+    },
+    "class_type": "CFGNorm",
+    "_meta": {
+      "title": "CFG正規化"
+    }
+  },
+  "89:70": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "89:68",
+        0
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "FluxKontextMultiReferenceLatentMethod"
+    }
+  },
+  "89:71": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "89:69",
+        0
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "FluxKontextMultiReferenceLatentMethod"
+    }
+  },
+  "89:75": {
+    "inputs": {
+      "pixels": [
+        "94",
+        0
+      ],
+      "vae": [
+        "89:10",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAEエンコード"
+    }
+  },
+  "89:65": {
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "89:64",
+        0
+      ],
+      "positive": [
+        "89:70",
+        0
+      ],
+      "negative": [
+        "89:71",
+        0
+      ],
+      "latent_image": [
+        "89:75",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Kサンプラー"
+    }
+  },
+  "89:68": {
+    "inputs": {
+      "prompt": "girl standing, closed legs.\n\u4e21\u624b\u3092\u6a2a\u306b\u4f38\u3070\u3059(T-Pose)\u3002\nwhite background, simple background.\nremove shadow.\nRotate the camera 90 degrees to the right.\n",
+      "clip": [
+        "89:91",
+        0
+      ],
+      "vae": [
+        "89:10",
+        0
+      ],
+      "image1": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "TextEncodeQwenImageEditPlus (Positive)"
+    }
+  },
+  "89:91": {
+    "inputs": {
+      "clip_name": "qwen_image\\Qwen2.5-VL-7B-Instruct-Q4_K_M.gguf",
+      "type": "qwen_image"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "CLIPLoader (GGUF)"
+    }
+  },
+  "89:99": {
+    "inputs": {
+      "unet_name": "Qwen-Rapid-NSFW-v23_Q4_K.gguf",
+      "compute_device": "cuda:0",
+      "virtual_vram_gb": 4,
+      "donor_device": "cpu",
+      "expert_mode_allocations": "",
+      "eject_models": true
+    },
+    "class_type": "UnetLoaderGGUFDisTorch2MultiGPU",
+    "_meta": {
+      "title": "UnetLoaderGGUFDisTorch2MultiGPU"
+    }
+  }
+}
