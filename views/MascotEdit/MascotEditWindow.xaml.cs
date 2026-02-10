@@ -22,7 +22,7 @@ namespace DesktopAiMascot.views
     {
         private MascotModel _mascotModel;
         private string _mascotDirectory;
-        private ObservableCollection<MascotImageItem> _imageItems = new ObservableCollection<MascotImageItem>();
+        private ObservableCollection<MascotImageSet> _imageItems = new ObservableCollection<MascotImageSet>();
 
 
         public MascotEditWindow(MascotModel mascotModel)
@@ -103,7 +103,7 @@ namespace DesktopAiMascot.views
         }
 
         /// <summary>
-        /// 画像一覧を読み込む
+        /// 画像一覧を読み込み、セットにグループ化する
         /// </summary>
         private void LoadImageList()
         {
@@ -119,26 +119,87 @@ namespace DesktopAiMascot.views
 
                 Debug.WriteLine($"[MascotEditWindow] 画像一覧を読み込み中: {_mascotDirectory}");
 
-                var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
-
-                // MascotModel側のフィルタリング処理を使用してディレクトリ内のファイルを取得
                 var allFiles = Directory.GetFiles(_mascotDirectory);
                 var imageItems = ImageLoadHelper.LoadImages(_mascotModel.Name, allFiles);
 
-                // 画像を並び替え: cover.* が先頭、その他はファイル名順
-                var sortedItems = imageItems
-                    .OrderBy(item =>
+                // 画像セットのディクショナリ (Key: SetName)
+                var imageSets = new Dictionary<string, MascotImageSet>();
+
+                foreach (var item in imageItems)
+                {
+                    string fileName = Path.GetFileNameWithoutExtension(item.FileName);
+                    // if (fileName.Equals("cover", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    string setName = fileName;
+                    string suffix = "";
+                    string type = "main"; // main, angle, pose, emotion
+
+                    // サフィックスの判定
+                    if (fileName.Contains("_"))
                     {
-                        string fileNameWithoutExt = Path.GetFileNameWithoutExtension(item.FileName);
-                        return fileNameWithoutExt.Equals("cover", StringComparison.OrdinalIgnoreCase)
-                            ? ""
-                            : item.FileName;
-                    })
+                        var parts = fileName.Split('_');
+                        string lastPart = parts.Last().ToLower();
+
+                        // 角度サフィックス
+                        var angleSuffixes = new[] { "left", "right", "front", "back", "top", "bottom", "above", "below", "behind" };
+                        if (angleSuffixes.Contains(lastPart))
+                        {
+                            setName = string.Join("_", parts.Take(parts.Length - 1));
+                            suffix = lastPart;
+                            type = "angle";
+                        }
+                    }
+
+                    if (!imageSets.ContainsKey(setName))
+                    {
+                        imageSets[setName] = new MascotImageSet(setName);
+                    }
+
+                    var currentSet = imageSets[setName];
+
+                    switch (type)
+                    {
+                        case "angle":
+                            currentSet.AngleImages[suffix] = item;
+                            break;
+
+                        case "main":
+                        default:
+                            if (currentSet.Image == null)
+                            {
+                                currentSet.Image = item;
+                            }
+                            else
+                            {
+                                // 既にメイン画像がある場合（例：同名で拡張子違いなど）、
+                                // 厳密なルールがないため、とりあえず上書きするか、警告するか。
+                                // ここでは、より優先度の高い画像を判定するロジックがないため、
+                                // 単純に割り当てるか、あるいはバリエーションとして扱うか検討が必要。
+                                // 現状は上書き。
+                                currentSet.Image = item;
+                            }
+                            break;
+                    }
+                }
+
+                // セットをリストに追加 (Imageがnullでないもの、またはAngleImagesがあるもの)
+                var sortedSets = imageSets.Values
+                    .Where(s => s.Image != null || s.AngleImages.Count > 0)
+                    .OrderBy(s => s.Name.Equals("cover", StringComparison.OrdinalIgnoreCase) ? "" : s.Name)
                     .ToList();
 
-                foreach (var item in sortedItems)
+                foreach (var set in sortedSets)
                 {
-                    _imageItems.Add(item);
+                    // 代表画像がない場合、AngleImagesのどれかを代表にするなどのフォールバックがあると良いが、
+                    // ここではView側でBindingがnullになるだけなのでそのまま。
+                    // ただし、ViewでImage.ImageSourceにバインドしているので、Imageがnullだと何も表示されない可能性がある。
+                    // 暫定対応: ImageがnullならAngleImagesの最初のものをImageに入れておく
+                    if (set.Image == null && set.AngleImages.Count > 0)
+                    {
+                        set.Image = set.AngleImages.Values.First();
+                    }
+
+                    _imageItems.Add(set);
                 }
 
                 // ObservableCollectionを使用しているので、一度だけ設定すればよい
@@ -147,7 +208,7 @@ namespace DesktopAiMascot.views
                     mascotImageListView.ItemsSource = _imageItems;
                 }
 
-                Debug.WriteLine($"[MascotEditWindow] {_imageItems.Count}個の画像をListViewに設定しました");
+                Debug.WriteLine($"[MascotEditWindow] {_imageItems.Count}個の画像セットをListViewに設定しました");
 
             }
             catch (Exception ex)
@@ -162,13 +223,13 @@ namespace DesktopAiMascot.views
         /// </summary>
         private void ImageListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (mascotImageListView.SelectedItem is MascotImageItem selectedItem)
+            if (mascotImageListView.SelectedItem is MascotImageSet selectedSet)
             {
-                mascotEditSettingControl.SelectedMascotImage = selectedItem;
+                mascotEditSettingControl.SelectedMascotImageSet = selectedSet;
             }
             else
             {
-                mascotEditSettingControl.SelectedMascotImage = null;
+                mascotEditSettingControl.SelectedMascotImageSet = null;
             }
         }
 

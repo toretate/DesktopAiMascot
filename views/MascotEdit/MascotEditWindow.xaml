@@ -22,7 +22,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- カバー画像 -->
+                <!-- キャラクター画像一覧 -->
                 <Grid Grid.Column="0" Margin="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -42,6 +42,8 @@
                                RenderOptions.EdgeMode="Aliased"/>
 
                     </GroupBox>
+
+                    <!-- キャラクター画像一覧 -->
                     <ListView Grid.Row="1" 
                         x:Name="mascotImageListView"
                         SelectionMode="Single"
@@ -73,7 +75,7 @@
                                         </Grid.RowDefinitions>
 
                                         <Image Grid.Row="0"
-                                            Source="{Binding ImageSource}" 
+                                            Source="{Binding Image.ImageSource}" 
                                             Stretch="Uniform"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
@@ -81,7 +83,7 @@
                                             RenderOptions.EdgeMode="Aliased"/>
 
                                         <TextBlock Grid.Row="1"
-                                            Text="{Binding FileName}" 
+                                            Text="{Binding Name}" 
                                             TextAlignment="Center"
                                             TextWrapping="Wrap"
                                             FontSize="10"

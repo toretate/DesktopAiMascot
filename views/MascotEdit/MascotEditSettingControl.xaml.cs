@@ -21,15 +21,15 @@ namespace DesktopAiMascot.views.MascotEdit
 {
     public partial class MascotEditSettingControl : System.Windows.Controls.UserControl
     {
-        // 依存関係プロパティ: 選択された画像
-        public static readonly DependencyProperty SelectedMascotImageProperty =
-            DependencyProperty.Register("SelectedMascotImage", typeof(MascotImageItem), typeof(MascotEditSettingControl),
-                new PropertyMetadata(null, OnSelectedMascotImageChanged));
+        // 依存関係プロパティ: 選択された画像セット
+        public static readonly DependencyProperty SelectedMascotImageSetProperty =
+            DependencyProperty.Register("SelectedMascotImageSet", typeof(MascotImageSet), typeof(MascotEditSettingControl),
+                new PropertyMetadata(null, OnSelectedMascotImageSetChanged));
 
-        public MascotImageItem? SelectedMascotImage
+        public MascotImageSet? SelectedMascotImageSet
         {
-            get { return (MascotImageItem)GetValue(SelectedMascotImageProperty); }
-            set { SetValue(SelectedMascotImageProperty, value); }
+            get { return (MascotImageSet)GetValue(SelectedMascotImageSetProperty); }
+            set { SetValue(SelectedMascotImageSetProperty, value); }
         }
 
         // イベント: 画像リストの再読み込みリクエスト
@@ -182,8 +182,8 @@ namespace DesktopAiMascot.views.MascotEdit
             }
         }
 
-        // SelectedMascotImageが変更されたときの処理
-        private static void OnSelectedMascotImageChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        // SelectedMascotImageSetが変更されたときの処理
+        private static void OnSelectedMascotImageSetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is MascotEditSettingControl control)
             {
@@ -193,27 +193,24 @@ namespace DesktopAiMascot.views.MascotEdit
 
         private void UpdateSelectionState()
         {
-            bool isSelected = SelectedMascotImage != null;
+            bool isSelected = SelectedMascotImageSet != null && SelectedMascotImageSet.Image != null;
             removeBackgroundButton.IsEnabled = isSelected;
             generateEmotesButton.IsEnabled = isSelected;
 
-            if (isSelected && SelectedMascotImage != null)
+            if (isSelected && SelectedMascotImageSet != null && SelectedMascotImageSet.Image != null)
             {
                 try
                 {
-                    string directory = Path.GetDirectoryName(SelectedMascotImage.ImagePath) ?? "";
-                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(SelectedMascotImage.ImagePath);
-                    string extension = Path.GetExtension(SelectedMascotImage.ImagePath);
+                    var imageItem = SelectedMascotImageSet.Image;
+                    string directory = Path.GetDirectoryName(imageItem.ImagePath) ?? "";
+                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(imageItem.ImagePath);
+                    string extension = Path.GetExtension(imageItem.ImagePath);
 
                     var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}");
                     restoreBackgroundButton.IsEnabled = backupFiles.Length > 0;
 
-                    // 選択された画像をfrontImageに表示
-                    var image = ImageLoadHelper.LoadBitmapThumbnail(SelectedMascotImage.ImagePath, 120, 120);
-                    if (image != null)
-                    {
-                        angleViewControl.FrontImage.Source = image;
-                    }
+                    // AngleViewControlの画像を更新
+                    UpdateAngleViewImages();
                 }
                 catch (Exception ex)
                 {
@@ -223,13 +220,55 @@ namespace DesktopAiMascot.views.MascotEdit
             }
             else
             {
-                // 選択解除時はカバー画像に戻すか、nullにするか？
-                // 元の動作ではnullになるようだが、LoadCoverImageでセットされていたはず。
-                // ここではとりあえず何もしないか、LoadCoverImageを呼ぶ。
-                // ユーザー体験的にはカバー画像に戻るのが良いかも。
+                // 選択解除時はカバー画像に戻す
                 LoadCoverImage();
                 restoreBackgroundButton.IsEnabled = false;
+
+                // Clear angle images except front (which is set by LoadCoverImage)
+                angleViewControl.LeftImage.Source = null;
+                angleViewControl.RightImage.Source = null;
+                angleViewControl.AboveImage.Source = null;
+                angleViewControl.BelowImage.Source = null;
+                angleViewControl.BehindImage.Source = null;
             }
+        }
+
+        private void UpdateAngleViewImages()
+        {
+            if (SelectedMascotImageSet == null) return;
+
+            // Front image
+            if (SelectedMascotImageSet.Image != null)
+            {
+                var image = ImageLoadHelper.LoadBitmapThumbnail(SelectedMascotImageSet.Image.ImagePath, 120, 120);
+                if (image != null)
+                {
+                    angleViewControl.FrontImage.Source = image;
+                }
+            }
+
+            // Other angles
+            // Helper function to set image source
+            void SetAngleImage(System.Windows.Controls.Image target, string key)
+            {
+                if (SelectedMascotImageSet.AngleImages.ContainsKey(key))
+                {
+                    var item = SelectedMascotImageSet.AngleImages[key];
+                    var img = ImageLoadHelper.LoadBitmapThumbnail(item.ImagePath, 120, 120);
+                    if (img != null) target.Source = img;
+                    else target.Source = null;
+                }
+                else
+                {
+                    target.Source = null;
+                }
+            }
+
+            SetAngleImage(angleViewControl.LeftImage, "left");
+            SetAngleImage(angleViewControl.RightImage, "right");
+            SetAngleImage(angleViewControl.AboveImage, "above");
+            SetAngleImage(angleViewControl.BelowImage, "below");
+            SetAngleImage(angleViewControl.BehindImage, "behind");
         }
 
         public string GetDisplayName()
@@ -368,8 +407,9 @@ namespace DesktopAiMascot.views.MascotEdit
 
         private async void RemoveBackgroundButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SelectedMascotImage == null) return;
-            // ロジックコピー（SelectedMascotImageを使用）
+            if (SelectedMascotImageSet == null || SelectedMascotImageSet.Image == null) return;
+            var targetImage = SelectedMascotImageSet.Image;
+
             try
             {
                 var imageService = backgroundRemovalServiceComboBox.SelectedItem as ImageAiServiceBase;
@@ -384,7 +424,7 @@ namespace DesktopAiMascot.views.MascotEdit
 
                 if (_removeBgImage == null) return;
 
-                string? backupFileName = await _removeBgImage.ExecuteAsync(SelectedMascotImage.ImagePath, imageService);
+                string? backupFileName = await _removeBgImage.ExecuteAsync(targetImage.ImagePath, imageService);
 
                 if (!string.IsNullOrEmpty(backupFileName))
                 {
@@ -414,13 +454,14 @@ namespace DesktopAiMascot.views.MascotEdit
 
         private void RestoreBackgroundButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SelectedMascotImage == null) return;
-            // ロジックコピー
+            if (SelectedMascotImageSet == null || SelectedMascotImageSet.Image == null) return;
+            var targetImage = SelectedMascotImageSet.Image;
+
             try
             {
-                string directory = Path.GetDirectoryName(SelectedMascotImage.ImagePath) ?? "";
-                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(SelectedMascotImage.ImagePath);
-                string extension = Path.GetExtension(SelectedMascotImage.ImagePath);
+                string directory = Path.GetDirectoryName(targetImage.ImagePath) ?? "";
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(targetImage.ImagePath);
+                string extension = Path.GetExtension(targetImage.ImagePath);
 
                 var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}")
                     .OrderByDescending(f => f)
@@ -452,7 +493,7 @@ namespace DesktopAiMascot.views.MascotEdit
 
                     System.Threading.Thread.Sleep(100);
 
-                    File.Copy(latestBackup, SelectedMascotImage.ImagePath, true);
+                    File.Copy(latestBackup, targetImage.ImagePath, true);
                     File.Delete(latestBackup);
 
                     RequestReloadImageList?.Invoke(this, EventArgs.Empty);
@@ -514,13 +555,14 @@ namespace DesktopAiMascot.views.MascotEdit
 
         private void GenerateEmotesButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SelectedMascotImage == null) return;
+            if (SelectedMascotImageSet == null || SelectedMascotImageSet.Image == null) return;
+            var targetImage = SelectedMascotImageSet.Image;
+
 
             // ロジックコピー
             // EmoteGenerationWindowはWindowなので、OwnerをWindowにする必要がある。
-            // Window.GetWindow(this) で親ウィンドウを取得
             var window = Window.GetWindow(this);
-            var emoteWindow = new EmoteGenerationWindow(SelectedMascotImage.ImagePath);
+            var emoteWindow = new EmoteGenerationWindow(targetImage.ImagePath);
             emoteWindow.Owner = window;
             emoteWindow.ShowDialog();
 
@@ -548,14 +590,14 @@ namespace DesktopAiMascot.views.MascotEdit
             string frontImageFileName = "cover.png";
             string frontImagePath = Path.Combine(_mascotDirectory, "cover.png");
 
-            if (SelectedMascotImage != null)
+            // SelectedMascotImageSet.Image があればそれを使う
+            if (SelectedMascotImageSet != null && SelectedMascotImageSet.Image != null)
             {
-                frontImageFileName = SelectedMascotImage.FileName;
-                frontImagePath = SelectedMascotImage.ImagePath;
+                frontImageFileName = SelectedMascotImageSet.Image.FileName;
+                frontImagePath = SelectedMascotImageSet.Image.ImagePath;
             }
             else
             {
-                // SelectedUserImageがnullでも、FrontImage.Sourceがnullでなければcover.pngが表示されている状態とみなせる
                 if (!File.Exists(frontImagePath)) return;
             }
 
