@@ -1,0 +1,142 @@
+{
+	"admiration": {
+		"name": { "ja": "賞賛", "en": "admiration" },
+		"face": "admiring viewer, looking at viewer",
+		"fullbody": "admiring viewer, looking at viewer"
+	},
+	"amusement": {
+		"name": { "ja": "楽しさ", "en": "amusement" },
+		"face": "chuckling, amused, looking at viewer",
+		"fullbody": "chuckling, amused, looking at viewer"
+	},
+	"anger": {
+		"name": { "ja": "怒り", "en": "anger" },
+		"face": "angry, anger, looking at viewer",
+		"fullbody": "angry, anger, clenched hands, clenched fists, blush, full-face blush, looking at viewer"
+	},
+	"annoyance": {
+		"name": { "ja": "イライラ", "en": "annoyance" },
+		"face": "annoyed, rolling eyes, frown",
+		"fullbody": "annoyed, rolling eyes, frown, arms crossed"
+	},
+	"approval": {
+		"name": { "ja": "承認", "en": "approval" },
+		"face": "approving, happy, looking at viewer",
+		"fullbody": "approving, thumbs up, happy, looking at viewer"
+	},
+	"caring": {
+		"name": { "ja": "思いやり", "en": "caring" },
+		"face": "caring, in love, looking at viewer",
+		"fullbody": "caring, concerned, looking at viewer"
+	},
+	"confusion": {
+		"name": { "ja": "混乱", "en": "confusion" },
+		"face": "confusion, confused, furrowed brow, looking at viewer",
+		"fullbody": "confusion, confused, furrowed brow, scratching head in confusion, looking at viewer"
+	},
+	"curiosity": {
+		"name": { "ja": "好奇心", "en": "curiosity" },
+		"face": "curious, curiosity, inquisitive, raised eyebrow, thoughtful, looking at viewer",
+		"fullbody": "curious, finger on chin, curiosity, inquisitive, raised eyebrow, thoughtful, looking at viewer"
+	},
+	"desire": {
+		"name": { "ja": "欲望", "en": "desire" },
+		"face": "desire, horny, seductive smile, aroused, biting lip, looking at viewer",
+		"fullbody": "desire, horny, seductive smile, aroused, biting lip, looking at viewer"
+	},
+	"disappointment": {
+		"name": { "ja": "失望", "en": "disappointment" },
+		"face": "disappointment, disappointed, looking at viewer",
+		"fullbody": "disappointment, disappointed, looking down, head down, sad and droopy"
+	},
+	"disapproval": {
+		"name": { "ja": "不承認", "en": "disapproval" },
+		"face": "disapproval, frown, unhappy, looking at viewer",
+		"fullbody": "disapproval, frown, unhappy, arms crossed, looking at viewer"
+	},
+	"disgust": {
+		"name": { "ja": "嫌悪", "en": "disgust" },
+		"face": "disgusted, disgust, revulsion, ew!, sneer, sneering, looking at viewer",
+		"fullbody": "disgusted, disgust, revulsion, ew!, sneer, sneering, looking at viewer"
+	},
+	"embarrassment": {
+		"name": { "ja": "恥ずかしさ", "en": "embarrassment" },
+		"face": "embarrassed, wide-eyed, blush, looking away",
+		"fullbody": "embarrassed, wide-eyed, blush, looking away, full-face blush"
+	},
+	"excitement": {
+		"name": { "ja": "興奮", "en": "excitement" },
+		"face": "excitement, excited, happy, blush, looking at viewer",
+		"fullbody": "excitement, excited, jumping, happy, blush, looking at viewer"
+	},
+	"fear": {
+		"name": { "ja": "恐怖", "en": "fear" },
+		"face": "fear, afraid, scared, nervous, worried, looking away",
+		"fullbody": "fear, hands up in self defense, afraid, scared, nervous, worried, looking away"
+	},
+	"gratitude": {
+		"name": { "ja": "感謝", "en": "gratitude" },
+		"face": "gratitude, pleased, looking at viewer",
+		"fullbody": "gratitude, hands clasped together, pleased, looking at viewer"
+	},
+	"grief": {
+		"name": { "ja": "悲嘆", "en": "grief" },
+		"face": "grief, anguish, tearing up, crying, looking at viewer",
+		"fullbody": "grief, wiping tears, anguish, wet face, crying, looking at viewer"
+	},
+	"joy": {
+		"name": { "ja": "喜び", "en": "joy" },
+		"face": "joy, happy, smile, looking at viewer",
+		"fullbody": "joy, happy, smile, looking at viewer"
+	},
+	"love": {
+		"name": { "ja": "愛", "en": "love" },
+		"face": "love, in love, loving expression, blush, looking at viewer",
+		"fullbody": "love, in love, loving expression, blush, looking at viewer"
+	},
+	"nervousness": {
+		"name": { "ja": "不安", "en": "nervousness" },
+		"face": "nervousness, nervous, worried, unsure, looking away",
+		"fullbody": "nervousness, nervous, biting fingernails, worried, unsure, looking away"
+	},
+	"neutral": {
+		"name": { "ja": "無表情", "en": "neutral" },
+		"face": "neutral expression, looking at viewer",
+		"fullbody": "neutral expression, looking at viewer"
+	},
+	"optimism": {
+		"name": { "ja": "楽観", "en": "optimism" },
+		"face": "optimism, optimistic, looking up, happy",
+		"fullbody": "optimism, optimistic, raising one finger, pointing up, eureka moment, happy"
+	},
+	"pride": {
+		"name": { "ja": "誇り", "en": "pride" },
+		"face": "pride, proud, prideful, haughty, smug, looking at viewer",
+		"fullbody": "pride, proud, prideful, haughty, smug, looking at viewer"
+	},
+	"realization": {
+		"name": { "ja": "気づき", "en": "realization" },
+		"face": "realization, surprised, open mouth, looking at viewer",
+		"fullbody": "realization, surprised, open mouth, looking at viewer"
+	},
+	"relief": {
+		"name": { "ja": "安堵", "en": "relief" },
+		"face": "relief, relieved, relaxed, mouth slightly open, tired, exhausted, looking at viewer",
+		"fullbody": "relief, relieved, tired, exhausted, relaxed, mouth slightly open, looking at viewer"
+	},
+	"remorse": {
+		"name": { "ja": "後悔", "en": "remorse" },
+		"face": "remorse, regret, sad, looking at viewer, ashamed, shame, tearing up, crying",
+		"fullbody": "remorse, guilt, regret, sad, looking at viewer, ashamed, shame, tearing up, crying"
+	},
+	"sadness": {
+		"name": { "ja": "悲しみ", "en": "sadness" },
+		"face": "sad, looking down, slumped postru",
+		"fullbody": "sad, looking down, hugging self, hunched over"
+	},
+	"surprise": {
+		"name": { "ja": "驚き", "en": "surprise" },
+		"face": "surprise, surprised, wide-eyed, looking at viewer",
+		"fullbody": "surprise, surprised, wide-eyed, eyes and mouth wide open, looking at viewer"
+	}
+}

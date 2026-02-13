@@ -21,18 +21,19 @@ namespace DesktopAiMascot.mascots
 
         /** 各角度の画像。Key: left, right, front, back, top, bottom */
         public Dictionary<string, MascotImageItem> AngleImages { get; set; }
-        /** 各ポーズの画像。Key: pose1, pose2, ... */
-        public Dictionary<string, MascotImageItem> PoseImages { get; set; }
 
-        /** 各感情の画像。Key: happy, sad, angry, ... */
-        public Dictionary<string, MascotImageItem> EmotionImages { get; set; }
+        /** 各感情の表情画像（顔のみ）。Key: joy, sadness, anger, admiration, amusement, など28種類 */
+        public Dictionary<string, MascotImageItem> EmotionFaceImages { get; set; }
+
+        /** 各感情の全身画像。Key: joy, sadness, anger, admiration, amusement, など28種類 */
+        public Dictionary<string, MascotImageItem> EmotionFullbodyImages { get; set; }
 
         public MascotImageSet(string name)
         {
             Name = name;
             AngleImages = new Dictionary<string, MascotImageItem>();
-            PoseImages = new Dictionary<string, MascotImageItem>();
-            EmotionImages = new Dictionary<string, MascotImageItem>();
+            EmotionFaceImages = new Dictionary<string, MascotImageItem>();
+            EmotionFullbodyImages = new Dictionary<string, MascotImageItem>();
         }
     }
 }

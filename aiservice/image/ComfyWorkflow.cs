@@ -213,6 +213,58 @@ namespace DesktopAiMascot.aiservice.image
         }
 
         /// <summary>
+        /// 角度設定LoraのON/OFF切り替え
+        /// </summary>
+        /// <param name="on">true: AngleLoraを使用する / false: 使用しない</param>
+        public void AngleLoraOnOff(bool on)
+        {
+            // ModelSamplingAuraFlow ノードを検索
+            var modelSamplingNodeId = FindNodeByClassName("ModelSamplingAuraFlow");
+            if (modelSamplingNodeId == null)
+            {
+                throw new Exception("ModelSamplingAuraFlow node not found in workflow.");
+            }
+
+            Debug.WriteLine($"[ComfyWorkflow] AngleLoraOnOff - Node '{modelSamplingNodeId}' before:");
+            LogNodeContent(modelSamplingNodeId);
+
+            var targetElement = WorkflowData[modelSamplingNodeId];
+            
+            // JsonElement を JsonNode に変換して編集可能にする
+            var targetNode = JsonNode.Parse(targetElement.GetRawText());
+            
+            if (targetNode == null)
+            {
+                throw new Exception($"Failed to parse node '{modelSamplingNodeId}'.");
+            }
+
+            // inputs プロパティを取得
+            if (targetNode["inputs"] == null)
+            {
+                throw new Exception($"Node '{modelSamplingNodeId}' has no inputs property.");
+            }
+
+            // model プロパティを取得（配列の最初の要素がノードID）
+            if (targetNode["inputs"]!["model"] == null || targetNode["inputs"]!["model"] is not JsonArray)
+            {
+                throw new Exception($"Node '{modelSamplingNodeId}' inputs.model is not an array.");
+            }
+
+            // on = true の場合: AngleLoraノード（89:90）を使用
+            // on = false の場合: UnetLoaderノード（89:99）を直接使用
+            string sourceNodeId = on ? "89:90" : "89:99";
+            targetNode["inputs"]!["model"]![0] = sourceNodeId;
+
+            // JsonElement に戻して WorkflowData を更新
+            var updatedElement = JsonSerializer.Deserialize<JsonElement>(targetNode.ToJsonString(), SerializerOptions);
+            WorkflowData[modelSamplingNodeId] = updatedElement;
+
+            Debug.WriteLine($"[ComfyWorkflow] AngleLoraOnOff({on}) - Switched model input to '{sourceNodeId}'");
+            Debug.WriteLine($"[ComfyWorkflow] AngleLoraOnOff - Node '{modelSamplingNodeId}' after:");
+            LogNodeContent(modelSamplingNodeId);
+        }
+
+        /// <summary>
         /// クラス名でノードを検索する
         /// </summary>
         /// <param name="className">検索するクラス名</param>

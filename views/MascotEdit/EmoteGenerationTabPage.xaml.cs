@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using MessageBox = System.Windows.MessageBox;
 using DesktopAiMascot.aiservice.chat;
@@ -12,17 +12,28 @@ using DesktopAiMascot.aiservice.image;
 
 namespace DesktopAiMascot.views.MascotEdit
 {
-    public partial class EmoteGenerationWindow : Window
+    /// <summary>
+    /// EmoteGenerationTabPage.xaml の相互作用ロジック
+    /// </summary>
+    public partial class EmoteGenerationTabPage : System.Windows.Controls.UserControl
     {
         private const string ComfyQwen3ImageEditServiceName = "Comfy - Qwen3ImageEdit";
-        private string _sourceImagePath;
+        private string _sourceImagePath = string.Empty;
         private List<EmoteItem> _emoteItems = new List<EmoteItem>();
         private GoogleAiStudioChatService? _chatService;
         private ComfyQwen3ImageEditService? _comfyQwen3Service;
 
-        public EmoteGenerationWindow(string sourceImagePath)
+        public EmoteGenerationTabPage()
         {
             InitializeComponent();
+        }
+
+        /// <summary>
+        /// タブページを初期化
+        /// </summary>
+        public void Initialize(string sourceImagePath)
+        {
+            Debug.WriteLine($"[EmoteGenerationTabPage] Initialize called with: {sourceImagePath}");
             _sourceImagePath = sourceImagePath;
             
             // GoogleAiStudioChatServiceを初期化
@@ -31,6 +42,7 @@ namespace DesktopAiMascot.views.MascotEdit
             
             LoadSourceImage();
             InitializeEmoteList();
+            Debug.WriteLine($"[EmoteGenerationTabPage] Initialize completed. Emote count: {_emoteItems.Count}");
         }
 
         /// <summary>
@@ -52,7 +64,7 @@ namespace DesktopAiMascot.views.MascotEdit
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[EmoteGenerationWindow] 元画像読み込みエラー: {ex.Message}");
+                Debug.WriteLine($"[EmoteGenerationTabPage] 元画像読み込みエラー: {ex.Message}");
             }
         }
 
@@ -90,24 +102,41 @@ namespace DesktopAiMascot.views.MascotEdit
         /// </summary>
         private void InitializeEmoteList()
         {
+            Debug.WriteLine("[EmoteGenerationTabPage] InitializeEmoteList called");
+            
+            const string promptTemplate = "ONLY change the facial expression, {0}, 1girl, solo, same character, same hairstyle, same outfit, front view, standing, high quality anime illustration";
+            
             // チャットマスコットとして必要な表情の一覧
             _emoteItems = new List<EmoteItem>
             {
-                new EmoteItem { EmoteName = "通常", Description = "デフォルトの表情", Prompt = "neutral expression, calm, default face" },
-                new EmoteItem { EmoteName = "笑顔", Description = "嬉しい時の表情", Prompt = "happy smile, joyful, cheerful expression" },
-                new EmoteItem { EmoteName = "驚き", Description = "驚いた時の表情", Prompt = "surprised expression, wide eyes, open mouth" },
-                new EmoteItem { EmoteName = "悲しみ", Description = "悲しい時の表情", Prompt = "sad expression, downcast eyes, tears" },
-                new EmoteItem { EmoteName = "怒り", Description = "怒った時の表情", Prompt = "angry expression, furrowed brow, intense gaze" },
-                new EmoteItem { EmoteName = "照れ", Description = "照れている表情", Prompt = "blushing, shy expression, embarrassed" },
-                new EmoteItem { EmoteName = "困惑", Description = "困っている表情", Prompt = "confused expression, puzzled, uncertain" },
-                new EmoteItem { EmoteName = "疲労", Description = "疲れている表情", Prompt = "tired expression, exhausted, weary" },
-                new EmoteItem { EmoteName = "興奮", Description = "興奮している表情", Prompt = "excited expression, energetic, enthusiastic" },
-                new EmoteItem { EmoteName = "思考", Description = "考えている表情", Prompt = "thinking expression, contemplative, pensive" },
-                new EmoteItem { EmoteName = "不安", Description = "不安な表情", Prompt = "anxious expression, worried, nervous" },
-                new EmoteItem { EmoteName = "楽しい", Description = "楽しんでいる表情", Prompt = "playful expression, having fun, amused" }
+                // === アニメーションベース（必須） ===
+                new EmoteItem { GroupName = "アニメーションベース", EmoteName = "通常", Description = "デフォルトの表情", Prompt = string.Format(promptTemplate, "neutral expression, calm face") },
+                new EmoteItem { GroupName = "アニメーションベース", EmoteName = "目閉じ", Description = "目を閉じた表情", Prompt = string.Format(promptTemplate, "eyes closed, peaceful expression") },
+                new EmoteItem { GroupName = "アニメーションベース", EmoteName = "口閉じ", Description = "口を閉じた表情", Prompt = string.Format(promptTemplate, "mouth closed, gentle smile") },
+                
+                // === 基本表情（感情表現） ===
+                new EmoteItem { GroupName = "基本表情", EmoteName = "笑顔", Description = "嬉しい時の表情", Prompt = string.Format(promptTemplate, "happy smile, joyful, bright eyes") },
+                new EmoteItem { GroupName = "基本表情", EmoteName = "悲しみ", Description = "悲しい時の表情", Prompt = string.Format(promptTemplate, "sad expression, downcast eyes, teary") },
+                new EmoteItem { GroupName = "基本表情", EmoteName = "怒り", Description = "怒った時の表情", Prompt = string.Format(promptTemplate, "angry expression, furrowed brow, intense gaze") },
+                new EmoteItem { GroupName = "基本表情", EmoteName = "驚き", Description = "驚いた時の表情", Prompt = string.Format(promptTemplate, "surprised expression, wide eyes, open mouth") },
+                
+                // === 追加表情（会話用） ===
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "照れ", Description = "恥ずかしい表情", Prompt = string.Format(promptTemplate, "blushing, shy expression, embarrassed, red cheeks") },
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "困惑", Description = "困っている表情", Prompt = string.Format(promptTemplate, "confused expression, puzzled, uncertain") },
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "疲労", Description = "疲れている表情", Prompt = string.Format(promptTemplate, "tired expression, exhausted, sleepy eyes") },
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "興奮", Description = "興奮している表情", Prompt = string.Format(promptTemplate, "excited expression, energetic, sparkling eyes") },
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "思考", Description = "考えている表情", Prompt = string.Format(promptTemplate, "thinking expression, contemplative, hand on chin") },
+                new EmoteItem { GroupName = "会話用表情", EmoteName = "ウインク", Description = "片目をつぶった表情", Prompt = string.Format(promptTemplate, "wink, one eye closed, playful smile") }
             };
 
-            emoteItemsControl.ItemsSource = _emoteItems;
+            Debug.WriteLine($"[EmoteGenerationTabPage] Created {_emoteItems.Count} emote items");
+
+            // グループ化されたビューを作成
+            var groupedView = System.Windows.Data.CollectionViewSource.GetDefaultView(_emoteItems);
+            groupedView.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription("GroupName"));
+
+            emoteItemsControl.ItemsSource = groupedView;
+            Debug.WriteLine($"[EmoteGenerationTabPage] ItemsSource set. Group count: {groupedView.Groups?.Count ?? 0}");
         }
 
         private async void GenerateAllButton_Click(object sender, RoutedEventArgs e)
@@ -115,7 +144,7 @@ namespace DesktopAiMascot.views.MascotEdit
             generateAllButton.IsEnabled = false;
             try
             {
-                string aiService = (aiServiceComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
+                string aiService = (aiServiceComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
                 string promptAdjust = promptAdjustTextBox.Text;
 
                 foreach (var emote in _emoteItems)
@@ -127,7 +156,7 @@ namespace DesktopAiMascot.views.MascotEdit
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[EmoteGenerationWindow] 一括生成エラー: {ex.Message}");
+                Debug.WriteLine($"[EmoteGenerationTabPage] 一括生成エラー: {ex.Message}");
                 MessageBox.Show($"表情の生成中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -143,13 +172,13 @@ namespace DesktopAiMascot.views.MascotEdit
                 button.IsEnabled = false;
                 try
                 {
-                    string aiService = (aiServiceComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
+                    string aiService = (aiServiceComboBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Nano Banana";
                     string promptAdjust = promptAdjustTextBox.Text;
                     _ = GenerateEmoteAsync(emote, aiService, promptAdjust);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[EmoteGenerationWindow] 表情生成エラー: {ex.Message}");
+                    Debug.WriteLine($"[EmoteGenerationTabPage] 表情生成エラー: {ex.Message}");
                     MessageBox.Show($"表情の生成に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
@@ -167,8 +196,8 @@ namespace DesktopAiMascot.views.MascotEdit
                 string imageBase64 = ConvertImageToBase64(_sourceImagePath);
                 string fullPrompt = $"Edit this image to show: {emote.Prompt}. {promptAdjust}";
                 
-                Debug.WriteLine($"[EmoteGenerationWindow] {aiService}で表情「{emote.EmoteName}」を生成中");
-                Debug.WriteLine($"[EmoteGenerationWindow] プロンプト: {fullPrompt}");
+                Debug.WriteLine($"[EmoteGenerationTabPage] {aiService}で表情「{emote.EmoteName}」を生成中");
+                Debug.WriteLine($"[EmoteGenerationTabPage] プロンプト: {fullPrompt}");
 
                 string? resultBase64;
                 if (aiService == ComfyQwen3ImageEditServiceName)
@@ -179,7 +208,8 @@ namespace DesktopAiMascot.views.MascotEdit
                         return;
                     }
 
-                    resultBase64 = await _comfyQwen3Service.EditImageAsync(imageBase64, fullPrompt);
+                    // 表情差分作成用のメソッドを使用（角度LoRAをOFF）
+                    resultBase64 = await _comfyQwen3Service.EditImageForEmoteAsync(imageBase64, fullPrompt);
                 }
                 else
                 {
@@ -202,8 +232,6 @@ namespace DesktopAiMascot.views.MascotEdit
                     {
                         try
                         {
-                            var generatedImage = ConvertBase64ToImage(resultBase64);
-                            // 一時的に画像を表示するために、メモリストリームに保存して表示
                             var bitmap = new BitmapImage();
                             bitmap.BeginInit();
                             byte[] imageBytes = Convert.FromBase64String(resultBase64);
@@ -215,30 +243,29 @@ namespace DesktopAiMascot.views.MascotEdit
                             }
                             bitmap.Freeze();
                             
-                            // URI形式で画像を表示することはできないため、別の方法を使用
-                            emote.ImagePath = "generated"; // プレースホルダー
+                            emote.ImagePath = "generated";
                             emote.GeneratedBitmapImage = bitmap;
                             emote.StatusText = "生成完了（未保存）";
                             emote.HasImage = true;
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"[EmoteGenerationWindow] 画像変換エラー: {ex.Message}");
+                            Debug.WriteLine($"[EmoteGenerationTabPage] 画像変換エラー: {ex.Message}");
                             emote.StatusText = "生成完了（表示失敗）";
                             emote.HasImage = true;
                         }
                     });
-                    Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」の生成が完了しました");
+                    Debug.WriteLine($"[EmoteGenerationTabPage] 表情「{emote.EmoteName}」の生成が完了しました");
                 }
                 else
                 {
                     emote.StatusText = "生成失敗";
-                    Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」の生成に失敗しました");
+                    Debug.WriteLine($"[EmoteGenerationTabPage] 表情「{emote.EmoteName}」の生成に失敗しました");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[EmoteGenerationWindow] 表情生成エラー: {ex.Message}");
+                Debug.WriteLine($"[EmoteGenerationTabPage] 表情生成エラー: {ex.Message}");
                 emote.StatusText = $"エラー: {ex.Message}";
             }
         }
@@ -262,7 +289,7 @@ namespace DesktopAiMascot.views.MascotEdit
                     byte[] imageBytes = Convert.FromBase64String(emote.GeneratedImageBase64);
                     File.WriteAllBytes(savePath, imageBytes);
                     
-                    Debug.WriteLine($"[EmoteGenerationWindow] 表情「{emote.EmoteName}」を保存: {savePath}");
+                    Debug.WriteLine($"[EmoteGenerationTabPage] 表情「{emote.EmoteName}」を保存: {savePath}");
                     
                     emote.StatusText = "保存済み";
                     emote.ImagePath = savePath;
@@ -271,7 +298,7 @@ namespace DesktopAiMascot.views.MascotEdit
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[EmoteGenerationWindow] 保存エラー: {ex.Message}");
+                    Debug.WriteLine($"[EmoteGenerationTabPage] 保存エラー: {ex.Message}");
                     MessageBox.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
@@ -302,111 +329,9 @@ namespace DesktopAiMascot.views.MascotEdit
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[EmoteGenerationWindow] 一括保存エラー: {ex.Message}");
+                Debug.WriteLine($"[EmoteGenerationTabPage] 一括保存エラー: {ex.Message}");
                 MessageBox.Show($"保存中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-    }
-
-    public class EmoteItem : INotifyPropertyChanged
-    {
-        private string _imagePath = string.Empty;
-        private string _statusText = "未生成";
-        private bool _hasImage = false;
-        private BitmapImage? _generatedBitmapImage = null;
-
-        public string EmoteName { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Prompt { get; set; } = string.Empty;
-        public string GeneratedImageBase64 { get; set; } = string.Empty;
-
-        public string ImagePath
-        {
-            get => _imagePath;
-            set
-            {
-                _imagePath = value;
-                OnPropertyChanged(nameof(ImagePath));
-            }
-        }
-
-        public BitmapImage? GeneratedBitmapImage
-        {
-            get => _generatedBitmapImage;
-            set
-            {
-                _generatedBitmapImage = value;
-                OnPropertyChanged(nameof(GeneratedBitmapImage));
-               OnPropertyChanged(nameof(DisplayImage));
-            }
-        }
-
-        public string StatusText
-        {
-            get => _statusText;
-            set
-            {
-                _statusText = value;
-                OnPropertyChanged(nameof(StatusText));
-            }
-        }
-
-        public bool HasImage
-        {
-            get => _hasImage;
-            set
-            {
-                _hasImage = value;
-                OnPropertyChanged(nameof(HasImage));
-            }
-        }
-
-       /// <summary>
-       /// 表示用画像（GeneratedBitmapImageが優先、なければImagePathから読み込み）
-       /// </summary>
-       public BitmapImage? DisplayImage
-       {
-           get
-           {
-               // 生成された画像がある場合はそれを返す
-               if (_generatedBitmapImage != null)
-               {
-                   return _generatedBitmapImage;
-               }
-
-               // ImagePathがある場合は画像を読み込む
-               if (!string.IsNullOrEmpty(_imagePath) && File.Exists(_imagePath))
-               {
-                   try
-                   {
-                       var bitmap = new BitmapImage();
-                       bitmap.BeginInit();
-                       bitmap.UriSource = new Uri(_imagePath, UriKind.Absolute);
-                       bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                       bitmap.EndInit();
-                       bitmap.Freeze();
-                       return bitmap;
-                   }
-                   catch
-                   {
-                       return null;
-                   }
-               }
-
-               return null;
-           }
-       }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

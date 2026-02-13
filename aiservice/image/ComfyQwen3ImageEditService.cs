@@ -122,7 +122,15 @@ namespace DesktopAiMascot.aiservice.image
             return EditImageAsync(imageData, prompt, AngleWorkflowFileName);
         }
 
-        private async Task<string?> EditImageAsync(string imageData, string prompt, string workflowFileName)
+        /// <summary>
+        /// 表情差分作成用の画像編集を実行する（角度LoRAなし）
+        /// </summary>
+        public Task<string?> EditImageForEmoteAsync(string imageData, string prompt)
+        {
+            return EditImageAsync(imageData, prompt, AngleWorkflowFileName, useAngleLora: false);
+        }
+
+        private async Task<string?> EditImageAsync(string imageData, string prompt, string workflowFileName, bool useAngleLora = true)
         {
             try
             {
@@ -135,7 +143,7 @@ namespace DesktopAiMascot.aiservice.image
                     return null;
                 }
 
-                var workflow = await CreateEditWorkflowAsync(uploadedFilename, prompt, workflowFileName);
+                var workflow = await CreateEditWorkflowAsync(uploadedFilename, prompt, workflowFileName, useAngleLora);
                 if (workflow == null)
                 {
                     Debug.WriteLine("[ComfyQwen3ImageEditService] ワークフローの生成に失敗");
@@ -179,7 +187,7 @@ namespace DesktopAiMascot.aiservice.image
         /// <summary>
         /// 画像編集用のワークフローを生成する
         /// </summary>
-        private async Task<Dictionary<string, object>?> CreateEditWorkflowAsync(string uploadedFilename, string prompt, string workflowFileName)
+        private async Task<Dictionary<string, object>?> CreateEditWorkflowAsync(string uploadedFilename, string prompt, string workflowFileName, bool useAngleLora = true)
         {
             try
             {
@@ -201,6 +209,13 @@ namespace DesktopAiMascot.aiservice.image
                 workflow.SetImageInput(ImageInputNodeId, uploadedFilename);
                 workflow.SetTextPrompt(PromptInputNodeId, prompt);
                 workflow.SetSeed(_random.Next(1, 10000000));
+
+                // 角度LoRAのON/OFF設定（AngleWorkflowの場合のみ有効）
+                if (workflowFileName == AngleWorkflowFileName)
+                {
+                    workflow.AngleLoraOnOff(useAngleLora);
+                    Debug.WriteLine($"[ComfyQwen3ImageEditService] 角度LoRA: {(useAngleLora ? "ON" : "OFF")}");
+                }
 
                 var workflowData = workflow.GetWorkflow();
                 var result = new Dictionary<string, object>();

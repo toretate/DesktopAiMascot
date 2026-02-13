@@ -195,7 +195,6 @@ namespace DesktopAiMascot.views.MascotEdit
         {
             bool isSelected = SelectedMascotImageSet != null && SelectedMascotImageSet.Image != null;
             removeBackgroundButton.IsEnabled = isSelected;
-            generateEmotesButton.IsEnabled = isSelected;
 
             if (isSelected && SelectedMascotImageSet != null && SelectedMascotImageSet.Image != null)
             {
@@ -211,6 +210,9 @@ namespace DesktopAiMascot.views.MascotEdit
 
                     // AngleViewControlの画像を更新
                     UpdateAngleViewImages();
+                    
+                    // 表情差分作成タブを初期化
+                    emoteGenerationTabPage.Initialize(imageItem.ImagePath);
                 }
                 catch (Exception ex)
                 {
@@ -551,22 +553,6 @@ namespace DesktopAiMascot.views.MascotEdit
             {
                 MessageBox.Show($"画像の追加に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private void GenerateEmotesButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (SelectedMascotImageSet == null || SelectedMascotImageSet.Image == null) return;
-            var targetImage = SelectedMascotImageSet.Image;
-
-
-            // ロジックコピー
-            // EmoteGenerationWindowはWindowなので、OwnerをWindowにする必要がある。
-            var window = Window.GetWindow(this);
-            var emoteWindow = new EmoteGenerationWindow(targetImage.ImagePath);
-            emoteWindow.Owner = window;
-            emoteWindow.ShowDialog();
-
-            RequestReloadImageList?.Invoke(this, EventArgs.Empty);
         }
 
         private void LeftImage_Click(object sender, MouseButtonEventArgs e) => GenerateAngleImageWrapper("left", angleViewControl.LeftImage);
