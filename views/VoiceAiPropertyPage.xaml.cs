@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using DesktopAiMascot.aiservice;
 using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.mascots;
+using DesktopAiMascot.utils;
 using System.Diagnostics;
 using System.Collections.Generic;
 
@@ -20,11 +22,16 @@ namespace DesktopAiMascot.views
         
         // 設定読み込み中フラグ（重複呼び出しを防ぐ）
         private bool _isLoadingConfig = false;
+
+        // 辞書ダウンローダー
+        private MeCabDictionaryDownloader? _dictionaryDownloader;
+        private CancellationTokenSource? _downloadCancellationTokenSource;
         
         public VoiceAiPropertyPage()
         {
             InitializeComponent();
             PopulateVoiceAiCombo();
+            CheckMeCabDictionaryStatus();
             
             // ページの表示状態が変わった時にもVoice設定をロード
             this.IsVisibleChanged += async (s, e) =>
@@ -880,10 +887,151 @@ namespace DesktopAiMascot.views
             
             await System.Threading.Tasks.Task.CompletedTask;
         }
+
+        /// <summary>
+        /// MeCab辞書の状態をチェック
+        /// </summary>
+        private void CheckMeCabDictionaryStatus()
+        {
+            _dictionaryDownloader = new MeCabDictionaryDownloader();
+            
+            if (_dictionaryDownloader.IsNeologdInstalled())
+            {
+                mecabDictionaryStatusLabel.Content = "インストール済み";
+                mecabDictionaryStatusLabel.Foreground = System.Windows.Media.Brushes.Green;
+                downloadDictionaryButton.Content = "辞書を再ダウンロード";
+            }
+            else
+            {
+                mecabDictionaryStatusLabel.Content = "未インストール";
+                mecabDictionaryStatusLabel.Foreground = System.Windows.Media.Brushes.Orange;
+                downloadDictionaryButton.Content = "辞書をダウンロード";
+            }
+        }
+
+        /// <summary>
+        /// 辞書ダウンロードボタンクリック
+        /// </summary>
+        private async void DownloadDictionaryButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_dictionaryDownloader == null)
+            {
+                _dictionaryDownloader = new MeCabDictionaryDownloader();
+            }
+
+            // 既にダウンロード中の場合はキャンセル
+            if (_downloadCancellationTokenSource != null)
+            {
+                _downloadCancellationTokenSource.Cancel();
+                return;
+            }
+
+            try
+            {
+                // UIを更新
+                downloadDictionaryButton.Content = "キャンセル";
+                downloadDictionaryButton.IsEnabled = true;
+                dictionaryDownloadProgressBar.Visibility = Visibility.Visible;
+                dictionaryDownloadStatusText.Visibility = Visibility.Visible;
+                dictionaryDownloadProgressBar.Value = 0;
+                
+                // イベントハンドラを登録
+                _dictionaryDownloader.ProgressChanged += OnDictionaryDownloadProgressChanged;
+                _dictionaryDownloader.StatusChanged += OnDictionaryDownloadStatusChanged;
+
+                // ダウンロード開始
+                _downloadCancellationTokenSource = new CancellationTokenSource();
+                
+                // ユーザーに手動配置を案内
+                var result = System.Windows.MessageBox.Show(
+                    "MeCab辞書は大きなファイルのため、手動でのダウンロードと配置を推奨します。\n\n" +
+                    "詳細は dic\\README.md を参照してください。\n\n" +
+                    "それでも自動ダウンロードを試みますか？",
+                    "辞書のダウンロード",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.No)
+                {
+                    // 辞書配置フォルダを開く
+                    var dicPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dic");
+                    if (!System.IO.Directory.Exists(dicPath))
+                    {
+                        System.IO.Directory.CreateDirectory(dicPath);
+                    }
+                    Process.Start("explorer.exe", dicPath);
+                    return;
+                }
+
+                bool success = await _dictionaryDownloader.DownloadAndInstallNeologdAsync(_downloadCancellationTokenSource.Token);
+                
+                if (success)
+                {
+                    System.Windows.MessageBox.Show(
+                        "辞書のダウンロードとインストールが完了しました。",
+                        "完了",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    
+                    CheckMeCabDictionaryStatus();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                dictionaryDownloadStatusText.Text = "キャンセルされました";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[VoiceAiPropertyPage] 辞書ダウンロードエラー: {ex.Message}");
+                System.Windows.MessageBox.Show(
+                    $"辞書のダウンロードに失敗しました: {ex.Message}\n\n" +
+                    "手動で辞書を配置してください。詳細は dic\\README.md を参照してください。",
+                    "エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                // UIをリセット
+                downloadDictionaryButton.Content = _dictionaryDownloader.IsNeologdInstalled() 
+                    ? "辞書を再ダウンロード" 
+                    : "辞書をダウンロード";
+                downloadDictionaryButton.IsEnabled = true;
+                dictionaryDownloadProgressBar.Visibility = Visibility.Collapsed;
+                dictionaryDownloadStatusText.Visibility = Visibility.Collapsed;
+                
+                // イベントハンドラを解除
+                if (_dictionaryDownloader != null)
+                {
+                    _dictionaryDownloader.ProgressChanged -= OnDictionaryDownloadProgressChanged;
+                    _dictionaryDownloader.StatusChanged -= OnDictionaryDownloadStatusChanged;
+                }
+                
+                _downloadCancellationTokenSource?.Dispose();
+                _downloadCancellationTokenSource = null;
+            }
+        }
+
+        private void OnDictionaryDownloadProgressChanged(object? sender, DownloadProgressEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                dictionaryDownloadProgressBar.Value = e.Percentage;
+                dictionaryDownloadStatusText.Text = e.Message;
+            });
+        }
+
+        private void OnDictionaryDownloadStatusChanged(object? sender, string status)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                dictionaryDownloadStatusText.Text = status;
+            });
+        }
     }
-    
+
     /// <summary>
-    /// VoiceVoxのStyleをComboBoxに表示するためのヘルパークラス
+    /// VoiceVoxのStyleを表示するためのクラス
     /// </summary>
     internal class VoiceVoxStyleDisplayItem
     {
