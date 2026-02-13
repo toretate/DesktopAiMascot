@@ -933,6 +933,8 @@ namespace DesktopAiMascot.views
                 downloadDictionaryButton.IsEnabled = true;
                 dictionaryDownloadProgressBar.Visibility = Visibility.Visible;
                 dictionaryDownloadStatusText.Visibility = Visibility.Visible;
+                dictionaryDownloadStepText.Visibility = Visibility.Visible;
+                dictionaryDownloadDetailsText.Visibility = Visibility.Visible;
                 dictionaryDownloadProgressBar.Value = 0;
                 
                 // イベントハンドラを登録
@@ -999,6 +1001,8 @@ namespace DesktopAiMascot.views
                 downloadDictionaryButton.IsEnabled = true;
                 dictionaryDownloadProgressBar.Visibility = Visibility.Collapsed;
                 dictionaryDownloadStatusText.Visibility = Visibility.Collapsed;
+                dictionaryDownloadStepText.Visibility = Visibility.Collapsed;
+                dictionaryDownloadDetailsText.Visibility = Visibility.Collapsed;
                 
                 // イベントハンドラを解除
                 if (_dictionaryDownloader != null)
@@ -1018,6 +1022,29 @@ namespace DesktopAiMascot.views
             {
                 dictionaryDownloadProgressBar.Value = e.Percentage;
                 dictionaryDownloadStatusText.Text = e.Message;
+                
+                // ステップ表示
+                if (!string.IsNullOrEmpty(e.CurrentStep))
+                {
+                    dictionaryDownloadStepText.Text = $"[{e.CurrentStep}]";
+                    dictionaryDownloadStepText.Visibility = Visibility.Visible;
+                }
+                
+                // 詳細情報表示
+                if (e.DownloadSpeedMBps > 0)
+                {
+                    var details = $"ダウンロード速度: {e.DownloadSpeedMBps:F2} MB/s";
+                    if (e.EstimatedTimeRemaining.TotalSeconds > 0 && e.EstimatedTimeRemaining.TotalSeconds < 3600)
+                    {
+                        details += $" | 残り時間: 約{e.EstimatedTimeRemaining.Minutes}分{e.EstimatedTimeRemaining.Seconds}秒";
+                    }
+                    dictionaryDownloadDetailsText.Text = details;
+                    dictionaryDownloadDetailsText.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    dictionaryDownloadDetailsText.Visibility = Visibility.Collapsed;
+                }
             });
         }
 

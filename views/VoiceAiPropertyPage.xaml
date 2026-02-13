@@ -62,15 +62,31 @@ Loaded="VoiceAiPropertyPage_Loaded" Background="White">
                             Margin="0,0,0,5"
                             Click="DownloadDictionaryButton_Click"/>
 
+                    <!-- 現在のステップ表示 -->
+                    <TextBlock x:Name="dictionaryDownloadStepText" 
+                               FontSize="10" 
+                               FontWeight="Bold"
+                               Foreground="DarkBlue"
+                               Margin="0,0,0,2"
+                               Visibility="Collapsed"/>
+
                     <ProgressBar x:Name="dictionaryDownloadProgressBar" 
                                  Height="20" 
                                  Margin="0,0,0,5"
                                  Visibility="Collapsed"/>
 
+                    <!-- 詳細情報表示 -->
                     <TextBlock x:Name="dictionaryDownloadStatusText" 
                                FontSize="10" 
                                Foreground="Gray"
                                TextWrapping="Wrap"
+                               Visibility="Collapsed"/>
+
+                    <TextBlock x:Name="dictionaryDownloadDetailsText" 
+                               FontSize="9" 
+                               Foreground="DarkGray"
+                               TextWrapping="Wrap"
+                               Margin="0,2,0,0"
                                Visibility="Collapsed"/>
                 </StackPanel>
             </GroupBox>
