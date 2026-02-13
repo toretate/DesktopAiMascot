@@ -123,25 +123,50 @@ namespace DesktopAiMascot.utils
             var totalBytes = response.Content.Headers.ContentLength ?? 0;
             var buffer = new byte[8192];
             var totalRead = 0L;
+            var startTime = DateTime.Now;
+            var lastProgressUpdate = DateTime.MinValue;
 
             using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
             int bytesRead;
-            var lastProgressUpdate = DateTime.MinValue;
             
             while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
             {
                 await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                 totalRead += bytesRead;
 
-                // プログレス更新を100msごとに制限（UI負荷軽減)
+                // プログレス更新を100msごとに制限（UI負荷軽減）
                 if ((DateTime.Now - lastProgressUpdate).TotalMilliseconds >= 100 && totalBytes > 0)
                 {
                     var progress = (int)((totalRead * 100) / totalBytes);
                     var downloadedMB = totalRead / 1024.0 / 1024.0;
                     var totalMB = totalBytes / 1024.0 / 1024.0;
-                    OnProgressChanged(progress, $"ダウンロード中... {downloadedMB:F1} MB / {totalMB:F1} MB");
+                    
+                    // ダウンロード速度を計算（MB/s）
+                    var elapsedSeconds = (DateTime.Now - startTime).TotalSeconds;
+                    var speedMBps = elapsedSeconds > 0 ? downloadedMB / elapsedSeconds : 0;
+                    
+                    // 残り時間を推定
+                    var remainingBytes = totalBytes - totalRead;
+                    var remainingSeconds = speedMBps > 0 ? (remainingBytes / 1024.0 / 1024.0) / speedMBps : 0;
+                    var estimatedTimeRemaining = TimeSpan.FromSeconds(remainingSeconds);
+                    
+                    var message = $"ダウンロード中... {downloadedMB:F1} MB / {totalMB:F1} MB ({speedMBps:F2} MB/s)";
+                    if (remainingSeconds > 0 && remainingSeconds < 3600) // 1時間以内なら表示
+                    {
+                        message += $" | 残り: 約{estimatedTimeRemaining.Minutes}分{estimatedTimeRemaining.Seconds}秒";
+                    }
+                    
+                    OnProgressChanged(
+                        progress, 
+                        message,
+                        totalRead,
+                        totalBytes,
+                        speedMBps,
+                        estimatedTimeRemaining,
+                        "ダウンロード");
+                    
                     lastProgressUpdate = DateTime.Now;
                 }
             }
@@ -155,6 +180,7 @@ namespace DesktopAiMascot.utils
             await Task.Run(() =>
             {
                 OnStatusChanged("GZip圧縮を解除中...");
+                OnProgressChanged(50, "GZip圧縮を解除中...", currentStep: "展開");
                 
                 // 展開先ディレクトリを作成
                 Directory.CreateDirectory(extractPath);
@@ -169,6 +195,7 @@ namespace DesktopAiMascot.utils
                 }
                 
                 OnStatusChanged("Tarアーカイブを展開中...");
+                OnProgressChanged(70, "Tarアーカイブを展開中...", currentStep: "展開");
                 
                 // 2. Tar展開
                 try
@@ -185,7 +212,7 @@ namespace DesktopAiMascot.utils
                     }
                 }
                 
-                OnProgressChanged(90, "展開完了");
+                OnProgressChanged(90, "展開完了", currentStep: "展開");
             }, cancellationToken);
         }
 
@@ -209,6 +236,7 @@ namespace DesktopAiMascot.utils
                 var targetPath = Path.Combine(_dicDirectory, dicName);
                 
                 OnStatusChanged($"{dicName}辞書をインストール中...");
+                OnProgressChanged(92, $"{dicName}辞書をインストール中...", currentStep: "インストール");
                 
                 if (Directory.Exists(targetPath))
                 {
@@ -218,7 +246,7 @@ namespace DesktopAiMascot.utils
                 // 辞書ファイルをコピー
                 CopyDirectory(sourceDir, targetPath);
                 
-                OnProgressChanged(95, "インストール完了");
+                OnProgressChanged(95, "インストール完了", currentStep: "インストール");
                 
                 Debug.WriteLine($"[MeCabDictionaryDownloader] 辞書を {targetPath} にインストールしました");
             }, cancellationToken);
@@ -248,9 +276,25 @@ namespace DesktopAiMascot.utils
             }
         }
 
-        private void OnProgressChanged(int percentage, string message)
+        private void OnProgressChanged(
+            int percentage, 
+            string message,
+            long bytesDownloaded = 0,
+            long totalBytes = 0,
+            double downloadSpeedMBps = 0,
+            TimeSpan? estimatedTimeRemaining = null,
+            string currentStep = "")
         {
-            ProgressChanged?.Invoke(this, new DownloadProgressEventArgs(percentage, message));
+            ProgressChanged?.Invoke(
+                this, 
+                new DownloadProgressEventArgs(
+                    percentage, 
+                    message, 
+                    bytesDownloaded, 
+                    totalBytes,
+                    downloadSpeedMBps,
+                    estimatedTimeRemaining,
+                    currentStep));
         }
 
         private void OnStatusChanged(string status)
@@ -269,11 +313,28 @@ namespace DesktopAiMascot.utils
     {
         public int Percentage { get; }
         public string Message { get; }
+        public long BytesDownloaded { get; }
+        public long TotalBytes { get; }
+        public double DownloadSpeedMBps { get; }
+        public TimeSpan EstimatedTimeRemaining { get; }
+        public string CurrentStep { get; }
 
-        public DownloadProgressEventArgs(int percentage, string message)
+        public DownloadProgressEventArgs(
+            int percentage, 
+            string message, 
+            long bytesDownloaded = 0, 
+            long totalBytes = 0,
+            double downloadSpeedMBps = 0,
+            TimeSpan? estimatedTimeRemaining = null,
+            string currentStep = "")
         {
             Percentage = percentage;
             Message = message;
+            BytesDownloaded = bytesDownloaded;
+            TotalBytes = totalBytes;
+            DownloadSpeedMBps = downloadSpeedMBps;
+            EstimatedTimeRemaining = estimatedTimeRemaining ?? TimeSpan.Zero;
+            CurrentStep = currentStep;
         }
     }
 }
