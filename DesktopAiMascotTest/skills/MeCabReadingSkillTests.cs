@@ -1,17 +1,16 @@
-using System.Threading.Tasks;
-using DesktopAiMascot.skills;
 using Xunit;
+using DesktopAiMascot.skills;
+using System.Threading.Tasks;
 
 namespace DesktopAiMascotTest.skills
 {
-    public class MeCabReadingSkillTests
+    public class BilingualKanaDictionarySkillTests
     {
         [Fact]
         public async Task ConvertToReadingAsync_空文字列_空文字列を返す()
         {
             // Arrange
-            var skill = new MeCabReadingSkill();
-            skill.Initialize();
+            var skill = new BilingualKanaDictionarySkill();
 
             // Act
             var result = await skill.ConvertToReadingAsync("");
@@ -24,8 +23,7 @@ namespace DesktopAiMascotTest.skills
         public async Task ConvertToReadingAsync_英単語なし_元の文字列を返す()
         {
             // Arrange
-            var skill = new MeCabReadingSkill();
-            skill.Initialize();
+            var skill = new BilingualKanaDictionarySkill();
 
             // Act
             var result = await skill.ConvertToReadingAsync("こんにちは");
@@ -38,46 +36,83 @@ namespace DesktopAiMascotTest.skills
         public async Task ConvertToReadingAsync_英単語あり_読み仮名に変換される()
         {
             // Arrange
-            var skill = new MeCabReadingSkill();
-            skill.Initialize();
+            var skill = new BilingualKanaDictionarySkill();
 
             // Act
             var result = await skill.ConvertToReadingAsync("私はappleが好きです");
 
             // Assert
-            // MeCabが利用できる場合は読み仮名が取得される
-            // 利用できない場合は元の文字列が返される
+            // 辞書に登録されていない単語はアルファベット読みになる
             Assert.NotNull(result);
             Assert.NotEmpty(result);
+            Assert.Contains("私は", result);
+            Assert.Contains("が好きです", result);
         }
 
         [Fact]
-        public void GetWordReading_単語の読みを取得()
+        public void GetWordReading_登録済み単語の読みを取得()
         {
             // Arrange
-            var skill = new MeCabReadingSkill();
-            skill.Initialize();
+            var skill = new BilingualKanaDictionarySkill();
 
             // Act
-            var result = skill.GetWordReading("東京");
+            var result = skill.GetWordReading("hello");
 
             // Assert
-            Assert.NotNull(result);
-            Assert.NotEmpty(result);
+            Assert.Equal("ハロー", result);
         }
 
         [Fact]
         public void GetWordReading_空文字列_空文字列を返す()
         {
             // Arrange
-            var skill = new MeCabReadingSkill();
-            skill.Initialize();
+            var skill = new BilingualKanaDictionarySkill();
 
             // Act
             var result = skill.GetWordReading("");
 
             // Assert
             Assert.Equal("", result);
+        }
+
+        [Fact]
+        public void AddWord_新しい単語を追加できる()
+        {
+            // Arrange
+            var skill = new BilingualKanaDictionarySkill();
+            skill.AddWord("customword", "カスタムワード");
+
+            // Act
+            var result = skill.GetWordReading("customword");
+
+            // Assert
+            Assert.Equal("カスタムワード", result);
+        }
+
+        [Fact]
+        public void DictionaryCount_辞書のエントリ数を取得できる()
+        {
+            // Arrange
+            var skill = new BilingualKanaDictionarySkill();
+
+            // Act
+            var count = skill.DictionaryCount;
+
+            // Assert
+            Assert.True(count > 0);
+        }
+
+        [Fact]
+        public void IsLoaded_辞書が読み込まれている()
+        {
+            // Arrange
+            var skill = new BilingualKanaDictionarySkill();
+
+            // Act
+            var isLoaded = skill.IsLoaded;
+
+            // Assert
+            Assert.True(isLoaded);
         }
     }
 }

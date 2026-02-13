@@ -35,62 +35,6 @@ Loaded="VoiceAiPropertyPage_Loaded" Background="White">
                         Click="VoiceAiRefreshButton_Click"/>
             </Grid>
 
-            <!-- MeCab辞書管理 -->
-            <GroupBox Header="読み仮名変換辞書 (MeCab)" 
-                      Padding="10" 
-                      Margin="0,0,0,10">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <Label Content="辞書の状態:" FontSize="11" Padding="0" Margin="0,0,5,0"/>
-                        <Label x:Name="mecabDictionaryStatusLabel" 
-                               Content="確認中..." 
-                               FontSize="11" 
-                               Padding="0" 
-                               Foreground="Gray"/>
-                    </StackPanel>
-
-                    <TextBlock TextWrapping="Wrap" 
-                               FontSize="10" 
-                               Foreground="Gray" 
-                               Margin="0,0,0,10">
-                        MeCab辞書を使用すると、英単語の読み仮名変換が高速化されます（約50倍）。
-                    </TextBlock>
-
-                    <Button x:Name="downloadDictionaryButton" 
-                            Content="辞書をダウンロード" 
-                            Height="30"
-                            Margin="0,0,0,5"
-                            Click="DownloadDictionaryButton_Click"/>
-
-                    <!-- 現在のステップ表示 -->
-                    <TextBlock x:Name="dictionaryDownloadStepText" 
-                               FontSize="10" 
-                               FontWeight="Bold"
-                               Foreground="DarkBlue"
-                               Margin="0,0,0,2"
-                               Visibility="Collapsed"/>
-
-                    <ProgressBar x:Name="dictionaryDownloadProgressBar" 
-                                 Height="20" 
-                                 Margin="0,0,0,5"
-                                 Visibility="Collapsed"/>
-
-                    <!-- 詳細情報表示 -->
-                    <TextBlock x:Name="dictionaryDownloadStatusText" 
-                               FontSize="10" 
-                               Foreground="Gray"
-                               TextWrapping="Wrap"
-                               Visibility="Collapsed"/>
-
-                    <TextBlock x:Name="dictionaryDownloadDetailsText" 
-                               FontSize="9" 
-                               Foreground="DarkGray"
-                               TextWrapping="Wrap"
-                               Margin="0,2,0,0"
-                               Visibility="Collapsed"/>
-                </StackPanel>
-            </GroupBox>
-
             <!-- StyleBertVits2専用設定 -->
             <GroupBox x:Name="styleBertVits2SettingsGroup" 
                       Header="StyleBertVits2 設定" 
