@@ -1,7 +1,8 @@
 ###############################################################################
-# Set default behavior to automatically normalize line endings.
+# Set default behavior to automatically normalize line endings to CRLF.
+# プロジェクトの要件: すべてのファイルの改行コードはCRLF（Windowsスタイル）に統一
 ###############################################################################
-* text=auto
+* text eol=crlf
 
 ###############################################################################
 # Set default behavior for command prompt diff.
@@ -40,9 +41,11 @@
 #
 # image files are treated as binary by default.
 ###############################################################################
-#*.jpg   binary
-#*.png   binary
-#*.gif   binary
+*.jpg   binary
+*.png   binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
 
 ###############################################################################
 # diff behavior for common document formats
