@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Formats.Tar;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
@@ -13,7 +14,7 @@ namespace DesktopAiMascot.utils
     /// </summary>
     public class MeCabDictionaryDownloader
     {
-        private const string NEOLOGD_DOWNLOAD_URL = "https://github.com/neologd/mecab-ipadic-neologd/releases/download/v0.0.7/mecab-ipadic-neologd-v0.0.7.tar.gz";
+        // 標準IPAdic辞書（軽量・確実に動作）
         private const string IPADIC_DOWNLOAD_URL = "https://github.com/taku910/mecab/releases/download/v0.996/mecab-ipadic-2.7.0-20070801.tar.gz";
         
         private readonly string _dicDirectory;
@@ -37,18 +38,21 @@ namespace DesktopAiMascot.utils
         public bool IsNeologdInstalled()
         {
             var neologdPath = Path.Combine(_dicDirectory, "mecab-ipadic-neologd");
-            return Directory.Exists(neologdPath) && 
-                   File.Exists(Path.Combine(neologdPath, "sys.dic"));
+            var ipadicPath = Path.Combine(_dicDirectory, "ipadic");
+            
+            // NEologdまたは標準辞書が存在すればOK
+            return (Directory.Exists(neologdPath) && File.Exists(Path.Combine(neologdPath, "sys.dic"))) ||
+                   (Directory.Exists(ipadicPath) && File.Exists(Path.Combine(ipadicPath, "sys.dic")));
         }
 
         /// <summary>
-        /// NEologd辞書をダウンロードして配置
+        /// 標準IPAdic辞書をダウンロードして配置
         /// </summary>
-        public async Task<bool> DownloadAndInstallNeologdAsync(CancellationToken cancellationToken = default)
+        public async Task<bool> DownloadAndInstallIpadicAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                OnStatusChanged("NEologd辞書のダウンロードを開始します...");
+                OnStatusChanged("IPAdic辞書のダウンロードを開始します...");
                 
                 // 一時ディレクトリを作成
                 var tempDir = Path.Combine(Path.GetTempPath(), $"mecab_download_{Guid.NewGuid():N}");
@@ -56,21 +60,21 @@ namespace DesktopAiMascot.utils
 
                 try
                 {
-                    // GitHubからビルド済みのWindows用辞書をダウンロード
-                    // 実際にはWindows用のビルド済みバイナリが公式には提供されていないため、
-                    // 代替としてIPAdicをダウンロードする
+                    // tar.gzファイルをダウンロード
                     OnStatusChanged("辞書ファイルをダウンロード中...");
                     var downloadPath = Path.Combine(tempDir, "ipadic.tar.gz");
                     
                     await DownloadFileAsync(IPADIC_DOWNLOAD_URL, downloadPath, cancellationToken);
                     
                     OnStatusChanged("辞書ファイルを展開中...");
-                    await ExtractDictionaryAsync(downloadPath, tempDir, cancellationToken);
+                    var extractPath = Path.Combine(tempDir, "extracted");
+                    await ExtractTarGzAsync(downloadPath, extractPath, cancellationToken);
                     
                     OnStatusChanged("辞書ファイルをインストール中...");
-                    await InstallDictionaryAsync(tempDir, cancellationToken);
+                    await InstallDictionaryAsync(extractPath, "ipadic", cancellationToken);
                     
                     OnStatusChanged("辞書のインストールが完了しました");
+                    OnProgressChanged(100, "完了");
                     return true;
                 }
                 finally
@@ -102,6 +106,15 @@ namespace DesktopAiMascot.utils
             }
         }
 
+        /// <summary>
+        /// NEologd辞書をダウンロードして配置（後方互換性のため）
+        /// </summary>
+        public Task<bool> DownloadAndInstallNeologdAsync(CancellationToken cancellationToken = default)
+        {
+            // 現在は標準辞書をダウンロード
+            return DownloadAndInstallIpadicAsync(cancellationToken);
+        }
+
         private async Task DownloadFileAsync(string url, string destinationPath, CancellationToken cancellationToken)
         {
             using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -115,52 +128,99 @@ namespace DesktopAiMascot.utils
             using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
 
             int bytesRead;
+            var lastProgressUpdate = DateTime.MinValue;
+            
             while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
             {
                 await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                 totalRead += bytesRead;
 
-                if (totalBytes > 0)
+                // プログレス更新を100msごとに制限（UI負荷軽減)
+                if ((DateTime.Now - lastProgressUpdate).TotalMilliseconds >= 100 && totalBytes > 0)
                 {
                     var progress = (int)((totalRead * 100) / totalBytes);
-                    OnProgressChanged(progress, $"ダウンロード中... {totalRead / 1024 / 1024} MB / {totalBytes / 1024 / 1024} MB");
+                    var downloadedMB = totalRead / 1024.0 / 1024.0;
+                    var totalMB = totalBytes / 1024.0 / 1024.0;
+                    OnProgressChanged(progress, $"ダウンロード中... {downloadedMB:F1} MB / {totalMB:F1} MB");
+                    lastProgressUpdate = DateTime.Now;
                 }
             }
         }
 
-        private async Task ExtractDictionaryAsync(string archivePath, string extractPath, CancellationToken cancellationToken)
+        /// <summary>
+        /// tar.gzファイルを展開
+        /// </summary>
+        private async Task ExtractTarGzAsync(string tarGzPath, string extractPath, CancellationToken cancellationToken)
         {
             await Task.Run(() =>
             {
-                // .tar.gzファイルの展開
-                // 簡易実装: ZipArchiveはtar.gzに対応していないため、
-                // 実際にはSharpZipLibやSystem.Formats.Tarなどを使用する必要がある
-                // ここでは説明のため、後で実装することを示唆
-                OnStatusChanged("展開処理は未実装です。手動で辞書ファイルを配置してください。");
-                throw new NotImplementedException("tar.gzの展開は別途ライブラリが必要です");
+                OnStatusChanged("GZip圧縮を解除中...");
+                
+                // 展開先ディレクトリを作成
+                Directory.CreateDirectory(extractPath);
+                
+                // 1. GZip解凍
+                var tarPath = Path.Combine(Path.GetTempPath(), $"temp_{Guid.NewGuid():N}.tar");
+                using (var gzipStream = new FileStream(tarGzPath, FileMode.Open, FileAccess.Read))
+                using (var decompressionStream = new GZipStream(gzipStream, CompressionMode.Decompress))
+                using (var tarStream = new FileStream(tarPath, FileMode.Create, FileAccess.Write))
+                {
+                    decompressionStream.CopyTo(tarStream);
+                }
+                
+                OnStatusChanged("Tarアーカイブを展開中...");
+                
+                // 2. Tar展開
+                try
+                {
+                    using var tarStream = new FileStream(tarPath, FileMode.Open, FileAccess.Read);
+                    TarFile.ExtractToDirectory(tarStream, extractPath, overwriteFiles: true);
+                }
+                finally
+                {
+                    // 一時tarファイルを削除
+                    if (File.Exists(tarPath))
+                    {
+                        File.Delete(tarPath);
+                    }
+                }
+                
+                OnProgressChanged(90, "展開完了");
             }, cancellationToken);
         }
 
-        private async Task InstallDictionaryAsync(string sourcePath, CancellationToken cancellationToken)
+        private async Task InstallDictionaryAsync(string sourcePath, string dicName, CancellationToken cancellationToken)
         {
             await Task.Run(() =>
             {
-                var targetPath = Path.Combine(_dicDirectory, "mecab-ipadic-neologd");
-                
                 if (!Directory.Exists(_dicDirectory))
                 {
                     Directory.CreateDirectory(_dicDirectory);
                 }
 
+                // 展開されたディレクトリを探す（mecab-ipadic-2.7.0-20070801のような名前）
+                var extractedDirs = Directory.GetDirectories(sourcePath);
+                if (extractedDirs.Length == 0)
+                {
+                    throw new DirectoryNotFoundException("展開されたディレクトリが見つかりません");
+                }
+
+                var sourceDir = extractedDirs[0];
+                var targetPath = Path.Combine(_dicDirectory, dicName);
+                
+                OnStatusChanged($"{dicName}辞書をインストール中...");
+                
                 if (Directory.Exists(targetPath))
                 {
                     Directory.Delete(targetPath, true);
                 }
 
                 // 辞書ファイルをコピー
-                CopyDirectory(sourcePath, targetPath);
+                CopyDirectory(sourceDir, targetPath);
                 
-                OnProgressChanged(100, "インストール完了");
+                OnProgressChanged(95, "インストール完了");
+                
+                Debug.WriteLine($"[MeCabDictionaryDownloader] 辞書を {targetPath} にインストールしました");
             }, cancellationToken);
         }
 
@@ -178,7 +238,7 @@ namespace DesktopAiMascot.utils
             foreach (FileInfo file in dir.GetFiles())
             {
                 string targetFilePath = Path.Combine(destinationDir, file.Name);
-                file.CopyTo(targetFilePath);
+                file.CopyTo(targetFilePath, overwrite: true);
             }
 
             foreach (DirectoryInfo subDir in dir.GetDirectories())
