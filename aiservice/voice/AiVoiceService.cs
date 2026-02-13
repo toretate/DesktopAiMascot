@@ -39,6 +39,36 @@ namespace DesktopAiMascot.aiservice.voice
 
         protected const int MAX_TEXT_LENGTH = 100;
 
+        private static readonly Dictionary<char, string> AlphabetReadings = new Dictionary<char, string>
+        {
+            { 'A', "エー" },
+            { 'B', "ビー" },
+            { 'C', "シー" },
+            { 'D', "ディー" },
+            { 'E', "イー" },
+            { 'F', "エフ" },
+            { 'G', "ジー" },
+            { 'H', "エイチ" },
+            { 'I', "アイ" },
+            { 'J', "ジェイ" },
+            { 'K', "ケー" },
+            { 'L', "エル" },
+            { 'M', "エム" },
+            { 'N', "エヌ" },
+            { 'O', "オー" },
+            { 'P', "ピー" },
+            { 'Q', "キュー" },
+            { 'R', "アール" },
+            { 'S', "エス" },
+            { 'T', "ティー" },
+            { 'U', "ユー" },
+            { 'V', "ヴィー" },
+            { 'W', "ダブリュー" },
+            { 'X', "エックス" },
+            { 'Y', "ワイ" },
+            { 'Z', "ゼット" }
+        };
+
         /// <summary>
         /// 括弧で囲まれた動作や感情を表すテキストをフィルタします。
         /// 例: "(笑いながら)こんにちは" → "こんにちは"
@@ -233,6 +263,33 @@ namespace DesktopAiMascot.aiservice.voice
             result[43] = (byte)((dataSizeTotal >> 24) & 0xFF);
 
             return result;
+        }
+
+        protected string ConvertEnglishWordsToReading(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            return Regex.Replace(text, "[A-Za-z]+", match =>
+            {
+                var builder = new StringBuilder();
+                foreach (var letter in match.Value)
+                {
+                    var upperLetter = char.ToUpperInvariant(letter);
+                    if (AlphabetReadings.TryGetValue(upperLetter, out var reading))
+                    {
+                        builder.Append(reading);
+                    }
+                    else
+                    {
+                        builder.Append(letter);
+                    }
+                }
+
+                return builder.ToString();
+            });
         }
     }
 }

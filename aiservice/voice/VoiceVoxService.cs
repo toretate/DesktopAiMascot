@@ -198,10 +198,10 @@ namespace DesktopAiMascot.aiservice.voice
                 {
                     DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
                 };
-                
+
                 var json = System.Text.Json.JsonSerializer.Serialize(audioQuery, options);
                 Debug.WriteLine($"[VoiceVox] Request JSON: {json.Substring(0, Math.Min(200, json.Length))}...");
-                
+
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(url, content);
                 response.EnsureSuccessStatusCode();
@@ -318,10 +318,10 @@ namespace DesktopAiMascot.aiservice.voice
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
                 var response = await _httpClient.GetAsync(url, cts.Token);
-                
+
                 bool isAvailable = response.IsSuccessStatusCode;
                 Debug.WriteLine($"[VoiceVox] サーバー状態: {(isAvailable ? "起動中" : "停止中")}");
-                
+
                 return isAvailable;
             }
             catch (HttpRequestException)
@@ -386,6 +386,8 @@ namespace DesktopAiMascot.aiservice.voice
                 return null;
             }
 
+            var convertedText = ConvertEnglishWordsToReading(text);
+
             // 話者が初期化されているか確認
             var isInitialized = await IsInitializedSpeakerAsync(speakerId);
             if (!isInitialized)
@@ -395,7 +397,7 @@ namespace DesktopAiMascot.aiservice.voice
             }
 
             // AudioQueryを作成
-            var audioQuery = await CreateAudioQueryAsync(text, speakerId);
+            var audioQuery = await CreateAudioQueryAsync(convertedText, speakerId);
             if (audioQuery == null)
             {
                 return null;
@@ -477,37 +479,37 @@ namespace DesktopAiMascot.aiservice.voice
     {
         [System.Text.Json.Serialization.JsonPropertyName("accent_phrases")]
         public VoiceVoxAccentPhrase[]? Accent_Phrases { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("speedScale")]
         public float SpeedScale { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("pitchScale")]
         public float PitchScale { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("intonationScale")]
         public float IntonationScale { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("volumeScale")]
         public float VolumeScale { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("prePhonemeLength")]
         public float PrePhonemeLength { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("postPhonemeLength")]
         public float PostPhonemeLength { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("pauseLength")]
         public float? PauseLength { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("pauseLengthScale")]
         public float PauseLengthScale { get; set; } = 1.0f;
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("outputSamplingRate")]
         public int OutputSamplingRate { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("outputStereo")]
         public bool OutputStereo { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("kana")]
         public string? Kana { get; set; }
     }
@@ -519,13 +521,13 @@ namespace DesktopAiMascot.aiservice.voice
     {
         [System.Text.Json.Serialization.JsonPropertyName("moras")]
         public VoiceVoxMora[]? Moras { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("accent")]
         public int Accent { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("pause_mora")]
         public VoiceVoxMora? Pause_Mora { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("is_interrogative")]
         public bool Is_Interrogative { get; set; }
     }
@@ -537,19 +539,19 @@ namespace DesktopAiMascot.aiservice.voice
     {
         [System.Text.Json.Serialization.JsonPropertyName("text")]
         public string Text { get; set; } = string.Empty;
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("consonant")]
         public string? Consonant { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("consonant_length")]
         public float? Consonant_Length { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("vowel")]
         public string Vowel { get; set; } = string.Empty;
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("vowel_length")]
         public float Vowel_Length { get; set; }
-        
+
         [System.Text.Json.Serialization.JsonPropertyName("pitch")]
         public float Pitch { get; set; }
     }
@@ -577,3 +579,4 @@ namespace DesktopAiMascot.aiservice.voice
 
     #endregion
 }
+

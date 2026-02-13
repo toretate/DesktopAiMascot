@@ -229,22 +229,24 @@ namespace DesktopAiMascot.aiservice.voice
             string encoding = "utf-8")
         {
             string filteredText = FilterEmotionAndActionText(text);
+            string convertedText = ConvertEnglishWordsToReading(filteredText);
             Debug.WriteLine($"[TTS] フィルタ前: {text}");
             Debug.WriteLine($"[TTS] フィルタ後: {filteredText}");
+            Debug.WriteLine($"[TTS] 英単語変換後: {convertedText}");
 
-            if (string.IsNullOrWhiteSpace(filteredText))
+            if (string.IsNullOrWhiteSpace(convertedText))
             {
                 Debug.WriteLine("[TTS] フィルタ後のテキストが空のため、処理をスキップします。");
                 return Array.Empty<byte>();
             }
 
-            if (filteredText.Length <= MAX_TEXT_LENGTH)
+            if (convertedText.Length <= MAX_TEXT_LENGTH)
             {
-                return await SynthesizeSingleAsync(filteredText, modelId, speakerId, style, sdpRatio, noise, noiseW, length, language, encoding);
+                return await SynthesizeSingleAsync(convertedText, modelId, speakerId, style, sdpRatio, noise, noiseW, length, language, encoding);
             }
 
-            Debug.WriteLine($"[TTS] テキストが{filteredText.Length}文字のため、分割して処理します。");
-            var chunks = SplitText(filteredText, MAX_TEXT_LENGTH);
+            Debug.WriteLine($"[TTS] テキストが{convertedText.Length}文字のため、分割して処理します。");
+            var chunks = SplitText(convertedText, MAX_TEXT_LENGTH);
             Debug.WriteLine($"[TTS] {chunks.Count}個のチャンクに分割しました。");
             
             // チャンク毎のテキストをログ出力
@@ -282,24 +284,26 @@ namespace DesktopAiMascot.aiservice.voice
             string encoding = "utf-8")
         {
             string filteredText = FilterEmotionAndActionText(text);
+            string convertedText = ConvertEnglishWordsToReading(filteredText);
             Debug.WriteLine($"[TTS] フィルタ前: {text}");
             Debug.WriteLine($"[TTS] フィルタ後: {filteredText}");
+            Debug.WriteLine($"[TTS] 英単語変換後: {convertedText}");
 
-            if (string.IsNullOrWhiteSpace(filteredText))
+            if (string.IsNullOrWhiteSpace(convertedText))
             {
                 Debug.WriteLine("[TTS] フィルタ後のテキストが空のため、処理をスキップします。");
                 yield break;
             }
 
-            if (filteredText.Length <= MAX_TEXT_LENGTH)
+            if (convertedText.Length <= MAX_TEXT_LENGTH)
             {
-                var audioData = await SynthesizeSingleAsync(filteredText, modelId, speakerId, style, sdpRatio, noise, noiseW, length, language, encoding);
+                var audioData = await SynthesizeSingleAsync(convertedText, modelId, speakerId, style, sdpRatio, noise, noiseW, length, language, encoding);
                 yield return audioData;
                 yield break;
             }
 
-            Debug.WriteLine($"[TTS] テキストが{filteredText.Length}文字のため、分割して処理します。");
-            var chunks = SplitText(filteredText, MAX_TEXT_LENGTH);
+            Debug.WriteLine($"[TTS] テキストが{convertedText.Length}文字のため、分割して処理します。");
+            var chunks = SplitText(convertedText, MAX_TEXT_LENGTH);
             Debug.WriteLine($"[TTS] {chunks.Count}個のチャンクに分割しました。");
             
             // チャンク毎のテキストをログ出力
