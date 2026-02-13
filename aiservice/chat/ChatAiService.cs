@@ -124,7 +124,8 @@ namespace DesktopAiMascot.aiservice.chat
         public virtual async Task<string?> SendOneShotMessageAsync(string systemPrompt, string userPrompt)
         {
             // デフォルト実装: システムプロンプトとユーザープロンプトを結合して送信
-            var combinedMessage = $"{systemPrompt}\n\n{userPrompt}";
+            var finalSystemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(systemPrompt);
+            var combinedMessage = $"{finalSystemPrompt}\n\n{userPrompt}";
             return await SendMessageAsync(combinedMessage);
         }
 

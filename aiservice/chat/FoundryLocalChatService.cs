@@ -43,7 +43,7 @@ namespace DesktopAiMascot.aiservice.chat
         {
             try
             {
-                var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
+                var systemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(LoadSystemPrompt() ?? "You are a helpful assistant.");
 
                 // Build a generic OpenAI-style chat request. Many Foundry Local deployments accept this shape.
                 var requestObj = new

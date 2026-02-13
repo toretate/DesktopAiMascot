@@ -99,7 +99,7 @@ namespace DesktopAiMascot.aiservice.chat
                     return "Error: Google AI API key is not configured. Please set the API key in settings.";
                 }
 
-                var systemPrompt = LoadSystemPrompt() ?? "You are a helpful assistant.";
+                var systemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(LoadSystemPrompt() ?? "You are a helpful assistant.");
                 var modelName = SystemConfig.Instance.ModelName ?? DEFAULT_MODEL;
 
                 Debug.WriteLine($"[GoogleAiStudio] Model ID from config: {modelName}");

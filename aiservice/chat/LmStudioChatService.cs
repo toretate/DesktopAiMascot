@@ -53,7 +53,7 @@ namespace DesktopAiMascot.aiservice.chat
             var chatClient = client.GetChatClient(llmModel);
 
             // チャットメッセージの構築
-            var systemPrompt = SystemPrompt ?? LoadSystemPrompt() ?? "You are a helpful assistant.";
+            var systemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(SystemPrompt ?? LoadSystemPrompt() ?? "You are a helpful assistant.");
             var messages = new List<OpenAI.Chat.ChatMessage>
             {
                 new SystemChatMessage(systemPrompt),
