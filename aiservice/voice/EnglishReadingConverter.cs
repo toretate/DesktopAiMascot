@@ -1,80 +1,127 @@
 using System;
 using System.Diagnostics;
-using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DesktopAiMascot.skills;
 
 namespace DesktopAiMascot.aiservice.voice
 {
     /// <summary>
-    /// 英単語の読み仮名変換を行うコンバーター
-    /// MeCabを優先的に使用し、利用できない場合は元のテキストを返します
+    /// 英単語を読み仮名（カタカナ）に変換するクラス
     /// </summary>
-    internal static class EnglishReadingConverter
+    public class EnglishReadingConverter
     {
-        private static readonly Lazy<MeCabReadingSkill> MeCabSkill = new Lazy<MeCabReadingSkill>(() =>
+        private readonly BilingualKanaDictionarySkill _dictionarySkill;
+        private static readonly Regex AlphabetPattern = new Regex("[A-Za-z]+", RegexOptions.Compiled);
+        
+        public EnglishReadingConverter()
         {
-            var skill = new MeCabReadingSkill();
-            
-            // NEologd辞書のパスを探索
-            var dicPaths = new[]
+            _dictionarySkill = new BilingualKanaDictionarySkill();
+            Debug.WriteLine($"[EnglishReadingConverter] 辞書ベース変換を初期化: {_dictionarySkill.DictionaryCount}件");
+        }
+
+        /// <summary>
+        /// テキスト内の英単語を読み仮名に変換
+        /// </summary>
+        public async Task<string> ConvertToReadingAsync(string text)
+        {
+            if (string.IsNullOrEmpty(text))
             {
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dic", "mecab-ipadic-neologd"),
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dic", "ipadic"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
-                    "DesktopAiMascot", "dic", "mecab-ipadic-neologd"),
+                return text;
+            }
+
+            try
+            {
+                // 辞書ベースで変換
+                var result = await _dictionarySkill.ConvertToReadingAsync(text);
+                
+                // 辞書に見つからなかった単語をアルファベット読みに変換
+                result = ConvertRemainingAlphabets(result);
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[EnglishReadingConverter] エラー: {ex.Message}");
+                return text;
+            }
+        }
+
+        /// <summary>
+        /// 残っているアルファベットを1文字ずつ読みに変換
+        /// </summary>
+        private string ConvertRemainingAlphabets(string text)
+        {
+            return AlphabetPattern.Replace(text, match =>
+            {
+                var word = match.Value;
+                var builder = new StringBuilder();
+
+                foreach (var letter in word)
+                {
+                    var upperLetter = char.ToUpperInvariant(letter);
+                    var reading = GetAlphabetReading(upperLetter);
+                    builder.Append(reading);
+                }
+
+                return builder.ToString();
+            });
+        }
+
+        /// <summary>
+        /// アルファベット1文字の読みを取得
+        /// </summary>
+        private static string GetAlphabetReading(char letter)
+        {
+            return letter switch
+            {
+                'A' => "エー",
+                'B' => "ビー",
+                'C' => "シー",
+                'D' => "ディー",
+                'E' => "イー",
+                'F' => "エフ",
+                'G' => "ジー",
+                'H' => "エイチ",
+                'I' => "アイ",
+                'J' => "ジェイ",
+                'K' => "ケー",
+                'L' => "エル",
+                'M' => "エム",
+                'N' => "エヌ",
+                'O' => "オー",
+                'P' => "ピー",
+                'Q' => "キュー",
+                'R' => "アール",
+                'S' => "エス",
+                'T' => "ティー",
+                'U' => "ユー",
+                'V' => "ヴィー",
+                'W' => "ダブリュー",
+                'X' => "エックス",
+                'Y' => "ワイ",
+                'Z' => "ゼット",
+                _ => letter.ToString()
             };
-
-            string? foundDicPath = null;
-            foreach (var dicPath in dicPaths)
-            {
-                if (Directory.Exists(dicPath))
-                {
-                    foundDicPath = dicPath;
-                    break;
-                }
-            }
-
-            skill.Initialize(foundDicPath);
-            return skill;
-        });
-
-        private static bool _mecabAvailable = true;
-
-        /// <summary>
-        /// テキスト内の英単語を読み仮名に変換します
-        /// </summary>
-        public static async Task<string> ConvertAsync(string text)
-        {
-            // MeCabが利用可能な場合は優先的に使用
-            if (_mecabAvailable)
-            {
-                try
-                {
-                    var result = await MeCabSkill.Value.ConvertToReadingAsync(text);
-                    if (!string.IsNullOrEmpty(result))
-                    {
-                        return result;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[EnglishReadingConverter] MeCab使用エラー: {ex.Message}");
-                    _mecabAvailable = false;
-                }
-            }
-
-            // MeCabが使えない場合は元のテキストを返す
-            Debug.WriteLine("[EnglishReadingConverter] MeCab未使用のため元のテキストを返します");
-            return text;
         }
 
         /// <summary>
-        /// MeCabが利用可能かどうかを確認します
+        /// 辞書に単語を追加
         /// </summary>
-        public static bool IsMeCabAvailable()
+        public void AddWord(string word, string reading)
         {
-            return _mecabAvailable && MeCabSkill.IsValueCreated;
+            _dictionarySkill.AddWord(word, reading);
         }
+
+        /// <summary>
+        /// 辞書を保存
+        /// </summary>
+        public void SaveDictionary()
+        {
+            _dictionarySkill.SaveDictionary();
+        }
+
+        public int DictionaryCount => _dictionarySkill.DictionaryCount;
     }
 }

@@ -2,11 +2,9 @@ using DesktopAiMascot.aiservice;
 using DesktopAiMascot.mascots;
 using DesktopAiMascot.Controls;
 using DesktopAiMascot.Wpf;
-using DesktopAiMascot.utils;
 using System;
 using System.Drawing;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -53,9 +51,6 @@ namespace DesktopAiMascot
             }
             systemConfig.BaseDir = appDir;
             systemConfig.Load();
-
-            // MeCab辞書の自動ダウンロード（バックグラウンド）
-            _ = CheckAndDownloadMeCabDictionaryAsync();
 
             int imageWidth = 768 / 3;
             int imageHeight = 1024 / 3;
@@ -473,61 +468,7 @@ namespace DesktopAiMascot
             catch (Exception ex)
             {
                 Debug.WriteLine($"[MascotWindow] ✗ Voice設定の適用エラー: {ex.Message}");
-                Debug.WriteLine($"[MascotWindow] スタック 추적: {ex.StackTrace}");
-            }
-        }
-
-        /// <summary>
-        /// MeCab辞書の存在をチェックし、なければバックグラウンドでダウンロード
-        /// </summary>
-        private async Task CheckAndDownloadMeCabDictionaryAsync()
-        {
-            try
-            {
-                Debug.WriteLine("[MascotWindow] MeCab辞書の確認を開始...");
-                
-                var downloader = new MeCabDictionaryDownloader();
-                
-                if (downloader.IsNeologdInstalled())
-                {
-                    Debug.WriteLine("[MascotWindow] MeCab辞書はインストール済みです");
-                    return;
-                }
-                
-                Debug.WriteLine("[MascotWindow] MeCab辞書が見つかりません。バックグラウンドでダウンロードを開始します...");
-                
-                // バックグラウンドでダウンロード
-                await Task.Run(async () =>
-                {
-                    try
-                    {
-                        downloader.StatusChanged += (s, status) =>
-                        {
-                            Debug.WriteLine($"[MascotWindow] 辞書ダウンロード: {status}");
-                        };
-
-                        // 自動ダウンロードはユーザーに通知するのみ
-                        // 実際のダウンロードは手動で行うことを推奨
-                        Debug.WriteLine("[MascotWindow] MeCab辞書を使用するには、手動でのダウンロードと配置が必要です。");
-                        Debug.WriteLine("[MascotWindow] 詳細は dic\\README.md を参照してください。");
-                        Debug.WriteLine("[MascotWindow] Voice AI設定画面からダウンロードボタンを使用できます。");
-                        
-                        // 通知のみで実際のダウンロードは行わない
-                        // bool success = await downloader.DownloadAndInstallNeologdAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[MascotWindow] 辞書確認エラー: {ex.Message}");
-                    }
-                    finally
-                    {
-                        downloader.Dispose();
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[MascotWindow] MeCab辞書確認処理でエラー: {ex.Message}");
+                Debug.WriteLine($"[MascotWindow] スタックトレース: {ex.StackTrace}");
             }
         }
     }
