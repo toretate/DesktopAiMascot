@@ -99,12 +99,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="MozcDictionaryBuilder\**" />
     <Compile Remove="新しいフォルダー\**" />
+    <EmbeddedResource Remove="MozcDictionaryBuilder\**" />
     <EmbeddedResource Remove="新しいフォルダー\**" />
+    <None Remove="MozcDictionaryBuilder\**" />
     <None Remove="新しいフォルダー\**" />
     <Compile Remove="DesktopAiMascotTest\**" />
     <EmbeddedResource Remove="DesktopAiMascotTest\**" />
     <None Remove="DesktopAiMascotTest\**" />
+    <Page Remove="MozcDictionaryBuilder\**" />
     <!-- 音声合成ベースの読み取得は一時的に除外（Windows.Media依存関係の問題） -->
     <Compile Remove="skills\EnglishReadingSkill.cs" />
   </ItemGroup>
