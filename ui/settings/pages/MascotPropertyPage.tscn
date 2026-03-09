@@ -1,0 +1,89 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/settings/pages/MascotPropertyPage.cs" id="1_script"]
+
+[node name="MascotPropertyPage" type="MarginContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="LeftVBox" type="VBoxContainer" parent="HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MascotList" type="ItemList" parent="HBoxContainer/LeftVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AddButton" type="Button" parent="HBoxContainer/LeftVBox"]
+layout_mode = 2
+text = "Add"
+
+[node name="RightVBox" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="InfoPanel" type="PanelContainer" parent="HBoxContainer/RightVBox"]
+layout_mode = 2
+
+[node name="InfoVBox" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="NameHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "名前"
+
+[node name="NameLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+text = "未選択"
+
+[node name="VoiceHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "現在設定中の音声"
+
+[node name="VoiceLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "未設定"
+autowrap_mode = 2
+
+[node name="StyleHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "音声スタイル"
+
+[node name="StyleLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "未設定"
+autowrap_mode = 2
+
+[node name="EditButton" type="Button" parent="HBoxContainer/RightVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Edit"
+
+[node name="GenerateEmotesBtn" type="Button" parent="HBoxContainer/RightVBox"]
+layout_mode = 2
+text = "Generate Emotes"
+
+[node name="RemoveBgBtn" type="Button" parent="HBoxContainer/RightVBox"]
+layout_mode = 2
+text = "Remove Background"

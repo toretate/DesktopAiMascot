@@ -1,0 +1,77 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://ui/settings/SettingsWindow.cs" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/MascotPropertyPage.tscn" id="2_mascot"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/ChatAiPropertyPage.tscn" id="3_chat"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/VoiceAiPropertyPage.tscn" id="4_voice"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/ImageAiPropertyPage.tscn" id="5_image"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/MovieAiPropertyPage.tscn" id="6_movie"]
+[ext_resource type="PackedScene" path="res://ui/settings/pages/ApiKeyPropertyPage.tscn" id="7_apikey"]
+
+[node name="SettingsWindow" type="Window"]
+title = "設定 (Settings)"
+size = Vector2i(600, 500)
+min_size = Vector2i(600, 500)
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.95, 0.95, 0.95, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="CategoryList" type="ItemList" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="PageContainer" type="MarginContainer" parent="MarginContainer/HBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="MascotPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("2_mascot")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ChatAiPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("3_chat")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="VoiceAiPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("4_voice")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="ImageAiPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("5_image")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MovieAiPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("6_movie")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="ApiKeyPropertyPage" parent="MarginContainer/HBoxContainer/PageContainer" instance=ExtResource("7_apikey")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
