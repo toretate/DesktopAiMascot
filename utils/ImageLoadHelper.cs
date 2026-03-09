@@ -62,10 +62,22 @@ namespace DesktopAiMascot.utils
             Debug.WriteLine($"[ImageLoadHelper] フィルタリング前: {ImagePaths.Length}個, フィルタリング後: {filteredPaths.Length}個");
 
             var loadedList = new List<MascotImageItem>();
+            
+            // Godot実行時のパス解決 (エディタ実行時は .godot/mono/temp/bin/Debug 以下になるため)
+            string baseDir;
+            if (Godot.OS.HasFeature("editor"))
+            {
+                baseDir = Godot.ProjectSettings.GlobalizePath("res://");
+            }
+            else
+            {
+                baseDir = System.IO.Path.GetDirectoryName(Godot.OS.GetExecutablePath()) ?? AppDomain.CurrentDomain.BaseDirectory;
+            }
+
             int index = 0;
             foreach (var path in filteredPaths)
             {
-                string fullPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+                string fullPath = System.IO.Path.Combine(baseDir, path);
                 Debug.WriteLine($"[ImageLoadHelper] 画像[{index}]を読み込み中: {fullPath}");
 
                 var texture = LoadGodotTexture(fullPath);

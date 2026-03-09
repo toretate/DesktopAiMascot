@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DesktopAiMascotTest")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+05c3748d3a0824ed6a844c80a3228d5a509b3eb6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+47204078259b784c44621ae5026e893022a55e9f")]
 [assembly: System.Reflection.AssemblyProductAttribute("DesktopAiMascotTest")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DesktopAiMascotTest")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

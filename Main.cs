@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Linq;
 
 public partial class Main : Node2D
 {
@@ -21,17 +22,72 @@ public partial class Main : Node2D
 
         // 背景透過を有効化
         GetTree().Root.TransparentBg = true;
-        
+
         // サブウィンドウ（設定画面など）をOSの独立したウィンドウとして表示する
         GetTree().Root.GuiEmbedSubwindows = false;
 
+        // メインウィンドウも埋め込みを無効化する（エディタ実行時の Embedded window can't be moved 対策）
+        GetWindow().GuiEmbedSubwindows = false;
+
+        // C#コアクラス (SystemConfig) の呼び出し
+        DesktopAiMascot.SystemConfig.Instance.Load();
+
+        // マスコットの読み込みと表示
+        DesktopAiMascot.mascots.MascotManager.Instance.Load();
+        var sysConfig = DesktopAiMascot.SystemConfig.Instance;
+        var model = DesktopAiMascot.mascots.MascotManager.Instance.GetMascotByName(sysConfig.MascotName);
+
+        // 設定されたマスコットが見つからなかった場合、最初に見つかったマスコットをデフォルトとして読み込む
+        if (model == null && DesktopAiMascot.mascots.MascotManager.Instance.MascotModels.Count > 0)
+        {
+            model = DesktopAiMascot.mascots.MascotManager.Instance.MascotModels.Values.First();
+            GD.Print($"[Main] Configured mascot '{sysConfig.MascotName}' not found. Falling back to '{model.Name}'.");
+            sysConfig.MascotName = model.Name;
+        }
+
         var sprite = GetNode<Sprite2D>("Sprite2D");
+
+        if (model != null)
+        {
+            var images = model.LoadImages();
+            if (images != null && images.Length > 0 && images[0].ImageSource != null)
+            {
+                sprite.Texture = images[0].ImageSource;
+            }
+        }
+
         if (sprite.Texture != null)
         {
             var size = sprite.Texture.GetSize();
-            var pos = sprite.Position;
-            var halfSize = size / 2;
-            
+
+            // 1024x1280の領域に収まるようにスケールを計算（アスペクト比維持）
+            float maxWidth = 512f;
+            float maxHeight = 640f;
+            float scaleX = maxWidth / size.X;
+            float scaleY = maxHeight / size.Y;
+            float scale = Math.Min(scaleX, scaleY);
+
+            // 縮小のみ行う（元画像が小さい場合は拡大しない）
+            if (scale < 1.0f)
+            {
+                sprite.Scale = new Vector2(scale, scale);
+            }
+            else
+            {
+                sprite.Scale = new Vector2(1.0f, 1.0f);
+            }
+
+            var scaledSize = size * sprite.Scale;
+
+            // OS側のメインウィンドウサイズをマスコットの表示サイズに合わせてリサイズする
+            DisplayServer.WindowSetSize(new Vector2I((int)Math.Ceiling(scaledSize.X), (int)Math.Ceiling(scaledSize.Y)), (int)DisplayServer.MainWindowId);
+
+            // スプライトをウィンドウの中央に配置
+            var pos = new Vector2(scaledSize.X / 2f, scaledSize.Y / 2f);
+            sprite.Position = pos;
+
+            var halfSize = scaledSize / 2f;
+
             // ピクセル完全な四角形の領域を定義
             _mascotPolygon = new Vector2[]
             {
@@ -40,12 +96,13 @@ public partial class Main : Node2D
                 new Vector2(pos.X + halfSize.X, pos.Y + halfSize.Y),
                 new Vector2(pos.X - halfSize.X, pos.Y + halfSize.Y)
             };
-            
+
             DisplayServer.WindowSetMousePassthrough(_mascotPolygon);
         }
 
         // SettingsWindowの初期化
-        _settingsWindow = new DesktopAiMascot.ui.settings.SettingsWindow();
+        var settingsScene = GD.Load<PackedScene>("res://ui/settings/SettingsWindow.tscn");
+        _settingsWindow = settingsScene.Instantiate<DesktopAiMascot.ui.settings.SettingsWindow>();
         _settingsWindow.Hide(); // 初期状態は非表示
         AddChild(_settingsWindow);
 
@@ -58,26 +115,12 @@ public partial class Main : Node2D
         {
             GD.PrintErr($"[Mascot] トレイアイコンの初期化に失敗しました (Godotエディタ実行時の WinForms 制約のため無視します): {ex.Message}");
         }
-        
-        // C#コアクラス (SystemConfig) の呼び出しテスト
-        DesktopAiMascot.SystemConfig.Instance.Load();
 
         // InteractionPanelの追加
-        _interactionPanel = new DesktopAiMascot.ui.chat.InteractionPanel();
-        _interactionPanel.Visible = false;
-        _interactionPanel.Size = new Vector2(350, 500);
-        
-        // マスコットの横に配置 (仮のオフセットとサイズ)
-        if (sprite.Texture != null)
-        {
-            var panelPos = sprite.Position + new Vector2(sprite.Texture.GetSize().X / 2 + 20, -200);
-            _interactionPanel.Position = panelPos;
-        }
-        else
-        {
-            _interactionPanel.Position = new Vector2(100, 100);
-        }
-
+        var interactionScene = GD.Load<PackedScene>("res://ui/chat/InteractionPanel.tscn");
+        _interactionPanel = interactionScene.Instantiate<DesktopAiMascot.ui.chat.InteractionPanel>();
+        _interactionPanel.Hide();
+        // 配置はToggleInteractionPanelにて決定する
         AddChild(_interactionPanel);
     }
 
@@ -89,7 +132,28 @@ public partial class Main : Node2D
         }
     }
 
-    public override void _UnhandledInput(InputEvent @event)
+    public override void _Process(double delta)
+    {
+        if (_isDragging)
+        {
+            var mousePos = DisplayServer.MouseGetPosition();
+            var window = GetWindow();
+
+            // WindowがEmbedded（Godotエディタ内サブウィンドウ扱い等）かどうか判定
+            if (!window.IsEmbedded())
+            {
+                // OSレベルで独立したウィンドウの場合
+                window.Position = mousePos - _dragOffset;
+            }
+            else
+            {
+                // エディタ埋め込み等で通常のPosition変更が効かない場合のフォールバック
+                DisplayServer.WindowSetPosition(mousePos - _dragOffset, (int)DisplayServer.MainWindowId);
+            }
+        }
+    }
+
+    public override void _Input(InputEvent @event)
     {
         if (@event is InputEventMouseButton mouseButton)
         {
@@ -99,8 +163,16 @@ public partial class Main : Node2D
                 {
                     _isDragging = true;
                     _hasMovedSinceClick = false;
-                    // ドラッグ開始時のマウス位置とウィンドウ位置の差分を記録
-                    _dragOffset = DisplayServer.MouseGetPosition() - DisplayServer.WindowGetPosition();
+
+                    var window = GetWindow();
+                    if (!window.IsEmbedded())
+                    {
+                        _dragOffset = DisplayServer.MouseGetPosition() - window.Position;
+                    }
+                    else
+                    {
+                        _dragOffset = DisplayServer.MouseGetPosition() - DisplayServer.WindowGetPosition((int)DisplayServer.MainWindowId);
+                    }
                 }
                 else
                 {
@@ -123,8 +195,7 @@ public partial class Main : Node2D
             if (_isDragging)
             {
                 _hasMovedSinceClick = true;
-                // マウスの現在位置からオフセットを引いた値を新しいウィンドウ位置とする
-                DisplayServer.WindowSetPosition(DisplayServer.MouseGetPosition() - _dragOffset);
+                // 移動処理自体は _Process で1フレームごとに実行
             }
         }
     }
@@ -133,27 +204,24 @@ public partial class Main : Node2D
     {
         if (_interactionPanel == null) return;
 
-        _interactionPanel.Visible = !_interactionPanel.Visible;
-
         if (_interactionPanel.Visible)
         {
-            // パネル表示時はウィンドウ全体のクリックスルーを解除（パネル操作可能にする）
-            DisplayServer.WindowSetMousePassthrough(new Vector2[] {});
+            _interactionPanel.Hide();
         }
         else
         {
-            // 非表示時は再びマスコット部分のみクリック可能にする
-            if (_mascotPolygon != null)
-            {
-                DisplayServer.WindowSetMousePassthrough(_mascotPolygon);
-            }
+            // メインウィンドウの隣（右側）にチャットパネルを表示する
+            var win = GetWindow();
+            _interactionPanel.Position = win.Position + new Vector2I(win.Size.X, 0);
+            _interactionPanel.Show();
         }
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private void TryInitTrayIcon()
     {
-        _trayIcon = new DesktopAiMascot.MascotTrayIcon(() => {
+        _trayIcon = new DesktopAiMascot.MascotTrayIcon(() =>
+        {
             _settingsWindow?.CallDeferred(Godot.Window.MethodName.PopupCentered);
         });
     }

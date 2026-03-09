@@ -55,7 +55,17 @@ namespace DesktopAiMascot.mascots
 
             try
             {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                // Godot実行時のパス解決 (エディタ実行時は .godot/mono/temp/bin/Debug 以下になるため)
+                string baseDir;
+                if (Godot.OS.HasFeature("editor"))
+                {
+                    baseDir = Godot.ProjectSettings.GlobalizePath("res://");
+                }
+                else
+                {
+                    baseDir = System.IO.Path.GetDirectoryName(Godot.OS.GetExecutablePath()) ?? AppDomain.CurrentDomain.BaseDirectory;
+                }
+
                 string mascotsDir = Path.Combine(baseDir, "assets", "mascots");
                 Debug.WriteLine($"[MascotManager.Load] mascotsDir: {mascotsDir}");
                 Debug.WriteLine($"[MascotManager.Load] mascotsDir exists: {Directory.Exists(mascotsDir)}");
