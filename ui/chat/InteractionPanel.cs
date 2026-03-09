@@ -7,146 +7,114 @@ using Button = Godot.Button;
 using Control = Godot.Control;
 using Color = Godot.Color;
 using Panel = Godot.Panel;
+using LayoutPreset = Godot.Control.LayoutPreset;
+using SizeFlags = Godot.Control.SizeFlags;
 
 namespace DesktopAiMascot.ui.chat
 {
-    public partial class InteractionPanel : Control
-    {
-        private MessageListPanel? _messageList;
-        private TextEdit? _inputBox;
-        private Button? _sendButton;
-        
-        public ChatAiService? ChatService { get; set; }
+	public partial class InteractionPanel : Window
+	{
+		private MessageListPanel _messageList = null!;
+		private TextEdit _inputBox = null!;
+		private Button _sendButton = null!;
+		
+		public ChatAiService? ChatService { get; set; }
 
-        public override void _Ready()
-        {
-            // Panel背景
-            var bgPanel = new Panel();
-            bgPanel.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            var styleBox = new StyleBoxFlat();
-            styleBox.BgColor = new Color(0.95f, 0.95f, 0.95f, 1.0f);
-            bgPanel.AddThemeStyleboxOverride("panel", styleBox);
-            AddChild(bgPanel);
+		public override void _Ready()
+		{
+			CloseRequested += () => Hide();
 
-            var vbox = new VBoxContainer();
-            vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            AddChild(vbox);
+			_messageList = GetNode<MessageListPanel>("%MessageListPanel");
+			_inputBox = GetNode<TextEdit>("%InputBox");
+			_sendButton = GetNode<Button>("%SendButton");
 
-            // ツールバー
-            var toolbar = new HBoxContainer();
-            toolbar.CustomMinimumSize = new Vector2(0, 30);
-            vbox.AddChild(toolbar);
+			var settingsBtn = GetNode<Button>("%SettingsButton");
+			settingsBtn.Pressed += OnSettingsPressed;
 
-            var settingsBtn = new Button { Text = "⚙" };
-            settingsBtn.Pressed += OnSettingsPressed;
-            toolbar.AddChild(settingsBtn);
+			var clearBtn = GetNode<Button>("%ClearButton");
+			clearBtn.Pressed += OnClearPressed;
 
-            var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            toolbar.AddChild(spacer);
+			_messageList.TtsRequested += OnTtsRequested;
+			_sendButton.Pressed += OnSendPressed;
 
-            var clearBtn = new Button { Text = "✖" };
-            clearBtn.Pressed += OnClearPressed;
-            toolbar.AddChild(clearBtn);
+			UpdateChatService(SystemConfig.Instance.LlmService);
+		}
 
-            // メッセージリスト
-            _messageList = new MessageListPanel();
-            _messageList.SizeFlagsVertical = SizeFlags.ExpandFill;
-            _messageList.TtsRequested += OnTtsRequested;
-            vbox.AddChild(_messageList);
+		private void OnSettingsPressed()
+		{
+			GD.Print("設定ボタンが押されました (Settingダイアログは未実装)");
+		}
 
-            // 入力エリア
-            var inputArea = new HBoxContainer();
-            inputArea.CustomMinimumSize = new Vector2(0, 60);
-            vbox.AddChild(inputArea);
+		private void OnClearPressed()
+		{
+			_messageList?.ClearMessages();
+			ChatService?.ClearConversation();
+		}
 
-            _inputBox = new TextEdit();
-            _inputBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _inputBox.WrapMode = TextEdit.LineWrappingMode.Boundary;
-            inputArea.AddChild(_inputBox);
+		private void OnSendPressed()
+		{
+			var text = _inputBox?.Text.Trim() ?? "";
+			if (!string.IsNullOrEmpty(text))
+			{
+				_ = HandleSendAsync(text);
+				if (_inputBox != null) _inputBox.Text = "";
+			}
+		}
 
-            _sendButton = new Button { Text = "送信" };
-            _sendButton.CustomMinimumSize = new Vector2(60, 0);
-            _sendButton.Pressed += OnSendPressed;
-            inputArea.AddChild(_sendButton);
+		private async Task HandleSendAsync(string text)
+		{
+			if (_messageList == null) return;
 
-            UpdateChatService(SystemConfig.Instance.LlmService);
-        }
+			_messageList.AddMessage(new ChatMessage { Sender = "User", Text = text });
 
-        private void OnSettingsPressed()
-        {
-            GD.Print("設定ボタンが押されました (Settingダイアログは未実装)");
-        }
+			if (ChatService == null)
+			{
+				_messageList.AddMessage(new ChatMessage { Sender = "System", Text = "ChatServiceが設定されていません。" });
+				return;
+			}
 
-        private void OnClearPressed()
-        {
-            _messageList?.ClearMessages();
-            ChatService?.ClearConversation();
-        }
+			try
+			{
+				var reply = await ChatService.SendMessageAsync(text);
+				if (string.IsNullOrWhiteSpace(reply)) reply = "(no response)";
+				
+				CallDeferred(MethodName.AddAssistanceMessage, reply);
+			}
+			catch (Exception ex)
+			{
+				CallDeferred(MethodName.AddAssistanceMessage, $"Error: {ex.Message}");
+			}
+		}
 
-        private void OnSendPressed()
-        {
-            var text = _inputBox?.Text.Trim() ?? "";
-            if (!string.IsNullOrEmpty(text))
-            {
-                _ = HandleSendAsync(text);
-                if (_inputBox != null) _inputBox.Text = "";
-            }
-        }
+		private void AddAssistanceMessage(string text)
+		{
+			_messageList?.AddMessage(new ChatMessage { Sender = "Assistant", Text = text });
+		}
 
-        private async Task HandleSendAsync(string text)
-        {
-            if (_messageList == null) return;
+		private void OnTtsRequested(MessageBubble bubble)
+		{
+			GD.Print($"TTS生成リクエスト: {bubble.Message?.Text} (未実装)");
+			// TODO: TTS生成処理
+		}
 
-            _messageList.AddMessage(new ChatMessage { Sender = "User", Text = text });
-
-            if (ChatService == null)
-            {
-                _messageList.AddMessage(new ChatMessage { Sender = "System", Text = "ChatServiceが設定されていません。" });
-                return;
-            }
-
-            try
-            {
-                var reply = await ChatService.SendMessageAsync(text);
-                if (string.IsNullOrWhiteSpace(reply)) reply = "(no response)";
-                
-                CallDeferred(MethodName.AddAssistanceMessage, reply);
-            }
-            catch (Exception ex)
-            {
-                CallDeferred(MethodName.AddAssistanceMessage, $"Error: {ex.Message}");
-            }
-        }
-
-        private void AddAssistanceMessage(string text)
-        {
-            _messageList?.AddMessage(new ChatMessage { Sender = "Assistant", Text = text });
-        }
-
-        private void OnTtsRequested(MessageBubble bubble)
-        {
-            GD.Print($"TTS生成リクエスト: {bubble.Message?.Text} (未実装)");
-            // TODO: TTS生成処理
-        }
-
-        public void UpdateChatService(string serviceName)
-        {
-            if (serviceName == "Foundry Local")
-            {
-                ChatService = new FoundryLocalChatService(SystemConfig.Instance.ModelName);
-            }
-            else if (serviceName == "Gemini (AI Studio)" || serviceName == "Google AI Studio")
-            {
-                ChatService = new GoogleAiStudioChatService();
-            }
-            else if (serviceName == "Gemini (Google Cloud)")
-            {
-                ChatService = new GoogleCloudChatService();
-            }
-            else
-            {
-                ChatService = new LmStudioChatService();
-            }
-        }
-    }
+		public void UpdateChatService(string serviceName)
+		{
+			if (serviceName == "Foundry Local")
+			{
+				ChatService = new FoundryLocalChatService(SystemConfig.Instance.ModelName);
+			}
+			else if (serviceName == "Gemini (AI Studio)" || serviceName == "Google AI Studio")
+			{
+				ChatService = new GoogleAiStudioChatService();
+			}
+			else if (serviceName == "Gemini (Google Cloud)")
+			{
+				ChatService = new GoogleCloudChatService();
+			}
+			else
+			{
+				ChatService = new LmStudioChatService();
+			}
+		}
+	}
 }

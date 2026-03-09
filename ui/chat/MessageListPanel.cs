@@ -21,22 +21,8 @@ namespace DesktopAiMascot.ui.chat
 
         public override void _Ready()
         {
-            // 全体背景
-            var bgPanel = new Panel();
-            bgPanel.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            var styleBox = new StyleBoxFlat();
-            styleBox.BgColor = new Color(1, 1, 1, 0.8f);
-            bgPanel.AddThemeStyleboxOverride("panel", styleBox);
-            AddChild(bgPanel);
-
-            _scrollContainer = new ScrollContainer();
-            _scrollContainer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            _scrollContainer.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
-            AddChild(_scrollContainer);
-
-            _messageContainer = new VBoxContainer();
-            _messageContainer.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _scrollContainer.AddChild(_messageContainer);
+            _scrollContainer = GetNode<ScrollContainer>("%ScrollContainer");
+            _messageContainer = GetNode<VBoxContainer>("%MessageContainer");
         }
 
         public void AddMessage(ChatMessage msg)
