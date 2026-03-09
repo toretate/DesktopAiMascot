@@ -45,20 +45,44 @@ public partial class Main : Node2D
             sysConfig.MascotName = model.Name;
         }
 
-        var sprite = GetNode<Sprite2D>("Sprite2D");
+        var sprite = GetNode<AnimatedSprite2D>("AnimatedSprite2D");
+        Vector2? firstFrameSize = null;
 
         if (model != null)
         {
             var images = model.LoadImages();
-            if (images != null && images.Length > 0 && images[0].ImageSource != null)
+            if (images != null && images.Length > 0)
             {
-                sprite.Texture = images[0].ImageSource;
+                var spriteFrames = new SpriteFrames();
+                spriteFrames.AddAnimation("default");
+                spriteFrames.SetAnimationSpeed("default", 5.0f); // 初期設定 5FPS
+                spriteFrames.SetAnimationLoop("default", true);
+
+                bool hasFrames = false;
+                foreach (var img in images)
+                {
+                    if (img.ImageSource != null)
+                    {
+                        spriteFrames.AddFrame("default", img.ImageSource);
+                        if (firstFrameSize == null)
+                        {
+                            firstFrameSize = img.ImageSource.GetSize();
+                        }
+                        hasFrames = true;
+                    }
+                }
+
+                if (hasFrames)
+                {
+                    sprite.SpriteFrames = spriteFrames;
+                    sprite.Play("default");
+                }
             }
         }
 
-        if (sprite.Texture != null)
+        if (firstFrameSize.HasValue)
         {
-            var size = sprite.Texture.GetSize();
+            var size = firstFrameSize.Value;
 
             // 1024x1280の領域に収まるようにスケールを計算（アスペクト比維持）
             float maxWidth = 512f;

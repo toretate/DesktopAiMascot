@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://cax2snhk0t8y1"]
 
 [ext_resource type="Script" path="res://ui/settings/pages/ApiKeyPropertyPage.cs" id="1_script"]
 
@@ -8,9 +8,138 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
 script = ExtResource("1_script")
 
-[node name="Label" type="Label" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 2
-text = "API Key Settings (WIP)"
-horizontal_alignment = 1
+theme_override_constants/separation = 15
+
+[node name="Label" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "API Keys"
+
+[node name="AiStudioPanel" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="VBoxContainer/AiStudioPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="VBoxContainer/AiStudioPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Title" type="Label" parent="VBoxContainer/AiStudioPanel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Google AI Studio / Gemini API"
+
+[node name="HBoxKey" type="HBoxContainer" parent="VBoxContainer/AiStudioPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/AiStudioPanel/Margin/VBox/HBoxKey"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "API Key:"
+
+[node name="AiStudioApiKeyEdit" type="LineEdit" parent="VBoxContainer/AiStudioPanel/Margin/VBox/HBoxKey"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+secret = true
+
+[node name="HBoxButtons" type="HBoxContainer" parent="VBoxContainer/AiStudioPanel/Margin/VBox"]
+layout_mode = 2
+alignment = 2
+
+[node name="SaveAiStudioBtn" type="Button" parent="VBoxContainer/AiStudioPanel/Margin/VBox/HBoxButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="ClearAiStudioBtn" type="Button" parent="VBoxContainer/AiStudioPanel/Margin/VBox/HBoxButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear"
+
+[node name="CloudPanel" type="PanelContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="VBoxContainer/CloudPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="VBoxContainer/CloudPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Title" type="Label" parent="VBoxContainer/CloudPanel/Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Google Cloud (Vertex AI)"
+
+[node name="HBoxKey" type="HBoxContainer" parent="VBoxContainer/CloudPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxKey"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "API Key:"
+
+[node name="CloudApiKeyEdit" type="LineEdit" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxKey"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+secret = true
+
+[node name="HBoxProject" type="HBoxContainer" parent="VBoxContainer/CloudPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxProject"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Project ID:"
+
+[node name="ProjectIdEdit" type="LineEdit" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxProject"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HBoxRegion" type="HBoxContainer" parent="VBoxContainer/CloudPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxRegion"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Region:"
+
+[node name="RegionEdit" type="LineEdit" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxRegion"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "us-central1"
+
+[node name="HBoxButtons" type="HBoxContainer" parent="VBoxContainer/CloudPanel/Margin/VBox"]
+layout_mode = 2
+alignment = 2
+
+[node name="SaveCloudBtn" type="Button" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Save"
+
+[node name="ClearCloudBtn" type="Button" parent="VBoxContainer/CloudPanel/Margin/VBox/HBoxButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Clear"
