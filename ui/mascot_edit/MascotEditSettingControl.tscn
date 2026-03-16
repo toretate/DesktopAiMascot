@@ -1,0 +1,168 @@
+[gd_scene load_steps=2 format=3 uid="uid://cuqh8w3pvm1v5"]
+
+[ext_resource type="Script" uid="uid://c8x2m5dvt3pqr" path="res://ui/mascot_edit/MascotEditSettingControl.cs" id="1_script"]
+
+[node name="MascotEditSettingControl" type="VBoxContainer"]
+offset_right = 600.0
+offset_bottom = 800.0
+script = ExtResource("1_script")
+
+[node name="BasicInfoPanel" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="NameLabel" type="Label" parent="BasicInfoPanel"]
+layout_mode = 2
+text = "名前"
+
+[node name="DisplayNameLineEdit" type="LineEdit" parent="BasicInfoPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="ProfileLabel" type="Label" parent="BasicInfoPanel"]
+layout_mode = 2
+text = "プロフィールなど"
+
+[node name="ConfigPathPanel" type="HBoxContainer" parent="BasicInfoPanel"]
+layout_mode = 2
+
+[node name="ConfigLabel" type="Label" parent="BasicInfoPanel/ConfigPathPanel"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "設定ファイル："
+
+[node name="ConfigPathLabel" type="Label" parent="BasicInfoPanel/ConfigPathPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "config.yaml"
+autowrap_mode = 3
+
+[node name="EditButton" type="Button" parent="BasicInfoPanel/ConfigPathPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+text = "エディタ起動"
+
+[node name="ProfileFilePanel" type="HBoxContainer" parent="BasicInfoPanel"]
+layout_mode = 2
+
+[node name="ProfileFileLabel" type="Label" parent="BasicInfoPanel/ProfileFilePanel"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "ファイルからプロフィールを生成："
+
+[node name="ProfileFileLineEdit" type="LineEdit" parent="BasicInfoPanel/ProfileFilePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "ファイルパスをドラッグ＆ドロップ"
+
+[node name="GenerateButton" type="Button" parent="BasicInfoPanel/ProfileFilePanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 30)
+layout_mode = 2
+text = "生成"
+
+[node name="ProfileModelComboBox" type="OptionButton" parent="BasicInfoPanel/ProfileFilePanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+
+[node name="ProfileGroupBox" type="VBoxContainer" parent="BasicInfoPanel"]
+layout_mode = 2
+
+[node name="ProfileHeaderLabel" type="Label" parent="BasicInfoPanel/ProfileGroupBox"]
+layout_mode = 2
+text = "プロフィール"
+
+[node name="ProfileTextEdit" type="TextEdit" parent="BasicInfoPanel/ProfileGroupBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+wrap_mode = 1
+
+[node name="TabContainer" type="TabContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="角度" type="VBoxContainer" parent="TabContainer"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="TabContainer/角度"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AngleViewContainer" type="MarginContainer" parent="TabContainer/角度/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="背景削除" type="VBoxContainer" parent="TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="TabContainer/背景削除"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BgRemovalPanel" type="VBoxContainer" parent="TabContainer/背景削除/ScrollContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RemoveBackgroundButton" type="Button" parent="TabContainer/背景削除/ScrollContainer/BgRemovalPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+disabled = true
+text = "背景を削除"
+
+[node name="ServicePanel" type="HBoxContainer" parent="TabContainer/背景削除/ScrollContainer/BgRemovalPanel"]
+layout_mode = 2
+
+[node name="ServiceLabel" type="Label" parent="TabContainer/背景削除/ScrollContainer/BgRemovalPanel/ServicePanel"]
+layout_mode = 2
+text = "背景削除AI"
+
+[node name="BgRemovalServiceComboBox" type="OptionButton" parent="TabContainer/背景削除/ScrollContainer/BgRemovalPanel/ServicePanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 25)
+layout_mode = 2
+
+[node name="RestoreBackgroundButton" type="Button" parent="TabContainer/背景削除/ScrollContainer/BgRemovalPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 30)
+layout_mode = 2
+disabled = true
+text = "背景削除前に戻す"
+
+[node name="画像追加" type="VBoxContainer" parent="TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="TabContainer/画像追加"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AddImagePanel" type="VBoxContainer" parent="TabContainer/画像追加/ScrollContainer"]
+layout_mode = 2
+
+[node name="AddImageButton" type="Button" parent="TabContainer/画像追加/ScrollContainer/AddImagePanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+text = "画像を追加"
+
+[node name="表情差分作成" type="VBoxContainer" parent="TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="EmoteGenerationContainer" type="MarginContainer" parent="TabContainer/表情差分作成"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3

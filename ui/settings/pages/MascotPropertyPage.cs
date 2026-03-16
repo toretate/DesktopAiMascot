@@ -27,7 +27,7 @@ namespace DesktopAiMascot.ui.settings.pages
             _mascotList.ItemSelected += OnMascotSelected;
             
             var editButton = GetNode<Button>("%EditButton");
-            editButton.Pressed += () => GD.Print("MascotEditWindow is not migrated yet.");
+            editButton.Pressed += OnEditButtonPressed;
 
             CallDeferred(MethodName.InitData);
         }
@@ -46,7 +46,19 @@ namespace DesktopAiMascot.ui.settings.pages
         private void PopulateMascotList()
         {
             _mascotList.Clear();
+            _mascotList.FixedIconSize = new Vector2I(80, 80);
             
+            // 実行時パスの取得（エディタ実行時とビルド後で分ける）
+            string baseDir;
+            if (Godot.OS.HasFeature("editor"))
+            {
+                baseDir = Godot.ProjectSettings.GlobalizePath("res://");
+            }
+            else
+            {
+                baseDir = System.IO.Path.GetDirectoryName(Godot.OS.GetExecutablePath()) ?? AppDomain.CurrentDomain.BaseDirectory;
+            }
+
             string? currentName = MascotManager.Instance.CurrentModel?.Name;
             int selectedIndex = 0;
             int index = 0;
@@ -55,7 +67,24 @@ namespace DesktopAiMascot.ui.settings.pages
             {
                 _mascotList.AddItem(model.Name);
                 
-                // Set cover image later if needed with _mascotList.SetItemIcon
+                // カバー画像の読み込みと設定
+                string mascotDir = Path.Combine(baseDir, "assets", "mascots", model.Name);
+                string coverPath = Path.Combine(mascotDir, "cover.png");
+                
+                if (!File.Exists(coverPath) && model.ImagePaths.Length > 0)
+                {
+                    coverPath = Path.Combine(baseDir, model.ImagePaths[0]);
+                }
+                
+                if (File.Exists(coverPath))
+                {
+                    var texture = DesktopAiMascot.utils.ImageLoadHelper.LoadGodotTexture(coverPath);
+                    if (texture != null)
+                    {
+                        _mascotList.SetItemIcon(index, texture);
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(currentName) && model.Name == currentName)
                 {
                     selectedIndex = index;
@@ -137,6 +166,30 @@ namespace DesktopAiMascot.ui.settings.pages
             else
             {
                 _styleLabel.Text = "未設定";
+            }
+        }
+
+        private void OnEditButtonPressed()
+        {
+            var currentModel = MascotManager.Instance.CurrentModel;
+            if (currentModel == null)
+            {
+                GD.PrintErr("マスコットが選択されていません。");
+                return;
+            }
+
+            // MascotEditWindowをロードして表示
+            var mascotEditWindowScene = GD.Load<PackedScene>("res://ui/mascot_edit/MascotEditWindow.tscn");
+            if (mascotEditWindowScene != null)
+            {
+                var mascotEditWindow = mascotEditWindowScene.Instantiate<ui.mascot_edit.MascotEditWindow>();
+                GetTree().Root.AddChild(mascotEditWindow);
+                mascotEditWindow.Initialize(currentModel);
+                mascotEditWindow.PopupCentered();
+            }
+            else
+            {
+                GD.PrintErr("MascotEditWindow.tscnのロードに失敗しました。");
             }
         }
     }

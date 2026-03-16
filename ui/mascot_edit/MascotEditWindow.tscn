@@ -1,0 +1,96 @@
+[gd_scene load_steps=3 format=3 uid="uid://dkwi3c5m4h2lo"]
+
+[ext_resource type="Script" uid="uid://b7vn0xqkr1jht" path="res://ui/mascot_edit/MascotEditWindow.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://cuqh8w3pvm1v5" path="res://ui/mascot_edit/MascotEditSettingControl.tscn" id="2_settings"]
+
+[node name="MascotEditWindow" type="Window"]
+title = "マスコット編集"
+size = Vector2i(900, 900)
+min_size = Vector2i(800, 700)
+script = ExtResource("1_script")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+
+[node name="MainPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MainPanel"]
+layout_mode = 2
+
+[node name="LeftPanel" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+
+[node name="CoverPanel" type="PanelContainer" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/LeftPanel"]
+layout_mode = 2
+
+[node name="CoverVBox" type="VBoxContainer" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/LeftPanel/CoverPanel"]
+layout_mode = 2
+
+[node name="CoverLabel" type="Label" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/LeftPanel/CoverPanel/CoverVBox"]
+layout_mode = 2
+text = "Cover"
+horizontal_alignment = 1
+
+[node name="CoverTextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/LeftPanel/CoverPanel/CoverVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ImageList" type="ItemList" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/LeftPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RightPanel" type="MarginContainer" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 5
+
+[node name="SettingControl" parent="MarginContainer/VBoxContainer/MainPanel/HBoxContainer/RightPanel" instance=ExtResource("2_settings")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ButtonPanel" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/ButtonPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SaveButton" type="Button" parent="MarginContainer/VBoxContainer/ButtonPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 35)
+layout_mode = 2
+text = "保存"
+
+[node name="CancelButton" type="Button" parent="MarginContainer/VBoxContainer/ButtonPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 35)
+layout_mode = 2
+text = "キャンセル"
