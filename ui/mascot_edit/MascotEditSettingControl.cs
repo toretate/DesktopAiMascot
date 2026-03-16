@@ -51,6 +51,8 @@ namespace DesktopAiMascot.ui.mascot_edit
         private Button _addImageButton = null!;
         private MarginContainer _angleViewContainer = null!;
         private MarginContainer _emoteGenerationContainer = null!;
+        private AngleViewControl? _angleViewControl;
+        private EmoteGenerationTabPage? _emoteGenerationTabPage;
 
         private GoogleAiStudioService? _googleAiService;
         private ComfyQwen3ImageEditService? _comfyQwen3ImageEditService;
@@ -72,6 +74,8 @@ namespace DesktopAiMascot.ui.mascot_edit
             _addImageButton = GetNode<Button>("%AddImageButton");
             _angleViewContainer = GetNode<MarginContainer>("%AngleViewContainer");
             _emoteGenerationContainer = GetNode<MarginContainer>("%EmoteGenerationContainer");
+            _angleViewControl = GetNode<AngleViewControl>("%AngleViewControl");
+            _emoteGenerationTabPage = GetNode<EmoteGenerationTabPage>("%EmoteGenerationTabPage");
 
             _editButton.Pressed += OnEditButtonPressed;
             _generateButton.Pressed += OnGenerateButtonPressed;
@@ -85,9 +89,14 @@ namespace DesktopAiMascot.ui.mascot_edit
         /// </summary>
         public void Initialize(MascotModel mascotModel)
         {
+            Debug.WriteLine("[MascotEditSettingControl] Initialize() 開始");
+            
             _mascotModel = mascotModel;
             _mascotDirectory = _mascotModel.DirectoryPath;
             _configPath = Path.Combine(_mascotDirectory, "config.yaml");
+
+            Debug.WriteLine($"[MascotEditSettingControl] MascotDirectory: {_mascotDirectory}");
+            Debug.WriteLine($"[MascotEditSettingControl] ConfigPath: {_configPath}");
 
             _googleAiService = new GoogleAiStudioService();
             _googleAiService.Initialize();
@@ -97,7 +106,10 @@ namespace DesktopAiMascot.ui.mascot_edit
 
             InitializeBackgroundRemovalServices();
             InitializeGenerateProfileModelComboBox();
+            // TODO: InitializeAngleViewControl();
             LoadMascotData();
+            
+            Debug.WriteLine("[MascotEditSettingControl] Initialize() 完了");
         }
 
         private void InitializeBackgroundRemovalServices()
@@ -206,8 +218,8 @@ namespace DesktopAiMascot.ui.mascot_edit
                     var backupFiles = Directory.GetFiles(directory, $"{fileNameWithoutExt}.*.back{extension}");
                     _restoreBackgroundButton.Disabled = backupFiles.Length == 0;
 
-                    // TODO: AngleViewControlの更新
-                    // TODO: 表情差分作成タブの初期化
+                    // 表情差分作成タブを初期化
+                    _emoteGenerationTabPage?.Initialize(imageItem.ImagePath);
                 }
                 catch (Exception ex)
                 {
@@ -471,6 +483,36 @@ namespace DesktopAiMascot.ui.mascot_edit
             {
                 GD.PrintErr($"画像の追加に失敗しました。\n{ex.Message}");
             }
+        }
+
+        private void OnLeftImageClick()
+        {
+            GD.Print("Left image clicked - angle generation not yet implemented");
+            // TODO: Implement angle image generation
+        }
+
+        private void OnRightImageClick()
+        {
+            GD.Print("Right image clicked - angle generation not yet implemented");
+            // TODO: Implement angle image generation
+        }
+
+        private void OnAboveImageClick()
+        {
+            GD.Print("Above image clicked - angle generation not yet implemented");
+            // TODO: Implement angle image generation
+        }
+
+        private void OnBelowImageClick()
+        {
+            GD.Print("Below image clicked - angle generation not yet implemented");
+            // TODO: Implement angle image generation
+        }
+
+        private void OnBehindImageClick()
+        {
+            GD.Print("Behind image clicked - angle generation not yet implemented");
+            // TODO: Implement angle image generation
         }
     }
 

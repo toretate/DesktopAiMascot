@@ -7,6 +7,9 @@
 title = "マスコット編集"
 size = Vector2i(900, 900)
 min_size = Vector2i(800, 700)
+always_on_top = true
+transient = true
+exclusive = true
 script = ExtResource("1_script")
 
 [node name="Background" type="ColorRect" parent="."]

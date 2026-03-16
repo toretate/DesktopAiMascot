@@ -185,7 +185,13 @@ namespace DesktopAiMascot.ui.settings.pages
                 var mascotEditWindow = mascotEditWindowScene.Instantiate<ui.mascot_edit.MascotEditWindow>();
                 GetTree().Root.AddChild(mascotEditWindow);
                 mascotEditWindow.Initialize(currentModel);
+                
+                // ウィンドウを最前面に表示
+                mascotEditWindow.AlwaysOnTop = true;
                 mascotEditWindow.PopupCentered();
+                
+                // 明示的にフォーカスを設定
+                mascotEditWindow.GrabFocus();
             }
             else
             {

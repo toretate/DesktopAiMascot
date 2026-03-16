@@ -27,17 +27,131 @@ namespace DesktopAiMascot.ui.mascot_edit
 
         public override void _Ready()
         {
-            _coverTextureRect = GetNode<TextureRect>("%CoverTextureRect");
-            _imageList = GetNode<ItemList>("%ImageList");
-            _settingControl = GetNode<MascotEditSettingControl>("%SettingControl");
-            _saveButton = GetNode<Button>("%SaveButton");
-            _cancelButton = GetNode<Button>("%CancelButton");
+            Debug.WriteLine("[MascotEditWindow] _Ready() 開始");
+            
+            try
+            {
+                // ノードツリーをダンプ
+                Debug.WriteLine("[MascotEditWindow] ========== ノードツリーダンプ開始 ==========");
+                PrintNodeTree(this, 0);
+                Debug.WriteLine("[MascotEditWindow] ========== ノードツリーダンプ終了 ==========");
+                
+                _coverTextureRect = GetNode<TextureRect>("%CoverTextureRect");
+                Debug.WriteLine($"[MascotEditWindow] _coverTextureRect: {(_coverTextureRect != null ? "OK" : "NULL")}");
+                
+                _imageList = GetNode<ItemList>("%ImageList");
+                Debug.WriteLine($"[MascotEditWindow] _imageList: {(_imageList != null ? "OK" : "NULL")}");
+                
+                // 通常のパスで取得を試みる
+                var settingControlPath = "MarginContainer/VBoxContainer/MainPanel/HBoxContainer/RightPanel/SettingControl";
+                Debug.WriteLine($"[MascotEditWindow] SettingControl取得を試みます: {settingControlPath}");
+                
+                var settingControlNode = GetNodeOrNull(settingControlPath);
+                Debug.WriteLine($"[MascotEditWindow] settingControlNode (通常パス): {settingControlNode?.GetType().Name ?? "NULL"}");
+                
+                if (settingControlNode != null)
+                {
+                    _settingControl = settingControlNode as MascotEditSettingControl;
+                    Debug.WriteLine($"[MascotEditWindow] キャスト結果: {(_settingControl != null ? "OK" : "FAILED")}");
+                    
+                    if (_settingControl == null)
+                    {
+                        Debug.WriteLine($"[MascotEditWindow] 実際の型: {settingControlNode.GetType().FullName}");
+                    }
+                }
+                
+                // unique_name_in_ownerでも試す
+                if (_settingControl == null)
+                {
+                    Debug.WriteLine("[MascotEditWindow] unique_name_in_ownerで再取得を試みます");
+                    var uniqueNode = GetNodeOrNull("%SettingControl");
+                    Debug.WriteLine($"[MascotEditWindow] uniqueNode: {uniqueNode?.GetType().Name ?? "NULL"}");
+                    
+                    if (uniqueNode != null)
+                    {
+                        _settingControl = uniqueNode as MascotEditSettingControl;
+                        Debug.WriteLine($"[MascotEditWindow] unique経由のキャスト: {(_settingControl != null ? "OK" : "FAILED")}");
+                    }
+                }
+                
+                // 手動インスタンス化を試みる
+                if (_settingControl == null)
+                {
+                    Debug.WriteLine("[MascotEditWindow] 手動インスタンス化を試みます");
+                    try
+                    {
+                        var settingControlScene = GD.Load<PackedScene>("res://ui/mascot_edit/MascotEditSettingControl.tscn");
+                        if (settingControlScene != null)
+                        {
+                            Debug.WriteLine("[MascotEditWindow] シーンのロードに成功");
+                            _settingControl = settingControlScene.Instantiate<MascotEditSettingControl>();
+                            Debug.WriteLine($"[MascotEditWindow] インスタンス化結果: {(_settingControl != null ? "OK" : "NULL")}");
+                            
+                            if (_settingControl != null)
+                            {
+                                // RightPanelに追加
+                                var rightPanel = GetNode<MarginContainer>("MarginContainer/VBoxContainer/MainPanel/HBoxContainer/RightPanel");
+                                if (rightPanel != null)
+                                {
+                                    rightPanel.AddChild(_settingControl);
+                                    _settingControl.Name = "SettingControl";
+                                    Debug.WriteLine("[MascotEditWindow] RightPanelに追加しました");
+                                }
+                                else
+                                {
+                                    Debug.WriteLine("[MascotEditWindow] エラー: RightPanelが見つかりません");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Debug.WriteLine("[MascotEditWindow] エラー: シーンのロードに失敗");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[MascotEditWindow] 手動インスタンス化エラー: {ex.Message}");
+                    }
+                }
+                
+                Debug.WriteLine($"[MascotEditWindow] _settingControl 最終結果: {(_settingControl != null ? "OK" : "NULL")}");
+                
+                _saveButton = GetNode<Button>("%SaveButton");
+                Debug.WriteLine($"[MascotEditWindow] _saveButton: {(_saveButton != null ? "OK" : "NULL")}");
+                
+                _cancelButton = GetNode<Button>("%CancelButton");
+                Debug.WriteLine($"[MascotEditWindow] _cancelButton: {(_cancelButton != null ? "OK" : "NULL")}");
 
-            _imageList.ItemSelected += OnImageSelected;
-            _saveButton.Pressed += OnSaveButtonPressed;
-            _cancelButton.Pressed += OnCancelButtonPressed;
+                Debug.WriteLine("[MascotEditWindow] ノード取得完了");
 
-            CloseRequested += () => QueueFree();
+                if (_imageList != null)
+                    _imageList.ItemSelected += OnImageSelected;
+                if (_saveButton != null)
+                    _saveButton.Pressed += OnSaveButtonPressed;
+                if (_cancelButton != null)
+                    _cancelButton.Pressed += OnCancelButtonPressed;
+
+                CloseRequested += () => QueueFree();
+                
+                Debug.WriteLine("[MascotEditWindow] _Ready() 完了");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotEditWindow] _Ready() エラー: {ex.Message}");
+                Debug.WriteLine($"[MascotEditWindow] スタックトレース: {ex.StackTrace}");
+                GD.PrintErr($"_Ready() エラー: {ex.Message}");
+            }
+        }
+
+        private void PrintNodeTree(Node node, int depth)
+        {
+            string indent = new string(' ', depth * 2);
+            Debug.WriteLine($"{indent}- {node.Name} ({node.GetType().Name})");
+            
+            for (int i = 0; i < node.GetChildCount(); i++)
+            {
+                PrintNodeTree(node.GetChild(i), depth + 1);
+            }
         }
 
         /// <summary>
@@ -45,20 +159,46 @@ namespace DesktopAiMascot.ui.mascot_edit
         /// </summary>
         public void Initialize(MascotModel mascotModel)
         {
+            Debug.WriteLine("[MascotEditWindow] Initialize() 開始");
+            
             _mascotModel = mascotModel;
             _mascotDirectory = _mascotModel.DirectoryPath;
 
             Debug.WriteLine($"[MascotEditWindow] MascotModel.DirectoryPath から取得: {_mascotDirectory}");
+            Debug.WriteLine($"[MascotEditWindow] ディレクトリ存在確認: {Directory.Exists(_mascotDirectory)}");
 
             if (string.IsNullOrEmpty(_mascotDirectory))
             {
                 Debug.WriteLine($"[MascotEditWindow] エラー: MascotModel.DirectoryPath が空です");
+                GD.PrintErr("MascotModel.DirectoryPath が空です");
+                return;
             }
 
-            _settingControl.Initialize(_mascotModel);
-            _settingControl.RequestReloadImageList += OnRequestReloadImageList;
+            // _Ready()が完了してから初期化処理を実行
+            Debug.WriteLine("[MascotEditWindow] CallDeferred を実行");
+            CallDeferred(nameof(InitializeDeferred));
+            Debug.WriteLine("[MascotEditWindow] Initialize() 完了");
+        }
 
-            LoadMascotData();
+        private void InitializeDeferred()
+        {
+            Debug.WriteLine("[MascotEditWindow] InitializeDeferred() 開始");
+            
+            try
+            {
+                _settingControl.Initialize(_mascotModel);
+                _settingControl.RequestReloadImageList += OnRequestReloadImageList;
+
+                LoadMascotData();
+                
+                Debug.WriteLine("[MascotEditWindow] InitializeDeferred() 完了");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MascotEditWindow] InitializeDeferred エラー: {ex.Message}");
+                Debug.WriteLine($"[MascotEditWindow] スタックトレース: {ex.StackTrace}");
+                GD.PrintErr($"InitializeDeferred エラー: {ex.Message}");
+            }
         }
 
         /// <summary>

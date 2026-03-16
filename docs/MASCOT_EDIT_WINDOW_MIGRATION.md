@@ -59,21 +59,23 @@ MascotEditWindowをWPFからGodotへマイグレーションしました。
 ## 未実装機能（将来の実装予定）
 
 ### AngleViewControl
-- ⏳ 角度画像の表示と編集機能
-  - 元のWPF版には`AngleViewControl.xaml`が存在
-  - Godot版は`_angleViewContainer`として準備済み
-  - 実装が必要
+- ✅ 角度画像の表示と編集機能
+  - ✅ 元のWPF版には`AngleViewControl.xaml`が存在
+  - ✅ Godot版は実装済み `ui/mascot_edit/AngleViewControl.tscn`
+  - ⏳ 角度画像生成機能の実装が必要
 
 ### EmoteGenerationTabPage
-- ⏳ 表情差分生成機能
-  - 元のWPF版には`EmoteGenerationTabPage.xaml`が存在
-  - Godot版は`_emoteGenerationContainer`として準備済み
-  - 実装が必要
+- ✅ 表情差分生成機能の基本UI
+  - ✅ 元のWPF版には`EmoteGenerationTabPage.xaml`が存在
+  - ✅ Godot版は基本UI実装済み `ui/mascot_edit/EmoteGenerationTabPage.tscn`
+  - ⏳ 表情差分生成ロジックの実装が必要
 
 ### その他の細かい機能
 - ⏳ ドラッグ&ドロップでのファイル指定（プロフィール生成）
 - ⏳ 確認ダイアログ（背景削除前に戻す処理）
 - ⏳ 進捗表示（背景削除中など）
+- ⏳ 角度画像の自動生成機能
+- ⏳ 表情差分の自動生成機能
 
 ## 技術的な注意事項
 

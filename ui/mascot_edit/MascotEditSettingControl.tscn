@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://cuqh8w3pvm1v5"]
+[gd_scene load_steps=4 format=3 uid="uid://cuqh8w3pvm1v5"]
 
 [ext_resource type="Script" uid="uid://c8x2m5dvt3pqr" path="res://ui/mascot_edit/MascotEditSettingControl.cs" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://cnm7x4k2vq8pb" path="res://ui/mascot_edit/AngleViewControl.tscn" id="2_angle"]
+[ext_resource type="PackedScene" uid="uid://bq4nw7kx3m5ry" path="res://ui/mascot_edit/EmoteGenerationTabPage.tscn" id="3_emote"]
 
 [node name="MascotEditSettingControl" type="VBoxContainer"]
 offset_right = 600.0
@@ -103,6 +105,10 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
+[node name="AngleViewControl" parent="TabContainer/角度/ScrollContainer/AngleViewContainer" instance=ExtResource("2_angle")]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="背景削除" type="VBoxContainer" parent="TabContainer"]
 visible = false
 layout_mode = 2
@@ -166,3 +172,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="EmoteGenerationTabPage" parent="TabContainer/表情差分作成/EmoteGenerationContainer" instance=ExtResource("3_emote")]
+unique_name_in_owner = true
+layout_mode = 2
