@@ -166,9 +166,9 @@ namespace DesktopAiMascot.views
                     string coverPath = Path.Combine(mascotDir, "cover.png");
                     
                     // cover.pngが存在しない場合、最初の画像を使用
-                    if (!File.Exists(coverPath) && model.ImagePaths.Length > 0)
+                    if (!File.Exists(coverPath) && model.GetPrimaryImage() != null)
                     {
-                        coverPath = Path.Combine(baseDir, model.ImagePaths[0]);
+                        coverPath = model.GetPrimaryImage()!.ImagePath;
                     }
 
                     var displayItem = new MascotDisplayItem

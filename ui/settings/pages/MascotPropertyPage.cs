@@ -71,9 +71,9 @@ namespace DesktopAiMascot.ui.settings.pages
                 string mascotDir = Path.Combine(baseDir, "assets", "mascots", model.Name);
                 string coverPath = Path.Combine(mascotDir, "cover.png");
                 
-                if (!File.Exists(coverPath) && model.ImagePaths.Length > 0)
+                if (!File.Exists(coverPath) && model.GetPrimaryImage() != null)
                 {
-                    coverPath = Path.Combine(baseDir, model.ImagePaths[0]);
+                    coverPath = model.GetPrimaryImage()!.ImagePath;
                 }
                 
                 if (File.Exists(coverPath))

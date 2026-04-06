@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DesktopAiMascot.mascots
 {
@@ -34,6 +35,140 @@ namespace DesktopAiMascot.mascots
             AngleImages = new Dictionary<string, MascotImageItem>();
             EmotionFaceImages = new Dictionary<string, MascotImageItem>();
             EmotionFullbodyImages = new Dictionary<string, MascotImageItem>();
+        }
+
+        /// <summary>
+        /// チャット表示用の正面画像を返す
+        /// </summary>
+        public MascotImageItem? GetFrontImage()
+        {
+            if (AngleImages.TryGetValue("front", out var frontImage))
+            {
+                return frontImage;
+            }
+
+            return Image ?? GetPreferredAngleImage();
+        }
+
+        /// <summary>
+        /// 感情に対応する顔画像を返す
+        /// </summary>
+        public MascotImageItem? GetEmotionFaceImage(string? emotion)
+        {
+            if (emotion is null)
+            {
+                return null;
+            }
+
+            var key = emotion.Trim();
+            if (key.Length == 0)
+            {
+                return null;
+            }
+
+            return EmotionFaceImages.TryGetValue(key, out var image) ? image : null;
+        }
+
+        /// <summary>
+        /// 感情に対応する全身画像を返す
+        /// </summary>
+        public MascotImageItem? GetEmotionFullbodyImage(string? emotion)
+        {
+            if (emotion is null)
+            {
+                return null;
+            }
+
+            var key = emotion.Trim();
+            if (key.Length == 0)
+            {
+                return null;
+            }
+
+            return EmotionFullbodyImages.TryGetValue(key, out var image) ? image : null;
+        }
+
+        /// <summary>
+        /// 指定方向の画像を返す
+        /// </summary>
+        public MascotImageItem? GetAngleImage(string? angle)
+        {
+            if (angle is null)
+            {
+                return null;
+            }
+
+            var key = angle.Trim();
+            if (key.Length == 0)
+            {
+                return null;
+            }
+
+            return AngleImages.TryGetValue(key, out var image) ? image : null;
+        }
+
+        /// <summary>
+        /// 表示用の代表画像を返す
+        /// </summary>
+        public MascotImageItem? GetPrimaryImage()
+        {
+            return GetFrontImage()
+                ?? EmotionFaceImages.Values.FirstOrDefault()
+                ?? EmotionFullbodyImages.Values.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// このセットに属する全画像を重複なく返す
+        /// </summary>
+        public IEnumerable<MascotImageItem> GetAllImages()
+        {
+            var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (Image is MascotImageItem primaryImage)
+            {
+                if (seenPaths.Add(primaryImage.ImagePath))
+                {
+                    yield return primaryImage;
+                }
+            }
+
+            foreach (var item in AngleImages.Values)
+            {
+                if (seenPaths.Add(item.ImagePath))
+                {
+                    yield return item;
+                }
+            }
+
+            foreach (var item in EmotionFaceImages.Values)
+            {
+                if (seenPaths.Add(item.ImagePath))
+                {
+                    yield return item;
+                }
+            }
+
+            foreach (var item in EmotionFullbodyImages.Values)
+            {
+                if (seenPaths.Add(item.ImagePath))
+                {
+                    yield return item;
+                }
+            }
+        }
+
+        private MascotImageItem? GetPreferredAngleImage()
+        {
+            string[] preferredOrder = ["front", "left", "right", "back", "top", "bottom", "above", "below", "behind"];
+            foreach (var key in preferredOrder)
+            {
+                if (AngleImages.TryGetValue(key, out var item))
+                {
+                    return item;
+                }
+            }
+
+            return AngleImages.Values.FirstOrDefault();
         }
     }
 }
