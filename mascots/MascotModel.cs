@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DesktopAiMascot.utils;
 
 namespace DesktopAiMascot.mascots
 {
@@ -14,6 +13,7 @@ namespace DesktopAiMascot.mascots
         public string Name { get; private set; }
         public string Prompt { get; private set; }
         public string[] ImagePaths { get; private set; } = Array.Empty<string>();
+        public MascotImageSet ImageSet { get; private set; } = new MascotImageSet(string.Empty);
         public MascotConfig Config { get; set; } = new MascotConfig();
         public string ConfigPath { get; private set; } = string.Empty;
         
@@ -29,11 +29,19 @@ namespace DesktopAiMascot.mascots
             ImagePaths = images;
             ConfigPath = configPath;
             DirectoryPath = directoryPath;
+            ImageSet = MascotImageSetBuilder.CreateFromPaths(name, images);
         }
 
-        /** 画像キャッシュ */
-        private MascotImageItem[] imageCache = [];
-        
+        public MascotModel(string name, string prompt, MascotImageSet imageSet, string[]? imagePaths = null, string configPath = "", string directoryPath = "")
+        {
+            Name = name;
+            Prompt = prompt;
+            ImageSet = imageSet ?? new MascotImageSet(name);
+            ImagePaths = imagePaths ?? Array.Empty<string>();
+            ConfigPath = configPath;
+            DirectoryPath = directoryPath;
+        }
+
         /// <summary>
         /// .back.*とtemp_*を除外したフィルタリング済みの画像ファイルパスを取得する
         /// </summary>
@@ -50,19 +58,79 @@ namespace DesktopAiMascot.mascots
         /// マスコット画像をロードする
         /// バックアップファイル（.back.*）と一時ファイル（temp_*）は除外される
         /// </summary>
-        /// <returns>ロードされた画像アイテムの配列</returns>
+        /// <returns>チャット表示に使う画像アイテムの配列</returns>
         public MascotImageItem[] LoadImages()
         {
-            // キャッシュがあればそれを返す
-            if (imageCache.Length != 0)
+            var frontImage = GetFrontImage() ?? GetPrimaryImage();
+            var images = frontImage != null
+                ? new[] { frontImage }
+                : Array.Empty<MascotImageItem>();
+
+            Debug.WriteLine($"[MascotModel] チャット表示用画像を返す: {Name}, 画像数={images.Length}");
+            return images;
+        }
+
+        /// <summary>
+        /// 画像セットを返す
+        /// </summary>
+        public MascotImageSet LoadImageSet()
+        {
+            Debug.WriteLine($"[MascotModel] 画像セットを返す: {Name}");
+            return ImageSet;
+        }
+
+        /// <summary>
+        /// 表示やサムネイルで使う代表画像を返す
+        /// </summary>
+        public MascotImageItem? GetPrimaryImage()
+        {
+            return ImageSet.GetPrimaryImage();
+        }
+
+        /// <summary>
+        /// チャットの通常表示に使う正面画像を返す
+        /// </summary>
+        public MascotImageItem? GetFrontImage()
+        {
+            return ImageSet.GetFrontImage();
+        }
+
+        /// <summary>
+        /// 感情に応じた顔画像を返す
+        /// </summary>
+        public MascotImageItem? GetEmotionFaceImage(string emotion)
+        {
+            return ImageSet.GetEmotionFaceImage(emotion);
+        }
+
+        /// <summary>
+        /// 感情に応じた全身画像を返す
+        /// </summary>
+        public MascotImageItem? GetEmotionFullbodyImage(string emotion)
+        {
+            return ImageSet.GetEmotionFullbodyImage(emotion);
+        }
+
+        /// <summary>
+        /// 方向別画像を返す
+        /// </summary>
+        public MascotImageItem? GetAngleImage(string angle)
+        {
+            return ImageSet.GetAngleImage(angle);
+        }
+
+        /// <summary>
+        /// チャット表示に使う画像を返す
+        /// 感情画像が無ければ正面画像にフォールバックする
+        /// </summary>
+        public MascotImageItem? GetChatImage(string? emotion = null)
+        {
+            if (!string.IsNullOrWhiteSpace(emotion))
             {
-                Debug.WriteLine($"[MascotModel] キャッシュから画像を返す: {Name}, 画像数={imageCache.Length}");
-                return imageCache;
+                return GetEmotionFaceImage(emotion) ?? GetEmotionFullbodyImage(emotion) ?? GetFrontImage() ?? GetPrimaryImage();
             }
-            
-            imageCache = ImageLoadHelper.LoadImages(Name, ImagePaths);
-            Debug.WriteLine($"[MascotModel] 画像読み込み完了: {Name}, 読み込み成功={imageCache.Length}/{ImagePaths.Length}");
-            return imageCache;
+
+            return GetFrontImage() ?? GetPrimaryImage();
         }
 
         /// <summary>
@@ -70,13 +138,9 @@ namespace DesktopAiMascot.mascots
         /// </summary>
         public void Dispose()
         {
-            if (imageCache != null)
+            foreach (var image in ImageSet.GetAllImages())
             {
-                foreach (var im in imageCache)
-                {
-                    im?.Dispose();
-                }
-                imageCache = [];
+                image.Dispose();
             }
         }
 
