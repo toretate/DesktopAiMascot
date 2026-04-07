@@ -44,7 +44,7 @@ namespace DesktopAiMascotTest.mascots
             Assert.NotEmpty(name);
             Assert.NotNull(prompt);
             Assert.NotEmpty(prompt);
-            
+
             Debug.WriteLine($"[{mascotName}] マスコット名: {name}");
             Debug.WriteLine($"[{mascotName}] プロンプト長: {prompt.Length}");
         }
@@ -63,7 +63,7 @@ namespace DesktopAiMascotTest.mascots
             Assert.NotNull(config.SystemPrompt);
             Assert.NotNull(config.SystemPrompt.Profile);
             Assert.NotEmpty(config.SystemPrompt.Profile.Name);
-            
+
             Debug.WriteLine($"[{mascotName}] キャラクター名: {config.SystemPrompt.Profile.Name}");
             Debug.WriteLine($"[{mascotName}] 性格要素数: {config.SystemPrompt.Personality?.Count ?? 0}");
             Debug.WriteLine($"[{mascotName}] 会話スタイル要素数: {config.SystemPrompt.ConversationStyle?.Count ?? 0}");
@@ -82,9 +82,9 @@ namespace DesktopAiMascotTest.mascots
             // Assert
             Assert.Contains("キャラクター名:", prompt);
             Assert.Contains("【", prompt);
-            
-            Debug.WriteLine($"[{mascotName}] プロンプト内容 (最初の300文字):");
-            Debug.WriteLine(prompt.Length > 300 ? prompt.Substring(0, 300) + "..." : prompt);
+
+            // Debug.WriteLine($"[{mascotName}] プロンプト内容 (最初の300文字):");
+            // Debug.WriteLine(prompt.Length > 300 ? prompt.Substring(0, 300) + "..." : prompt);
         }
 
         [Theory]
@@ -100,12 +100,12 @@ namespace DesktopAiMascotTest.mascots
             // Assert
             Assert.NotNull(config.SystemPrompt.Personality);
             Assert.NotEmpty(config.SystemPrompt.Personality);
-            
+
             foreach (var trait in config.SystemPrompt.Personality)
             {
                 Assert.NotEmpty(trait);
             }
-            
+
             Debug.WriteLine($"[{mascotName}] 性格特性数: {config.SystemPrompt.Personality.Count}");
         }
 
@@ -122,7 +122,7 @@ namespace DesktopAiMascotTest.mascots
             // Assert
             Assert.NotNull(config.SystemPrompt.SpeechStyle);
             Assert.NotEmpty(config.SystemPrompt.SpeechStyle.FirstPerson);
-            
+
             Debug.WriteLine($"[{mascotName}] 一人称: {config.SystemPrompt.SpeechStyle.FirstPerson}");
             Debug.WriteLine($"[{mascotName}] 話し方パターン数: {config.SystemPrompt.SpeechStyle.SpeechPatterns?.Count ?? 0}");
         }
@@ -139,7 +139,7 @@ namespace DesktopAiMascotTest.mascots
 
             // Assert
             Assert.NotNull(config.Voice);
-            
+
             Debug.WriteLine($"[{mascotName}] Voice設定数: {config.Voice?.Count ?? 0}");
         }
 
