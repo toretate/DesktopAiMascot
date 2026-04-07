@@ -36,8 +36,25 @@ namespace DesktopAiMascot
 		public SystemConfig()
 		{
 			ApiKeys = new Dictionary<string, string>();
-			// デフォルトのBaseDirを設定
-			BaseDir = AppDomain.CurrentDomain.BaseDirectory;
+			
+			// Godotのユーザーデータディレクトリ（%APPDATA%/Godot/app_userdata/DesktopAiMascot など）を設定保存先に変更
+			try
+			{
+				if (Godot.Engine.HasSingleton("OS") || Godot.OS.HasFeature("godot"))
+				{
+					BaseDir = Godot.ProjectSettings.GlobalizePath("user://");
+				}
+				else
+				{
+					BaseDir = AppDomain.CurrentDomain.BaseDirectory;
+				}
+			}
+			catch
+			{
+				BaseDir = AppDomain.CurrentDomain.BaseDirectory;
+			}
+			
+			Debug.WriteLine($"[SystemConfig] Initialized BaseDir: {BaseDir}");
 		}
 
 		// ここにシステム全体の設定プロパティを追加する
@@ -165,7 +182,7 @@ namespace DesktopAiMascot
 		}
 
 		/// <summary>
-		/// Windows DPAPIを使用してAPIキーを暗号化します。
+		/// APIキーを暗号化します（Godot環境でのProtectedDataロードエラーを避けるためBase64化）
 		/// </summary>
 		private Dictionary<string, string> EncryptApiKeys(Dictionary<string, string> apiKeys)
 		{
@@ -181,9 +198,9 @@ namespace DesktopAiMascot
 						continue;
 					}
 
+					// DPAPIではなくBase64エンコードを使用する（Godot実行時のロードエラー対策）
 					byte[] plainBytes = Encoding.UTF8.GetBytes(kvp.Value);
-					byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
-					encrypted[kvp.Key] = Convert.ToBase64String(encryptedBytes);
+					encrypted[kvp.Key] = Convert.ToBase64String(plainBytes);
 				}
 				catch (Exception ex)
 				{
@@ -196,7 +213,8 @@ namespace DesktopAiMascot
 		}
 
 		/// <summary>
-		/// Windows DPAPIを使用してAPIキーを復号化します。
+		/// APIキーを復号化します。
+		/// 旧バージョンのDPAPI暗号化データはReflection経由で復号を試み、失敗すればBase64としてデコードします。
 		/// </summary>
 		private Dictionary<string, string> DecryptApiKeys(Dictionary<string, string> encryptedApiKeys)
 		{
@@ -213,8 +231,33 @@ namespace DesktopAiMascot
 					}
 
 					byte[] encryptedBytes = Convert.FromBase64String(kvp.Value);
-					byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
-					decrypted[kvp.Key] = Encoding.UTF8.GetString(plainBytes);
+
+					// 過去のDPAPI暗号化からのマイグレーション（Reflectionでロードエラーを回避）
+					bool decryptedFlag = false;
+					try
+					{
+						var type = Type.GetType("System.Security.Cryptography.ProtectedData, System.Security.Cryptography.ProtectedData");
+						if (type != null)
+						{
+							var unprotectMethod = type.GetMethod("Unprotect", new Type[] { typeof(byte[]), typeof(byte[]), typeof(DataProtectionScope) });
+							if (unprotectMethod != null)
+							{
+								byte[] plainBytes = (byte[])unprotectMethod.Invoke(null, new object?[] { encryptedBytes, null, DataProtectionScope.CurrentUser })!;
+								decrypted[kvp.Key] = Encoding.UTF8.GetString(plainBytes);
+								decryptedFlag = true;
+							}
+						}
+					}
+					catch
+					{
+						// DPAPI復号に失敗した場合は無視してBase64を試す
+					}
+
+					if (!decryptedFlag)
+					{
+						// Base64デコードとして処理
+						decrypted[kvp.Key] = Encoding.UTF8.GetString(encryptedBytes);
+					}
 				}
 				catch (Exception ex)
 				{
