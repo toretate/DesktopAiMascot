@@ -1,8 +1,15 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://crf7dvkxq7xc7"]
 
-[ext_resource type="Script" path="res://ui/settings/pages/MascotPropertyPage.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://bem3wwde5wfhv" path="res://ui/settings/pages/MascotPropertyPage.cs" id="1_script"]
+[ext_resource type="LabelSettings" uid="uid://bbu4b4pg2rjih" path="res://title.tres" id="2_4misl"]
 
-[node name="MascotPropertyPage" type="MarginContainer"]
+[sub_resource type="LabelSettings" id="LabelSettings_wgvmb"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_5aqr8"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_l57th"]
+
+[node name="MascotPropertyPage" type="MarginContainer" unique_id=350224127]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -10,80 +17,86 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1333639879]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="LeftVBox" type="VBoxContainer" parent="HBoxContainer"]
+[node name="LeftVBox" type="VBoxContainer" parent="HBoxContainer" unique_id=597499627]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="MascotList" type="ItemList" parent="HBoxContainer/LeftVBox"]
+[node name="MascotList" type="ItemList" parent="HBoxContainer/LeftVBox" unique_id=95049258]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="AddButton" type="Button" parent="HBoxContainer/LeftVBox"]
+[node name="AddButton" type="Button" parent="HBoxContainer/LeftVBox" unique_id=2088160991]
 layout_mode = 2
 text = "Add"
 
-[node name="RightVBox" type="VBoxContainer" parent="HBoxContainer"]
+[node name="RightVBox" type="VBoxContainer" parent="HBoxContainer" unique_id=472940839]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="InfoPanel" type="PanelContainer" parent="HBoxContainer/RightVBox"]
+[node name="InfoPanel" type="PanelContainer" parent="HBoxContainer/RightVBox" unique_id=1638275217]
 layout_mode = 2
 
-[node name="InfoVBox" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel"]
+[node name="InfoVBox" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel" unique_id=1350448355]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="NameHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="NameHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=791654192]
 layout_mode = 2
 theme_type_variation = &"HeaderLarge"
 text = "名前"
+label_settings = ExtResource("2_4misl")
 
-[node name="NameLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="NameLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=1946650761]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 text = "未選択"
+label_settings = SubResource("LabelSettings_wgvmb")
 
-[node name="VoiceHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="VoiceHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=718879779]
 layout_mode = 2
 theme_type_variation = &"HeaderLarge"
 text = "現在設定中の音声"
+label_settings = ExtResource("2_4misl")
 
-[node name="VoiceLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="VoiceLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=859443769]
 unique_name_in_owner = true
 layout_mode = 2
 text = "未設定"
+label_settings = SubResource("LabelSettings_5aqr8")
 autowrap_mode = 2
 
-[node name="StyleHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="StyleHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=1908859155]
 layout_mode = 2
 theme_type_variation = &"HeaderLarge"
 text = "音声スタイル"
+label_settings = ExtResource("2_4misl")
 
-[node name="StyleLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+[node name="StyleLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=831240826]
 unique_name_in_owner = true
 layout_mode = 2
 text = "未設定"
+label_settings = SubResource("LabelSettings_l57th")
 autowrap_mode = 2
 
-[node name="EditButton" type="Button" parent="HBoxContainer/RightVBox"]
+[node name="EditButton" type="Button" parent="HBoxContainer/RightVBox" unique_id=2040832608]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Edit"
 
-[node name="GenerateEmotesBtn" type="Button" parent="HBoxContainer/RightVBox"]
+[node name="GenerateEmotesBtn" type="Button" parent="HBoxContainer/RightVBox" unique_id=2013524297]
 layout_mode = 2
 text = "Generate Emotes"
 
-[node name="RemoveBgBtn" type="Button" parent="HBoxContainer/RightVBox"]
+[node name="RemoveBgBtn" type="Button" parent="HBoxContainer/RightVBox" unique_id=1903681680]
 layout_mode = 2
 text = "Remove Background"
