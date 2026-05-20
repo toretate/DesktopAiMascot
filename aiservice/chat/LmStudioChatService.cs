@@ -23,15 +23,28 @@ namespace DesktopAiMascot.aiservice.chat
         private const string LOCAL_ENDPOINT = "http://127.0.0.1:1234/v1/";
         private readonly string _endpoint;
 
-        public override string EndPoint { get; set; }
-
-
+        private string _endPoint = LOCAL_ENDPOINT;
+        public override string EndPoint
+        {
+            get => _endPoint;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _endPoint = LOCAL_ENDPOINT;
+                }
+                else
+                {
+                    _endPoint = value.EndsWith("/") ? value : value + "/";
+                }
+            }
+        }
 
         public string? SystemPrompt { get; set; }
 
-        public LmStudioChatService(string endpoint = LOCAL_ENDPOINT)
+        public LmStudioChatService(string? endpoint = null)
         {
-            this.EndPoint = endpoint;
+            this.EndPoint = endpoint ?? string.Empty;
         }
 
         public override async Task<string?> SendMessageAsync(string message)
@@ -39,24 +52,21 @@ namespace DesktopAiMascot.aiservice.chat
             return await SendMessageAsync(message, SystemConfig.Instance.ModelName);
         }
 
+        private static readonly HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+
         public override async Task<string?> SendMessageAsync(string message, string? modelName)
         {
             string llmModel = string.IsNullOrWhiteSpace(modelName) ? SystemConfig.Instance.ModelName : modelName;
-            string endpoint = EndPoint;
-            string apiKey = "NOT_NEEDED_API_KEY";
-
-            var client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions()
-            {
-                Endpoint = new Uri(endpoint),
-            });
-
-            var chatClient = client.GetChatClient(llmModel);
+            
+            // エンドポイントの構築 (例: http://192.168.10.103:1234/v1/chat/completions)
+            string endpoint = EndPoint.EndsWith("/") ? EndPoint + "chat/completions" : EndPoint + "/chat/completions";
 
             // チャットメッセージの構築
             var systemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(SystemPrompt ?? LoadSystemPrompt() ?? "You are a helpful assistant.");
-            var messages = new List<OpenAI.Chat.ChatMessage>
+            
+            var messages = new List<object>
             {
-                new SystemChatMessage(systemPrompt),
+                new { role = "system", content = systemPrompt }
             };
 
             var chatHistory = ChatHistory.GetMessages();
@@ -64,12 +74,18 @@ namespace DesktopAiMascot.aiservice.chat
             {
                 if (string.Equals(m.Sender, "Assistant", StringComparison.OrdinalIgnoreCase))
                 {
-                    messages.Add(new AssistantChatMessage(m.Text));
+                    messages.Add(new { role = "assistant", content = m.Text });
                 }
                 else
                 {
-                    messages.Add(new UserChatMessage(m.Text));
+                    messages.Add(new { role = "user", content = m.Text });
                 }
+            }
+
+            // 現在のユーザーメッセージが履歴の末尾にない場合は明示的に追加する
+            if (chatHistory.Count == 0 || !string.Equals(chatHistory[chatHistory.Count - 1].Text, message, StringComparison.Ordinal))
+            {
+                messages.Add(new { role = "user", content = message });
             }
 
             // 送信ログ出力
@@ -78,14 +94,48 @@ namespace DesktopAiMascot.aiservice.chat
             Debug.WriteLine($"エンドポイント: {endpoint}");
             Debug.WriteLine($"ユーザーメッセージ: {message}");
 
-            // レスポンスを取得する
+            var requestObj = new
+            {
+                model = llmModel,
+                messages = messages
+            };
+
+            var json = JsonSerializer.Serialize(requestObj);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
             try
             {
-                var response = await chatClient.CompleteChatAsync(messages);
-                var text = response.Value.Content[0].Text;
-                Debug.WriteLine($"レスポンス: {text}");
-                Debug.WriteLine("=== LmStudio 送信完了 ===");
-                return text;
+                var resp = await httpClient.PostAsync(endpoint, content).ConfigureAwait(false);
+                var responseText = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine($"LmStudio HTTPエラー: {resp.StatusCode}");
+                    Debug.WriteLine($"レスポンス本文: {responseText}");
+                    Debug.WriteLine("=== LmStudio 送信失敗 ===");
+                    return $"Error: サーバーがエラーを返しました ({resp.StatusCode})";
+                }
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(responseText);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                    {
+                        var first = choices[0];
+                        if (first.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var textContent))
+                        {
+                            var text = textContent.GetString();
+                            Debug.WriteLine($"レスポンス: {text}");
+                            Debug.WriteLine("=== LmStudio 送信完了 ===");
+                            return text;
+                        }
+                    }
+                }
+                catch { }
+
+                Debug.WriteLine("レスポンスのパースに失敗しました");
+                return "Error: レスポンスのパースに失敗しました";
             }
             catch (HttpRequestException)
             {
@@ -105,7 +155,7 @@ namespace DesktopAiMascot.aiservice.chat
                 Debug.WriteLine("=== LmStudio 送信失敗 ===");
                 return $"Error: {ex.Message}";
             }
-         }
+        }
 
         public override void ClearConversation()
         {

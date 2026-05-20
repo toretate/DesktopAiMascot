@@ -38,7 +38,8 @@ namespace DesktopAiMascot.aiservice
             }
             else if (serviceName == "LM Studio")
             {
-                return new LmStudioChatService();
+                var endpoint = SystemConfig.Instance.ChatAiEndpoint;
+                return new LmStudioChatService(endpoint);
             }
             else if (serviceName == "Gemini (AI Studio)" || serviceName == "Google AI Studio")
             {
