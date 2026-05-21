@@ -6,7 +6,7 @@ namespace DesktopAiMascot.ui.settings
 {
 	public partial class SettingsWindow : Window
 	{
-		private ItemList _categoryList = null!;
+		private VerticalNavigationList _categoryList = null!;
 		private MarginContainer _pageContainer = null!;
 		
 		// Property Pages
@@ -22,7 +22,7 @@ namespace DesktopAiMascot.ui.settings
 		{
 			CloseRequested += () => Hide();
 
-			_categoryList = GetNode<ItemList>("%CategoryList");
+			_categoryList = GetNode<VerticalNavigationList>("%CategoryList");
 			_pageContainer = GetNode<MarginContainer>("%PageContainer");
 
 			_mascotPage = GetNode<MascotPropertyPage>("%MascotPropertyPage");
