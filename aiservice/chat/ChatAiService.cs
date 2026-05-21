@@ -106,7 +106,7 @@ namespace DesktopAiMascot.aiservice.chat
         /// </summary>
         public virtual Task<string?> SendMessageAsync(string message, string? modelName)
         {
-            return SendMessageAsync(message, modelName);
+            return SendMessageAsync(message);
         }
 
         /// <summary>

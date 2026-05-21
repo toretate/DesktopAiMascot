@@ -7,6 +7,7 @@ using System.Diagnostics;
 using DesktopAiMascot.mascots;
 using DesktopAiMascot.ui.chat;
 using Google.GenAI;
+using Google.GenAI.Types;
 
 namespace DesktopAiMascot.aiservice.chat
 {
@@ -14,27 +15,47 @@ namespace DesktopAiMascot.aiservice.chat
     {
         private const string DEFAULT_MODEL = "gemini-2.0-flash-exp";
         private const string IMAGE_MODEL = "imagen-3.0-generate-001"; // Gemini 画像生成モデル
-        private readonly Google.GenAI.Client? _client;
+        private Google.GenAI.Client? _client;
+        private string? _lastUsedApiKey;
+        private readonly object _clientLock = new object();
         
         public override string EndPoint { get; set; }
 
         public GoogleAiStudioChatService()
         {
-            var apiKey = LoadApiKey();
-            
-            if (!string.IsNullOrWhiteSpace(apiKey))
-            {
-                _client = new Google.GenAI.Client(apiKey: apiKey);
-            }
-            
             EndPoint = "https://generativelanguage.googleapis.com/v1beta/";
+            GetClient(); // 初回初期化
+        }
+
+        private Google.GenAI.Client? GetClient()
+        {
+            var currentApiKey = LoadApiKey();
+            lock (_clientLock)
+            {
+                if (_client == null || currentApiKey != _lastUsedApiKey)
+                {
+                    _lastUsedApiKey = currentApiKey;
+                    if (!string.IsNullOrWhiteSpace(currentApiKey))
+                    {
+                        Debug.WriteLine("[GoogleAiStudio] APIキーの変更を検知しました。Clientを再初期化します。");
+                        _client = new Google.GenAI.Client(apiKey: currentApiKey);
+                    }
+                    else
+                    {
+                        Debug.WriteLine("[GoogleAiStudio] APIキーが設定されていません。");
+                        _client = null;
+                    }
+                }
+                return _client;
+            }
         }
 
         public override async Task<ModelDisplayItem[]> GetAvailableModels(bool reload)
         {
             try
             {
-                if (_client == null)
+                var client = GetClient();
+                if (client == null)
                 {
                     Debug.WriteLine("[GoogleAiStudio] Client is not initialized. API key may be missing.");
                     return new[] { new ModelDisplayItem(DEFAULT_MODEL) };
@@ -44,7 +65,7 @@ namespace DesktopAiMascot.aiservice.chat
 
                 var models = new List<ModelDisplayItem>();
                 
-                var pager = await _client.Models.ListAsync();
+                var pager = await client.Models.ListAsync();
                 
                 await foreach (var model in pager)
                 {
@@ -91,47 +112,91 @@ namespace DesktopAiMascot.aiservice.chat
 
         public override async Task<string?> SendMessageAsync(string message)
         {
+            return await SendMessageAsync(message, null);
+        }
+
+        public override async Task<string?> SendMessageAsync(string message, string? modelName)
+        {
             try
             {
-                if (_client == null)
+                var client = GetClient();
+                if (client == null)
                 {
                     Debug.WriteLine("[GoogleAiStudio] Client is not initialized.");
                     return "Error: Google AI API key is not configured. Please set the API key in settings.";
                 }
 
                 var systemPrompt = EmotionTagPromptHelper.AppendEmotionTagInstruction(LoadSystemPrompt() ?? "You are a helpful assistant.");
-                var modelName = SystemConfig.Instance.ModelName ?? DEFAULT_MODEL;
+                var model = string.IsNullOrWhiteSpace(modelName) ? (SystemConfig.Instance.ModelName ?? DEFAULT_MODEL) : modelName;
 
-                Debug.WriteLine($"[GoogleAiStudio] Model ID from config: {modelName}");
-                Debug.WriteLine($"[GoogleAiStudio] Sending request to API with model: {modelName}");
+                Debug.WriteLine($"[GoogleAiStudio] Sending request to API with model: {model}");
 
-                // システムプロンプトとメッセージを結合
-                var fullMessage = $"{systemPrompt}\n\n{message}";
-                
-                var response = await _client.Models.GenerateContentAsync(modelName, fullMessage);
+                // システムプロンプトを GenerateContentConfig.SystemInstruction に設定
+                var config = new GenerateContentConfig
+                {
+                    SystemInstruction = new Content
+                    {
+                        Parts = new List<Part> { new Part { Text = systemPrompt } }
+                    }
+                };
+
+                // 会話履歴を構築
+                var contents = new List<Content>();
+                var chatHistory = ChatHistory.GetMessages();
+
+                foreach (var m in chatHistory)
+                {
+                    var role = string.Equals(m.Sender, "Assistant", StringComparison.OrdinalIgnoreCase) ? "model" : "user";
+                    contents.Add(new Content
+                    {
+                        Role = role,
+                        Parts = new List<Part> { new Part { Text = m.Text } }
+                    });
+                }
+
+                // 現在のメッセージが履歴の末尾にない場合は明示的に追加する
+                if (contents.Count == 0 || contents.Last().Parts?.FirstOrDefault()?.Text != message)
+                {
+                    contents.Add(new Content
+                    {
+                        Role = "user",
+                        Parts = new List<Part> { new Part { Text = message } }
+                    });
+                }
+
+                // 送信ログ出力
+                Debug.WriteLine("=== Google AI Studio 送信開始 ===");
+                Debug.WriteLine($"モデル: {model}");
+                Debug.WriteLine($"ユーザーメッセージ: {message}");
+
+                var response = await client.Models.GenerateContentAsync(model, contents, config);
                 
                 if (response?.Candidates != null && response.Candidates.Count > 0)
                 {
                     var candidate = response.Candidates[0];
                     if (candidate?.Content?.Parts != null && candidate.Content.Parts.Count > 0)
                     {
-                        return candidate.Content.Parts[0].Text;
+                        var text = candidate.Content.Parts[0].Text;
+                        Debug.WriteLine($"レスポンス: {text}");
+                        Debug.WriteLine("=== Google AI Studio 送信完了 ===");
+                        return text;
                     }
                 }
                 
                 Debug.WriteLine("[GoogleAiStudio] No response content from API");
+                Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
                 return "Error: No response content from Google AI Studio";
             }
             catch (Google.GenAI.ClientError ex)
             {
                 Debug.WriteLine($"[GoogleAiStudio] ClientError発生");
-                Debug.WriteLine($"[GoogleAiStudio] Message: {ex.Message}");
-                Debug.WriteLine($"[GoogleAiStudio] InnerException: {ex.InnerException?.Message ?? "None"}");
+                Debug.WriteLine($"Message: {ex.Message}");
+                Debug.WriteLine($"InnerException: {ex.InnerException?.Message ?? "None"}");
                 
                 // ステータスコードが取得可能な場合は出力
                 if (ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode.HasValue)
                 {
-                    Debug.WriteLine($"[GoogleAiStudio] StatusCode: {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode.Value})");
+                    Debug.WriteLine($"StatusCode: {(int)httpEx.StatusCode.Value} ({httpEx.StatusCode.Value})");
                 }
                 
                 Debug.WriteLine("=== Google AI Studio 送信失敗 ===");
@@ -324,7 +389,8 @@ namespace DesktopAiMascot.aiservice.chat
         {
             try
             {
-                if (_client == null)
+                var client = GetClient();
+                if (client == null)
                 {
                     Debug.WriteLine("[GoogleAiStudio] Client is not initialized.");
                     return "Error: Google AI API key is not configured. Please set the API key in settings.";
@@ -336,7 +402,7 @@ namespace DesktopAiMascot.aiservice.chat
                 // システムプロンプトとユーザープロンプトを結合
                 var fullMessage = $"{systemPrompt}\n\n{userPrompt}";
                 
-                var response = await _client.Models.GenerateContentAsync(modelName, fullMessage);
+                var response = await client.Models.GenerateContentAsync(modelName, fullMessage);
                 
                 if (response?.Candidates != null && response.Candidates.Count > 0)
                 {

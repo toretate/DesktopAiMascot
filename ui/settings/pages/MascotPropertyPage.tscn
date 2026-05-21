@@ -1,102 +1,315 @@
-[gd_scene format=3 uid="uid://crf7dvkxq7xc7"]
+[gd_scene load_steps=17 format=3 uid="uid://crf7dvkxq7xc7"]
 
-[ext_resource type="Script" uid="uid://bem3wwde5wfhv" path="res://ui/settings/pages/MascotPropertyPage.cs" id="1_script"]
-[ext_resource type="LabelSettings" uid="uid://bbu4b4pg2rjih" path="res://title.tres" id="2_4misl"]
+[ext_resource type="Script" path="res://ui/settings/pages/MascotPropertyPage.cs" id="1_script"]
+[ext_resource type="LabelSettings" path="res://title.tres" id="2_4misl"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_wgvmb"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_info"]
+bg_color = Color(0.98, 0.98, 0.99, 0.95)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.03)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
+content_margin_left = 20
+content_margin_top = 20
+content_margin_right = 20
+content_margin_bottom = 20
 
-[sub_resource type="LabelSettings" id="LabelSettings_5aqr8"]
+[sub_resource type="LabelSettings" id="LabelSettings_name"]
+font_size = 24
+font_color = Color(0.08, 0.08, 0.1, 1)
 
-[sub_resource type="LabelSettings" id="LabelSettings_l57th"]
+[sub_resource type="LabelSettings" id="LabelSettings_desc"]
+font_size = 14
+font_color = Color(0.5, 0.5, 0.55, 1)
 
-[node name="MascotPropertyPage" type="MarginContainer" unique_id=350224127]
+[sub_resource type="LabelSettings" id="LabelSettings_section"]
+font_size = 16
+font_color = Color(0.2, 0.2, 0.25, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_value"]
+font_size = 14
+font_color = Color(0.4, 0.4, 0.45, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_edit_normal"]
+bg_color = Color(0.20, 0.47, 0.96, 1.0)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_edit_hover"]
+bg_color = Color(0.13, 0.38, 0.85, 1.0)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gen_normal"]
+bg_color = Color(0.92, 0.98, 0.94, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.72, 0.9, 0.8, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gen_hover"]
+bg_color = Color(0.85, 0.96, 0.88, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.52, 0.82, 0.65, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_remove_normal"]
+bg_color = Color(0.96, 0.96, 0.96, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.85, 0.85, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_remove_hover"]
+bg_color = Color(0.92, 0.92, 0.92, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.75, 0.75, 0.75, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_add_normal"]
+bg_color = Color(1.0, 1.0, 1.0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.85, 0.85, 0.85, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_add_hover"]
+bg_color = Color(0.96, 0.96, 0.96, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.75, 0.75, 0.75, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_bg"]
+bg_color = Color(0.96, 0.97, 0.98, 0.95)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.88, 0.90, 0.92, 1.0)
+content_margin_left = 12
+content_margin_top = 12
+content_margin_right = 12
+content_margin_bottom = 12
+
+[node name="MascotPropertyPage" type="MarginContainer"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
 script = ExtResource("1_script")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1333639879]
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 16
 
-[node name="LeftVBox" type="VBoxContainer" parent="HBoxContainer" unique_id=597499627]
-custom_minimum_size = Vector2(150, 0)
+[node name="LeftVBox" type="VBoxContainer" parent="HBoxContainer"]
+custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 12
 
-[node name="MascotList" type="ItemList" parent="HBoxContainer/LeftVBox" unique_id=95049258]
+[node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/LeftVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="MascotListContainer" type="VBoxContainer" parent="HBoxContainer/LeftVBox/ScrollContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
-[node name="AddButton" type="Button" parent="HBoxContainer/LeftVBox" unique_id=2088160991]
+[node name="AddButton" type="Button" parent="HBoxContainer/LeftVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.2, 0.25, 1)
+theme_override_colors/font_hover_color = Color(0.1, 0.1, 0.15, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_add_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_add_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_add_normal")
 text = "Add"
 
-[node name="RightVBox" type="VBoxContainer" parent="HBoxContainer" unique_id=472940839]
+[node name="PreviewPanel" type="PanelContainer" parent="HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_preview_bg")
+
+[node name="PreviewScroll" type="ScrollContainer" parent="HBoxContainer/PreviewPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="CenterContainer" type="CenterContainer" parent="HBoxContainer/PreviewPanel/PreviewScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PreviewTexture" type="TextureRect" parent="HBoxContainer/PreviewPanel/PreviewScroll/CenterContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 300)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RightVBox" type="VBoxContainer" parent="HBoxContainer"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="InfoPanel" type="PanelContainer" parent="HBoxContainer/RightVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_info")
+
+[node name="InfoVBox" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="VoiceSettingsHeader" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+text = "Current Voice Settings"
+label_settings = SubResource("LabelSettings_section")
+
+[node name="NameSection" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="NameLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/NameSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "miyako"
+label_settings = SubResource("LabelSettings_name")
+
+[node name="DescLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/NameSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "miyako"
+label_settings = SubResource("LabelSettings_desc")
+
+[node name="HSeparator" type="HSeparator" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+
+[node name="VoiceStyleSection" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="VoiceHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/VoiceStyleSection"]
+layout_mode = 2
+text = "Voice Style"
+label_settings = SubResource("LabelSettings_section")
+
+[node name="VoiceLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/VoiceStyleSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "未設定"
+label_settings = SubResource("LabelSettings_value")
+autowrap_mode = 2
+
+[node name="StyleSection" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="StyleHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/StyleSection"]
+layout_mode = 2
+text = "voice settings"
+label_settings = SubResource("LabelSettings_value")
+
+[node name="StyleLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox/StyleSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "未設定"
+label_settings = SubResource("LabelSettings_value")
+autowrap_mode = 2
+
+[node name="ButtonContainer" type="VBoxContainer" parent="HBoxContainer/RightVBox"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="InfoPanel" type="PanelContainer" parent="HBoxContainer/RightVBox" unique_id=1638275217]
-layout_mode = 2
-
-[node name="InfoVBox" type="VBoxContainer" parent="HBoxContainer/RightVBox/InfoPanel" unique_id=1350448355]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="NameHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=791654192]
-layout_mode = 2
-theme_type_variation = &"HeaderLarge"
-text = "名前"
-label_settings = ExtResource("2_4misl")
-
-[node name="NameLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=1946650761]
+[node name="EditButton" type="Button" parent="HBoxContainer/RightVBox/ButtonContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 30)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-text = "未選択"
-label_settings = SubResource("LabelSettings_wgvmb")
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_edit_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_edit_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_edit_normal")
+text = "📝 Edit"
 
-[node name="VoiceHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=718879779]
-layout_mode = 2
-theme_type_variation = &"HeaderLarge"
-text = "現在設定中の音声"
-label_settings = ExtResource("2_4misl")
-
-[node name="VoiceLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=859443769]
+[node name="GenerateEmotesBtn" type="Button" parent="HBoxContainer/RightVBox/ButtonContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-text = "未設定"
-label_settings = SubResource("LabelSettings_5aqr8")
-autowrap_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.6, 0.35, 1)
+theme_override_colors/font_hover_color = Color(0.15, 0.5, 0.25, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_gen_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_gen_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_gen_normal")
+text = "💬 Generate Emotes"
 
-[node name="StyleHeaderLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=1908859155]
-layout_mode = 2
-theme_type_variation = &"HeaderLarge"
-text = "音声スタイル"
-label_settings = ExtResource("2_4misl")
-
-[node name="StyleLabel" type="Label" parent="HBoxContainer/RightVBox/InfoPanel/InfoVBox" unique_id=831240826]
+[node name="RemoveBgBtn" type="Button" parent="HBoxContainer/RightVBox/ButtonContainer"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-text = "未設定"
-label_settings = SubResource("LabelSettings_l57th")
-autowrap_mode = 2
-
-[node name="EditButton" type="Button" parent="HBoxContainer/RightVBox" unique_id=2040832608]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Edit"
-
-[node name="GenerateEmotesBtn" type="Button" parent="HBoxContainer/RightVBox" unique_id=2013524297]
-layout_mode = 2
-text = "Generate Emotes"
-
-[node name="RemoveBgBtn" type="Button" parent="HBoxContainer/RightVBox" unique_id=1903681680]
-layout_mode = 2
-text = "Remove Background"
+theme_override_colors/font_color = Color(0.4, 0.4, 0.45, 1)
+theme_override_colors/font_hover_color = Color(0.2, 0.2, 0.25, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_remove_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_remove_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_remove_normal")
+text = "🗑️ Remove Background"
