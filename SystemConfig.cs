@@ -105,6 +105,12 @@ namespace DesktopAiMascot
 		public string ChatAiEndpoint { get; set; } = "";
 		public string GoogleCloudProjectId { get; set; } = "";
 		public string GoogleCloudRegion { get; set; } = "us-central1";
+		public double ChatAiTemperature { get; set; } = 1.0;
+		public int ChatAiTopK { get; set; } = 20;
+		public bool ChatAiTopKToggle { get; set; } = false;
+		public bool ChatAiAudioRandomElititors { get; set; } = false;
+		public bool ChatAiBridgesRopherlyModels { get; set; } = true;
+		public bool ChatAiFilterChatOnlyModels { get; set; } = true;
 
 		public void Load()
 		{
@@ -151,6 +157,12 @@ namespace DesktopAiMascot
 					this.GoogleCloudProjectId = loaded.GoogleCloudProjectId ?? "";
 					this.GoogleCloudRegion = loaded.GoogleCloudRegion ?? "us-central1";
 					this.AngleImageModelIndex = loaded.AngleImageModelIndex;
+					this.ChatAiTemperature = loaded.ChatAiTemperature != 0 ? loaded.ChatAiTemperature : 1.0;
+					this.ChatAiTopK = loaded.ChatAiTopK != 0 ? loaded.ChatAiTopK : 20;
+					this.ChatAiTopKToggle = loaded.ChatAiTopKToggle;
+					this.ChatAiAudioRandomElititors = loaded.ChatAiAudioRandomElititors;
+					this.ChatAiBridgesRopherlyModels = loaded.ChatAiBridgesRopherlyModels;
+					this.ChatAiFilterChatOnlyModels = loaded.ChatAiFilterChatOnlyModels;
 				}
 			}
 			catch (Exception ex)

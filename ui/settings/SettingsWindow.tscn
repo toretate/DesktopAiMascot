@@ -38,8 +38,8 @@ content_margin_bottom = 8
 
 [node name="SettingsWindow" type="Window"]
 title = "設定 (Settings)"
-size = Vector2i(1024, 768)
-min_size = Vector2i(1024, 768)
+size = Vector2i(1150, 768)
+min_size = Vector2i(1150, 768)
 script = ExtResource("1_script")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -64,6 +64,7 @@ theme_override_constants/margin_bottom = 12
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 12
+grow_horizontal = 1
 
 [node name="CategoryList" type="ItemList" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
