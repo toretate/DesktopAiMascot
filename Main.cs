@@ -59,7 +59,6 @@ public partial class Main : Node2D
 
         // プロジェクト設定が効かない場合のために、コードから強制的にウィンドウフラグを設定
         DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Borderless, true);
-        DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.AlwaysOnTop, true);
         DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.Transparent, true);
 
         // 背景透過を有効化
@@ -73,6 +72,9 @@ public partial class Main : Node2D
 
         // C#コアクラス (SystemConfig) の呼び出し
         DesktopAiMascot.SystemConfig.Instance.Load();
+
+        // 最前面表示の設定適用
+        DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.AlwaysOnTop, DesktopAiMascot.SystemConfig.Instance.AlwaysOnTop);
 
         // マスコットの読み込みと表示
         DesktopAiMascot.mascots.MascotManager.Instance.Load();

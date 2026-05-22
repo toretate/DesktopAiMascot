@@ -1,6 +1,8 @@
 using Godot;
 using System;
 using DesktopAiMascot.ui.settings.pages;
+using CheckBox = Godot.CheckBox;
+using Button = Godot.Button;
 
 namespace DesktopAiMascot.ui.settings
 {
@@ -8,6 +10,8 @@ namespace DesktopAiMascot.ui.settings
 	{
 		private VerticalNavigationList _categoryList = null!;
 		private MarginContainer _pageContainer = null!;
+		private CheckBox _alwaysOnTopCheck = null!;
+		private Button _exitAppButton = null!;
 		
 		// Property Pages
 		private MascotPropertyPage _mascotPage = null!;
@@ -24,6 +28,8 @@ namespace DesktopAiMascot.ui.settings
 
 			_categoryList = GetNode<VerticalNavigationList>("%CategoryList");
 			_pageContainer = GetNode<MarginContainer>("%PageContainer");
+			_alwaysOnTopCheck = GetNode<CheckBox>("%AlwaysOnTopCheck");
+			_exitAppButton = GetNode<Button>("%ExitAppButton");
 
 			_mascotPage = GetNode<MascotPropertyPage>("%MascotPropertyPage");
 			_chatAiPage = GetNode<ChatAiPropertyPage>("%ChatAiPropertyPage");
@@ -46,6 +52,11 @@ namespace DesktopAiMascot.ui.settings
 			// 初期選択状態
 			_categoryList.Select(0);
 			OnCategorySelected(0);
+
+			// 最前面チェックボックスと終了ボタンの初期化・接続
+			_alwaysOnTopCheck.ButtonPressed = SystemConfig.Instance.AlwaysOnTop;
+			_alwaysOnTopCheck.Toggled += OnAlwaysOnTopToggled;
+			_exitAppButton.Pressed += OnExitAppPressed;
 		}
 
 		private void OnCategorySelected(long index)
@@ -80,6 +91,18 @@ namespace DesktopAiMascot.ui.settings
 					_apiKeyPage.Show();
 					break;
 			}
+		}
+
+		private void OnAlwaysOnTopToggled(bool buttonPressed)
+		{
+			SystemConfig.Instance.AlwaysOnTop = buttonPressed;
+			SystemConfig.Instance.Save();
+			DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.AlwaysOnTop, buttonPressed);
+		}
+
+		private void OnExitAppPressed()
+		{
+			GetTree().Quit();
 		}
 	}
 }

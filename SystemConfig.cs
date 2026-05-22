@@ -61,6 +61,7 @@ namespace DesktopAiMascot
 		[YamlIgnore]
 		public string BaseDir { get; set; }
 		public string Language { get; set; } = "ja-JP";
+		public bool AlwaysOnTop { get; set; } = true;
 
 		// APIキーの辞書（メモリ上は平文）
 		[YamlIgnore]
@@ -163,6 +164,7 @@ namespace DesktopAiMascot
 					this.ChatAiAudioRandomElititors = loaded.ChatAiAudioRandomElititors;
 					this.ChatAiBridgesRopherlyModels = loaded.ChatAiBridgesRopherlyModels;
 					this.ChatAiFilterChatOnlyModels = loaded.ChatAiFilterChatOnlyModels;
+					this.AlwaysOnTop = loaded.AlwaysOnTop;
 				}
 			}
 			catch (Exception ex)
