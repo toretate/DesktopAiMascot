@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DesktopAiMascot.aiservice;
@@ -7,12 +8,21 @@ using DesktopAiMascot.aiservice.voice;
 using DesktopAiMascot.mascots;
 using Button = Godot.Button;
 using Label = Godot.Label;
+using Control = Godot.Control;
+using Color = Godot.Color;
 
 namespace DesktopAiMascot.ui.settings.pages
 {
+    /// <summary>
+    /// Voice AI 設定画面を表すクラス。
+    /// デザインガイドラインに沿った、スリムなプロバイダーリストと設定パネルの2カラム構成で制御します。
+    /// </summary>
     public partial class VoiceAiPropertyPage : MarginContainer
     {
-        private OptionButton _voiceAiComboBox = null!;
+        private VBoxContainer _providerListContainer = null!;
+        private VBoxContainer _parametersVBox = null!;
+        private PanelContainer _notImplementedPanel = null!;
+
         private LineEdit _voiceAiUrlTextField = null!;
         private Button _voiceAiRefreshButton = null!;
         private Label _serverStatusLabel = null!;
@@ -30,10 +40,33 @@ namespace DesktopAiMascot.ui.settings.pages
         private VoiceVoxSpeaker[]? _voiceVoxSpeakers = null;
         private int? _pendingVoiceVoxStyleId = null;
         private bool _isLoadingConfig = false;
+        private bool _isUpdatingUI = false;
+
+        // プロバイダー情報メタデータ定義
+        private class ProviderInfo
+        {
+            public string Name { get; set; } = "";
+            public string InternalName { get; set; } = "";
+            public string Description { get; set; } = "";
+            public string IconPath { get; set; } = "";
+            public bool IsImplemented { get; set; }
+        }
+
+        // 定義されたボイスエンジンプロバイダーメタデータ
+        private readonly List<ProviderInfo> _providers = new List<ProviderInfo>
+        {
+            new ProviderInfo { Name = "StyleBertVits2", InternalName = "StyleBertVits2", Description = "Style-Bert-VITS2 - High-quality expressive text-to-speech.", IconPath = "res://assets/icons/providers/stylebertvits2_icon.png", IsImplemented = true },
+            new ProviderInfo { Name = "VoiceVox", InternalName = "VoiceVox", Description = "VOICEVOX - Free Japanese neural text-to-speech software.", IconPath = "res://assets/icons/providers/voicevox_icon.png", IsImplemented = true },
+            new ProviderInfo { Name = "OpenAI TTS", InternalName = "OpenAI TTS", Description = "OpenAI TTS - Natural-sounding text-to-speech API.", IconPath = "res://assets/icons/providers/openai_tts_icon.png", IsImplemented = false },
+            new ProviderInfo { Name = "ElevenLabs", InternalName = "ElevenLabs", Description = "ElevenLabs - Prime AI Text to Speech & Voice Cloning.", IconPath = "res://assets/icons/providers/elevenlabs_icon.png", IsImplemented = false }
+        };
 
         public override void _Ready()
         {
-            _voiceAiComboBox = GetNode<OptionButton>("%VoiceAiComboBox");
+            _providerListContainer = GetNode<VBoxContainer>("%ProviderListContainer");
+            _parametersVBox = GetNode<VBoxContainer>("%ParametersVBox");
+            _notImplementedPanel = GetNode<PanelContainer>("%NotImplementedPanel");
+
             _voiceAiUrlTextField = GetNode<LineEdit>("%VoiceAiUrlTextField");
             _voiceAiRefreshButton = GetNode<Button>("%VoiceAiRefreshButton");
             _serverStatusLabel = GetNode<Label>("%ServerStatusLabel");
@@ -48,7 +81,7 @@ namespace DesktopAiMascot.ui.settings.pages
 
             _saveVoiceToMascotButton = GetNode<Button>("%SaveVoiceToMascotButton");
 
-            _voiceAiComboBox.ItemSelected += OnVoiceAiSelected;
+            // イベントハンドラーの接続
             _voiceAiUrlTextField.TextChanged += OnVoiceUrlChanged;
             _voiceAiRefreshButton.Pressed += OnRefreshPressed;
 
@@ -62,72 +95,266 @@ namespace DesktopAiMascot.ui.settings.pages
 
             VisibilityChanged += OnVisibilityChanged;
 
-            PopulateVoiceAiCombo();
-
             if (IsVisibleInTree())
             {
-                _ = LoadMascotVoiceConfig();
+                InitializeUI();
             }
         }
 
-        private async void OnVisibilityChanged()
+        private void OnVisibilityChanged()
         {
             if (Visible && !_isLoadingConfig)
             {
-                await LoadMascotVoiceConfig();
+                InitializeUI();
             }
         }
 
-        private void PopulateVoiceAiCombo()
+        /// <summary>
+        /// 画面初期表示時の UI 更新
+        /// </summary>
+        private void InitializeUI()
         {
-            _voiceAiComboBox.Clear();
-            var services = VoiceAiManager.Instance.VoiceAiServices.Values.ToList();
-            foreach (var svc in services)
+            if (_isUpdatingUI) return;
+            _isUpdatingUI = true;
+
+            // プロバイダー固定リストの再構築
+            PopulateProviderList();
+
+            string currentVoice = SystemConfig.Instance.VoiceService;
+            
+            if (VoiceAiManager.Instance.VoiceAiServices.TryGetValue(currentVoice, out var service))
             {
-                _voiceAiComboBox.AddItem(svc.Name);
+                VoiceAiManager.Instance.CurrentService = service;
+                string serviceUrl = SystemConfig.Instance.GetVoiceServiceUrl(currentVoice, service.EndPoint);
+                service.Url = serviceUrl;
+                _voiceAiUrlTextField.Text = serviceUrl;
+            }
+
+            UpdatePanelsVisibility();
+            
+            _isUpdatingUI = false;
+
+            // 設定パラメータのロード
+            _ = LoadMascotVoiceConfig();
+        }
+
+        /// <summary>
+        /// プロバイダーの固定縦型リストを動的に生成します。
+        /// </summary>
+        private void PopulateProviderList()
+        {
+            // 既存のリストアイテムをクリア
+            foreach (Node child in _providerListContainer.GetChildren())
+            {
+                child.QueueFree();
             }
 
             string currentVoice = SystemConfig.Instance.VoiceService;
-            for (int i = 0; i < _voiceAiComboBox.ItemCount; i++)
+
+            foreach (var prov in _providers)
             {
-                if (_voiceAiComboBox.GetItemText(i) == currentVoice)
+                bool isSelected = prov.InternalName == currentVoice;
+
+                // 各プロバイダー用のパネルコンテナを作成（これがリストの1行分になる）
+                var itemPanel = new PanelContainer();
+                itemPanel.CustomMinimumSize = new Vector2(0, 48); // 48pxのスリムな固定高で均一にする
+                itemPanel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                
+                // パネルのスタイル設定（丸角と余白）
+                var styleBoxNormal = new StyleBoxFlat();
+                styleBoxNormal.CornerRadiusTopLeft = 8;
+                styleBoxNormal.CornerRadiusTopRight = 8;
+                styleBoxNormal.CornerRadiusBottomLeft = 8;
+                styleBoxNormal.CornerRadiusBottomRight = 8;
+                styleBoxNormal.ContentMarginLeft = 12;
+                styleBoxNormal.ContentMarginRight = 12;
+                styleBoxNormal.ContentMarginTop = 6;
+                styleBoxNormal.ContentMarginBottom = 6;
+
+                if (isSelected)
                 {
-                    _voiceAiComboBox.Select(i);
-                    break;
+                    // 選択時のライトブルー背景とボーダー
+                    styleBoxNormal.BgColor = new Color(0.85f, 0.92f, 0.98f, 1.0f);
+                    styleBoxNormal.BorderWidthLeft = 2;
+                    styleBoxNormal.BorderWidthTop = 2;
+                    styleBoxNormal.BorderWidthRight = 2;
+                    styleBoxNormal.BorderWidthBottom = 2;
+                    styleBoxNormal.BorderColor = new Color(0.20f, 0.47f, 0.96f, 1.0f); // アクセントソフトブルー
                 }
-            }
+                else
+                {
+                    // 通常時は透明背景
+                    styleBoxNormal.BgColor = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+                }
 
-            if (VoiceAiManager.Instance.CurrentService != null)
-            {
-                var currentService = VoiceAiManager.Instance.CurrentService;
-                string serviceUrl = SystemConfig.Instance.GetVoiceServiceUrl(currentService.Name, currentService.EndPoint);
-                currentService.Url = serviceUrl;
-                _voiceAiUrlTextField.Text = serviceUrl;
-            }
+                itemPanel.AddThemeStyleboxOverride("panel", styleBoxNormal);
 
-            if (!string.IsNullOrEmpty(currentVoice))
-            {
-                UpdateSettingsVisibility(currentVoice);
+                // パネル内のレイアウト (HBox)
+                var hbox = new HBoxContainer();
+                hbox.AddThemeConstantOverride("separation", 12);
+                hbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                hbox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+                hbox.MouseFilter = Control.MouseFilterEnum.Ignore;
+                itemPanel.AddChild(hbox);
+
+                // アイコン
+                var iconRect = new TextureRect();
+                iconRect.CustomMinimumSize = new Vector2(28, 28); // スリムな28px四方に変更
+                iconRect.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+                iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+                iconRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+                
+                try
+                {
+                    if (!string.IsNullOrEmpty(prov.IconPath))
+                    {
+                        if (ResourceLoader.Exists(prov.IconPath))
+                        {
+                            try
+                            {
+                                iconRect.Texture = ResourceLoader.Load<Texture2D>(prov.IconPath);
+                            }
+                            catch
+                            {
+                                var image = Godot.Image.LoadFromFile(prov.IconPath);
+                                if (image != null)
+                                {
+                                    iconRect.Texture = ImageTexture.CreateFromImage(image);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var image = Godot.Image.LoadFromFile(prov.IconPath);
+                            if (image != null)
+                            {
+                                iconRect.Texture = ImageTexture.CreateFromImage(image);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    GD.PrintErr($"Failed to load provider icon ({prov.IconPath}): {ex.Message}");
+                }
+                hbox.AddChild(iconRect);
+
+                // プロバイダー名
+                var nameLabel = new Label();
+                nameLabel.Text = prov.Name;
+                nameLabel.AddThemeColorOverride("font_color", new Color(0.1f, 0.1f, 0.15f));
+                nameLabel.AddThemeFontSizeOverride("font_size", 14);
+                nameLabel.AddThemeFontOverride("font", ThemeDB.FallbackFont); // フォントフォールバック
+                nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // チェックマークとの幅調整
+                nameLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+                hbox.AddChild(nameLabel);
+
+                // 選択時チェックマーク
+                if (isSelected)
+                {
+                    var checkLabel = new Label();
+                    checkLabel.Text = "✓";
+                    checkLabel.AddThemeColorOverride("font_color", new Color(0.20f, 0.47f, 0.96f)); // アクセントブルー
+                    checkLabel.AddThemeFontSizeOverride("font_size", 16);
+                    checkLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                    checkLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+                    hbox.AddChild(checkLabel);
+                }
+
+                // クリック用の透明なボタンを上に重ねる
+                var itemBtn = new Button();
+                itemBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                itemBtn.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+                itemBtn.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+                
+                // ボタンの背景スタイルを透明にする
+                var styleBoxEmpty = new StyleBoxEmpty();
+                itemBtn.AddThemeStyleboxOverride("normal", styleBoxEmpty);
+                itemBtn.AddThemeStyleboxOverride("pressed", styleBoxEmpty);
+                itemBtn.AddThemeStyleboxOverride("focus", styleBoxEmpty);
+
+                // ホバー時のみ少し薄いグレーを重ねる
+                var styleBoxHover = new StyleBoxFlat();
+                styleBoxHover.BgColor = new Color(0.0f, 0.0f, 0.0f, 0.05f); // 非常に薄い黒を重ねる
+                styleBoxHover.CornerRadiusTopLeft = 8;
+                styleBoxHover.CornerRadiusTopRight = 8;
+                styleBoxHover.CornerRadiusBottomLeft = 8;
+                styleBoxHover.CornerRadiusBottomRight = 8;
+                itemBtn.AddThemeStyleboxOverride("hover", styleBoxHover);
+
+                // クリックイベントのバインド
+                string internalName = prov.InternalName;
+                itemBtn.Pressed += () => OnProviderSelected(internalName);
+                
+                itemPanel.AddChild(itemBtn);
+
+                _providerListContainer.AddChild(itemPanel);
             }
         }
 
-        private async void OnVoiceAiSelected(long index)
+        /// <summary>
+        /// プロバイダーが選択されたときの処理
+        /// </summary>
+        private async void OnProviderSelected(string internalName)
         {
-            string voiceName = _voiceAiComboBox.GetItemText((int)index);
-            SystemConfig.Instance.VoiceService = voiceName;
+            if (_isUpdatingUI) return;
+
+            // 即時保存
+            SystemConfig.Instance.VoiceService = internalName;
             SystemConfig.Instance.Save();
 
-            if (VoiceAiManager.Instance.VoiceAiServices.TryGetValue(voiceName, out var service))
+            // UIの再構成
+            PopulateProviderList();
+            UpdatePanelsVisibility();
+
+            var prov = _providers.FirstOrDefault(p => p.InternalName == internalName);
+            if (prov != null && prov.IsImplemented)
             {
-                VoiceAiManager.Instance.CurrentService = service;
-                
-                string serviceUrl = SystemConfig.Instance.GetVoiceServiceUrl(voiceName, service.EndPoint);
-                service.Url = serviceUrl;
-                _voiceAiUrlTextField.Text = serviceUrl;
-                
-                UpdateSettingsVisibility(voiceName);
-                
-                await UpdateModelAndSpeakerList(service);
+                if (VoiceAiManager.Instance.VoiceAiServices.TryGetValue(internalName, out var service))
+                {
+                    VoiceAiManager.Instance.CurrentService = service;
+                    
+                    string serviceUrl = SystemConfig.Instance.GetVoiceServiceUrl(internalName, service.EndPoint);
+                    service.Url = serviceUrl;
+                    _voiceAiUrlTextField.Text = serviceUrl;
+                    
+                    UpdateSettingsVisibility(internalName);
+                    
+                    await UpdateModelAndSpeakerList(service);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 各カラムパネル・コントロールの表示制御
+        /// </summary>
+        private void UpdatePanelsVisibility()
+        {
+            string serviceName = SystemConfig.Instance.VoiceService;
+            var prov = _providers.FirstOrDefault(p => p.InternalName == serviceName);
+
+            var scrollContainer = _parametersVBox.GetParent<Control>();
+
+            if (prov == null || !prov.IsImplemented)
+            {
+                // 未実装エンジンの場合は右ペインを未実装画面にする
+                if (scrollContainer != null)
+                {
+                    scrollContainer.Visible = false;
+                }
+                _notImplementedPanel.Visible = true;
+            }
+            else
+            {
+                // 実装済みの場合はパラメータ画面を表示
+                if (scrollContainer != null)
+                {
+                    scrollContainer.Visible = true;
+                }
+                _notImplementedPanel.Visible = false;
+
+                UpdateSettingsVisibility(serviceName);
             }
         }
 
