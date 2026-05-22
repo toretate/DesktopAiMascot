@@ -2,6 +2,9 @@ using Godot;
 using System;
 using DesktopAiMascot;
 using Button = Godot.Button;
+using Label = Godot.Label;
+using LinkButton = Godot.LinkButton;
+using Color = Godot.Color;
 
 namespace DesktopAiMascot.ui.settings.pages
 {
@@ -11,6 +14,9 @@ namespace DesktopAiMascot.ui.settings.pages
         private LineEdit _cloudApiKeyEdit = null!;
         private LineEdit _projectIdEdit = null!;
         private LineEdit _regionEdit = null!;
+        
+        private Label _aiStudioStatusLabel = null!;
+        private Label _cloudStatusLabel = null!;
 
         public override void _Ready()
         {
@@ -19,11 +25,17 @@ namespace DesktopAiMascot.ui.settings.pages
             _projectIdEdit = GetNode<LineEdit>("%ProjectIdEdit");
             _regionEdit = GetNode<LineEdit>("%RegionEdit");
 
+            _aiStudioStatusLabel = GetNode<Label>("%AiStudioStatusLabel");
+            _cloudStatusLabel = GetNode<Label>("%CloudStatusLabel");
+
             GetNode<Button>("%SaveAiStudioBtn").Pressed += SaveAiStudio;
             GetNode<Button>("%ClearAiStudioBtn").Pressed += ClearAiStudio;
             
             GetNode<Button>("%SaveCloudBtn").Pressed += SaveCloud;
             GetNode<Button>("%ClearCloudBtn").Pressed += ClearCloud;
+
+            GetNode<LinkButton>("%GetAiStudioKeyLink").Pressed += () => OS.ShellOpen("https://aistudio.google.com/app/apikey");
+            GetNode<LinkButton>("%GetCloudKeyLink").Pressed += () => OS.ShellOpen("https://console.cloud.google.com/");
 
             VisibilityChanged += OnVisibilityChanged;
 
@@ -38,6 +50,8 @@ namespace DesktopAiMascot.ui.settings.pages
             if (Visible)
             {
                 LoadApiKeysToUI();
+                _aiStudioStatusLabel.Text = "";
+                _cloudStatusLabel.Text = "";
             }
         }
 
@@ -71,6 +85,21 @@ namespace DesktopAiMascot.ui.settings.pages
             }
         }
 
+        private async void ShowStatusFeedback(Label label, string message, string colorHtml)
+        {
+            label.Text = message;
+            label.AddThemeColorOverride("font_color", Color.FromHtml(colorHtml));
+            
+            // 3秒後にメッセージを消去
+            await ToSignal(GetTree().CreateTimer(3.0f), SceneTreeTimer.SignalName.Timeout);
+            
+            // メッセージ内容が現在の表示と一致している場合のみクリア (他の操作で上書きされていなければ)
+            if (label.Text == message)
+            {
+                label.Text = "";
+            }
+        }
+
         private void SaveAiStudio()
         {
             var apiKey = _aiStudioApiKeyEdit.Text.Trim();
@@ -79,6 +108,7 @@ namespace DesktopAiMascot.ui.settings.pages
             SystemConfig.Instance.Save();
             
             GD.Print("Google AI Studio API key saved.");
+            ShowStatusFeedback(_aiStudioStatusLabel, "設定を保存しました", "#26a69a");
         }
 
         private void ClearAiStudio()
@@ -86,6 +116,9 @@ namespace DesktopAiMascot.ui.settings.pages
             _aiStudioApiKeyEdit.Text = "";
             SystemConfig.Instance.ApiKeys["GoogleAiStudioApiKey"] = "";
             SystemConfig.Instance.Save();
+            
+            GD.Print("Google AI Studio API key cleared.");
+            ShowStatusFeedback(_aiStudioStatusLabel, "設定をクリアしました", "#ef5350");
         }
 
         private void SaveCloud()
@@ -96,6 +129,7 @@ namespace DesktopAiMascot.ui.settings.pages
             
             SystemConfig.Instance.Save();
             GD.Print("Google Cloud configuration saved.");
+            ShowStatusFeedback(_cloudStatusLabel, "設定を保存しました", "#26a69a");
         }
 
         private void ClearCloud()
@@ -108,6 +142,9 @@ namespace DesktopAiMascot.ui.settings.pages
             SystemConfig.Instance.ApiKeys["GoogleProjectId"] = "";
             SystemConfig.Instance.ApiKeys["GoogleRegion"] = "us-central1";
             SystemConfig.Instance.Save();
+            
+            GD.Print("Google Cloud configuration cleared.");
+            ShowStatusFeedback(_cloudStatusLabel, "設定をクリアしました", "#ef5350");
         }
     }
 }
