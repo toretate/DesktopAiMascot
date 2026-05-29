@@ -18,6 +18,25 @@
             "outFiles": [
                 "${workspaceFolder}/dist-electron/**/*.js"
             ]
+        },
+        {
+            "name": "Electron: Settings Only (設定画面直接起動)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+            "args": [
+                "${workspaceFolder}/dist-electron/main.js"
+            ],
+            "preLaunchTask": "npm: dev",
+            "env": {
+                "VITE_DEV_SERVER_URL": "http://localhost:5173",
+                "START_SETTINGS": "true"
+            },
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/dist-electron/**/*.js"
+            ]
         }
     ]
 }

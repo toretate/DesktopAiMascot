@@ -90,6 +90,32 @@ function createWindows() {
     config = new AppConfig();
     const configData = config.get();
 
+    // 開発用：設定画面のみ直接起動するモードの処理
+    if (process.env.START_SETTINGS === 'true') {
+        settingsWindow = new BrowserWindow({
+            width: 800,
+            height: 600,
+            show: true,
+            title: 'Desktop AI Mascot 設定 - 開発用単体起動',
+            webPreferences: {
+                preload: path.join(__dirname, 'preload.js'),
+                contextIsolation: true,
+                nodeIntegration: false
+            }
+        });
+
+        if (isDev) {
+            settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
+        } else {
+            settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
+        }
+
+        settingsWindow.on('closed', () => {
+            app.quit();
+        });
+        return;
+    }
+
     // 画面サイズの取得
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
