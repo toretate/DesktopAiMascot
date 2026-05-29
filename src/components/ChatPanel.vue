@@ -14,31 +14,95 @@ const messages = ref<Message[]>([
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
 
-const sendMessage = async () => {
-    if (!inputText.value.trim()) return;
+const isAiResponding = ref(false);
 
-    messages.value.push({
-        id: Date.now(),
-        sender: 'user',
-        text: inputText.value
-    });
+const sendMessage = async () => {
+    if (!inputText.value.trim() || isAiResponding.value) return;
 
     const userQuery = inputText.value;
     inputText.value = '';
 
+    messages.value.push({
+        id: Date.now(),
+        sender: 'user',
+        text: userQuery
+    });
+
+    isAiResponding.value = true;
+
     await nextTick();
     scrollToBottom();
 
-    // AI返答の簡易モック (後ほど本物のAPIへ接続)
-    setTimeout(async () => {
-        messages.value.push({
-            id: Date.now() + 1,
-            sender: 'mascot',
-            text: `「${userQuery}」ですね！今はモック動作中ですが、このメッセージはAIによって生成されます。`
-        });
+    // 設定データのロード
+    const apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
+    const engine = localStorage.getItem('selectedEngine') || 'gemini-2.0-flash-exp';
+
+    // 表情タグを含むシステムプロンプトの指定
+    const systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
+
+    // AIの「考え中...」プレースホルダーを表示
+    const aiMessageId = Date.now() + 1;
+    messages.value.push({
+        id: aiMessageId,
+        sender: 'mascot',
+        text: '考え中...'
+    });
+    
+    await nextTick();
+    scrollToBottom();
+
+    try {
+        if (!apiKey) {
+            throw new Error('APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。');
+        }
+
+        // 1. Gemini API呼び出し
+        let reply = '';
+        if (window.electronAPI) {
+            reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, engine);
+        } else {
+            reply = 'ブラウザ実行時のモック回答です。[happy]';
+        }
+
+        // 2. メッセージを実際の応答で更新
+        const mascotMsg = messages.value.find(m => m.id === aiMessageId);
+        if (mascotMsg) {
+            mascotMsg.text = reply;
+        }
+
+        // 応答テキストから感情タグ（[happy]など）をパースし、表情変更イベントを送信
+        const emotionMatch = reply.match(/\[(\w+)\]/);
+        if (emotionMatch && emotionMatch[1]) {
+            const detectedEmotion = emotionMatch[1].toLowerCase();
+            if (window.electronAPI) {
+                window.electronAPI.changeEmotion(detectedEmotion);
+            }
+        }
+
         await nextTick();
         scrollToBottom();
-    }, 800);
+
+        // 3. VOICEVOX音声合成と再生 (話者ID: 2 = 四国めたん)
+        if (window.electronAPI) {
+            // 音声合成用に、感情タグ `[happy]` などを取り除く
+            const speechText = reply.replace(/\[\w+\]/g, '').trim();
+            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, 2);
+            if (base64Audio) {
+                const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+                audio.play();
+            }
+        }
+
+    } catch (error: any) {
+        const mascotMsg = messages.value.find(m => m.id === aiMessageId);
+        if (mascotMsg) {
+            mascotMsg.text = `接続に失敗しました: ${error.message}`;
+        }
+    } finally {
+        isAiResponding.value = false;
+        await nextTick();
+        scrollToBottom();
+    }
 };
 
 const scrollToBottom = () => {

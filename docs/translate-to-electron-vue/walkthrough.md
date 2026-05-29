@@ -58,14 +58,35 @@
 
 ---
 
+---
+
+6. **フェーズ4（AIサービス・音声サービスの移植）の構築**
+    - **本物のAI対話 (Gemini API) の接続**: メインプロセスに `ask-gemini` IPCハンドラーを追加し、Node.js標準の `fetch` と `AbortController` (60秒タイムアウト) を用いた Gemini API (v1beta/generateContent) 接続ロジックを実装。
+    - **本物の音声合成 (VOICEVOX) の接続**: `synthesize-voicevox` IPCハンドラーを実装し、ローカルで立ち上がっているVOICEVOX (localhost:50021) に対して `audio_query` および `synthesis` リクエストを順にPOST送信。取得した音声バイナリ（WAV）をBase64文字列にエンコードしてレンダラープロセスに転送。
+    - **厳格な接続例外ハンドリングと通信ログ設計**: グローバルルールに完全に準拠し、タイムアウト時は `Google AI Studioとの接続エラー (タイムアウト)` を、接続エラー時は `Google AI Studioとの接続エラー` を `console.warn` に出力し、余計なスタックトレースを一切非表示にしました（VOICEVOX側も同様）。
+    - **リアルタイム音声再生と感情連動アバターアニメーション**:
+        - `ChatPanel.vue` の送信処理を実接続に変更。localStorageからAPIキーやモデル設定をロードし、Gemini対話およびVOICEVOX音声取得を実行。Web標準の `Audio` を用いてBase64音声を即座に再生。
+        - 応答の末尾に含まれる感情タグ（`[happy]`, `[sad]` 等）をパースし、IPC経由でメインプロセスを中継して `MascotViewer.vue` に感情をリアルタイムで同期転送。
+        - マスコットウィンドウは感情を受け取り、表情絵文字（`🤖` -> `😊` / `😢` / `😠` / `😲`）へ動的変化させると同時に、ぷるんと揺れるポップアップのCSSマイクロアニメーション (`emotion-pop`) を実行。
+
+---
+
+## 作成されたファイルの一覧
+
+以下のファイルが `docs/translate-to-electron-vue/` ディレクトリ配下に正しく作成されたことを確認しました。
+
+- [implementation_plan.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/implementation_plan.md) (実装計画)
+- [task.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/task.md) (タスクリスト)
+- [walkthrough.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/walkthrough.md) (本ファイル)
+- [conversion_guidelines.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/conversion_guidelines.md) (C# to TS 変換ガイドライン)
+
+---
+
 ## 今後のステップ
 
-タスクリストの「フェーズ4: AIサービス・音声サービスの移植」に沿って、以下の実装を進めます。
+タスクリストの「フェーズ5: テストおよび検証」に沿って、以下の実装とテストを進めます。
 
-1. **AI対話API (Gemini API 等) の移植**:
-    - `ChatPanel` でのメッセージ送信時に、モックではなく本物のGemini API（または設定されたLLM）へリクエストを送信して対話応答を取得するTypeScriptロジックを実装します。
-    - グローバルルールに準拠した、通信ログの保存および接続エラーのシンプルな表示ハンドリングを構築します。
-2. **音声生成 (VOICEVOX 等) の移植**:
-    - AIのテキスト応答時に、VOICEVOXのローカルAPI等と通信して音声合成を生成・再生する連携ロジックを実装します。
-3. **アセット（キャラクター画像）の差し替えと表情・アニメーション制御**:
-    - Godot/C#時のマスコットキャラクターアセットを読み込み、会話の返答感情に連動して表情が変化するアニメーション基盤（WebGL/Canvas）を実装します。
+1. **実環境における統合手動テスト**:
+    - VS Code上で F5 起動を行い、設定画面からAPIキーを設定し、Gemini対話とVOICEVOX音声再生、およびドラッグ位置の永続化、ウィンドウ追従同期が正しく噛み合って動くかを手動検証します。
+2. **ユニットテストの構築 (Vitest)**:
+    - 今後追加する状態管理ロジックや位置計算、パース処理などの堅牢性を保つため、Vitestを用いた自動テストコードの追加を検討します。

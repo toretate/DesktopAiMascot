@@ -244,6 +244,135 @@ app.whenReady().then(() => {
         }
     });
 
+    // 感情変更のマルチウィンドウ中継ハンドラー
+    ipcMain.on('emotion-changed', (event, emotion: string) => {
+        if (mascotWindow) {
+            mascotWindow.webContents.send('emotion-changed', emotion);
+            console.log(`[IPC] Emotion broadcasted to MascotWindow: ${emotion}`);
+        }
+    });
+
+    // 5. Gemini APIによる対話処理のハンドラー
+    ipcMain.handle('ask-gemini', async (event, message: string, apiKey: string, systemPrompt: string, modelName: string) => {
+        const model = modelName || 'gemini-2.0-flash-exp';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
+
+        try {
+            console.log('=== Google AI Studio 送信開始 ===');
+            console.log(`[GoogleAiStudio] 使用モデル: ${model}`);
+            console.log(`[GoogleAiStudio] 送信メッセージ: ${message}`);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            role: 'user',
+                            parts: [{ text: message }]
+                        }
+                    ],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt || 'You are a helpful assistant.' }]
+                    }
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API Error: ${response.status} ${errorText}`);
+            }
+
+            const data: any = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            console.log(`[GoogleAiStudio] レスポンス内容: ${text}`);
+            console.log('=== Google AI Studio 送信完了 ===');
+            return text || 'Error: 空の返答を受信しました。';
+
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                // グローバルルールに従い、タイムアウト時はスタックトレースを出さずシンプルなログを出力
+                console.warn('Google AI Studioとの接続エラー (タイムアウト)');
+                return 'Error: Google AI Studioとの接続がタイムアウトしました。';
+            } else {
+                // 接続エラー時もシンプルなメッセージのみログ出力
+                console.warn('Google AI Studioとの接続エラー');
+                return `Error: Google AI Studioとの接続に失敗しました`;
+            }
+        }
+    });
+
+    // 6. VOICEVOXによる音声合成のハンドラー
+    ipcMain.handle('synthesize-voicevox', async (event, text: string, speakerId: number) => {
+        const baseUrl = 'http://localhost:50021';
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
+
+        try {
+            console.log(`[VoiceVox] 音声合成クエリ作成開始: ${text}`);
+            const encodedText = encodeURIComponent(text);
+            const queryUrl = `${baseUrl}/audio_query?text=${encodedText}&speaker=${speakerId}`;
+
+            // 1. クエリ作成
+            const queryResponse = await fetch(queryUrl, { 
+                method: 'POST',
+                signal: controller.signal 
+            });
+
+            if (!queryResponse.ok) {
+                throw new Error(`Query Error: ${queryResponse.status}`);
+            }
+
+            const audioQuery = await queryResponse.json();
+            console.log('[VoiceVox] AudioQuery作成成功');
+
+            // 2. 音声合成
+            const synthesisUrl = `${baseUrl}/synthesis?speaker=${speakerId}`;
+            const synthResponse = await fetch(synthesisUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(audioQuery),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!synthResponse.ok) {
+                throw new Error(`Synthesis Error: ${synthResponse.status}`);
+            }
+
+            // バイナリデータを取得しBase64に変換
+            const arrayBuffer = await synthResponse.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString('base64');
+
+            console.log(`[VoiceVox] 音声合成成功: ${buffer.length} bytes`);
+            return base64;
+
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('VoiceVoxとの接続エラー (タイムアウト)');
+            } else {
+                console.warn('VoiceVoxとの接続エラー');
+            }
+            return null;
+        }
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindows();

@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue';
 
 const isChatVisible = ref(false);
+const mascotEmoji = ref('🤖');
+const emotionClass = ref('');
 
 const toggleChat = () => {
     if (window.electronAPI) {
@@ -15,10 +17,32 @@ const openSettings = () => {
     }
 };
 
+const emotionMap: Record<string, string> = {
+    happy: '😊',
+    sad: '😢',
+    angry: '😠',
+    surprised: '😲',
+    neutral: '🤖'
+};
+
 onMounted(() => {
     if (window.electronAPI) {
+        // チャットウィンドウ開閉の検知
         window.electronAPI.onChatToggled((visible: boolean) => {
             isChatVisible.value = visible;
+        });
+
+        // 感情変化イベントの検知
+        window.electronAPI.onEmotionChanged((emotion: string) => {
+            const normalized = emotion.toLowerCase();
+            const emoji = emotionMap[normalized] || '🤖';
+            mascotEmoji.value = emoji;
+
+            // 表情変化時にポップアップアニメーションを実行
+            emotionClass.value = 'emotion-pop';
+            setTimeout(() => {
+                emotionClass.value = '';
+            }, 600);
         });
     }
 });
@@ -28,7 +52,7 @@ onMounted(() => {
     <div class="mascot-wrapper app-dark">
         <!-- マスコットのキャラクター描画部分 -->
         <div class="mascot-character drag-area" @contextmenu.prevent="openSettings">
-            <div class="mascot-visual">🤖</div>
+            <div class="mascot-visual" :class="emotionClass">{{ mascotEmoji }}</div>
             <div class="hover-tip no-drag">右クリックで設定</div>
         </div>
         
@@ -128,12 +152,30 @@ onMounted(() => {
     background: rgba(168, 85, 247, 0.15);
 }
 
+.mascot-visual.emotion-pop {
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 @keyframes float {
     0%, 100% {
         transform: translateY(0);
     }
     50% {
         transform: translateY(-8px);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.6);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1.0);
+        opacity: 1;
     }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
@@ -30,6 +30,38 @@ const selectedVoiceEngine = ref('voicevox');
 
 const temperature = ref(0.7);
 const geminiApiKey = ref('');
+const saveStatus = ref('設定を保存');
+const isSaving = ref(false);
+
+// 設定データの復元
+onMounted(() => {
+    geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
+    selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
+    selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
+    const temp = localStorage.getItem('temperature');
+    if (temp) {
+        temperature.value = parseFloat(temp);
+    }
+});
+
+// 設定の保存処理
+const saveSettings = () => {
+    isSaving.value = true;
+    saveStatus.value = '保存中...';
+
+    localStorage.setItem('GoogleAiStudioApiKey', geminiApiKey.value);
+    localStorage.setItem('selectedEngine', selectedEngine.value);
+    localStorage.setItem('selectedVoiceEngine', selectedVoiceEngine.value);
+    localStorage.setItem('temperature', temperature.value.toString());
+
+    setTimeout(() => {
+        saveStatus.value = '保存完了！';
+        isSaving.value = false;
+        setTimeout(() => {
+            saveStatus.value = '設定を保存';
+        }, 2000);
+    }, 600);
+};
 </script>
 
 <template>
@@ -127,7 +159,13 @@ const geminiApiKey = ref('');
                                     />
                                 </div>
                                 <div class="flex justify-content-end mt-4">
-                                    <Button label="設定を保存" icon="pi pi-check" class="p-button-primary" />
+                                    <Button 
+                                        :label="saveStatus" 
+                                        :icon="saveStatus === '保存完了！' ? 'pi pi-check-circle' : 'pi pi-check'" 
+                                        class="p-button-primary" 
+                                        :disabled="isSaving"
+                                        @click="saveSettings" 
+                                    />
                                 </div>
                             </div>
                         </template>
