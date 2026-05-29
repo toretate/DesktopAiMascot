@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => 
         ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName),
         
+    // LM Studio (ローカル)による対話処理を呼び出す
+    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string) =>
+        ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint),
+        
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
     synthesizeVoicevox: (text: string, speakerId: number) => 
         ipcRenderer.invoke('synthesize-voicevox', text, speakerId),

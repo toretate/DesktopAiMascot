@@ -35,7 +35,9 @@ const sendMessage = async () => {
 
     // 設定データのロード
     const apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
-    const engine = localStorage.getItem('selectedEngine') || 'gemini-2.0-flash-exp';
+    const engine = localStorage.getItem('selectedEngine') || 'gemini';
+    const lmsModel = localStorage.getItem('lmstudioModel') || '';
+    const lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
 
     // 表情タグを含むシステムプロンプトの指定
     const systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
@@ -52,14 +54,19 @@ const sendMessage = async () => {
     scrollToBottom();
 
     try {
-        if (!apiKey) {
-            throw new Error('APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。');
-        }
-
-        // 1. Gemini API呼び出し
         let reply = '';
         if (window.electronAPI) {
-            reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, engine);
+            if (engine === 'lmstudio') {
+                // 1. LM Studioの呼び出し
+                reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, lmsModel, lmsEndpoint);
+            } else {
+                // 1. Gemini API呼び出し
+                if (!apiKey) {
+                    throw new Error('Gemini APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。');
+                }
+                const model = engine === 'gemini' ? 'gemini-2.0-flash-exp' : engine;
+                reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model);
+            }
         } else {
             reply = 'ブラウザ実行時のモック回答です。[happy]';
         }

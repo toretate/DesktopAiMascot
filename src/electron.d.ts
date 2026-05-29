@@ -4,6 +4,7 @@ export interface IElectronAPI {
     setIgnoreMouseEvents: (ignore: boolean) => void;
     startWindowDrag: () => void;
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => Promise<string>;
+    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string) => Promise<string>;
     synthesizeVoicevox: (text: string, speakerId: number) => Promise<string | null>;
     changeEmotion: (emotion: string) => void;
     onEmotionChanged: (callback: (emotion: string) => void) => () => void;

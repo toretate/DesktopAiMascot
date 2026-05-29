@@ -373,6 +373,63 @@ app.whenReady().then(() => {
         }
     });
 
+    // 7. LM Studio (ローカル) による対話処理のハンドラー
+    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string) => {
+        const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
+        const apiBase = endpoint || defaultEndpoint;
+        const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+        const model = modelName || 'unspecified';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
+
+        try {
+            console.log('=== LmStudio 送信開始 ===');
+            console.log(`[LmStudio] エンドポイント: ${url}`);
+            console.log(`[LmStudio] 使用モデル: ${model}`);
+            console.log(`[LmStudio] 送信メッセージ: ${message}`);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: message }
+                    ]
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`LM Studio Error: ${response.status} ${errorText}`);
+            }
+
+            const data: any = await response.json();
+            const text = data.choices?.[0]?.message?.content;
+
+            console.log(`[LmStudio] レスポンス内容: ${text}`);
+            console.log('=== LmStudio 送信完了 ===');
+            return text || 'Error: 空の返答を受信しました。';
+
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('LmStudioとの接続エラー (タイムアウト)');
+                return 'Error: LM Studioとの接続がタイムアウトしました。';
+            } else {
+                console.warn('LmStudioとの接続エラー');
+                return 'Error: LM Studioとの接続に失敗しました。ローカルサーバーが起動しているか確認してください。';
+            }
+        }
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindows();

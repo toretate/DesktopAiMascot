@@ -10,12 +10,14 @@ import Password from 'primevue/password';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Slider from 'primevue/slider';
+import InputText from 'primevue/inputtext';
 
 const selectedTab = ref('0');
 
 // AIエンジンのモックデータ
 const aiEngines = ref([
     { name: 'Gemini AI Studio', value: 'gemini' },
+    { name: 'LM Studio (ローカル)', value: 'lmstudio' },
     { name: 'OpenAI (GPT-4o)', value: 'openai' },
     { name: 'Claude (Anthropic)', value: 'anthropic' }
 ]);
@@ -30,6 +32,9 @@ const selectedVoiceEngine = ref('voicevox');
 
 const temperature = ref(0.7);
 const geminiApiKey = ref('');
+const lmstudioEndpoint = ref('http://127.0.0.1:1234/v1/');
+const lmstudioModel = ref('');
+
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
 
@@ -38,6 +43,9 @@ onMounted(() => {
     geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
     selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
     selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
+    lmstudioEndpoint.value = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
+    lmstudioModel.value = localStorage.getItem('lmstudioModel') || '';
+    
     const temp = localStorage.getItem('temperature');
     if (temp) {
         temperature.value = parseFloat(temp);
@@ -52,6 +60,8 @@ const saveSettings = () => {
     localStorage.setItem('GoogleAiStudioApiKey', geminiApiKey.value);
     localStorage.setItem('selectedEngine', selectedEngine.value);
     localStorage.setItem('selectedVoiceEngine', selectedVoiceEngine.value);
+    localStorage.setItem('lmstudioEndpoint', lmstudioEndpoint.value);
+    localStorage.setItem('lmstudioModel', lmstudioModel.value);
     localStorage.setItem('temperature', temperature.value.toString());
 
     setTimeout(() => {
@@ -148,7 +158,8 @@ const saveSettings = () => {
                         <template #title>API認証情報</template>
                         <template #content>
                             <div class="flex flex-column gap-3">
-                                <div class="form-field">
+                                <!-- Gemini API Key -->
+                                <div v-if="selectedEngine === 'gemini'" class="form-field">
                                     <label class="font-medium">Gemini API KEY</label>
                                     <Password 
                                         v-model="geminiApiKey" 
@@ -157,6 +168,32 @@ const saveSettings = () => {
                                         class="w-full" 
                                         inputClass="w-full"
                                     />
+                                </div>
+
+                                <!-- LM Studio -->
+                                <div v-else-if="selectedEngine === 'lmstudio'" class="flex flex-column gap-2">
+                                    <div class="form-field">
+                                        <label class="font-medium">LM Studio エンドポイント</label>
+                                        <InputText 
+                                            v-model="lmstudioEndpoint" 
+                                            placeholder="http://127.0.0.1:1234/v1/" 
+                                            class="w-full"
+                                        />
+                                    </div>
+                                    <div class="form-field mt-2">
+                                        <label class="font-medium">使用モデル名 (LM Studioでロードしているモデル)</label>
+                                        <InputText 
+                                            v-model="lmstudioModel" 
+                                            placeholder="例: lms-community/Meta-Llama-3-8B-Instruct-GGUF" 
+                                            class="w-full"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- その他 -->
+                                <div v-else class="form-field">
+                                    <label class="font-medium">{{ selectedEngine.toUpperCase() }} API KEY (モック)</label>
+                                    <InputText placeholder="APIキーを入力..." class="w-full" disabled />
                                 </div>
                                 <div class="flex justify-content-end mt-4">
                                     <Button 
