@@ -31,6 +31,8 @@ interface ConfigData {
     chatAlwaysOnTop: boolean;
     chatSendKey: string;
     chatFontFamily: string;
+    openaiApiKey: string;
+    anthropicApiKey: string;
 }
 
 class AppConfig {
@@ -65,7 +67,9 @@ class AppConfig {
             chatOpacity: 1.0,
             chatAlwaysOnTop: true,
             chatSendKey: 'enter',
-            chatFontFamily: 'sans-serif'
+            chatFontFamily: 'sans-serif',
+            openaiApiKey: '',
+            anthropicApiKey: ''
         };
 
         try {

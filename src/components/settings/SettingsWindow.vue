@@ -43,6 +43,8 @@ const selectedVideoEngine = ref('runway');
 
 const temperature = ref(0.7);
 const geminiApiKey = ref('');
+const openaiApiKey = ref('');
+const anthropicApiKey = ref('');
 const lmstudioEndpoint = ref('http://127.0.0.1:1234/v1/');
 const lmstudioModel = ref('');
 const geminiModel = ref('gemini-2.0-flash-exp');
@@ -216,6 +218,8 @@ onMounted(async () => {
     if (configData) {
         // メインプロセスの config.json からロード
         geminiApiKey.value = configData.googleAiStudioApiKey || '';
+        openaiApiKey.value = configData.openaiApiKey || '';
+        anthropicApiKey.value = configData.anthropicApiKey || '';
         selectedEngine.value = configData.selectedEngine || 'gemini';
         selectedVoiceEngine.value = configData.selectedVoiceEngine || 'voicevox';
         selectedImageEngine.value = configData.selectedImageEngine || 'dalle3';
@@ -236,6 +240,8 @@ onMounted(async () => {
     } else {
         // Webブラウザ/モック環境（localStorageフォールバック）
         geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
+        openaiApiKey.value = localStorage.getItem('openaiApiKey') || '';
+        anthropicApiKey.value = localStorage.getItem('anthropicApiKey') || '';
         selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
         selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
         selectedImageEngine.value = localStorage.getItem('selectedImageEngine') || 'dalle3';
@@ -282,6 +288,8 @@ const saveSettings = async () => {
     if (window.electronAPI) {
         await window.electronAPI.updateAppConfig({
             googleAiStudioApiKey: geminiApiKey.value,
+            openaiApiKey: openaiApiKey.value,
+            anthropicApiKey: anthropicApiKey.value,
             selectedEngine: selectedEngine.value,
             selectedVoiceEngine: selectedVoiceEngine.value,
             selectedImageEngine: selectedImageEngine.value,
@@ -303,6 +311,8 @@ const saveSettings = async () => {
 
     // 2. localStorageへの同時書き込み (下位互換および二重化保持)
     localStorage.setItem('GoogleAiStudioApiKey', geminiApiKey.value);
+    localStorage.setItem('openaiApiKey', openaiApiKey.value);
+    localStorage.setItem('anthropicApiKey', anthropicApiKey.value);
     localStorage.setItem('selectedEngine', selectedEngine.value);
     localStorage.setItem('selectedVoiceEngine', selectedVoiceEngine.value);
     localStorage.setItem('selectedImageEngine', selectedImageEngine.value);
@@ -753,28 +763,49 @@ const quitApp = () => {
                         <template #title>API認証情報設定</template>
                         <template #content>
                             <div class="flex flex-column gap-4">
-                                <!-- Gemini API Key -->
-                                <div v-if="selectedEngine === 'gemini'" class="form-field">
-                                    <label class="font-medium">Gemini API KEY</label>
+                                <!-- Google AI Studio -->
+                                <div class="form-field">
+                                    <label class="font-medium">Google AI Studio (Gemini) API KEY</label>
                                     <Password 
                                         v-model="geminiApiKey" 
                                         toggleMask 
                                         :feedback="false" 
                                         class="w-full" 
                                         inputClass="w-full"
+                                        placeholder="APIキーを入力..."
+                                    />
+                                </div>
+
+                                <!-- OpenAI -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">OpenAI API KEY</label>
+                                    <Password 
+                                        v-model="openaiApiKey" 
+                                        toggleMask 
+                                        :feedback="false" 
+                                        class="w-full" 
+                                        inputClass="w-full"
+                                        placeholder="APIキーを入力..."
+                                    />
+                                </div>
+
+                                <!-- Anthropic -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">Anthropic (Claude) API KEY</label>
+                                    <Password 
+                                        v-model="anthropicApiKey" 
+                                        toggleMask 
+                                        :feedback="false" 
+                                        class="w-full" 
+                                        inputClass="w-full"
+                                        placeholder="APIキーを入力..."
                                     />
                                 </div>
 
                                 <!-- LM Studio -->
-                                <div v-else-if="selectedEngine === 'lmstudio'" class="form-field">
-                                    <label class="font-medium">API KEY</label>
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">LM Studio API KEY</label>
                                     <InputText placeholder="LM Studio（ローカル環境）はAPIキー認証が不要です。" class="w-full" disabled />
-                                </div>
-
-                                <!-- その他 -->
-                                <div v-else class="form-field">
-                                    <label class="font-medium">{{ selectedEngine.toUpperCase() }} API KEY (モック)</label>
-                                    <InputText placeholder="APIキーを入力..." class="w-full" disabled />
                                 </div>
 
                                 <div class="flex justify-content-end mt-4">

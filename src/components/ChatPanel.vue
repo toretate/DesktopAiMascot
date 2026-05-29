@@ -60,8 +60,16 @@ const sendMessage = async () => {
     if (window.electronAPI) {
         const configData = await window.electronAPI.getAppConfig();
         if (configData) {
-            apiKey = configData.googleAiStudioApiKey || '';
             engine = configData.selectedEngine || 'gemini';
+            if (engine === 'gemini') {
+                apiKey = configData.googleAiStudioApiKey || '';
+            } else if (engine === 'openai') {
+                apiKey = configData.openaiApiKey || '';
+            } else if (engine === 'anthropic') {
+                apiKey = configData.anthropicApiKey || '';
+            } else {
+                apiKey = '';
+            }
             lmsModel = configData.lmstudioModel || '';
             lmsEndpoint = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
             geminiModel = configData.geminiModel || 'gemini-2.0-flash-exp';
@@ -71,8 +79,16 @@ const sendMessage = async () => {
             voicevoxEndpointUrl = configData.voicevoxEndpoint || 'http://localhost:50021';
         }
     } else {
-        apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
         engine = localStorage.getItem('selectedEngine') || 'gemini';
+        if (engine === 'gemini') {
+            apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
+        } else if (engine === 'openai') {
+            apiKey = localStorage.getItem('openaiApiKey') || '';
+        } else if (engine === 'anthropic') {
+            apiKey = localStorage.getItem('anthropicApiKey') || '';
+        } else {
+            apiKey = '';
+        }
         lmsModel = localStorage.getItem('lmstudioModel') || '';
         lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
         geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
@@ -107,7 +123,7 @@ const sendMessage = async () => {
             } else {
                 // 1. Gemini API呼び出し
                 if (!apiKey) {
-                    throw new Error('Gemini APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。');
+                    throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);
                 }
                 const model = engine === 'gemini' 
                     ? geminiModel 
