@@ -34,13 +34,42 @@ const sendMessage = async () => {
     scrollToBottom();
 
     // 設定データのロード
-    const apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
-    const engine = localStorage.getItem('selectedEngine') || 'gemini';
-    const lmsModel = localStorage.getItem('lmstudioModel') || '';
-    const lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
-    const geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
-    const openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
-    const anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
+    let apiKey = '';
+    let engine = 'gemini';
+    let lmsModel = '';
+    let lmsEndpoint = 'http://127.0.0.1:1234/v1/';
+    let geminiModel = 'gemini-2.0-flash-exp';
+    let openaiModel = 'gpt-4o';
+    let anthropicModel = 'claude-3-5-sonnet-latest';
+    let voicevoxSpeakerId = 2;
+    let voicevoxEndpointUrl = 'http://localhost:50021';
+
+    if (window.electronAPI) {
+        const configData = await window.electronAPI.getAppConfig();
+        if (configData) {
+            apiKey = configData.googleAiStudioApiKey || '';
+            engine = configData.selectedEngine || 'gemini';
+            lmsModel = configData.lmstudioModel || '';
+            lmsEndpoint = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
+            geminiModel = configData.geminiModel || 'gemini-2.0-flash-exp';
+            openaiModel = configData.openaiModel || 'gpt-4o';
+            anthropicModel = configData.anthropicModel || 'claude-3-5-sonnet-latest';
+            voicevoxSpeakerId = configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2;
+            voicevoxEndpointUrl = configData.voicevoxEndpoint || 'http://localhost:50021';
+        }
+    } else {
+        apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
+        engine = localStorage.getItem('selectedEngine') || 'gemini';
+        lmsModel = localStorage.getItem('lmstudioModel') || '';
+        lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
+        geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
+        openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
+        anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
+        
+        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
+        voicevoxSpeakerId = savedSpeaker ? parseInt(savedSpeaker) : 2;
+        voicevoxEndpointUrl = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
+    }
 
     // 表情タグを含むシステムプロンプトの指定
     const systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
@@ -100,14 +129,9 @@ const sendMessage = async () => {
 
         // 3. VOICEVOX音声合成と再生
         if (window.electronAPI) {
-            // localStorage から設定された話者IDとエンドポイントをロード
-            const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
-            const speakerId = savedSpeaker ? parseInt(savedSpeaker) : 2;
-            const voiceEndpoint = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
-
             // 音声合成用に、感情タグ `[happy]` などを取り除く
             const speechText = reply.replace(/\[\w+\]/g, '').trim();
-            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, speakerId, voiceEndpoint);
+            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, voicevoxSpeakerId, voicevoxEndpointUrl);
             if (base64Audio) {
                 const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
                 audio.play();

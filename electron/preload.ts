@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // アプリケーションを終了する
     quitApp: () => ipcRenderer.send('quit-app'),
     
+    // アプリケーション設定のロードと保存
+    getAppConfig: () => ipcRenderer.invoke('get-app-config'),
+    updateAppConfig: (config: any) => ipcRenderer.invoke('update-app-config', config),
+    
     // Gemini APIによる対話処理を呼び出す
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => 
         ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName),

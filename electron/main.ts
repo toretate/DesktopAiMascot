@@ -11,6 +11,19 @@ interface ConfigData {
     mascotY: number;
     chatVisible: boolean;
     alwaysOnTop: boolean;
+    selectedEngine: string;
+    temperature: number;
+    googleAiStudioApiKey: string;
+    geminiModel: string;
+    openaiModel: string;
+    anthropicModel: string;
+    lmstudioEndpoint: string;
+    lmstudioModel: string;
+    selectedVoiceEngine: string;
+    voicevoxEndpoint: string;
+    voicevoxSpeaker: number;
+    selectedImageEngine: string;
+    selectedVideoEngine: string;
 }
 
 class AppConfig {
@@ -27,7 +40,20 @@ class AppConfig {
             mascotX: -1,
             mascotY: -1,
             chatVisible: false,
-            alwaysOnTop: true
+            alwaysOnTop: true,
+            selectedEngine: 'gemini',
+            temperature: 0.7,
+            googleAiStudioApiKey: '',
+            geminiModel: 'gemini-2.0-flash-exp',
+            openaiModel: 'gpt-4o',
+            anthropicModel: 'claude-3-5-sonnet-latest',
+            lmstudioEndpoint: 'http://127.0.0.1:1234/v1/',
+            lmstudioModel: '',
+            selectedVoiceEngine: 'voicevox',
+            voicevoxEndpoint: 'http://localhost:50021',
+            voicevoxSpeaker: 2,
+            selectedImageEngine: 'dalle3',
+            selectedVideoEngine: 'runway'
         };
 
         try {
@@ -554,6 +580,16 @@ app.whenReady().then(() => {
                 return { success: false, models: [], error: '接続に失敗しました。' };
             }
         }
+    });
+
+    // 9. 設定の取得および更新ハンドラー
+    ipcMain.handle('get-app-config', async () => {
+        return config.get();
+    });
+
+    ipcMain.handle('update-app-config', async (event, newData: Partial<ConfigData>) => {
+        config.update(newData);
+        console.log('[Config] Configuration updated via IPC');
     });
 
     app.on('activate', () => {
