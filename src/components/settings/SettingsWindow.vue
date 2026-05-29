@@ -1,0 +1,226 @@
+<script setup lang="ts">
+import { ref } from 'vue';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
+import TabPanel from 'primevue/tabpanel';
+import Card from 'primevue/card';
+import Password from 'primevue/password';
+import Button from 'primevue/button';
+import Select from 'primevue/select';
+import Slider from 'primevue/slider';
+
+const selectedTab = ref('0');
+
+// AIエンジンのモックデータ
+const aiEngines = ref([
+    { name: 'Gemini AI Studio', value: 'gemini' },
+    { name: 'OpenAI (GPT-4o)', value: 'openai' },
+    { name: 'Claude (Anthropic)', value: 'anthropic' }
+]);
+const selectedEngine = ref('gemini');
+
+// 音声AIエンジンのモックデータ
+const voiceEngines = ref([
+    { name: 'VOICEVOX (ローカル)', value: 'voicevox' },
+    { name: 'Google Cloud Text-to-Speech', value: 'gtts' }
+]);
+const selectedVoiceEngine = ref('voicevox');
+
+const temperature = ref(0.7);
+const geminiApiKey = ref('');
+</script>
+
+<template>
+    <div class="settings-container app-dark p-4">
+        <header class="settings-header mb-4">
+            <h1 class="text-xl font-bold flex align-items-center gap-2">
+                <i class="pi pi-cog"></i> Desktop AI Mascot 設定
+            </h1>
+        </header>
+
+        <Tabs v-model:value="selectedTab">
+            <TabList>
+                <Tab value="0"><i class="pi pi-user mr-2"></i> マスコット</Tab>
+                <Tab value="1"><i class="pi pi-sliders-h mr-2"></i> AI設定</Tab>
+                <Tab value="2"><i class="pi pi-key mr-2"></i> APIキー</Tab>
+            </TabList>
+            <TabPanels class="mt-3">
+                <!-- 1. マスコット設定パネル -->
+                <TabPanel value="0">
+                    <div class="grid-layout">
+                        <Card class="mascot-card">
+                            <template #title>マスコット一覧</template>
+                            <template #content>
+                                <div class="mascot-list">
+                                    <div class="mascot-item active">
+                                        <span class="avatar">🤖</span>
+                                        <div class="info">
+                                            <span class="name">デフォルトロボット</span>
+                                            <span class="desc">親しみやすいベーシックなAIマスコットです。</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </Card>
+                    </div>
+                </TabPanel>
+
+                <!-- 2. AI設定パネル -->
+                <TabPanel value="1">
+                    <Card class="mb-4">
+                        <template #title>チャットAIエンジン</template>
+                        <template #content>
+                            <div class="flex flex-column gap-3">
+                                <div class="form-field">
+                                    <label class="font-medium">AIエンジン</label>
+                                    <Select 
+                                        v-model="selectedEngine" 
+                                        :options="aiEngines" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        class="w-full" 
+                                    />
+                                </div>
+                                <div class="form-field mt-2">
+                                    <label class="font-medium flex justify-content-between">
+                                        <span>Temperature (創造性): {{ temperature }}</span>
+                                    </label>
+                                    <Slider v-model="temperature" :min="0" :max="1" :step="0.1" class="mt-2" />
+                                </div>
+                            </div>
+                        </template>
+                    </Card>
+
+                    <Card>
+                        <template #title>音声生成AIエンジン</template>
+                        <template #content>
+                            <div class="form-field">
+                                <label class="font-medium">音声エンジン</label>
+                                <Select 
+                                    v-model="selectedVoiceEngine" 
+                                    :options="voiceEngines" 
+                                    optionLabel="name" 
+                                    optionValue="value" 
+                                    class="w-full" 
+                                />
+                            </div>
+                        </template>
+                    </Card>
+                </TabPanel>
+
+                <!-- 3. APIキー設定パネル -->
+                <TabPanel value="2">
+                    <Card>
+                        <template #title>API認証情報</template>
+                        <template #content>
+                            <div class="flex flex-column gap-3">
+                                <div class="form-field">
+                                    <label class="font-medium">Gemini API KEY</label>
+                                    <Password 
+                                        v-model="geminiApiKey" 
+                                        toggleMask 
+                                        :feedback="false" 
+                                        class="w-full" 
+                                        inputClass="w-full"
+                                    />
+                                </div>
+                                <div class="flex justify-content-end mt-4">
+                                    <Button label="設定を保存" icon="pi pi-check" class="p-button-primary" />
+                                </div>
+                            </div>
+                        </template>
+                    </Card>
+                </TabPanel>
+            </TabPanels>
+        </Tabs>
+    </div>
+</template>
+
+<style scoped>
+.settings-container {
+    width: 100%;
+    height: 100vh;
+    box-sizing: border-box;
+    background: #121212;
+    overflow-y: auto;
+}
+
+.settings-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mascot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mascot-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mascot-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.mascot-item.active {
+    border-color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
+}
+
+.mascot-item .avatar {
+    font-size: 32px;
+}
+
+.mascot-item .info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mascot-item .name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #fff;
+}
+
+.mascot-item .desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* レイアウトユーティリティ */
+.flex { display: flex; }
+.flex-column { flex-direction: column; }
+.gap-3 { gap: 1rem; }
+.gap-2 { gap: 0.5rem; }
+.justify-content-between { justify-content: space-between; }
+.justify-content-end { justify-content: flex-end; }
+.align-items-center { align-items: center; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mr-2 { margin-right: 0.5rem; }
+.w-full { width: 100%; }
+</style>

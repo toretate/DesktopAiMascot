@@ -33,6 +33,20 @@
 
 ---
 
+---
+
+5. **フェーズ2（ElectronメインプロセスとIPC通信）およびフェーズ3（Vue3レンダープロセス）の構築**
+    - **複数ウィンドウの同期制御**: `mascotWindow` (透過ロボット), `chatWindow` (透過チャットパネル), `settingsWindow` (PrimeVue設定) の3つのウィンドウマネジメントを `electron/main.ts` に実装。マスコットウィンドウの移動（`move` イベント）にチャットウィンドウがぴったり追従して移動する処理を実現。
+    - **データの永続化**: マスコット位置情報を `app.getPath('userData')/config.json` にJSON保存する軽量設定管理クラス `AppConfig` を作成。ウィンドウの移動終了後に自動的に位置をデバウンス保存し、アプリ再起動時に前回の表示位置から復元する処理を実装。
+    - **安全なIPC通信**: レンダラーとメインプロセスを繋ぐプリロードスクリプト (`electron/preload.ts`) および型定義ファイル ([electron.d.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/src/electron.d.ts)) を構築。表示トグル、設定表示、マウススルーのやり取りを仲介。
+    - **ハッシュによる単一SPA簡易ルーティング**: URLのハッシュパラメータ (`#mascot`, `#chat`, `#settings`) を `App.vue` 内で動的監視し、1つのVueアプリ内で3つの異なるウィンドウ画面を適切にレンダリングするスマートルーティング構造を構築。
+    - **リッチなVue 3 + PrimeVueコンポーネントの実装**:
+        - [MascotViewer.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/MascotViewer.vue) (透過マスコット表示、チャット/設定トグルボタン)
+        - [ChatPanel.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/ChatPanel.vue) (グラスモーフィズム対応チャットUI、対話機能のモック実装)
+        - [SettingsWindow.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/settings/SettingsWindow.vue) (PrimeVueのTabs, Card, Select, Slider, Passwordを利用したダークモード対応設定UI)
+
+---
+
 ## 作成されたファイルの一覧
 
 以下のファイルが `docs/translate-to-electron-vue/` ディレクトリ配下に正しく作成されたことを確認しました。
@@ -46,11 +60,12 @@
 
 ## 今後のステップ
 
-タスクリストの「フェーズ2: ElectronメインプロセスとIPC通信の実装」に沿って、以下の実装を進めます。
+タスクリストの「フェーズ4: AIサービス・音声サービスの移植」に沿って、以下の実装を進めます。
 
-1. **基本ウィンドウ群の作成**:
-    - 透過・最前面のマスコットウィンドウと、グラスモーフィズム対応の追従型チャットウィンドウを作成し、IPCを通じて同期的に移動させるロジックを実装します。
-2. **ドラッグ＆ドロップによるウィンドウ移動と位置保存**:
-    - ウィンドウ全体のドラッグ操作による滑らかな位置変更、および設定ファイルへの現在位置の自動書き込み・復元処理を構築します。
-3. **動的マウススルー**:
-    - マスコット画像が存在しないピクセル部分のクリックを透過させ、デスクトップ背面を操作可能にする処理を IPC と連動して実装します。
+1. **AI対話API (Gemini API 等) の移植**:
+    - `ChatPanel` でのメッセージ送信時に、モックではなく本物のGemini API（または設定されたLLM）へリクエストを送信して対話応答を取得するTypeScriptロジックを実装します。
+    - グローバルルールに準拠した、通信ログの保存および接続エラーのシンプルな表示ハンドリングを構築します。
+2. **音声生成 (VOICEVOX 等) の移植**:
+    - AIのテキスト応答時に、VOICEVOXのローカルAPI等と通信して音声合成を生成・再生する連携ロジックを実装します。
+3. **アセット（キャラクター画像）の差し替えと表情・アニメーション制御**:
+    - Godot/C#時のマスコットキャラクターアセットを読み込み、会話の返答感情に連動して表情が変化するアニメーション基盤（WebGL/Canvas）を実装します。

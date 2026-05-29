@@ -2,25 +2,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Play in Godot (C# Debugger)",
-            "type": "coreclr",
+            "name": "Electron: All (Vite + Electron)",
+            "type": "node",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "C:\\Free\\Godot_v4.6.1-stable_mono_win64\\Godot_v4.6.1-stable_mono_win64\\Godot_v4.6.1-stable_mono_win64.exe",
-            "args": [
-                "--path",
-                "${workspaceFolder}"
-            ],
             "cwd": "${workspaceFolder}",
-            "stopAtEntry": false,
-            "justMyCode": true,
-            "console": "internalConsole"
-        },
-        {
-            "name": "Godot にアタッチ (C# Debugger)",
-            "type": "coreclr",
-            "request": "attach",
-            "processName": "Godot_v4.6.1-stable_mono_win64.exe"
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+            "args": [
+                "${workspaceFolder}/dist-electron/main.js"
+            ],
+            "preLaunchTask": "npm: dev",
+            "env": {
+                "VITE_DEV_SERVER_URL": "http://localhost:5173"
+            },
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/dist-electron/**/*.js"
+            ]
         }
     ]
 }
