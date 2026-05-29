@@ -14,6 +14,7 @@ export interface IElectronAPI {
     changeEmotion: (emotion: string) => void;
     onEmotionChanged: (callback: (emotion: string) => void) => () => void;
     onChatToggled: (callback: (visible: boolean) => void) => () => void;
+    onConfigUpdated: (callback: (config: any) => void) => () => void;
 }
 
 declare global {

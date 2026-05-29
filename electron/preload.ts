@@ -60,5 +60,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => {
             ipcRenderer.off('chat-toggled', listener);
         };
+    },
+    
+    // メインプロセス側から設定更新イベントを購読
+    onConfigUpdated: (callback: (config: any) => void) => {
+        const listener = (_event: any, config: any) => callback(config);
+        ipcRenderer.on('config-updated', listener);
+        return () => {
+            ipcRenderer.off('config-updated', listener);
+        };
     }
 });

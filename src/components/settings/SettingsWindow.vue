@@ -63,6 +63,29 @@ const voicevoxConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
 const voicevoxConnectionErrorMsg = ref('');
 const voicevoxSpeakers = ref<{ name: string; value: number }[]>([]);
 
+// --- チャットウィンドウの設定 ---
+const chatOpacity = ref(1.0);
+const alwaysOnTopOptions = ref([
+    { name: '常に最前面に表示する', value: true },
+    { name: '最前面に表示しない', value: false }
+]);
+const chatAlwaysOnTop = ref(true);
+
+const sendKeyOptions = ref([
+    { name: 'Enter で送信 (Shift + Enter で改行)', value: 'enter' },
+    { name: 'Shift + Enter で送信 (Enter で改行)', value: 'shiftEnter' }
+]);
+const chatSendKey = ref('enter');
+
+const fontFamilyOptions = ref([
+    { name: 'システムデフォルト (sans-serif)', value: 'sans-serif' },
+    { name: 'Yu Gothic UI / 游ゴシック', value: '"Yu Gothic UI", "Yu Gothic", sans-serif' },
+    { name: 'Meiryo / メイリオ', value: '"Meiryo", sans-serif' },
+    { name: 'Segoe UI', value: '"Segoe UI", sans-serif' },
+    { name: 'MS PGothic / ＭＳ Ｐゴシック', value: '"MS PGothic", sans-serif' }
+]);
+const chatFontFamily = ref('sans-serif');
+
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
 
@@ -205,6 +228,11 @@ onMounted(async () => {
         voicevoxEndpoint.value = configData.voicevoxEndpoint || 'http://localhost:50021';
         voicevoxSpeaker.value = configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2;
         temperature.value = configData.temperature !== undefined ? configData.temperature : 0.7;
+        
+        chatOpacity.value = configData.chatOpacity !== undefined ? configData.chatOpacity : 1.0;
+        chatAlwaysOnTop.value = configData.chatAlwaysOnTop !== undefined ? configData.chatAlwaysOnTop : true;
+        chatSendKey.value = configData.chatSendKey || 'enter';
+        chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
     } else {
         // Webブラウザ/モック環境（localStorageフォールバック）
         geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -226,6 +254,12 @@ onMounted(async () => {
         if (temp) {
             temperature.value = parseFloat(temp);
         }
+        
+        const opacity = localStorage.getItem('chatOpacity');
+        chatOpacity.value = opacity ? parseFloat(opacity) : 1.0;
+        chatAlwaysOnTop.value = localStorage.getItem('chatAlwaysOnTop') !== 'false';
+        chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
+        chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
     }
 
     // LM Studio が現在のアクティブエンジンの場合、初期表示時に自動で疎通確認を実行
@@ -259,7 +293,11 @@ const saveSettings = async () => {
             anthropicModel: anthropicModel.value,
             voicevoxEndpoint: voicevoxEndpoint.value,
             voicevoxSpeaker: Number(voicevoxSpeaker.value),
-            temperature: Number(temperature.value)
+            temperature: Number(temperature.value),
+            chatOpacity: Number(chatOpacity.value),
+            chatAlwaysOnTop: chatAlwaysOnTop.value,
+            chatSendKey: chatSendKey.value,
+            chatFontFamily: chatFontFamily.value
         });
     }
 
@@ -277,6 +315,10 @@ const saveSettings = async () => {
     localStorage.setItem('voicevoxEndpoint', voicevoxEndpoint.value);
     localStorage.setItem('voicevoxSpeaker', voicevoxSpeaker.value.toString());
     localStorage.setItem('temperature', temperature.value.toString());
+    localStorage.setItem('chatOpacity', chatOpacity.value.toString());
+    localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
+    localStorage.setItem('chatSendKey', chatSendKey.value);
+    localStorage.setItem('chatFontFamily', chatFontFamily.value);
 
     setTimeout(() => {
         saveStatus.value = '保存完了！';
@@ -324,6 +366,14 @@ const quitApp = () => {
                 >
                     <i class="pi pi-comments"></i>
                     <span>チャットAI</span>
+                </button>
+                <button 
+                    class="menu-item" 
+                    :class="{ active: activeMenu === 'chatwindow' }"
+                    @click="activeMenu = 'chatwindow'"
+                >
+                    <i class="pi pi-window-maximize"></i>
+                    <span>チャットウィンドウ</span>
                 </button>
                 <button 
                     class="menu-item" 
@@ -477,6 +527,73 @@ const quitApp = () => {
                                     </label>
                                     <Slider v-model="temperature" :min="0" :max="1" :step="0.1" class="mt-2" />
                                 </div>
+                                <div class="flex justify-content-end mt-4">
+                                    <Button 
+                                        :label="saveStatus" 
+                                        :icon="saveStatus === '保存完了！' ? 'pi pi-check-circle' : 'pi pi-check'" 
+                                        class="p-button-primary" 
+                                        :disabled="isSaving"
+                                        @click="saveSettings" 
+                                    />
+                                </div>
+                            </div>
+                        </template>
+                    </Card>
+                </div>
+
+                <!-- パネル2.5: チャットウィンドウ -->
+                <div v-else-if="activeMenu === 'chatwindow'" class="panel-section">
+                    <Card class="premium-card">
+                        <template #title>チャットウィンドウ設定</template>
+                        <template #content>
+                            <div class="flex flex-column gap-4">
+                                <!-- 1. 透明度 -->
+                                <div class="form-field">
+                                    <label class="font-medium flex justify-content-between">
+                                        <span>不透明度 (透明度): {{ Math.round(chatOpacity * 100) }}%</span>
+                                    </label>
+                                    <Slider v-model="chatOpacity" :min="0.1" :max="1.0" :step="0.05" class="mt-2" />
+                                </div>
+
+                                <!-- 2. 最前面表示 -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">最前面表示</label>
+                                    <Select 
+                                        v-model="chatAlwaysOnTop" 
+                                        :options="alwaysOnTopOptions" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        class="w-full" 
+                                    />
+                                </div>
+
+                                <!-- 3. 送信キー割り当て -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">送信キー割り当て</label>
+                                    <Select 
+                                        v-model="chatSendKey" 
+                                        :options="sendKeyOptions" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        class="w-full" 
+                                    />
+                                </div>
+
+                                <!-- 4. フォントファミリー -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">チャットウィンドウのフォント</label>
+                                    <Select 
+                                        v-model="chatFontFamily" 
+                                        :options="fontFamilyOptions" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        editable
+                                        placeholder="フォント名を選択または直接入力..."
+                                        class="w-full" 
+                                    />
+                                </div>
+
+                                <!-- 保存ボタン -->
                                 <div class="flex justify-content-end mt-4">
                                     <Button 
                                         :label="saveStatus" 
