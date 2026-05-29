@@ -19,12 +19,14 @@ const isAiResponding = ref(false);
 // --- チャットウィンドウの個別設定 ---
 const chatSendKey = ref('enter');
 const chatFontFamily = ref('sans-serif');
+const chatOpacity = ref(0.65);
 let unsubscribeConfig: (() => void) | null = null;
 
 const loadChatSettings = (configData: any) => {
     if (!configData) return;
     chatSendKey.value = configData.chatSendKey || 'enter';
     chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
+    chatOpacity.value = configData.chatOpacity !== undefined ? configData.chatOpacity : 0.65;
 };
 
 const sendMessage = async () => {
@@ -199,6 +201,8 @@ onMounted(async () => {
         // ブラウザ環境でのフォールバック
         chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
         chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
+        const opacity = localStorage.getItem('chatOpacity');
+        chatOpacity.value = opacity ? parseFloat(opacity) : 0.65;
     }
 });
 
@@ -210,7 +214,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily }">
+    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, backgroundColor: `rgba(255, 255, 255, ${chatOpacity})` }">
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
             <span class="chat-title">Mascot Chat</span>

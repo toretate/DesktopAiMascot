@@ -229,7 +229,6 @@ function createWindows() {
         transparent: true,
         frame: false,
         alwaysOnTop: configData.chatAlwaysOnTop !== undefined ? configData.chatAlwaysOnTop : true,
-        opacity: configData.chatOpacity !== undefined ? configData.chatOpacity : 1.0,
         resizable: false,
         show: false, // 初期表示状態は後述の toggle 処理等に委ねる
         hasShadow: false,
@@ -630,10 +629,7 @@ app.whenReady().then(() => {
             if (newData.chatAlwaysOnTop !== undefined) {
                 chatWindow.setAlwaysOnTop(newData.chatAlwaysOnTop);
             }
-            if (newData.chatOpacity !== undefined) {
-                chatWindow.setOpacity(newData.chatOpacity);
-            }
-            // レンダープロセスに伝達
+            // レンダープロセスに伝達（背景色の透明度はVue側のCSSアルファ値制御で安全かつ高品質に変更します）
             chatWindow.webContents.send('config-updated', newData);
         }
     });
