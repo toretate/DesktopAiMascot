@@ -6,3 +6,20 @@
 bin/*
 DesktopAiMascotTest/bin/
 DesktopAiMascotTest/obj/
+
+# Node.js and Frontend ignores
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite / Electron Build outputs
+dist/
+dist-electron/
+out/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
