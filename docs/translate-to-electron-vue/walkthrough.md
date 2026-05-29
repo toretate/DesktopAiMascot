@@ -47,27 +47,21 @@
 
 ---
 
-## 作成されたファイルの一覧
-
-以下のファイルが `docs/translate-to-electron-vue/` ディレクトリ配下に正しく作成されたことを確認しました。
-
-- [implementation_plan.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/implementation_plan.md) (実装計画)
-- [task.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/task.md) (タスクリスト)
-- [walkthrough.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/walkthrough.md) (本ファイル)
-- [conversion_guidelines.md](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/translate-to-electron-vue/conversion_guidelines.md) (C# to TS 変換ガイドライン)
-
----
-
----
-
 6. **フェーズ4（AIサービス・音声サービスの移植）の構築**
-    - **本物のAI対話 (Gemini API) の接続**: メインプロセスに `ask-gemini` IPCハンドラーを追加し、Node.js標準の `fetch` と `AbortController` (60秒タイムアウト) を用いた Gemini API (v1beta/generateContent) 接続ロジックを実装。
+    - **本物のAI対話 (Gemini API) の接続**: メインプロセスに `ask-gemini` IPCハンドラーを追加し、Node.js標準 of `fetch` と `AbortController` (60秒タイムアウト) を用いた Gemini API (v1beta/generateContent) 接続ロジックを実装。
     - **本物の音声合成 (VOICEVOX) の接続**: `synthesize-voicevox` IPCハンドラーを実装し、ローカルで立ち上がっているVOICEVOX (localhost:50021) に対して `audio_query` および `synthesis` リクエストを順にPOST送信。取得した音声バイナリ（WAV）をBase64文字列にエンコードしてレンダラープロセスに転送。
     - **厳格な接続例外ハンドリングと通信ログ設計**: グローバルルールに完全に準拠し、タイムアウト時は `Google AI Studioとの接続エラー (タイムアウト)` を、接続エラー時は `Google AI Studioとの接続エラー` を `console.warn` に出力し、余計なスタックトレースを一切非表示にしました（VOICEVOX側も同様）。
     - **リアルタイム音声再生と感情連動アバターアニメーション**:
         - `ChatPanel.vue` の送信処理を実接続に変更。localStorageからAPIキーやモデル設定をロードし、Gemini対話およびVOICEVOX音声取得を実行。Web標準の `Audio` を用いてBase64音声を即座に再生。
         - 応答の末尾に含まれる感情タグ（`[happy]`, `[sad]` 等）をパースし、IPC経由でメインプロセスを中継して `MascotViewer.vue` に感情をリアルタイムで同期転送。
         - マスコットウィンドウは感情を受け取り、表情絵文字（`🤖` -> `😊` / `😢` / `😠` / `😲`）へ動的変化させると同時に、ぷるんと揺れるポップアップのCSSマイクロアニメーション (`emotion-pop`) を実行。
+
+---
+
+7. **設定画面の垂直ナビゲーション化およびアプリ終了処理の実装**
+    - **プレミアムな垂直サイドバーの構築**: `SettingsWindow.vue` にて、従来の水平タブを完全に排除し、左側に幅 240px の洗練された垂直サイドバーメニュー（マスコット、チャットAI、音声AI、画像AI、動画AI、APIキー）を構築。各パネルは `v-if` にて右側にスマートにロードされる設計に変更。
+    - **「画像AI」「動画AI」設定の新規追加**: それぞれの生成AIエンジンを切り替えるセレクトボックスと、`localStorage` への設定値の永続化処理を追記。
+    - **ネイティブアプリ終了処理 (Quit App)**: メインプロセスに `quit-app` IPCイベントリスナーを追加。サイドバー最下部に設置したプレミアムな赤い「アプリ終了」ボタン（`pi-power-off` アイコン）をクリックした際に、Electron側で安全に `app.quit()` を実行しアプリ全体を完全に終了させるライフサイクル機能を実装。
 
 ---
 
