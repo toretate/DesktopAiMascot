@@ -184,25 +184,48 @@ const voicevoxConnectionText = computed(() => {
 });
 
 // 設定データのロード
-onMounted(() => {
-    geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
-    selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
-    selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
-    selectedImageEngine.value = localStorage.getItem('selectedImageEngine') || 'dalle3';
-    selectedVideoEngine.value = localStorage.getItem('selectedVideoEngine') || 'runway';
-    lmstudioEndpoint.value = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
-    lmstudioModel.value = localStorage.getItem('lmstudioModel') || '';
-    geminiModel.value = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
-    openaiModel.value = localStorage.getItem('openaiModel') || 'gpt-4o';
-    anthropicModel.value = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
-    
-    voicevoxEndpoint.value = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
-    const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
-    voicevoxSpeaker.value = savedSpeaker ? parseInt(savedSpeaker) : 2;
-    
-    const temp = localStorage.getItem('temperature');
-    if (temp) {
-        temperature.value = parseFloat(temp);
+onMounted(async () => {
+    let configData: any = null;
+    if (window.electronAPI) {
+        configData = await window.electronAPI.getAppConfig();
+    }
+
+    if (configData) {
+        // メインプロセスの config.json からロード
+        geminiApiKey.value = configData.googleAiStudioApiKey || '';
+        selectedEngine.value = configData.selectedEngine || 'gemini';
+        selectedVoiceEngine.value = configData.selectedVoiceEngine || 'voicevox';
+        selectedImageEngine.value = configData.selectedImageEngine || 'dalle3';
+        selectedVideoEngine.value = configData.selectedVideoEngine || 'runway';
+        lmstudioEndpoint.value = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
+        lmstudioModel.value = configData.lmstudioModel || '';
+        geminiModel.value = configData.geminiModel || 'gemini-2.0-flash-exp';
+        openaiModel.value = configData.openaiModel || 'gpt-4o';
+        anthropicModel.value = configData.anthropicModel || 'claude-3-5-sonnet-latest';
+        voicevoxEndpoint.value = configData.voicevoxEndpoint || 'http://localhost:50021';
+        voicevoxSpeaker.value = configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2;
+        temperature.value = configData.temperature !== undefined ? configData.temperature : 0.7;
+    } else {
+        // Webブラウザ/モック環境（localStorageフォールバック）
+        geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
+        selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
+        selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
+        selectedImageEngine.value = localStorage.getItem('selectedImageEngine') || 'dalle3';
+        selectedVideoEngine.value = localStorage.getItem('selectedVideoEngine') || 'runway';
+        lmstudioEndpoint.value = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
+        lmstudioModel.value = localStorage.getItem('lmstudioModel') || '';
+        geminiModel.value = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
+        openaiModel.value = localStorage.getItem('openaiModel') || 'gpt-4o';
+        anthropicModel.value = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
+        
+        voicevoxEndpoint.value = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
+        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
+        voicevoxSpeaker.value = savedSpeaker ? parseInt(savedSpeaker) : 2;
+        
+        const temp = localStorage.getItem('temperature');
+        if (temp) {
+            temperature.value = parseFloat(temp);
+        }
     }
 
     // LM Studio が現在のアクティブエンジンの場合、初期表示時に自動で疎通確認を実行
@@ -217,10 +240,30 @@ onMounted(() => {
 });
 
 // 設定の保存処理
-const saveSettings = () => {
+const saveSettings = async () => {
     isSaving.value = true;
     saveStatus.value = '保存中...';
 
+    // 1. ローカルファイルの更新（メインプロセス経由）
+    if (window.electronAPI) {
+        await window.electronAPI.updateAppConfig({
+            googleAiStudioApiKey: geminiApiKey.value,
+            selectedEngine: selectedEngine.value,
+            selectedVoiceEngine: selectedVoiceEngine.value,
+            selectedImageEngine: selectedImageEngine.value,
+            selectedVideoEngine: selectedVideoEngine.value,
+            lmstudioEndpoint: lmstudioEndpoint.value,
+            lmstudioModel: lmstudioModel.value,
+            geminiModel: geminiModel.value,
+            openaiModel: openaiModel.value,
+            anthropicModel: anthropicModel.value,
+            voicevoxEndpoint: voicevoxEndpoint.value,
+            voicevoxSpeaker: Number(voicevoxSpeaker.value),
+            temperature: Number(temperature.value)
+        });
+    }
+
+    // 2. localStorageへの同時書き込み (下位互換および二重化保持)
     localStorage.setItem('GoogleAiStudioApiKey', geminiApiKey.value);
     localStorage.setItem('selectedEngine', selectedEngine.value);
     localStorage.setItem('selectedVoiceEngine', selectedVoiceEngine.value);
@@ -231,10 +274,8 @@ const saveSettings = () => {
     localStorage.setItem('geminiModel', geminiModel.value);
     localStorage.setItem('openaiModel', openaiModel.value);
     localStorage.setItem('anthropicModel', anthropicModel.value);
-    
     localStorage.setItem('voicevoxEndpoint', voicevoxEndpoint.value);
     localStorage.setItem('voicevoxSpeaker', voicevoxSpeaker.value.toString());
-    
     localStorage.setItem('temperature', temperature.value.toString());
 
     setTimeout(() => {
