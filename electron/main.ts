@@ -27,6 +27,10 @@ interface ConfigData {
     voicevoxSpeaker: number;
     selectedImageEngine: string;
     selectedVideoEngine: string;
+    chatOpacity: number;
+    chatAlwaysOnTop: boolean;
+    chatSendKey: string;
+    chatFontFamily: string;
 }
 
 class AppConfig {
@@ -57,7 +61,11 @@ class AppConfig {
             voicevoxEndpoint: 'http://localhost:50021',
             voicevoxSpeaker: 2,
             selectedImageEngine: 'dalle3',
-            selectedVideoEngine: 'runway'
+            selectedVideoEngine: 'runway',
+            chatOpacity: 1.0,
+            chatAlwaysOnTop: true,
+            chatSendKey: 'enter',
+            chatFontFamily: 'sans-serif'
         };
 
         try {
@@ -113,6 +121,36 @@ function syncChatWindowPosition() {
     
     // チャットウィンドウをマスコットの右隣にぴったり追従させる
     chatWindow.setPosition(mascotX + mascotW, mascotY);
+}
+
+// --- 設定ウィンドウの作成・管理関数 ---
+function createSettingsWindow() {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        return;
+    }
+
+    settingsWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        show: false, // 必要なタイミングまで非表示
+        title: 'Desktop AI Mascot 設定',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+        }
+    });
+
+    if (isDev) {
+        settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
+    } else {
+        settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
+    }
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+        console.log('[Window] Settings Window resources released');
+    });
 }
 
 // --- ウィンドウ群の初期化 ---
@@ -190,7 +228,8 @@ function createWindows() {
         y: initialY,
         transparent: true,
         frame: false,
-        alwaysOnTop: configData.alwaysOnTop,
+        alwaysOnTop: configData.chatAlwaysOnTop !== undefined ? configData.chatAlwaysOnTop : true,
+        opacity: configData.chatOpacity !== undefined ? configData.chatOpacity : 1.0,
         resizable: false,
         show: false, // 初期表示状態は後述の toggle 処理等に委ねる
         hasShadow: false,
@@ -202,17 +241,7 @@ function createWindows() {
     });
 
     // 3. 設定ウィンドウの作成（透過なし・通常ウィンドウ）
-    settingsWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
-        show: false, // 必要なタイミングまで非表示
-        title: 'Desktop AI Mascot 設定',
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false
-        }
-    });
+    createSettingsWindow();
 
     // --- 各種ロード処理 ---
     if (isDev) {
@@ -222,12 +251,10 @@ function createWindows() {
         // マスコットとチャットは同一のVueアプリからコンポーネントまたは簡易ルーティングで出し分ける
         mascotWindow.loadURL(`${devUrl}#mascot`);
         chatWindow.loadURL(`${devUrl}#chat`);
-        settingsWindow.loadURL(`${devUrl}#settings`);
     } else {
         const htmlPath = path.join(__dirname, '../dist/index.html');
         mascotWindow.loadFile(htmlPath, { hash: 'mascot' });
         chatWindow.loadFile(htmlPath, { hash: 'chat' });
-        settingsWindow.loadFile(htmlPath, { hash: 'settings' });
     }
 
     // --- イベントリスナーの登録 ---
@@ -271,6 +298,9 @@ app.whenReady().then(() => {
 
     // 2. 設定画面の起動
     ipcMain.on('open-settings', () => {
+        if (!settingsWindow || settingsWindow.isDestroyed()) {
+            createSettingsWindow();
+        }
         if (settingsWindow) {
             settingsWindow.show();
             settingsWindow.focus();
@@ -594,6 +624,18 @@ app.whenReady().then(() => {
     ipcMain.handle('update-app-config', async (event, newData: Partial<ConfigData>) => {
         config.update(newData);
         console.log('[Config] Configuration updated via IPC');
+
+        // チャットウィンドウ設定の即時反映
+        if (chatWindow && !chatWindow.isDestroyed()) {
+            if (newData.chatAlwaysOnTop !== undefined) {
+                chatWindow.setAlwaysOnTop(newData.chatAlwaysOnTop);
+            }
+            if (newData.chatOpacity !== undefined) {
+                chatWindow.setOpacity(newData.chatOpacity);
+            }
+            // レンダープロセスに伝達
+            chatWindow.webContents.send('config-updated', newData);
+        }
     });
 
     app.on('activate', () => {

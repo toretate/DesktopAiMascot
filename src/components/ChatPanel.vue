@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 
 interface Message {
     id: number;
@@ -15,6 +15,17 @@ const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
 
 const isAiResponding = ref(false);
+
+// --- チャットウィンドウの個別設定 ---
+const chatSendKey = ref('enter');
+const chatFontFamily = ref('sans-serif');
+let unsubscribeConfig: (() => void) | null = null;
+
+const loadChatSettings = (configData: any) => {
+    if (!configData) return;
+    chatSendKey.value = configData.chatSendKey || 'enter';
+    chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
+};
 
 const sendMessage = async () => {
     if (!inputText.value.trim() || isAiResponding.value) return;
@@ -155,10 +166,51 @@ const scrollToBottom = () => {
         messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
 };
+
+const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.isComposing) return;
+
+    if (chatSendKey.value === 'enter') {
+        // Enterで送信（Shift + Enterで改行）
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    } else {
+        // Shift + Enterで送信（Enterで改行）
+        if (event.key === 'Enter' && event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+};
+
+onMounted(async () => {
+    // 初期ロード
+    if (window.electronAPI) {
+        const configData = await window.electronAPI.getAppConfig();
+        loadChatSettings(configData);
+
+        // 設定更新の購読
+        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
+            loadChatSettings(newConfig);
+        });
+    } else {
+        // ブラウザ環境でのフォールバック
+        chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
+        chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
+    }
+});
+
+onUnmounted(() => {
+    if (unsubscribeConfig) {
+        unsubscribeConfig();
+    }
+});
 </script>
 
 <template>
-    <div class="chat-wrapper">
+    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily }">
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
             <span class="chat-title">Mascot Chat</span>
@@ -185,12 +237,13 @@ const scrollToBottom = () => {
         <!-- フッター（入力・送信） -->
         <footer class="chat-footer">
             <form @submit.prevent="sendMessage" class="input-form">
-                <input 
-                    type="text" 
+                <textarea 
                     v-model="inputText" 
                     placeholder="メッセージを入力..." 
                     class="message-input"
-                />
+                    rows="1"
+                    @keydown="handleKeyDown"
+                ></textarea>
                 <button type="submit" class="send-btn" :disabled="!inputText.trim()">
                     <i class="pi pi-send"></i>
                 </button>
@@ -335,6 +388,10 @@ const scrollToBottom = () => {
     font-size: 13px;
     outline: none;
     transition: all 0.2s ease;
+    resize: none;
+    font-family: inherit;
+    height: 34px;
+    box-sizing: border-box;
 }
 
 .message-input:focus {
