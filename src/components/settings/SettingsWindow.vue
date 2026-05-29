@@ -296,7 +296,7 @@ const quitApp = () => {
 </script>
 
 <template>
-    <div class="settings-layout app-dark">
+    <div class="settings-layout">
         <!-- 1. 左サイドバー -->
         <aside class="sidebar drag-area">
             <div class="brand no-drag">
@@ -683,7 +683,7 @@ const quitApp = () => {
     width: 100vw;
     height: 100vh;
     display: flex;
-    background: #111111;
+    background: #f8fafc; /* 上品なオフホワイト */
     overflow: hidden;
     font-family: 'Outfit', 'Inter', sans-serif;
 }
@@ -691,8 +691,8 @@ const quitApp = () => {
 /* --- 左サイドバーのスタイル --- */
 .sidebar {
     width: 240px;
-    background: #161616;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    background: #ffffff; /* 純白 */
+    border-right: 1px solid rgba(0, 0, 0, 0.06); /* 淡い境界線 */
     display: flex;
     flex-direction: column;
     padding: 24px 16px;
@@ -705,7 +705,7 @@ const quitApp = () => {
     align-items: center;
     gap: 12px;
     padding-bottom: 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     margin-bottom: 20px;
 }
 
@@ -716,13 +716,13 @@ const quitApp = () => {
 .brand-text h2 {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: #1e293b; /* ダークスレート */
     margin: 0;
 }
 
 .brand-text p {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.4);
+    color: #64748b; /* ソフトグレー */
     margin: 2px 0 0 0;
 }
 
@@ -740,7 +740,7 @@ const quitApp = () => {
     align-items: center;
     gap: 12px;
     padding: 10px 16px;
-    color: rgba(255, 255, 255, 0.6);
+    color: #64748b; /* 未選択時はソフトグレー */
     font-size: 13px;
     font-weight: 500;
     border-radius: 8px;
@@ -754,26 +754,26 @@ const quitApp = () => {
 }
 
 .menu-item:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.03);
+    color: #0f172a;
+    background: rgba(0, 0, 0, 0.02);
 }
 
 .menu-item.active {
     color: #a855f7; /* 高貴なパープル */
-    background: rgba(168, 85, 247, 0.08);
+    background: rgba(168, 85, 247, 0.06);
     font-weight: 600;
 }
 
 .sidebar-footer {
     padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .quit-btn {
     width: 100%;
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(239, 68, 68, 0.05);
     border: 1px solid rgba(239, 68, 68, 0.15);
-    color: #f87171;
+    color: #ef4444;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -787,10 +787,10 @@ const quitApp = () => {
 }
 
 .quit-btn:hover {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.15);
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.08);
 }
 
 /* --- 右側コンテンツエリアのスタイル --- */
@@ -800,7 +800,7 @@ const quitApp = () => {
     overflow-y: auto;
     padding: 32px;
     box-sizing: border-box;
-    background: #121212;
+    background: #f1f5f9; /* 明るい背景 */
 }
 
 .content-container {
@@ -813,10 +813,10 @@ const quitApp = () => {
 }
 
 .premium-card {
-    background: #161616 !important;
-    border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    background: #ffffff !important; /* カードは純白 */
+    border: 1px solid rgba(0, 0, 0, 0.04) !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important; /* 上品でソフトなシャドウ */
 }
 
 /* フォームフィールド */
@@ -828,7 +828,7 @@ const quitApp = () => {
 
 .form-field label {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
+    color: #475569; /* 中スレートグレー */
 }
 
 /* マスコット一覧 */
@@ -843,21 +843,21 @@ const quitApp = () => {
     align-items: center;
     gap: 16px;
     padding: 12px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .mascot-item:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: #f8fafc;
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 .mascot-item.active {
     border-color: #a855f7;
-    background: rgba(168, 85, 247, 0.06);
+    background: rgba(168, 85, 247, 0.04);
 }
 
 .mascot-item .avatar {
@@ -873,12 +873,12 @@ const quitApp = () => {
 .mascot-item .name {
     font-weight: 600;
     font-size: 14px;
-    color: #fff;
+    color: #1e293b;
 }
 
 .mascot-item .desc {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.5);
+    color: #64748b;
 }
 
 /* ユーティリティ */
@@ -918,32 +918,32 @@ const quitApp = () => {
     transition: all 0.3s ease;
 }
 .status-idle {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.5);
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    color: #64748b;
 }
 .status-success {
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.2);
-    color: #4ade80; /* やさしいグリーン */
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+    background: rgba(34, 197, 94, 0.04);
+    border: 1px solid rgba(34, 197, 94, 0.15);
+    color: #15803d; /* やさしいグリーン */
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.04);
 }
 .status-failed {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    color: #f87171; /* やさしいレッド */
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.04);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    color: #b91c1c; /* やさしいレッド */
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.04);
 }
 .flex-1 {
     flex: 1;
 }
 .text-green-400 {
-    color: #4ade80;
+    color: #16a34a;
 }
 .text-red-400 {
-    color: #f87171;
+    color: #dc2626;
 }
 .text-gray-400 {
-    color: rgba(255, 255, 255, 0.4);
+    color: #64748b;
 }
 </style>
