@@ -30,8 +30,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('get-lmstudio-models', endpoint),
         
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
-    synthesizeVoicevox: (text: string, speakerId: number) => 
-        ipcRenderer.invoke('synthesize-voicevox', text, speakerId),
+    synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => 
+        ipcRenderer.invoke('synthesize-voicevox', text, speakerId, endpoint),
+        
+    // VOICEVOX (ローカル)疎通確認および話者（スタイル）一覧取得を呼び出す
+    getVoicevoxSpeakers: (endpoint: string) =>
+        ipcRenderer.invoke('get-voicevox-speakers', endpoint),
     
     // 感情の変更をメインプロセスへ通知する
     changeEmotion: (emotion: string) => ipcRenderer.send('emotion-changed', emotion),

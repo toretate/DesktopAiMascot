@@ -98,11 +98,16 @@ const sendMessage = async () => {
         await nextTick();
         scrollToBottom();
 
-        // 3. VOICEVOX音声合成と再生 (話者ID: 2 = 四国めたん)
+        // 3. VOICEVOX音声合成と再生
         if (window.electronAPI) {
+            // localStorage から設定された話者IDとエンドポイントをロード
+            const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
+            const speakerId = savedSpeaker ? parseInt(savedSpeaker) : 2;
+            const voiceEndpoint = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
+
             // 音声合成用に、感情タグ `[happy]` などを取り除く
             const speechText = reply.replace(/\[\w+\]/g, '').trim();
-            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, 2);
+            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, speakerId, voiceEndpoint);
             if (base64Audio) {
                 const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
                 audio.play();
