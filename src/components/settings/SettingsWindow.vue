@@ -55,6 +55,14 @@ const connectionState = ref<'idle' | 'success' | 'failed'>('idle');
 const connectionErrorMsg = ref('');
 const lmstudioModels = ref<string[]>([]);
 
+// VOICEVOX 疎通確認および話者ロード用の状態変数
+const voicevoxEndpoint = ref('http://localhost:50021');
+const voicevoxSpeaker = ref<any>(2); // デフォルト話者ID: 2 (四国めたんノーマル)
+const isTestingVoicevox = ref(false);
+const voicevoxConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
+const voicevoxConnectionErrorMsg = ref('');
+const voicevoxSpeakers = ref<{ name: string; value: number }[]>([]);
+
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
 
@@ -96,6 +104,47 @@ const testLmStudioConnection = async () => {
     isTestingConnection.value = false;
 };
 
+// VOICEVOX 疎通確認と話者（モデル）スタイル一覧のロード処理
+const testVoicevoxConnection = async () => {
+    isTestingVoicevox.value = true;
+    voicevoxConnectionState.value = 'idle';
+    voicevoxConnectionErrorMsg.value = '';
+    
+    if (window.electronAPI) {
+        try {
+            const result = await window.electronAPI.getVoicevoxSpeakers(voicevoxEndpoint.value);
+            if (result.success) {
+                voicevoxConnectionState.value = 'success';
+                voicevoxSpeakers.value = result.speakers;
+                // 現在選択されている話者IDが取得リストに存在しない場合、最初のスタイルを自動選択
+                const hasSpeaker = result.speakers.some((s) => s.value === voicevoxSpeaker.value);
+                if (!hasSpeaker && result.speakers.length > 0) {
+                    voicevoxSpeaker.value = result.speakers[0].value;
+                }
+            } else {
+                voicevoxConnectionState.value = 'failed';
+                voicevoxConnectionErrorMsg.value = result.error || '接続に失敗しました。';
+                voicevoxSpeakers.value = [];
+            }
+        } catch (e: any) {
+            voicevoxConnectionState.value = 'failed';
+            voicevoxConnectionErrorMsg.value = '通信エラーが発生しました。';
+            voicevoxSpeakers.value = [];
+        }
+    } else {
+        // ブラウザ実行時（デモ用モック）
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        voicevoxConnectionState.value = 'success';
+        voicevoxSpeakers.value = [
+            { name: '四国めたん (ノーマル)', value: 2 },
+            { name: '四国めたん (あまあま)', value: 0 },
+            { name: 'ずんだもん (ノーマル)', value: 3 },
+            { name: 'ずんだもん (あまあま)', value: 1 }
+        ];
+    }
+    isTestingVoicevox.value = false;
+};
+
 // 疎通確認ステータスに応じた動的クラスおよびテキスト
 const connectionClass = computed(() => {
     if (connectionState.value === 'success') return 'status-success';
@@ -115,6 +164,25 @@ const connectionText = computed(() => {
     return 'エンドポイントを入力して接続テストを行ってください。';
 });
 
+// VOICEVOX用疎通確認表示Computed
+const voicevoxConnectionClass = computed(() => {
+    if (voicevoxConnectionState.value === 'success') return 'status-success';
+    if (voicevoxConnectionState.value === 'failed') return 'status-failed';
+    return 'status-idle';
+});
+
+const voicevoxConnectionIcon = computed(() => {
+    if (voicevoxConnectionState.value === 'success') return 'pi pi-check-circle text-green-400';
+    if (voicevoxConnectionState.value === 'failed') return 'pi pi-times-circle text-red-400';
+    return 'pi pi-info-circle text-gray-400';
+});
+
+const voicevoxConnectionText = computed(() => {
+    if (voicevoxConnectionState.value === 'success') return `接続成功 (スタイル数: ${voicevoxSpeakers.value.length})`;
+    if (voicevoxConnectionState.value === 'failed') return `接続失敗: ${voicevoxConnectionErrorMsg.value}`;
+    return 'エンドポイントを入力して接続テストを行ってください。';
+});
+
 // 設定データのロード
 onMounted(() => {
     geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -128,6 +196,10 @@ onMounted(() => {
     openaiModel.value = localStorage.getItem('openaiModel') || 'gpt-4o';
     anthropicModel.value = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
     
+    voicevoxEndpoint.value = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
+    const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
+    voicevoxSpeaker.value = savedSpeaker ? parseInt(savedSpeaker) : 2;
+    
     const temp = localStorage.getItem('temperature');
     if (temp) {
         temperature.value = parseFloat(temp);
@@ -136,6 +208,11 @@ onMounted(() => {
     // LM Studio が現在のアクティブエンジンの場合、初期表示時に自動で疎通確認を実行
     if (selectedEngine.value === 'lmstudio') {
         testLmStudioConnection();
+    }
+    
+    // 音声エンジンが voicevox の場合、初期表示時に自動で疎通確認を実行
+    if (selectedVoiceEngine.value === 'voicevox') {
+        testVoicevoxConnection();
     }
 });
 
@@ -154,6 +231,10 @@ const saveSettings = () => {
     localStorage.setItem('geminiModel', geminiModel.value);
     localStorage.setItem('openaiModel', openaiModel.value);
     localStorage.setItem('anthropicModel', anthropicModel.value);
+    
+    localStorage.setItem('voicevoxEndpoint', voicevoxEndpoint.value);
+    localStorage.setItem('voicevoxSpeaker', voicevoxSpeaker.value.toString());
+    
     localStorage.setItem('temperature', temperature.value.toString());
 
     setTimeout(() => {
@@ -384,6 +465,55 @@ const quitApp = () => {
                                         optionValue="value" 
                                         class="w-full" 
                                     />
+                                </div>
+
+                                <!-- VOICEVOX 設定エリア (疎通テストと話者・スタイル選択) -->
+                                <div v-if="selectedVoiceEngine === 'voicevox'" class="flex flex-column gap-3 mt-3">
+                                    <div class="form-field">
+                                        <label class="font-medium">VOICEVOX エンドポイント</label>
+                                        <div class="flex gap-2 w-full">
+                                            <InputText 
+                                                v-model="voicevoxEndpoint" 
+                                                placeholder="http://localhost:50021" 
+                                                class="flex-1"
+                                            />
+                                            <Button 
+                                                icon="pi pi-sync" 
+                                                class="p-button-secondary" 
+                                                title="疎通確認と話者一覧再読み込み"
+                                                :loading="isTestingVoicevox"
+                                                @click="testVoicevoxConnection" 
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 疎通結果表示 -->
+                                    <div class="connection-status mt-2" :class="voicevoxConnectionClass">
+                                        <i :class="voicevoxConnectionIcon"></i>
+                                        <span>{{ voicevoxConnectionText }}</span>
+                                    </div>
+
+                                    <!-- 話者・キャラクタースタイル選択 (ボイスモデル選択) -->
+                                    <div class="form-field mt-3">
+                                        <label class="font-medium">使用話者スタイル (ボイスモデル)</label>
+                                        <Select 
+                                            v-if="voicevoxSpeakers.length > 0"
+                                            v-model="voicevoxSpeaker" 
+                                            :options="voicevoxSpeakers" 
+                                            optionLabel="name" 
+                                            optionValue="value" 
+                                            placeholder="話者スタイルを選択..." 
+                                            class="w-full" 
+                                        />
+                                        <div v-else class="flex gap-2 align-items-center">
+                                            <InputText 
+                                                v-model.number="voicevoxSpeaker" 
+                                                placeholder="話者ID (例: 2)" 
+                                                class="w-full"
+                                                type="number"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="flex justify-content-end mt-4">
                                     <Button 
