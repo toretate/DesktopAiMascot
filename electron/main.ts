@@ -248,6 +248,12 @@ app.whenReady().then(() => {
         }
     });
 
+    // アプリケーションを安全に終了する
+    ipcMain.on('quit-app', () => {
+        console.log('[IPC] Quit App request received');
+        app.quit();
+    });
+
     // 3. マウススルー（イベント無視）の制御
     // ignore: true の場合はクリックを透過させ、false の場合はウィンドウを通常クリック可能にする
     ipcMain.on('set-ignore-mouse-events', (event, ignore: boolean) => {

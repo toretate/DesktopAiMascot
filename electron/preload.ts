@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ウィンドウのドラッグ開始および終了シグナルの送信 (HTML要素でドラッグを擬似実装する場合に利用可能)
     startWindowDrag: () => ipcRenderer.send('start-window-drag'),
     
+    // アプリケーションを終了する
+    quitApp: () => ipcRenderer.send('quit-app'),
+    
     // Gemini APIによる対話処理を呼び出す
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => 
         ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName),
