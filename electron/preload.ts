@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string) =>
         ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint),
         
+    // LM Studio (ローカル)疎通確認およびモデル一覧取得を呼び出す
+    getLmStudioModels: (endpoint: string) =>
+        ipcRenderer.invoke('get-lmstudio-models', endpoint),
+        
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
     synthesizeVoicevox: (text: string, speakerId: number) => 
         ipcRenderer.invoke('synthesize-voicevox', text, speakerId),

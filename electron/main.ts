@@ -462,6 +462,45 @@ app.whenReady().then(() => {
         }
     });
 
+    // 8. LM Studio (ローカル) 疎通確認およびモデル一覧取得のハンドラー
+    ipcMain.handle('get-lmstudio-models', async (event, endpoint: string) => {
+        const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
+        const apiBase = endpoint || defaultEndpoint;
+        const url = apiBase.endsWith('/') ? `${apiBase}models` : `${apiBase}/models`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒タイムアウト
+
+        try {
+            console.log(`[LmStudio] 疎通確認・モデル一覧取得開始: ${url}`);
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+
+            const data: any = await response.json();
+            // 一般的な OpenAI / LM Studio / Llama.cpp 互換のレスポンス形式
+            const models = (data.data || []).map((m: any) => m.id);
+            console.log(`[LmStudio] 疎通成功。取得モデル数: ${models.length}`);
+            return { success: true, models };
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('LmStudioとの接続確認エラー (タイムアウト)');
+                return { success: false, models: [], error: '接続がタイムアウトしました。' };
+            } else {
+                console.warn('LmStudioとの接続確認エラー');
+                return { success: false, models: [], error: '接続に失敗しました。' };
+            }
+        }
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindows();

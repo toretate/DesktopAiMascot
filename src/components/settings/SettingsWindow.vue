@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import Card from 'primevue/card';
 import Password from 'primevue/password';
 import Button from 'primevue/button';
@@ -49,8 +49,71 @@ const geminiModel = ref('gemini-2.0-flash-exp');
 const openaiModel = ref('gpt-4o');
 const anthropicModel = ref('claude-3-5-sonnet-latest');
 
+// LM Studio 接続検証用の状態変数
+const isTestingConnection = ref(false);
+const connectionState = ref<'idle' | 'success' | 'failed'>('idle');
+const connectionErrorMsg = ref('');
+const lmstudioModels = ref<string[]>([]);
+
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
+
+// LM Studio 疎通確認とモデル一覧のロード処理
+const testLmStudioConnection = async () => {
+    isTestingConnection.value = true;
+    connectionState.value = 'idle';
+    connectionErrorMsg.value = '';
+    
+    if (window.electronAPI) {
+        try {
+            const result = await window.electronAPI.getLmStudioModels(lmstudioEndpoint.value);
+            if (result.success) {
+                connectionState.value = 'success';
+                lmstudioModels.value = result.models;
+                // 現在選択されているモデル名が空で、ロードされたモデルがあれば自動セット
+                if (!lmstudioModel.value && result.models.length > 0) {
+                    lmstudioModel.value = result.models[0];
+                }
+            } else {
+                connectionState.value = 'failed';
+                connectionErrorMsg.value = result.error || '接続に失敗しました。';
+                lmstudioModels.value = [];
+            }
+        } catch (e: any) {
+            connectionState.value = 'failed';
+            connectionErrorMsg.value = '通信エラーが発生しました。';
+            lmstudioModels.value = [];
+        }
+    } else {
+        // ブラウザ実行時（デモ用モック）
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        connectionState.value = 'success';
+        lmstudioModels.value = ['meta-llama-3-8b-instruct', 'mistral-7b-instruct-v0.2'];
+        if (!lmstudioModel.value) {
+            lmstudioModel.value = 'meta-llama-3-8b-instruct';
+        }
+    }
+    isTestingConnection.value = false;
+};
+
+// 疎通確認ステータスに応じた動的クラスおよびテキスト
+const connectionClass = computed(() => {
+    if (connectionState.value === 'success') return 'status-success';
+    if (connectionState.value === 'failed') return 'status-failed';
+    return 'status-idle';
+});
+
+const connectionIcon = computed(() => {
+    if (connectionState.value === 'success') return 'pi pi-check-circle text-green-400';
+    if (connectionState.value === 'failed') return 'pi pi-times-circle text-red-400';
+    return 'pi pi-info-circle text-gray-400';
+});
+
+const connectionText = computed(() => {
+    if (connectionState.value === 'success') return `接続成功 (ロード済みモデル数: ${lmstudioModels.value.length})`;
+    if (connectionState.value === 'failed') return `接続失敗: ${connectionErrorMsg.value}`;
+    return 'エンドポイントを入力して接続テストを行ってください。';
+});
 
 // 設定データのロード
 onMounted(() => {
@@ -68,6 +131,11 @@ onMounted(() => {
     const temp = localStorage.getItem('temperature');
     if (temp) {
         temperature.value = parseFloat(temp);
+    }
+
+    // LM Studio が現在のアクティブエンジンの場合、初期表示時に自動で疎通確認を実行
+    if (selectedEngine.value === 'lmstudio') {
+        testLmStudioConnection();
     }
 });
 
@@ -219,11 +287,26 @@ const quitApp = () => {
                                 <!-- LM Studio エンドポイント (チャットAIパネルに統合) -->
                                 <div v-if="selectedEngine === 'lmstudio'" class="form-field mt-3">
                                     <label class="font-medium">LM Studio エンドポイント</label>
-                                    <InputText 
-                                        v-model="lmstudioEndpoint" 
-                                        placeholder="http://127.0.0.1:1234/v1/" 
-                                        class="w-full"
-                                    />
+                                    <div class="flex gap-2 w-full">
+                                        <InputText 
+                                            v-model="lmstudioEndpoint" 
+                                            placeholder="http://127.0.0.1:1234/v1/" 
+                                            class="flex-1"
+                                        />
+                                        <Button 
+                                            icon="pi pi-sync" 
+                                            class="p-button-secondary" 
+                                            title="疎通確認とモデル一覧再読み込み"
+                                            :loading="isTestingConnection"
+                                            @click="testLmStudioConnection" 
+                                        />
+                                    </div>
+                                    
+                                    <!-- 疎通確認結果ステータス表示 -->
+                                    <div class="connection-status mt-2" :class="connectionClass">
+                                        <i :class="connectionIcon"></i>
+                                        <span>{{ connectionText }}</span>
+                                    </div>
                                 </div>
 
                                 <!-- 使用モデル名 (エンジン選択に動的連動) -->
@@ -235,12 +318,23 @@ const quitApp = () => {
                                         placeholder="例: gemini-2.0-flash-exp" 
                                         class="w-full" 
                                     />
+                                    
+                                    <!-- LM Studio用のモデル選択ドロップダウン (手動入力も可) -->
+                                    <Select 
+                                        v-else-if="selectedEngine === 'lmstudio' && lmstudioModels.length > 0"
+                                        v-model="lmstudioModel" 
+                                        :options="lmstudioModels" 
+                                        editable
+                                        placeholder="モデルを選択または直接入力..." 
+                                        class="w-full" 
+                                    />
                                     <InputText 
                                         v-else-if="selectedEngine === 'lmstudio'"
                                         v-model="lmstudioModel" 
                                         placeholder="例: Meta-Llama-3-8B-Instruct-GGUF" 
                                         class="w-full" 
                                     />
+                                    
                                     <InputText 
                                         v-else-if="selectedEngine === 'openai'"
                                         v-model="openaiModel" 
@@ -640,5 +734,45 @@ const quitApp = () => {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* --- 疎通確認ステータス表示のスタイル --- */
+.connection-status {
+    border-radius: 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    transition: all 0.3s ease;
+}
+.status-idle {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.5);
+}
+.status-success {
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    color: #4ade80; /* やさしいグリーン */
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+}
+.status-failed {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #f87171; /* やさしいレッド */
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+}
+.flex-1 {
+    flex: 1;
+}
+.text-green-400 {
+    color: #4ade80;
+}
+.text-red-400 {
+    color: #f87171;
+}
+.text-gray-400 {
+    color: rgba(255, 255, 255, 0.4);
 }
 </style>

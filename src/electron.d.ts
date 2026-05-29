@@ -6,6 +6,7 @@ export interface IElectronAPI {
     quitApp: () => void;
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => Promise<string>;
     askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string) => Promise<string>;
+    getLmStudioModels: (endpoint: string) => Promise<{ success: boolean; models: string[]; error?: string }>;
     synthesizeVoicevox: (text: string, speakerId: number) => Promise<string | null>;
     changeEmotion: (emotion: string) => void;
     onEmotionChanged: (callback: (emotion: string) => void) => () => void;
