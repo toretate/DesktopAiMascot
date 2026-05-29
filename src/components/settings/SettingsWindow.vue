@@ -45,6 +45,9 @@ const temperature = ref(0.7);
 const geminiApiKey = ref('');
 const lmstudioEndpoint = ref('http://127.0.0.1:1234/v1/');
 const lmstudioModel = ref('');
+const geminiModel = ref('gemini-2.0-flash-exp');
+const openaiModel = ref('gpt-4o');
+const anthropicModel = ref('claude-3-5-sonnet-latest');
 
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
@@ -58,6 +61,9 @@ onMounted(() => {
     selectedVideoEngine.value = localStorage.getItem('selectedVideoEngine') || 'runway';
     lmstudioEndpoint.value = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
     lmstudioModel.value = localStorage.getItem('lmstudioModel') || '';
+    geminiModel.value = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
+    openaiModel.value = localStorage.getItem('openaiModel') || 'gpt-4o';
+    anthropicModel.value = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
     
     const temp = localStorage.getItem('temperature');
     if (temp) {
@@ -77,6 +83,9 @@ const saveSettings = () => {
     localStorage.setItem('selectedVideoEngine', selectedVideoEngine.value);
     localStorage.setItem('lmstudioEndpoint', lmstudioEndpoint.value);
     localStorage.setItem('lmstudioModel', lmstudioModel.value);
+    localStorage.setItem('geminiModel', geminiModel.value);
+    localStorage.setItem('openaiModel', openaiModel.value);
+    localStorage.setItem('anthropicModel', anthropicModel.value);
     localStorage.setItem('temperature', temperature.value.toString());
 
     setTimeout(() => {
@@ -206,6 +215,46 @@ const quitApp = () => {
                                         class="w-full" 
                                     />
                                 </div>
+                                
+                                <!-- LM Studio エンドポイント (チャットAIパネルに統合) -->
+                                <div v-if="selectedEngine === 'lmstudio'" class="form-field mt-3">
+                                    <label class="font-medium">LM Studio エンドポイント</label>
+                                    <InputText 
+                                        v-model="lmstudioEndpoint" 
+                                        placeholder="http://127.0.0.1:1234/v1/" 
+                                        class="w-full"
+                                    />
+                                </div>
+
+                                <!-- 使用モデル名 (エンジン選択に動的連動) -->
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">使用モデル名</label>
+                                    <InputText 
+                                        v-if="selectedEngine === 'gemini'"
+                                        v-model="geminiModel" 
+                                        placeholder="例: gemini-2.0-flash-exp" 
+                                        class="w-full" 
+                                    />
+                                    <InputText 
+                                        v-else-if="selectedEngine === 'lmstudio'"
+                                        v-model="lmstudioModel" 
+                                        placeholder="例: Meta-Llama-3-8B-Instruct-GGUF" 
+                                        class="w-full" 
+                                    />
+                                    <InputText 
+                                        v-else-if="selectedEngine === 'openai'"
+                                        v-model="openaiModel" 
+                                        placeholder="例: gpt-4o" 
+                                        class="w-full" 
+                                    />
+                                    <InputText 
+                                        v-else-if="selectedEngine === 'anthropic'"
+                                        v-model="anthropicModel" 
+                                        placeholder="例: claude-3-5-sonnet-latest" 
+                                        class="w-full" 
+                                    />
+                                </div>
+
                                 <div class="form-field mt-3">
                                     <label class="font-medium flex justify-content-between">
                                         <span>Temperature (創造性): {{ temperature }}</span>
@@ -335,23 +384,9 @@ const quitApp = () => {
                                 </div>
 
                                 <!-- LM Studio -->
-                                <div v-else-if="selectedEngine === 'lmstudio'" class="flex flex-column gap-3">
-                                    <div class="form-field">
-                                        <label class="font-medium">LM Studio エンドポイント</label>
-                                        <InputText 
-                                            v-model="lmstudioEndpoint" 
-                                            placeholder="http://127.0.0.1:1234/v1/" 
-                                            class="w-full"
-                                        />
-                                    </div>
-                                    <div class="form-field">
-                                        <label class="font-medium">使用モデル名</label>
-                                        <InputText 
-                                            v-model="lmstudioModel" 
-                                            placeholder="例: Meta-Llama-3-8B-Instruct-GGUF" 
-                                            class="w-full"
-                                        />
-                                    </div>
+                                <div v-else-if="selectedEngine === 'lmstudio'" class="form-field">
+                                    <label class="font-medium">API KEY</label>
+                                    <InputText placeholder="LM Studio（ローカル環境）はAPIキー認証が不要です。" class="w-full" disabled />
                                 </div>
 
                                 <!-- その他 -->

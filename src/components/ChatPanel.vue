@@ -38,6 +38,9 @@ const sendMessage = async () => {
     const engine = localStorage.getItem('selectedEngine') || 'gemini';
     const lmsModel = localStorage.getItem('lmstudioModel') || '';
     const lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
+    const geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
+    const openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
+    const anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
 
     // 表情タグを含むシステムプロンプトの指定
     const systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
@@ -64,7 +67,13 @@ const sendMessage = async () => {
                 if (!apiKey) {
                     throw new Error('Gemini APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。');
                 }
-                const model = engine === 'gemini' ? 'gemini-2.0-flash-exp' : engine;
+                const model = engine === 'gemini' 
+                    ? geminiModel 
+                    : (engine === 'openai' 
+                        ? openaiModel 
+                        : (engine === 'anthropic' 
+                            ? anthropicModel 
+                            : engine));
                 reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model);
             }
         } else {
