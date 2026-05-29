@@ -158,7 +158,7 @@ const scrollToBottom = () => {
 </script>
 
 <template>
-    <div class="chat-wrapper app-dark">
+    <div class="chat-wrapper">
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
             <span class="chat-title">Mascot Chat</span>
@@ -205,13 +205,13 @@ const scrollToBottom = () => {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: rgba(18, 18, 18, 0.6);
+    background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     box-sizing: border-box;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
 }
 
 .chat-header {
@@ -220,15 +220,15 @@ const scrollToBottom = () => {
     align-items: center;
     justify-content: space-between;
     padding: 0 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.3);
     cursor: move;
 }
 
 .chat-title {
     font-size: 14px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+    color: #475569;
 }
 
 .header-actions {
@@ -239,7 +239,7 @@ const scrollToBottom = () => {
 .icon-btn {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: #64748b;
     cursor: pointer;
     font-size: 14px;
     width: 28px;
@@ -252,8 +252,8 @@ const scrollToBottom = () => {
 }
 
 .icon-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    color: #0f172a;
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .message-container {
@@ -273,7 +273,7 @@ const scrollToBottom = () => {
     background: transparent;
 }
 .message-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.08);
     border-radius: 3px;
 }
 
@@ -300,22 +300,24 @@ const scrollToBottom = () => {
 }
 
 .user .bubble {
-    background: #a855f7; /* 高貴なパープル */
-    color: #fff;
+    background: #e9d5ff;
+    color: #581c87;
     border-bottom-right-radius: 2px;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.08);
 }
 
 .mascot .bubble {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.9);
+    background: rgba(243, 232, 255, 0.7);
+    color: #4a2c7a;
     border-bottom-left-radius: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .chat-footer {
     padding: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.1);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .input-form {
@@ -325,11 +327,11 @@ const scrollToBottom = () => {
 
 .message-input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px;
     padding: 8px 12px;
-    color: #fff;
+    color: #1e293b;
     font-size: 13px;
     outline: none;
     transition: all 0.2s ease;
@@ -337,11 +339,16 @@ const scrollToBottom = () => {
 
 .message-input:focus {
     border-color: #a855f7;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.1);
+}
+
+.message-input::placeholder {
+    color: #94a3b8;
 }
 
 .send-btn {
-    background: #a855f7;
+    background: #c084fc;
     border: none;
     color: #fff;
     width: 34px;
@@ -355,12 +362,12 @@ const scrollToBottom = () => {
 }
 
 .send-btn:hover:not(:disabled) {
-    background: #9333ea;
+    background: #a855f7;
 }
 
 .send-btn:disabled {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.25);
     cursor: not-allowed;
 }
 </style>
