@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -9,6 +9,42 @@ const isDev = process.env.VITE_DEV_SERVER_URL !== undefined;
 app.setName('desktop-ai-mascot');
 
 // --- 設定管理 (AppConfig) の定義 ---
+// --- マスコットアセット・設定のデータ定義 ---
+interface MascotAsset {
+    id: string;
+    name: string;
+    path: string;
+    offsetX?: number;
+    offsetY?: number;
+    scale?: number;
+}
+
+interface MascotData {
+    id: string;
+    name: string;
+    avatar: string;
+    profile: string;
+    currentOutfitId?: string;
+    currentPoseId?: string;
+    aiConfig: {
+        chat: {
+            engine: string;
+            model: string;
+            temperature: number;
+        };
+        voice: {
+            engine: string;
+            speaker_id: number;
+            style: string;
+        };
+    };
+    assets: {
+        outfits: MascotAsset[];
+        expressions: MascotAsset[];
+        poses: MascotAsset[];
+    };
+}
+
 interface ConfigData {
     mascotX: number;
     mascotY: number;
@@ -33,6 +69,12 @@ interface ConfigData {
     chatFontFamily: string;
     openaiApiKey: string;
     anthropicApiKey: string;
+    mascots: MascotData[];
+    activeMascotId: string;
+    settingsWidth: number;
+    settingsHeight: number;
+    settingsX: number;
+    settingsY: number;
 }
 
 class AppConfig {
@@ -46,6 +88,43 @@ class AppConfig {
     }
 
     private load(): ConfigData {
+        const defaultMascots: MascotData[] = [
+            {
+                id: 'mascot_robot_001',
+                name: 'デフォルトロボット',
+                avatar: '🤖',
+                profile: 'あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。',
+                aiConfig: {
+                    chat: {
+                        engine: 'gemini',
+                        model: 'gemini-2.0-flash-exp',
+                        temperature: 0.7
+                    },
+                    voice: {
+                        engine: 'voicevox',
+                        speaker_id: 2,
+                        style: 'normal'
+                    }
+                },
+                assets: {
+                    outfits: [
+                        { id: 'outfit_default', name: '標準制服', path: '👕' },
+                        { id: 'outfit_cyber', name: 'サイバーコート', path: '🧥' }
+                    ],
+                    expressions: [
+                        { id: 'expr_normal', name: '通常', path: '😊' },
+                        { id: 'expr_smile', name: '笑顔', path: '😆' },
+                        { id: 'expr_sad', name: '悲しみ', path: '😢' },
+                        { id: 'expr_angry', name: '怒り', path: '😠' }
+                    ],
+                    poses: [
+                        { id: 'pose_stand', name: '立ち姿', path: '🧍' },
+                        { id: 'pose_wave', name: '手を振る', path: '👋' }
+                    ]
+                }
+            }
+        ];
+
         const defaultData: ConfigData = {
             mascotX: -1,
             mascotY: -1,
@@ -54,7 +133,7 @@ class AppConfig {
             selectedEngine: 'gemini',
             temperature: 0.7,
             googleAiStudioApiKey: '',
-            geminiModel: 'gemini-2.0-flash-exp',
+            geminiModel: 'gemini-3.1-flash-lite',
             openaiModel: 'gpt-4o',
             anthropicModel: 'claude-3-5-sonnet-latest',
             lmstudioEndpoint: 'http://127.0.0.1:1234/v1/',
@@ -69,7 +148,13 @@ class AppConfig {
             chatSendKey: 'enter',
             chatFontFamily: 'sans-serif',
             openaiApiKey: '',
-            anthropicApiKey: ''
+            anthropicApiKey: '',
+            mascots: defaultMascots,
+            activeMascotId: 'mascot_robot_001',
+            settingsWidth: 800,
+            settingsHeight: 600,
+            settingsX: -1,
+            settingsY: -1
         };
 
         try {
@@ -103,6 +188,7 @@ let mascotWindow: BrowserWindow | null = null;
 let chatWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let savePositionTimeout: NodeJS.Timeout | null = null;
+let saveSettingsBoundsTimeout: NodeJS.Timeout | null = null;
 
 // --- ウィンドウ位置の保存（デバウンス処理） ---
 function debouncedSaveMascotPosition() {
@@ -114,6 +200,20 @@ function debouncedSaveMascotPosition() {
         config.update({ mascotX: x, mascotY: y });
         console.log(`[Config] Mascot position saved: X=${x}, Y=${y}`);
     }, 1000); // 1秒間静止した後に保存
+}
+
+// --- 設定ウィンドウの位置・サイズ保存（デバウンス処理） ---
+function debouncedSaveSettingsBounds() {
+    if (!settingsWindow) return;
+    if (saveSettingsBoundsTimeout) clearTimeout(saveSettingsBoundsTimeout);
+
+    saveSettingsBoundsTimeout = setTimeout(() => {
+        if (!settingsWindow || settingsWindow.isDestroyed()) return;
+        const [w, h] = settingsWindow.getSize();
+        const [x, y] = settingsWindow.getPosition();
+        config.update({ settingsWidth: w, settingsHeight: h, settingsX: x, settingsY: y });
+        console.log(`[Config] Settings bounds saved: X=${x}, Y=${y}, width=${w}, height=${h}`);
+    }, 1000); // 1秒間操作が静止した後に保存
 }
 
 // --- チャットウィンドウの追従移動処理 ---
@@ -133,9 +233,11 @@ function createSettingsWindow() {
         return;
     }
 
-    settingsWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+    const configData = config.get();
+
+    const settingsOptions: Electron.BrowserWindowConstructorOptions = {
+        width: configData.settingsWidth || 800,
+        height: configData.settingsHeight || 600,
         show: false, // 必要なタイミングまで非表示
         title: 'Desktop AI Mascot 設定',
         webPreferences: {
@@ -143,13 +245,28 @@ function createSettingsWindow() {
             contextIsolation: true,
             nodeIntegration: false
         }
-    });
+    };
+
+    if (configData.settingsX !== -1 && configData.settingsY !== -1) {
+        settingsOptions.x = configData.settingsX;
+        settingsOptions.y = configData.settingsY;
+    }
+
+    settingsWindow = new BrowserWindow(settingsOptions);
 
     if (isDev) {
         settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
     } else {
         settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
     }
+
+    settingsWindow.on('resize', () => {
+        debouncedSaveSettingsBounds();
+    });
+
+    settingsWindow.on('move', () => {
+        debouncedSaveSettingsBounds();
+    });
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
@@ -164,9 +281,9 @@ function createWindows() {
 
     // 開発用：設定画面のみ直接起動するモードの処理
     if (process.env.START_SETTINGS === 'true') {
-        settingsWindow = new BrowserWindow({
-            width: 800,
-            height: 600,
+        const settingsOptions: Electron.BrowserWindowConstructorOptions = {
+            width: configData.settingsWidth || 800,
+            height: configData.settingsHeight || 600,
             show: true,
             title: 'Desktop AI Mascot 設定 - 開発用単体起動',
             webPreferences: {
@@ -174,13 +291,28 @@ function createWindows() {
                 contextIsolation: true,
                 nodeIntegration: false
             }
-        });
+        };
+
+        if (configData.settingsX !== -1 && configData.settingsY !== -1) {
+            settingsOptions.x = configData.settingsX;
+            settingsOptions.y = configData.settingsY;
+        }
+
+        settingsWindow = new BrowserWindow(settingsOptions);
 
         if (isDev) {
             settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
         } else {
             settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
         }
+
+        settingsWindow.on('resize', () => {
+            debouncedSaveSettingsBounds();
+        });
+
+        settingsWindow.on('move', () => {
+            debouncedSaveSettingsBounds();
+        });
 
         settingsWindow.on('closed', () => {
             app.quit();
@@ -349,7 +481,7 @@ app.whenReady().then(() => {
 
     // 5. Gemini APIによる対話処理のハンドラー
     ipcMain.handle('ask-gemini', async (event, message: string, apiKey: string, systemPrompt: string, modelName: string) => {
-        const model = modelName || 'gemini-2.0-flash-exp';
+        const model = modelName || 'gemini-3.1-flash-lite';
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const controller = new AbortController();
@@ -358,7 +490,6 @@ app.whenReady().then(() => {
         try {
             console.log('=== Google AI Studio 送信開始 ===');
             console.log(`[GoogleAiStudio] 使用モデル: ${model}`);
-            console.log(`[GoogleAiStudio] 送信メッセージ: ${message}`);
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -389,21 +520,89 @@ app.whenReady().then(() => {
             const data: any = await response.json();
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
             
-            console.log(`[GoogleAiStudio] レスポンス内容: ${text}`);
+            console.log(`[GoogleAiStudio] レスポンス内容取得成功`);
             console.log('=== Google AI Studio 送信完了 ===');
             return text || 'Error: 空の返答を受信しました。';
 
         } catch (error: any) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') {
-                // グローバルルールに従い、タイムアウト時はスタックトレースを出さずシンプルなログを出力
                 console.warn('Google AI Studioとの接続エラー (タイムアウト)');
                 return 'Error: Google AI Studioとの接続がタイムアウトしました。';
             } else {
-                // 接続エラー時もシンプルなメッセージのみログ出力
-                console.warn('Google AI Studioとの接続エラー');
+                console.warn('Google AI Studioとの接続エラー:', error.message);
                 return `Error: Google AI Studioとの接続に失敗しました`;
             }
+        }
+    });
+
+    // 5-2. Gemini Visionによるスプライトシート解析（表情切り出し支援）
+    ipcMain.handle('analyze-sprite-sheet', async (event, base64Image: string, apiKey: string) => {
+        const model = 'gemini-3.1-flash-lite';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        // Base64データからプレフィックス（data:image/png;base64,）を除去
+        const rawBase64 = base64Image.split(',')[1] || base64Image;
+
+        const prompt = `
+            Analyze this expression sprite sheet. 
+            Identify each facial expression box. 
+            For each box, determine which of the following 28 SillyTavern emotion labels it best represents:
+            
+            [admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral]
+            
+            Return the result strictly in JSON format as an array of objects. 
+            For each detected face, specify the exact matched emotion label from the list above, and provide its normalized coordinates [ymin, xmin, ymax, xmax] (range 0-1000).
+            Ensure that each detected face is mapped to ONE of the 28 emotions above.
+            
+            Format:
+            [
+                {"label": "emotion_label_from_list", "box_2d": [ymin, xmin, ymax, xmax]},
+                ...
+            ]
+            
+            Important: Ensure the crop boxes focus accurately on the face area (including hair and head).
+        `;
+
+        try {
+            console.log('[GeminiVision] スプライトシート解析開始...');
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                { text: prompt },
+                                {
+                                    inline_data: {
+                                        mime_type: 'image/png',
+                                        data: rawBase64
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        response_mime_type: "application/json"
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Vision API Error: ${response.status} ${errorText}`);
+            }
+
+            const data: any = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log(`[GeminiVision] 解析結果受信: ${text}`);
+            
+            return JSON.parse(text);
+
+        } catch (error: any) {
+            console.error('[GeminiVision] Error analyzing sprite sheet:', error);
+            return { error: error.message };
         }
     });
 
@@ -619,6 +818,60 @@ app.whenReady().then(() => {
         }
     });
 
+    // 8-2. ローカルの画像ファイルを選択してBase64形式のData URLで取得するハンドラー
+    ipcMain.handle('select-local-image', async (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (!win) return null;
+
+        try {
+            const result = await dialog.showOpenDialog(win, {
+                title: '画像ファイルを選択',
+                properties: ['openFile'],
+                filters: [
+                    { name: '画像ファイル', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }
+                ]
+            });
+
+            if (result.canceled || result.filePaths.length === 0) {
+                return null;
+            }
+
+            const filePath = result.filePaths[0];
+            const fileBuffer = fs.readFileSync(filePath);
+            
+            // 拡張子から適切なMIMEタイプを判別
+            const ext = path.extname(filePath).toLowerCase();
+            let mimeType = 'image/png';
+            if (ext === '.jpg' || ext === '.jpeg') {
+                mimeType = 'image/jpeg';
+            } else if (ext === '.gif') {
+                mimeType = 'image/gif';
+            } else if (ext === '.webp') {
+                mimeType = 'image/webp';
+            } else if (ext === '.svg') {
+                mimeType = 'image/svg+xml';
+            }
+
+            const base64Data = fileBuffer.toString('base64');
+            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            
+            // ファイル名も返すことでアセット名の自動補完を可能にする
+            const fileName = path.basename(filePath, ext);
+
+            return {
+                success: true,
+                path: dataUrl,
+                name: fileName
+            };
+        } catch (error) {
+            console.error('[IPC] Failed to select or read local image:', error);
+            return {
+                success: false,
+                error: '画像のロードに失敗しました。'
+            };
+        }
+    });
+
     // 9. 設定の取得および更新ハンドラー
     ipcMain.handle('get-app-config', async () => {
         return config.get();
@@ -628,13 +881,31 @@ app.whenReady().then(() => {
         config.update(newData);
         console.log('[Config] Configuration updated via IPC');
 
-        // チャットウィンドウ設定の即時反映
+        const currentConfig = config.get();
+
+        // 1. チャットウィンドウへの伝達と最前面制御
         if (chatWindow && !chatWindow.isDestroyed()) {
             if (newData.chatAlwaysOnTop !== undefined) {
                 chatWindow.setAlwaysOnTop(newData.chatAlwaysOnTop);
             }
-            // レンダープロセスに伝達（背景色の透明度はVue側のCSSアルファ値制御で安全かつ高品質に変更します）
-            chatWindow.webContents.send('config-updated', newData);
+            chatWindow.webContents.send('config-updated', currentConfig);
+        }
+
+        // 2. マスコットウィンドウへの伝達
+        if (mascotWindow && !mascotWindow.isDestroyed()) {
+            mascotWindow.webContents.send('config-updated', currentConfig);
+        }
+
+        // 3. 設定ウィンドウへの伝達
+        if (settingsWindow && !settingsWindow.isDestroyed()) {
+            settingsWindow.webContents.send('config-updated', currentConfig);
+        }
+    });
+
+    // 10. エディタからのリアルタイムプレビュー通知（保存前の状態を反映）
+    ipcMain.on('preview-mascot-state', (event, previewState: any) => {
+        if (mascotWindow && !mascotWindow.isDestroyed()) {
+            mascotWindow.webContents.send('apply-preview-state', previewState);
         }
     });
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted, computed } from 'vue';
 
 interface Message {
     id: number;
@@ -22,11 +22,22 @@ const chatFontFamily = ref('sans-serif');
 const chatOpacity = ref(0.65);
 let unsubscribeConfig: (() => void) | null = null;
 
+// --- マスコット関連の設定 ---
+const mascots = ref<any[]>([]);
+const activeMascotId = ref('');
+const activeMascot = computed(() => {
+    return mascots.value.find(m => m.id === activeMascotId.value) || null;
+});
+
 const loadChatSettings = (configData: any) => {
     if (!configData) return;
     chatSendKey.value = configData.chatSendKey || 'enter';
     chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
     chatOpacity.value = configData.chatOpacity !== undefined ? configData.chatOpacity : 0.65;
+    
+    // マスコットデータの読み込み
+    mascots.value = configData.mascots || [];
+    activeMascotId.value = configData.activeMascotId || '';
 };
 
 const sendMessage = async () => {
@@ -56,52 +67,93 @@ const sendMessage = async () => {
     let anthropicModel = 'claude-3-5-sonnet-latest';
     let voicevoxSpeakerId = 2;
     let voicevoxEndpointUrl = 'http://localhost:50021';
+    let systemPrompt = '';
+
+    // アクティブなマスコットがいる場合はその個別設定を優先
+    const mascot = activeMascot.value;
 
     if (window.electronAPI) {
         const configData = await window.electronAPI.getAppConfig();
         if (configData) {
-            engine = configData.selectedEngine || 'gemini';
+            // エンジン選択：マスコット個別の設定を優先し、無ければシステム設定を使用
+            engine = mascot?.aiConfig?.chat?.engine || configData.selectedEngine || 'gemini';
+            
+            // APIキーの取得（これはシステム全体のAPIキーから取得）
             if (engine === 'gemini') {
                 apiKey = configData.googleAiStudioApiKey || '';
             } else if (engine === 'openai') {
                 apiKey = configData.openaiApiKey || '';
             } else if (engine === 'anthropic') {
                 apiKey = configData.anthropicApiKey || '';
-            } else {
-                apiKey = '';
             }
-            lmsModel = configData.lmstudioModel || '';
+
             lmsEndpoint = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
-            geminiModel = configData.geminiModel || 'gemini-2.0-flash-exp';
-            openaiModel = configData.openaiModel || 'gpt-4o';
-            anthropicModel = configData.anthropicModel || 'claude-3-5-sonnet-latest';
-            voicevoxSpeakerId = configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2;
             voicevoxEndpointUrl = configData.voicevoxEndpoint || 'http://localhost:50021';
+
+            // モデル名：マスコット個別のモデル名を優先
+            if (mascot?.aiConfig?.chat?.model) {
+                if (engine === 'lmstudio') {
+                    lmsModel = mascot.aiConfig.chat.model;
+                } else if (engine === 'gemini') {
+                    geminiModel = mascot.aiConfig.chat.model;
+                } else if (engine === 'openai') {
+                    openaiModel = mascot.aiConfig.chat.model;
+                } else if (engine === 'anthropic') {
+                    anthropicModel = mascot.aiConfig.chat.model;
+                }
+            } else {
+                lmsModel = configData.lmstudioModel || '';
+                geminiModel = configData.geminiModel || 'gemini-2.0-flash-exp';
+                openaiModel = configData.openaiModel || 'gpt-4o';
+                anthropicModel = configData.anthropicModel || 'claude-3-5-sonnet-latest';
+            }
+
+            // 音声話者：マスコット個別の話者IDを優先
+            voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
+                ? mascot.aiConfig.voice.speaker_id 
+                : (configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2);
         }
     } else {
-        engine = localStorage.getItem('selectedEngine') || 'gemini';
+        engine = mascot?.aiConfig?.chat?.engine || localStorage.getItem('selectedEngine') || 'gemini';
         if (engine === 'gemini') {
             apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
         } else if (engine === 'openai') {
             apiKey = localStorage.getItem('openaiApiKey') || '';
         } else if (engine === 'anthropic') {
             apiKey = localStorage.getItem('anthropicApiKey') || '';
-        } else {
-            apiKey = '';
         }
-        lmsModel = localStorage.getItem('lmstudioModel') || '';
+
         lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
-        geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
-        openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
-        anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
-        
-        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
-        voicevoxSpeakerId = savedSpeaker ? parseInt(savedSpeaker) : 2;
         voicevoxEndpointUrl = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
+
+        if (mascot?.aiConfig?.chat?.model) {
+            if (engine === 'lmstudio') lmsModel = mascot.aiConfig.chat.model;
+            else if (engine === 'gemini') geminiModel = mascot.aiConfig.chat.model;
+            else if (engine === 'openai') openaiModel = mascot.aiConfig.chat.model;
+            else if (engine === 'anthropic') anthropicModel = mascot.aiConfig.chat.model;
+        } else {
+            lmsModel = localStorage.getItem('lmstudioModel') || '';
+            geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
+            openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
+            anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
+        }
+
+        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
+        voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
+            ? mascot.aiConfig.voice.speaker_id 
+            : (savedSpeaker ? parseInt(savedSpeaker) : 2);
     }
 
-    // 表情タグを含むシステムプロンプトの指定
-    const systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
+    // システムプロンプト：マスコットのプロフィールを優先
+    if (mascot && mascot.profile) {
+        systemPrompt = mascot.profile;
+        // プロンプトに感情タグの指示が含まれていない場合は自動で付与する
+        if (!systemPrompt.includes('[happy]') && !systemPrompt.includes('感情タグ')) {
+            systemPrompt += "\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
+        }
+    } else {
+        systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」`;
+    }
 
     // AIの「考え中...」プレースホルダーを表示
     const aiMessageId = Date.now() + 1;
@@ -233,7 +285,7 @@ onUnmounted(() => {
     <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, backgroundColor: `rgba(255, 255, 255, ${chatOpacity})` }">
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
-            <span class="chat-title">Mascot Chat</span>
+            <span class="chat-title">{{ activeMascot ? `${activeMascot.name} Chat` : 'Mascot Chat' }}</span>
             <div class="header-actions no-drag">
                 <button class="icon-btn"><i class="pi pi-plus"></i></button>
                 <button class="icon-btn"><i class="pi pi-history"></i></button>

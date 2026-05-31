@@ -41,8 +41,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getVoicevoxSpeakers: (endpoint: string) =>
         ipcRenderer.invoke('get-voicevox-speakers', endpoint),
     
+    // Gemini Visionによるスプライトシート解析
+    analyzeSpriteSheet: (base64Image: string, apiKey: string) =>
+        ipcRenderer.invoke('analyze-sprite-sheet', base64Image, apiKey),
+    
+    // ローカルPCの画像ファイルを選択し、Base64データURLとして取得する
+    selectLocalImage: () =>
+        ipcRenderer.invoke('select-local-image'),
+    
     // 感情の変更をメインプロセスへ通知する
     changeEmotion: (emotion: string) => ipcRenderer.send('emotion-changed', emotion),
+    
+    // エディタのプレビュー状態をマスコットウィンドウへ送信する
+    previewMascotState: (previewState: any) =>
+        ipcRenderer.send('preview-mascot-state', previewState),
+    
+    // エディタからのプレビュー状態適用イベントを購読
+    onApplyPreviewState: (callback: (previewState: any) => void) => {
+        const listener = (_event: any, state: any) => callback(state);
+        ipcRenderer.on('apply-preview-state', listener);
+        return () => {
+            ipcRenderer.off('apply-preview-state', listener);
+        };
+    },
     
     // メインプロセスから感情変更イベントを購読する
     onEmotionChanged: (callback: (emotion: string) => void) => {
