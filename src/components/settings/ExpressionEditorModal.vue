@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
 
@@ -40,10 +40,30 @@ const emit = defineEmits<{
 
 const selectedModalExpression = ref<MascotAsset | null>(null);
 
-// 初期選択
-if (props.editingMascot && props.editingMascot.assets.expressions.length > 0) {
-    selectedModalExpression.value = props.editingMascot.assets.expressions.find(e => e.name === '通常') || props.editingMascot.assets.expressions[0] || null;
-}
+// visible が true になった時やマスコットデータが渡された時に、表情初期選択を確実に実行する
+watch(
+    () => props.visible,
+    (newVal) => {
+        if (newVal) {
+            if (props.editingMascot && props.editingMascot.assets?.expressions?.length > 0) {
+                selectedModalExpression.value = props.editingMascot.assets.expressions.find(e => e.name === '通常') || props.editingMascot.assets.expressions[0] || null;
+            } else {
+                selectedModalExpression.value = null;
+            }
+        }
+    },
+    { immediate: true }
+);
+
+// editingMascot 自体が外部から切り替えられた場合もリアクティブに表情の選択を解決する
+watch(
+    () => props.editingMascot,
+    (newMascot) => {
+        if (props.visible && newMascot && newMascot.assets?.expressions?.length > 0) {
+            selectedModalExpression.value = newMascot.assets.expressions.find(e => e.name === '通常') || newMascot.assets.expressions[0] || null;
+        }
+    }
+);
 
 const selectExpression = (slot: MascotAsset) => {
     selectedModalExpression.value = slot;
