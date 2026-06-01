@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { MascotImageSetBuilder } from '../mascots/MascotImageSetBuilder';
 
 const isChatVisible = ref(false);
 const emotionClass = ref('');
@@ -23,6 +24,20 @@ const previewState = ref<{
 
 const activeMascot = computed(() => {
     return mascots.value.find(m => m.id === activeMascotId.value) || null;
+});
+
+const activeMascotImageSet = computed(() => {
+    const mascot = activeMascot.value;
+    if (!mascot) return null;
+    
+    // outfits, expressions, poses をフラットにしてアセットリストを作成
+    const assets = [
+        ...(mascot.assets?.outfits || []),
+        ...(mascot.assets?.expressions || []),
+        ...(mascot.assets?.poses || [])
+    ];
+    
+    return MascotImageSetBuilder.CreateFromAssets(mascot.name, assets);
 });
 
 // 現在選択されている服装アセット
@@ -73,6 +88,15 @@ const activeExpression = computed(() => {
     if (normalized === 'neutral' && mascot.defaultExpressionId) {
         const foundDefault = expressions.find((expr: any) => expr.id === mascot.defaultExpressionId);
         if (foundDefault && foundDefault.path) return foundDefault;
+    }
+
+    // 2.3 MascotImageSetから感情に応じた表情を明示的に取得（画像名から方向や感情を分類する処理を共通化）
+    if (activeMascotImageSet.value) {
+        const emotionFace = activeMascotImageSet.value.getEmotionFaceImage(normalized);
+        if (emotionFace && emotionFace.path) return emotionFace;
+
+        const emotionFull = activeMascotImageSet.value.getEmotionFullbodyImage(normalized);
+        if (emotionFull && emotionFull.path) return emotionFull;
     }
 
     // SillyTavernの英語名と日本語名アセットのマッピング対応表
@@ -184,6 +208,11 @@ const activeExpressionStyle = computed(() => {
     }
     
     return {};
+});
+
+// 既定の正面画像（最終フォールバック用）
+const defaultFrontAvatar = computed(() => {
+    return activeMascotImageSet.value?.getFrontImage() || null;
 });
 
 const toggleChat = () => {
@@ -320,9 +349,10 @@ onUnmounted(() => {
                     <img v-if="activeOutfit.path.startsWith('data:image/')" :src="activeOutfit.path" class="preview-full-img" />
                     <span v-else class="preview-base-avatar">{{ activeOutfit.path }}</span>
                 </template>
-                <!-- 何もなければベースアバター -->
+                <!-- 何もなければベースアバター (front画像を優先) -->
                 <template v-else-if="activeMascot">
-                    <img v-if="activeMascot.avatar.startsWith('data:image/')" :src="activeMascot.avatar" class="preview-full-img" />
+                    <img v-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')" :src="defaultFrontAvatar.path" class="preview-full-img" />
+                    <img v-else-if="activeMascot.avatar.startsWith('data:image/')" :src="activeMascot.avatar" class="preview-full-img" />
                     <span v-else class="preview-base-avatar">{{ activeMascot.avatar }}</span>
                 </template>
                 <span v-else class="preview-base-avatar">🤖</span>
