@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { MascotImageSetBuilder } from '../mascots/MascotImageSetBuilder';
+import { useConfigStore } from '../store/config';
+import { useMascotStore } from '../store/mascot';
+import { storeToRefs } from 'pinia';
 
 const isChatVisible = ref(false);
 const emotionClass = ref('');
-const currentEmotion = ref('neutral');
 
-// --- マスコット状態の管理 ---
-const mascots = ref<any[]>([]);
-const activeMascotId = ref('');
-let unsubscribeConfig: (() => void) | null = null;
-let unsubscribePreview: (() => void) | null = null;
+// ---- Stores ----
+const configStore = useConfigStore();
+const mascotStore = useMascotStore();
+
+const {
+    activeMascot,
+    mascots,
+    activeMascotId
+} = storeToRefs(configStore);
+
+const {
+    currentEmotion,
+    isSpeaking
+} = storeToRefs(mascotStore);
 
 // プレビュー用の臨時オーバーライド状態
 const previewState = ref<{
@@ -22,15 +33,12 @@ const previewState = ref<{
     expressionScale?: number;
 } | null>(null);
 
-const activeMascot = computed(() => {
-    return mascots.value.find(m => m.id === activeMascotId.value) || null;
-});
+let unsubscribePreview: (() => void) | null = null;
 
 const activeMascotImageSet = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot) return null;
     
-    // outfits, expressions, poses をフラットにしてアセットリストを作成
     const assets = [
         ...(mascot.assets?.outfits || []),
         ...(mascot.assets?.expressions || []),
@@ -45,7 +53,6 @@ const activeOutfit = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot || !mascot.assets?.outfits) return null;
     
-    // プレビュー中ならそれを優先
     const targetId = previewState.value?.outfitId || mascot.currentOutfitId;
     return mascot.assets.outfits.find((o: any) => o.id === targetId) || null;
 });
@@ -55,7 +62,6 @@ const activePose = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot || !mascot.assets?.poses) return null;
     
-    // プレビュー中ならそれを優先
     const targetId = previewState.value?.poseId || mascot.currentPoseId;
     return mascot.assets.poses.find((p: any) => p.id === targetId) || null;
 });
@@ -90,7 +96,7 @@ const activeExpression = computed(() => {
         if (foundDefault && foundDefault.path) return foundDefault;
     }
 
-    // 2.3 MascotImageSetから感情に応じた表情を明示的に取得（画像名から方向や感情を分類する処理を共通化）
+    // 2.3 MascotImageSetから感情に応じた表情を明示的に取得
     if (activeMascotImageSet.value) {
         const emotionFace = activeMascotImageSet.value.getEmotionFaceImage(normalized);
         if (emotionFace && emotionFace.path) return emotionFace;
@@ -131,9 +137,7 @@ const activeExpression = computed(() => {
         neutral: ['通常', 'neutral']
     };
 
-    // 2.5 感情名とアセットのnameが直接一致する（完全一致または部分一致、英語名・日本語名両方でマッチ）ものを最優先で解決
     if (normalized) {
-        // SillyTavernの英語名感情タグに対応する日本語名と英語名候補のリストを取得
         const candidateNames = emotionTranslationMap[normalized] || [normalized];
 
         const directMatch = expressions.find((expr: any) => {
@@ -147,7 +151,7 @@ const activeExpression = computed(() => {
         if (directMatch) return directMatch;
     }
 
-    // 3. キーワードマッピングによる解決 (SillyTavernの28感情すべてを基本5感情にマッピング、日本語アセット名も対応)
+    // 3. キーワードマッピングによる解決
     const keywords_map: Record<string, string[]> = {
         happy: ['笑顔', '喜び', '喜', 'happy', 'smile', '楽', '😆', '😊', 'joy', 'amusement', 'excitement', 'love', 'admiration', 'approval', 'gratitude', 'optimism', 'pride', 'relief', '面白がり', '興奮', '愛情', '賞賛', '賛同', '感謝', '楽観', '誇り', '安堵'],
         sad: ['悲しみ', '悲', '哀', 'sad', 'cry', '泣', '😢', '😭', 'sadness', 'grief', 'remorse', 'disappointment', 'disapproval', '深い悲しみ', '後悔', '失望', '不賛成'],
@@ -164,7 +168,6 @@ const activeExpression = computed(() => {
         if (found) return found;
     }
     
-    // 4. 感情に一致するものがない場合、マスコットのデフォルト表情（指定された標準表情、または通常）を探す
     if (mascot.defaultExpressionId) {
         const foundDefault = expressions.find((expr: any) => expr.id === mascot.defaultExpressionId);
         if (foundDefault && foundDefault.path) return foundDefault;
@@ -176,7 +179,6 @@ const activeExpression = computed(() => {
     );
     if (normalExpr) return normalExpr;
     
-    // 5. それでもなければ、最初のアセット
     if (expressions.length > 0) {
         return expressions[0];
     }
@@ -184,7 +186,7 @@ const activeExpression = computed(() => {
     return null;
 });
 
-// 感情に連動した表情アセットの動的な解決（画像パスまたは絵文字）
+// 感情に連動した表情アセットの動的な解決
 const activeExpressionEmoji = computed(() => {
     if (activeExpression.value) {
         return activeExpression.value.path;
@@ -197,7 +199,6 @@ const activeExpressionEmoji = computed(() => {
 const activeExpressionStyle = computed(() => {
     const found = activeExpression.value;
     if (found) {
-        // プレビュー中ならプレビューの値を、そうでなければアセット自身の保存値を使用
         const ox = previewState.value ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
         const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
         const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
@@ -210,7 +211,7 @@ const activeExpressionStyle = computed(() => {
     return {};
 });
 
-// 既定の正面画像（最終フォールバック用）
+// 既定の正面画像
 const defaultFrontAvatar = computed(() => {
     return activeMascotImageSet.value?.getFrontImage() || null;
 });
@@ -234,7 +235,7 @@ let startMouseY = 0;
 let hasMoved = false;
 
 const onMouseDown = (e: MouseEvent) => {
-    if (e.button === 0) { // 左クリックのみ対象
+    if (e.button === 0) {
         isDragging.value = true;
         startMouseX = e.screenX;
         startMouseY = e.screenY;
@@ -248,7 +249,6 @@ const onMouseDown = (e: MouseEvent) => {
 const onMouseMove = (e: MouseEvent) => {
     if (!isDragging.value) return;
 
-    // マウス左ボタンが押されていない状態ならドラッグ終了とする（予期しないmouseup漏れ対策）
     if (e.buttons !== 1) {
         onMouseUp();
         return;
@@ -275,31 +275,26 @@ const onMouseUp = () => {
     window.removeEventListener('mouseup', onMouseUp);
 
     if (!hasMoved) {
-        // ドラッグ移動しなかった場合はクリックとみなし、チャットトグル
         toggleChat();
     }
 };
 
-const loadMascotConfig = (configData: any) => {
-    if (!configData) return;
-    console.log('[MascotViewer] loadMascotConfig loaded settings:', configData);
-    mascots.value = configData.mascots || [];
-    activeMascotId.value = configData.activeMascotId || '';
-    console.log('[MascotViewer] activeMascotId updated to:', activeMascotId.value);
-    console.log('[MascotViewer] Active mascot resolved:', mascots.value.find(m => m.id === activeMascotId.value));
-};
+// ---- Watchers ----
+// 感情変化のリアクティブ監視による演出アニメーション
+watch(() => mascotStore.currentEmotion, () => {
+    emotionClass.value = 'emotion-pop';
+    setTimeout(() => {
+        emotionClass.value = '';
+    }, 600);
+});
 
 onMounted(async () => {
+    // ストアの設定データを初期ロード
+    if (!configStore.isLoaded) {
+        await configStore.loadConfig();
+    }
+
     if (window.electronAPI) {
-        // 初期設定のロード
-        const configData = await window.electronAPI.getAppConfig();
-        loadMascotConfig(configData);
-
-        // 設定更新の購読
-        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
-            loadMascotConfig(newConfig);
-        });
-
         // プレビュー状態の購読
         unsubscribePreview = window.electronAPI.onApplyPreviewState((state: any) => {
             previewState.value = state;
@@ -310,23 +305,14 @@ onMounted(async () => {
             isChatVisible.value = visible;
         });
 
-        // 感情変化イベントの検知
+        // 後方互換性および外部連携のための感情変化イベントの検知
         window.electronAPI.onEmotionChanged((emotion: string) => {
-            currentEmotion.value = emotion.toLowerCase();
-
-            // 表情変化時にポップアップアニメーションを実行
-            emotionClass.value = 'emotion-pop';
-            setTimeout(() => {
-                emotionClass.value = '';
-            }, 600);
+            mascotStore.setEmotion(emotion);
         });
     }
 });
 
 onUnmounted(() => {
-    if (unsubscribeConfig) {
-        unsubscribeConfig();
-    }
     if (unsubscribePreview) {
         unsubscribePreview();
     }

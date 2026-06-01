@@ -6,6 +6,33 @@ import Button from 'primevue/button';
 import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
+import { useConfigStore } from '../../store/config';
+import { storeToRefs } from 'pinia';
+
+const configStore = useConfigStore();
+const {
+    googleAiStudioApiKey: geminiApiKey,
+    openaiApiKey,
+    anthropicApiKey,
+    selectedEngine,
+    selectedVoiceEngine,
+    selectedImageEngine,
+    selectedVideoEngine,
+    lmstudioEndpoint,
+    lmstudioModel,
+    geminiModel,
+    openaiModel,
+    anthropicModel,
+    voicevoxEndpoint,
+    voicevoxSpeaker,
+    temperature,
+    chatOpacity,
+    chatAlwaysOnTop,
+    chatSendKey,
+    chatFontFamily,
+    mascots,
+    activeMascotId
+} = storeToRefs(configStore);
 
 const activeMenu = ref('mascot');
 
@@ -16,14 +43,12 @@ const aiEngines = ref([
     { name: 'OpenAI (GPT-4o)', value: 'openai' },
     { name: 'Claude (Anthropic)', value: 'anthropic' }
 ]);
-const selectedEngine = ref('gemini');
 
 // 音声AIエンジン
 const voiceEngines = ref([
     { name: 'VOICEVOX (ローカル)', value: 'voicevox' },
     { name: 'Google Cloud Text-to-Speech', value: 'gtts' }
 ]);
-const selectedVoiceEngine = ref('voicevox');
 
 // 画像生成AI
 const imageEngines = ref([
@@ -31,7 +56,6 @@ const imageEngines = ref([
     { name: 'Stable Diffusion (ローカル)', value: 'sd_local' },
     { name: 'Midjourney API', value: 'midjourney' }
 ]);
-const selectedImageEngine = ref('dalle3');
 
 // 動画生成AI
 const videoEngines = ref([
@@ -39,17 +63,6 @@ const videoEngines = ref([
     { name: 'Stable Video Diffusion', value: 'svd' },
     { name: 'Sora (OpenAI モック)', value: 'sora' }
 ]);
-const selectedVideoEngine = ref('runway');
-
-const temperature = ref(0.7);
-const geminiApiKey = ref('');
-const openaiApiKey = ref('');
-const anthropicApiKey = ref('');
-const lmstudioEndpoint = ref('http://127.0.0.1:1234/v1/');
-const lmstudioModel = ref('');
-const geminiModel = ref('gemini-2.0-flash-exp');
-const openaiModel = ref('gpt-4o');
-const anthropicModel = ref('claude-3-5-sonnet-latest');
 
 // LM Studio 接続検証用の状態変数
 const isTestingConnection = ref(false);
@@ -58,26 +71,20 @@ const connectionErrorMsg = ref('');
 const lmstudioModels = ref<string[]>([]);
 
 // VOICEVOX 疎通確認および話者ロード用の状態変数
-const voicevoxEndpoint = ref('http://localhost:50021');
-const voicevoxSpeaker = ref<any>(2); // デフォルト話者ID: 2 (四国めたんノーマル)
 const isTestingVoicevox = ref(false);
 const voicevoxConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
 const voicevoxConnectionErrorMsg = ref('');
 const voicevoxSpeakers = ref<{ name: string; value: number }[]>([]);
 
-// --- チャットウィンドウの設定 ---
-const chatOpacity = ref(1.0);
 const alwaysOnTopOptions = ref([
     { name: '常に最前面に表示する', value: true },
     { name: '最前面に表示しない', value: false }
 ]);
-const chatAlwaysOnTop = ref(true);
 
 const sendKeyOptions = ref([
     { name: 'Enter で送信 (Shift + Enter で改行)', value: 'enter' },
     { name: 'Shift + Enter で送信 (Enter で改行)', value: 'shiftEnter' }
 ]);
-const chatSendKey = ref('enter');
 
 const fontFamilyOptions = ref([
     { name: 'システムデフォルト (sans-serif)', value: 'sans-serif' },
@@ -86,7 +93,6 @@ const fontFamilyOptions = ref([
     { name: 'Segoe UI', value: '"Segoe UI", sans-serif' },
     { name: 'MS PGothic / ＭＳ Ｐゴシック', value: '"MS PGothic", sans-serif' }
 ]);
-const chatFontFamily = ref('sans-serif');
 
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
@@ -210,63 +216,7 @@ const voicevoxConnectionText = computed(() => {
 
 // 設定データのロード
 onMounted(async () => {
-    let configData: any = null;
-    if (window.electronAPI) {
-        configData = await window.electronAPI.getAppConfig();
-    }
-
-    if (configData) {
-        // メインプロセスの config.json からロード
-        geminiApiKey.value = configData.googleAiStudioApiKey || '';
-        openaiApiKey.value = configData.openaiApiKey || '';
-        anthropicApiKey.value = configData.anthropicApiKey || '';
-        selectedEngine.value = configData.selectedEngine || 'gemini';
-        selectedVoiceEngine.value = configData.selectedVoiceEngine || 'voicevox';
-        selectedImageEngine.value = configData.selectedImageEngine || 'dalle3';
-        selectedVideoEngine.value = configData.selectedVideoEngine || 'runway';
-        lmstudioEndpoint.value = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
-        lmstudioModel.value = configData.lmstudioModel || '';
-        geminiModel.value = configData.geminiModel || 'gemini-2.0-flash-exp';
-        openaiModel.value = configData.openaiModel || 'gpt-4o';
-        anthropicModel.value = configData.anthropicModel || 'claude-3-5-sonnet-latest';
-        voicevoxEndpoint.value = configData.voicevoxEndpoint || 'http://localhost:50021';
-        voicevoxSpeaker.value = configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2;
-        temperature.value = configData.temperature !== undefined ? configData.temperature : 0.7;
-        
-        chatOpacity.value = configData.chatOpacity !== undefined ? configData.chatOpacity : 1.0;
-        chatAlwaysOnTop.value = configData.chatAlwaysOnTop !== undefined ? configData.chatAlwaysOnTop : true;
-        chatSendKey.value = configData.chatSendKey || 'enter';
-        chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
-    } else {
-        // Webブラウザ/モック環境（localStorageフォールバック）
-        geminiApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
-        openaiApiKey.value = localStorage.getItem('openaiApiKey') || '';
-        anthropicApiKey.value = localStorage.getItem('anthropicApiKey') || '';
-        selectedEngine.value = localStorage.getItem('selectedEngine') || 'gemini';
-        selectedVoiceEngine.value = localStorage.getItem('selectedVoiceEngine') || 'voicevox';
-        selectedImageEngine.value = localStorage.getItem('selectedImageEngine') || 'dalle3';
-        selectedVideoEngine.value = localStorage.getItem('selectedVideoEngine') || 'runway';
-        lmstudioEndpoint.value = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
-        lmstudioModel.value = localStorage.getItem('lmstudioModel') || '';
-        geminiModel.value = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
-        openaiModel.value = localStorage.getItem('openaiModel') || 'gpt-4o';
-        anthropicModel.value = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
-        
-        voicevoxEndpoint.value = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
-        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
-        voicevoxSpeaker.value = savedSpeaker ? parseInt(savedSpeaker) : 2;
-        
-        const temp = localStorage.getItem('temperature');
-        if (temp) {
-            temperature.value = parseFloat(temp);
-        }
-        
-        const opacity = localStorage.getItem('chatOpacity');
-        chatOpacity.value = opacity ? parseFloat(opacity) : 1.0;
-        chatAlwaysOnTop.value = localStorage.getItem('chatAlwaysOnTop') !== 'false';
-        chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
-        chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
-    }
+    await configStore.loadConfig();
 
     // LM Studio が現在のアクティブエンジンの場合、初期表示時に自動で疎通確認を実行
     if (selectedEngine.value === 'lmstudio') {
@@ -277,18 +227,10 @@ onMounted(async () => {
     if (selectedVoiceEngine.value === 'voicevox') {
         testVoicevoxConnection();
     }
-    // マスコットデータのロード・初期化
-    let savedMascots: MascotData[] = [];
-    if (window.electronAPI) {
-        const appConfig = await window.electronAPI.getAppConfig();
-        if (appConfig.mascots && appConfig.mascots.length > 0) {
-            savedMascots = appConfig.mascots;
-        }
-    }
-    
+
     // データがない場合は初期のモックデータを作成
-    if (savedMascots.length === 0) {
-        savedMascots = [{
+    if (mascots.value.length === 0) {
+        mascots.value = [{
             id: 'mascot_default',
             name: 'デフォルトロボット',
             avatar: '🤖',
@@ -305,14 +247,18 @@ onMounted(async () => {
         }];
     } else {
         // ロードされたマスコットの表情スロットを保証
-        savedMascots.forEach(m => {
+        mascots.value.forEach(m => {
             m.assets.expressions = ensure28Expressions(m.assets.expressions);
         });
     }
 
-    mascots.value = savedMascots;
-    if (savedMascots.length > 0) {
-        selectMascot(savedMascots[0]);
+    if (mascots.value.length > 0) {
+        // activeMascotId が空なら最初のマスコットをアクティブにする
+        if (!activeMascotId.value) {
+            activeMascotId.value = mascots.value[0].id;
+        }
+        const activeMascot = mascots.value.find(m => m.id === activeMascotId.value) || mascots.value[0];
+        selectMascot(activeMascot);
     }
     activeMascotSubTab.value = 'expression';
 });
@@ -322,53 +268,8 @@ const saveSettings = async () => {
     isSaving.value = true;
     saveStatus.value = '保存中...';
 
-    // 1. ローカルファイルの更新（メインプロセス経由）
-    if (window.electronAPI) {
-        await window.electronAPI.updateAppConfig({
-            googleAiStudioApiKey: geminiApiKey.value,
-            openaiApiKey: openaiApiKey.value,
-            anthropicApiKey: anthropicApiKey.value,
-            selectedEngine: selectedEngine.value,
-            selectedVoiceEngine: selectedVoiceEngine.value,
-            selectedImageEngine: selectedImageEngine.value,
-            selectedVideoEngine: selectedVideoEngine.value,
-            lmstudioEndpoint: lmstudioEndpoint.value,
-            lmstudioModel: lmstudioModel.value,
-            geminiModel: geminiModel.value,
-            openaiModel: openaiModel.value,
-            anthropicModel: anthropicModel.value,
-            voicevoxEndpoint: voicevoxEndpoint.value,
-            voicevoxSpeaker: Number(voicevoxSpeaker.value),
-            temperature: Number(temperature.value),
-            chatOpacity: Number(chatOpacity.value),
-            chatAlwaysOnTop: chatAlwaysOnTop.value,
-            chatSendKey: chatSendKey.value,
-            chatFontFamily: chatFontFamily.value,
-            mascots: JSON.parse(JSON.stringify(mascots.value))
-        });
-    }
-
-    // 2. localStorageへの同時書き込み (下位互換および二重化保持)
-    localStorage.setItem('mascots', JSON.stringify(mascots.value));
-    localStorage.setItem('GoogleAiStudioApiKey', geminiApiKey.value);
-    localStorage.setItem('openaiApiKey', openaiApiKey.value);
-    localStorage.setItem('anthropicApiKey', anthropicApiKey.value);
-    localStorage.setItem('selectedEngine', selectedEngine.value);
-    localStorage.setItem('selectedVoiceEngine', selectedVoiceEngine.value);
-    localStorage.setItem('selectedImageEngine', selectedImageEngine.value);
-    localStorage.setItem('selectedVideoEngine', selectedVideoEngine.value);
-    localStorage.setItem('lmstudioEndpoint', lmstudioEndpoint.value);
-    localStorage.setItem('lmstudioModel', lmstudioModel.value);
-    localStorage.setItem('geminiModel', geminiModel.value);
-    localStorage.setItem('openaiModel', openaiModel.value);
-    localStorage.setItem('anthropicModel', anthropicModel.value);
-    localStorage.setItem('voicevoxEndpoint', voicevoxEndpoint.value);
-    localStorage.setItem('voicevoxSpeaker', voicevoxSpeaker.value.toString());
-    localStorage.setItem('temperature', temperature.value.toString());
-    localStorage.setItem('chatOpacity', chatOpacity.value.toString());
-    localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
-    localStorage.setItem('chatSendKey', chatSendKey.value);
-    localStorage.setItem('chatFontFamily', chatFontFamily.value);
+    // ストアに現在の設定値を一括保存
+    await configStore.saveConfig();
 
     setTimeout(() => {
         saveStatus.value = '保存完了！';
@@ -423,8 +324,6 @@ interface MascotData {
     };
 }
 
-const mascots = ref<MascotData[]>([]);
-const activeMascotId = ref('');
 const activeMascotSubTab = ref<'profile' | 'outfit' | 'expression' | 'pose'>('profile');
 
 // 編集・追加対象のワークバッファ
@@ -1352,11 +1251,11 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                                             placeholder="話者スタイルを選択..." 
                                             class="w-full" 
                                         />
-                                        <div v-else class="flex gap-2 align-items-center">
-                                            <InputText 
+                                        <div v-else class="flex gap-2 align-items-center w-full">
+                                            <input 
                                                 v-model.number="voicevoxSpeaker" 
                                                 placeholder="話者ID (例: 2)" 
-                                                class="w-full"
+                                                class="p-inputtext w-full"
                                                 type="number"
                                             />
                                         </div>
