@@ -34,6 +34,7 @@ const previewState = ref<{
 } | null>(null);
 
 let unsubscribePreview: (() => void) | null = null;
+let unsubscribeConfig: (() => void) | null = null;
 
 const activeMascotImageSet = computed(() => {
     const mascot = activeMascot.value;
@@ -203,8 +204,14 @@ const activeExpressionStyle = computed(() => {
         const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
         const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
         
+        // 表情エディタ（420px）とMascotViewer（180px）のスケール比率を適用して
+        // 位置調整パラメータがデスクトップ上でも正確に再現されるように補正する。
+        const scaleFactor = 180 / 420;
+        const scaledOx = ox * scaleFactor;
+        const scaledOy = oy * scaleFactor;
+        
         return {
-            transform: `translate(${ox}px, ${oy - 8}px) scale(${sc})`
+            transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc})`
         };
     }
     
@@ -309,12 +316,21 @@ onMounted(async () => {
         window.electronAPI.onEmotionChanged((emotion: string) => {
             mascotStore.setEmotion(emotion);
         });
+
+        // 設定更新の購読
+        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
+            console.log('[MascotViewer] Config updated via IPC:', newConfig);
+            configStore.updateConfig(newConfig);
+        });
     }
 });
 
 onUnmounted(() => {
     if (unsubscribePreview) {
         unsubscribePreview();
+    }
+    if (unsubscribeConfig) {
+        unsubscribeConfig();
     }
 });
 </script>
