@@ -30,9 +30,16 @@
    アバター画像の前面に絶対配置 (`absolute`) で表情画像を重ね合わせ描画します。
    また、アクティブ状態のマスコット一覧内のベース全身像（ポーズや衣装等）に対して、Tailwind CSSクラス `class="w-full h-full object-contain"` ではなくインラインスタイル `style="width: 100%; height: 100%; object-fit: contain;"` を直接指定することで、一覧枠内から画像が原寸大ではみ出すのを防ぎ、正しくアバター表示領域に収めます。
 
+4. **アスペクト比と基準位置のズレ修正 (140x140 正方形中間ラッパー導入)**
+   大画面プレビュー（420x420 正方形）と左側リストアバター枠（150x200 縦長）でアスペクト比が異なるため、アバター画像の縮小割合と表情プレビューの位置・拡大縮小率が噛み合わずズレてしまう問題、および `relative` が無効で絶対配置基準が崩れる問題を根本解決します。
+   - `avatar-container` 内に `140px × 140px` の正方形中間コンテナ `mascot-composite-preview` を配置し、インラインスタイル `position: relative` を明示して絶対配置の基準を固定します。
+   - 正方形コンテナにすることで、どのようなアスペクト比の画像アセットであっても、縮小率が常に大画面の `140 / 420 = 1/3` に完全に固定され、ドット単位で大画面エディタの調整が正確に再現されるようになります。
+
 ## 変更内容詳細（追加修正）
 - **対象ファイル**: [MascotSettings.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/settings/MascotSettings.vue)
-- **修正箇所**: `avatar-container` 内のアクティブマスコット立ち絵アセット（`activePose`, `activeOutfit`, `defaultFrontAvatar`, `mascot.avatar`）描画用の `img` タグのクラスをインラインスタイルに変更し、画像が原寸表示されてレイアウト崩れを引き起こす現象を解決します。
+- **修正箇所**: 
+  - `computedListPreviewExpressionStyle` 内のスケール補正率 `scaleFactor` を `140 / 420` に固定。
+  - `avatar-container` のマークアップを変更し、内部に正方形プレビューラッパーを追加して、ベース全身像アセットと表情画像をその中に重ね合わせるように構造をリファクタリング。
 
 
 ## 検証計画

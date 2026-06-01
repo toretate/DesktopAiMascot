@@ -115,11 +115,12 @@ const computedListPreviewExpressionStyle = computed(() => {
     const oy = expr.offsetY ?? 0;
     const sc = expr.scale ?? 1.0;
     
-    // 大画面（420px）からリストアバター（200px）へのスケール比率
-    const scaleFactor = 200 / 420;
+    // 大画面（420px）からリスト内正方形プレビュー（140px）へのスケール比率 (140 / 420 = 1/3)
+    const scaleFactor = 140 / 420;
     const scaledOx = ox * scaleFactor;
     const scaledOy = oy * scaleFactor;
     
+    // 大画面の表情ベースサイズ 140px に対するリスト内サイズ (140 * 1/3 ≒ 46.66px)
     const baseWidthHeight = 140 * scaleFactor;
     
     return {
@@ -411,47 +412,50 @@ const closeAssigningEmotionsModal = async () => {
                 :class="{ active: activeMascotId === mascot.id }"
                 @click="selectMascot(mascot)"
             >
-                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden relative" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04);">
-                    <!-- 1. ベースキャラクターアバターの優先度表示 -->
-                    <template v-if="activeMascotId === mascot.id">
-                        <!-- ポーズ画像優先 -->
-                        <template v-if="activePose && activePose.path.startsWith('data:image/')">
-                            <img :src="activePose.path" style="width: 100%; height: 100%; object-fit: contain;" />
+                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04); position: relative;">
+                    <!-- 大画面プレビュー（420x420）とアスペクト比を完全に一致させるための 140x140 正方形ラッパー -->
+                    <div class="mascot-composite-preview relative flex align-items-center justify-content-center" style="width: 140px; height: 140px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <!-- 1. ベースキャラクターアバターの優先度表示 -->
+                        <template v-if="activeMascotId === mascot.id">
+                            <!-- ポーズ画像優先 -->
+                            <template v-if="activePose && activePose.path.startsWith('data:image/')">
+                                <img :src="activePose.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            </template>
+                            <!-- 衣装画像優先 -->
+                            <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
+                                <img :src="activeOutfit.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            </template>
+                            <!-- フロント画像優先 -->
+                            <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
+                                <img :src="defaultFrontAvatar.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            </template>
+                            <!-- ベースアバター優先 -->
+                            <template v-else-if="mascot.avatar && mascot.avatar.startsWith('data:image/')">
+                                <img :src="mascot.avatar" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            </template>
+                            <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
-                        <!-- 衣装画像優先 -->
-                        <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
-                            <img :src="activeOutfit.path" style="width: 100%; height: 100%; object-fit: contain;" />
+                        <template v-else>
+                            <!-- 非アクティブなマスコットはベースアバターを表示 -->
+                            <img v-if="mascot.avatar && mascot.avatar.startsWith('data:image/')" :src="mascot.avatar" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
-                        <!-- フロント画像優先 -->
-                        <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
-                            <img :src="defaultFrontAvatar.path" style="width: 100%; height: 100%; object-fit: contain;" />
-                        </template>
-                        <!-- ベースアバター優先 -->
-                        <template v-else-if="mascot.avatar && mascot.avatar.startsWith('data:image/')">
-                            <img :src="mascot.avatar" style="width: 100%; height: 100%; object-fit: contain;" />
-                        </template>
-                        <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
-                    </template>
-                    <template v-else>
-                        <!-- 非アクティブなマスコットはベースアバターを表示 -->
-                        <img v-if="mascot.avatar && mascot.avatar.startsWith('data:image/')" :src="mascot.avatar" style="width: 100%; height: 100%; object-fit: contain;" />
-                        <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
-                    </template>
 
-                    <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
-                    <template v-if="activeMascotId === mascot.id && activePreviewExpression && activePreviewExpression.path">
-                        <img 
-                            v-if="activePreviewExpression.path.startsWith('data:image/')" 
-                            :src="activePreviewExpression.path" 
-                            class="absolute"
-                            :style="computedListPreviewExpressionStyle"
-                        />
-                        <span 
-                            v-else 
-                            class="absolute font-bold text-lg"
-                            :style="computedListPreviewExpressionStyle"
-                        >{{ activePreviewExpression.path }}</span>
-                    </template>
+                        <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
+                        <template v-if="activeMascotId === mascot.id && activePreviewExpression && activePreviewExpression.path">
+                            <img 
+                                v-if="activePreviewExpression.path.startsWith('data:image/')" 
+                                :src="activePreviewExpression.path" 
+                                class="absolute"
+                                :style="computedListPreviewExpressionStyle"
+                            />
+                            <span 
+                                v-else 
+                                class="absolute font-bold text-lg"
+                                :style="computedListPreviewExpressionStyle"
+                            >{{ activePreviewExpression.path }}</span>
+                        </template>
+                    </div>
                 </div>
                 <div class="info">
                     <span class="name">{{ mascot.name }}</span>
