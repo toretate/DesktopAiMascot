@@ -105,7 +105,7 @@ const clearExpression = () => {
 
             <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1" style="min-height: 0;">
                 <!-- 左カラム: 表情スロット縦スリムリスト (幅240px、ラベルなし) -->
-                <div class="flex flex-column" style="width: 240px; min-width: 240px; height: 520px; overflow: hidden !important;">
+                <div class="flex flex-column" style="width: 240px; min-width: 240px; height: 430px; overflow: hidden !important;">
                     <div class="pr-1 expression-vertical-list">
                         <div 
                             v-for="slot in editingMascot.assets.expressions" 
@@ -140,7 +140,7 @@ const clearExpression = () => {
                     <!-- プレビューと縦スライダーのコンテナ -->
                     <div class="flex-1 flex gap-3 align-items-center justify-content-center overflow-hidden">
                         <!-- プレビューカード (白飛びを防ぐための高級感のある市松模様背景) -->
-                        <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 520px;">
+                        <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 430px;">
                             <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 420px;">
                                 <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
                                 <template v-if="activePose && activePose.path.startsWith('data:image/')">
@@ -193,7 +193,7 @@ const clearExpression = () => {
                         <!-- 縦スライダー (Y方向オフセット) -->
                         <div class="flex flex-column align-items-center gap-2" style="width: 40px;">
                             <span class="text-xxs text-slate-500 select-none font-bold">上 (Y-)</span>
-                            <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 340px;">
+                            <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 310px;">
                                 <Slider 
                                     v-model="selectedModalExpression.offsetY" 
                                     :min="-150" 
@@ -335,8 +335,8 @@ const clearExpression = () => {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
-    height: 512px !important;
-    max-height: 512px !important;
+    height: 422px !important;
+    max-height: 422px !important;
     overflow-y: auto !important;
     scrollbar-width: thin;
     scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
