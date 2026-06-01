@@ -28,6 +28,12 @@
 
 3. **左側アバターコンテナへのプレビュー画像重ね合わせマークアップ**
    アバター画像の前面に絶対配置 (`absolute`) で表情画像を重ね合わせ描画します。
+   また、アクティブ状態のマスコット一覧内のベース全身像（ポーズや衣装等）に対して、Tailwind CSSクラス `class="w-full h-full object-contain"` ではなくインラインスタイル `style="width: 100%; height: 100%; object-fit: contain;"` を直接指定することで、一覧枠内から画像が原寸大ではみ出すのを防ぎ、正しくアバター表示領域に収めます。
+
+## 変更内容詳細（追加修正）
+- **対象ファイル**: [MascotSettings.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/settings/MascotSettings.vue)
+- **修正箇所**: `avatar-container` 内のアクティブマスコット立ち絵アセット（`activePose`, `activeOutfit`, `defaultFrontAvatar`, `mascot.avatar`）描画用の `img` タグのクラスをインラインスタイルに変更し、画像が原寸表示されてレイアウト崩れを引き起こす現象を解決します。
+
 
 ## 検証計画
 

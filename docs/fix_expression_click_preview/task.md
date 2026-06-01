@@ -4,4 +4,6 @@
 - [x] 左側リストアバター（高さ200px）向けの表情スケール補正プロパティ `computedListPreviewExpressionStyle` の定義
 - [x] プレビュー切り替えおよび Electron API を介したデスクトップマスコットへのリアルタイム同期通知の実装
 - [x] 左側アバター表示コンテナ (`avatar-container`) に対し、表情画像を絶対配置で重ね合わせる Vue テンプレートの追加
+- [x] マスコット一覧内のアクティブ立ち絵画像について、原寸表示によるはみ出しを防ぐためインラインスタイル指定（width: 100%, height: 100%, object-fit: contain）へ修正
 - [x] ビルド検証 (`cmd /c npm run build`) を行い、エラーなしで正常終了することを確認
+

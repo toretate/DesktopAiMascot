@@ -416,19 +416,19 @@ const closeAssigningEmotionsModal = async () => {
                     <template v-if="activeMascotId === mascot.id">
                         <!-- ポーズ画像優先 -->
                         <template v-if="activePose && activePose.path.startsWith('data:image/')">
-                            <img :src="activePose.path" class="w-full h-full object-contain" />
+                            <img :src="activePose.path" style="width: 100%; height: 100%; object-fit: contain;" />
                         </template>
                         <!-- 衣装画像優先 -->
                         <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
-                            <img :src="activeOutfit.path" class="w-full h-full object-contain" />
+                            <img :src="activeOutfit.path" style="width: 100%; height: 100%; object-fit: contain;" />
                         </template>
                         <!-- フロント画像優先 -->
                         <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
-                            <img :src="defaultFrontAvatar.path" class="w-full h-full object-contain" />
+                            <img :src="defaultFrontAvatar.path" style="width: 100%; height: 100%; object-fit: contain;" />
                         </template>
                         <!-- ベースアバター優先 -->
                         <template v-else-if="mascot.avatar && mascot.avatar.startsWith('data:image/')">
-                            <img :src="mascot.avatar" class="w-full h-full object-contain" />
+                            <img :src="mascot.avatar" style="width: 100%; height: 100%; object-fit: contain;" />
                         </template>
                         <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
                     </template>
