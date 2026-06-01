@@ -219,6 +219,12 @@ const onMouseDown = (e: MouseEvent) => {
 const onMouseMove = (e: MouseEvent) => {
     if (!isDragging.value) return;
 
+    // マウス左ボタンが押されていない状態ならドラッグ終了とする（予期しないmouseup漏れ対策）
+    if (e.buttons !== 1) {
+        onMouseUp();
+        return;
+    }
+
     const dx = e.screenX - startMouseX;
     const dy = e.screenY - startMouseY;
 
@@ -301,7 +307,7 @@ onUnmounted(() => {
 <template>
     <div class="mascot-wrapper app-dark">
         <!-- マスコットのキャラクター描画部分 -->
-        <div class="mascot-character" @mousedown="onMouseDown" @contextmenu.prevent="openSettings">
+        <div class="mascot-character" @mousedown="onMouseDown" @contextmenu.prevent="openSettings" @dragstart.prevent>
             <div class="mascot-visual" :class="emotionClass">
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->
