@@ -479,7 +479,6 @@ app.whenReady().then(() => {
         if (win) {
             const [x, y] = win.getPosition();
             win.setPosition(x + offset.dx, y + offset.dy);
-            syncChatWindowPosition();
             debouncedSaveMascotPosition();
         }
     });
