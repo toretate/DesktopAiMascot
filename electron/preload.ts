@@ -11,8 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // マウス透過状態の切り替えを送信 (ignore: true でマウスイベントを透過)
     setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', ignore),
     
-    // ウィンドウのドラッグ開始および終了シグナルの送信 (HTML要素でドラッグを擬似実装する場合に利用可能)
-    startWindowDrag: () => ipcRenderer.send('start-window-drag'),
+    // ウィンドウのドラッグ移動シグナルの送信 (HTML要素でドラッグを擬似実装する)
+    dragWindow: (offset: { dx: number; dy: number }) => ipcRenderer.send('drag-window', offset),
     
     // アプリケーションを終了する
     quitApp: () => ipcRenderer.send('quit-app'),

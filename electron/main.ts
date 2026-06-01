@@ -462,12 +462,14 @@ app.whenReady().then(() => {
     });
 
     // 4. アプリ内ドラッグ移動の実装 (HTML要素をドラッグ可能にする場合のサポート)
-    ipcMain.on('start-window-drag', (event) => {
+    ipcMain.on('drag-window', (event, offset: { dx: number; dy: number }) => {
         const webContents = event.sender;
         const win = BrowserWindow.fromWebContents(webContents);
         if (win) {
-            // メインプロセス側でウィンドウのネイティブドラッグを開始する
-            // （Vite/Electron環境でCSSの-webkit-app-region: dragがうまく動かない際のフォールバックとして有用）
+            const [x, y] = win.getPosition();
+            win.setPosition(x + offset.dx, y + offset.dy);
+            syncChatWindowPosition();
+            debouncedSaveMascotPosition();
         }
     });
 

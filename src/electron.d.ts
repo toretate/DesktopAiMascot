@@ -11,7 +11,7 @@ export interface IElectronAPI {
     toggleChat: () => void;
     openSettings: () => void;
     setIgnoreMouseEvents: (ignore: boolean) => void;
-    startWindowDrag: () => void;
+    dragWindow: (offset: { dx: number; dy: number }) => void;
     quitApp: () => void;
     getAppConfig: () => Promise<any>;
     updateAppConfig: (config: any) => Promise<void>;
