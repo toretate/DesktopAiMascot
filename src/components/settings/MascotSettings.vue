@@ -104,6 +104,51 @@ const defaultFrontAvatar = computed(() => {
     return editingMascotImageSet.value?.getFrontImage() || null;
 });
 
+// 左側アバター表示およびデスクトップマスコットへの表情リアルタイムプレビュー用状態
+const activePreviewExpression = ref<MascotAsset | null>(null);
+
+const computedListPreviewExpressionStyle = computed(() => {
+    const expr = activePreviewExpression.value;
+    if (!expr) return {};
+    
+    const ox = expr.offsetX ?? 0;
+    const oy = expr.offsetY ?? 0;
+    const sc = expr.scale ?? 1.0;
+    
+    // 大画面（420px）からリストアバター（200px）へのスケール比率
+    const scaleFactor = 200 / 420;
+    const scaledOx = ox * scaleFactor;
+    const scaledOy = oy * scaleFactor;
+    
+    const baseWidthHeight = 140 * scaleFactor;
+    
+    return {
+        position: 'absolute' as const,
+        width: `${baseWidthHeight}px`,
+        height: `${baseWidthHeight}px`,
+        objectFit: 'contain' as const,
+        pointerEvents: 'none' as const,
+        transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc})`,
+        zIndex: 10
+    };
+});
+
+const selectExpressionForPreview = (expr: MascotAsset) => {
+    activePreviewExpression.value = expr;
+    
+    // デスクトップマスコット（別プロセス・別ウィンドウ）へのリアルタイム表情プレビュー状態の通知
+    if (window.electronAPI && window.electronAPI.previewMascotState) {
+        window.electronAPI.previewMascotState({
+            expressionId: expr.id,
+            expressionOffsetX: expr.offsetX ?? 0,
+            expressionOffsetY: expr.offsetY ?? 0,
+            expressionScale: expr.scale ?? 1.0,
+            outfitId: editingMascot.value.currentOutfitId,
+            poseId: editingMascot.value.currentPoseId
+        });
+    }
+};
+
 const selectMascot = (mascot: MascotData) => {
     // 選択切り替え時に編集バッファの内容を親リストに同期
     if (editingMascot.value && editingMascot.value.id) {
@@ -115,6 +160,7 @@ const selectMascot = (mascot: MascotData) => {
     emit('update:activeMascotId', mascot.id);
     editingMascot.value = JSON.parse(JSON.stringify(mascot));
     activeExpression.value = mascot.assets.expressions.find(e => e.name === '通常') || mascot.assets.expressions[0] || null;
+    activePreviewExpression.value = activeExpression.value;
 };
 
 // 初期ロード時の選択処理用
@@ -122,6 +168,7 @@ if (props.mascots.length > 0) {
     const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
     editingMascot.value = JSON.parse(JSON.stringify(active));
     activeExpression.value = editingMascot.value.assets.expressions.find(e => e.name === '通常') || editingMascot.value.assets.expressions[0] || null;
+    activePreviewExpression.value = activeExpression.value;
 }
 
 // 編集バッファと親のリストを同期し保存するハンドラー
@@ -364,9 +411,47 @@ const closeAssigningEmotionsModal = async () => {
                 :class="{ active: activeMascotId === mascot.id }"
                 @click="selectMascot(mascot)"
             >
-                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04);">
-                    <img v-if="mascot.avatar && mascot.avatar.startsWith('data:image/')" :src="mascot.avatar" style="width: 100%; height: 100%; object-fit: contain;" />
-                    <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
+                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden relative" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04);">
+                    <!-- 1. ベースキャラクターアバターの優先度表示 -->
+                    <template v-if="activeMascotId === mascot.id">
+                        <!-- ポーズ画像優先 -->
+                        <template v-if="activePose && activePose.path.startsWith('data:image/')">
+                            <img :src="activePose.path" class="w-full h-full object-contain" />
+                        </template>
+                        <!-- 衣装画像優先 -->
+                        <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
+                            <img :src="activeOutfit.path" class="w-full h-full object-contain" />
+                        </template>
+                        <!-- フロント画像優先 -->
+                        <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
+                            <img :src="defaultFrontAvatar.path" class="w-full h-full object-contain" />
+                        </template>
+                        <!-- ベースアバター優先 -->
+                        <template v-else-if="mascot.avatar && mascot.avatar.startsWith('data:image/')">
+                            <img :src="mascot.avatar" class="w-full h-full object-contain" />
+                        </template>
+                        <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
+                    </template>
+                    <template v-else>
+                        <!-- 非アクティブなマスコットはベースアバターを表示 -->
+                        <img v-if="mascot.avatar && mascot.avatar.startsWith('data:image/')" :src="mascot.avatar" style="width: 100%; height: 100%; object-fit: contain;" />
+                        <span v-else class="avatar">{{ mascot.avatar || '🤖' }}</span>
+                    </template>
+
+                    <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
+                    <template v-if="activeMascotId === mascot.id && activePreviewExpression && activePreviewExpression.path">
+                        <img 
+                            v-if="activePreviewExpression.path.startsWith('data:image/')" 
+                            :src="activePreviewExpression.path" 
+                            class="absolute"
+                            :style="computedListPreviewExpressionStyle"
+                        />
+                        <span 
+                            v-else 
+                            class="absolute font-bold text-lg"
+                            :style="computedListPreviewExpressionStyle"
+                        >{{ activePreviewExpression.path }}</span>
+                    </template>
                 </div>
                 <div class="info">
                     <span class="name">{{ mascot.name }}</span>
@@ -449,8 +534,8 @@ const closeAssigningEmotionsModal = async () => {
                                 'has-image': expr.path,
                                 'default-expression': editingMascot.defaultExpressionId === expr.id
                             }"
-                            @click="openExpressionEditModalWithExpression(expr)"
-                            title="クリックして位置調整を開く"
+                            @click="selectExpressionForPreview(expr)"
+                            title="クリックして左側のマスコット表示にプレビュー"
                         >
                             <!-- 右上の標準（通常表示）スターバッジ -->
                             <div v-if="editingMascot.defaultExpressionId === expr.id" class="default-star-badge" title="通常表示（標準）">
