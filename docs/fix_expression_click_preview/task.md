@@ -13,8 +13,9 @@
 - [x] `tailwind.config.js` の初期化とコンテンツスキャンパス（Vueファイル対象）の設定
 - [x] グローバルCSS `main.css` への Tailwind および PrimeFlex ディレクティブの統合設定
 - [x] `ExpressionEditorModal.vue` の style scoped に一時的に入れた Vanilla 補完用 CSS を綺麗にクリーンアップ（削除）
-- [x] `ImageCropModal.vue` において、四隅の `.crop-corner` ハンドルドラッグによる表情トリミングサイズ変更（1:1アスペクト比維持）機能およびはみ出し制限ロジックを実装
+- [x] `ImageCropModal.vue` において、四隅の `.crop-corner` (■) および四辺の境界バーのドラッグによる縦・横・自由縦横・および Shift キーによるアスペクト比ロックリサイズ機能を統合実装
 - [x] ビルド検証 (`cmd /c npm run build`) を行い、エラーなしで正常終了することを確認
+
 
 
 

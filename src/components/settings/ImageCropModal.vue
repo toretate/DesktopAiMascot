@@ -14,7 +14,8 @@ const emit = defineEmits<{
 
 const cropX = ref(50);
 const cropY = ref(50);
-const cropSize = ref(120);
+const cropWidth = ref(120);
+const cropHeight = ref(120);
 const cropImageWidth = ref(0);
 const cropImageHeight = ref(0);
 
@@ -30,12 +31,14 @@ const handleCropImageLoaded = (event: Event) => {
 // ドラッグ処理用の変数
 let isDraggingCrop = false;
 let isResizingCrop = false;
-let resizeCorner = ''; // 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+let resizeCorner = ''; // 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 let startDragX = 0;
 let startDragY = 0;
 let startCropX = 0;
 let startCropY = 0;
-let startCropSize = 0;
+let startCropWidth = 0;
+let startCropHeight = 0;
+let startAspectRatio = 1.0;
 
 const onCropMouseDown = (event: MouseEvent) => {
     isDraggingCrop = true;
@@ -55,7 +58,9 @@ const onResizeMouseDown = (event: MouseEvent, corner: string) => {
     startDragY = event.clientY;
     startCropX = cropX.value;
     startCropY = cropY.value;
-    startCropSize = cropSize.value;
+    startCropWidth = cropWidth.value;
+    startCropHeight = cropHeight.value;
+    startAspectRatio = cropWidth.value / cropHeight.value; // ドラッグ開始時の比率をロック
     event.preventDefault();
     event.stopPropagation(); // 枠自体の移動イベント（onCropMouseDown）を遮断
 };
@@ -77,61 +82,119 @@ const onCropMouseMove = (event: MouseEvent) => {
         let newY = startCropY + dy * scaleY;
         
         // 範囲制限 (画像内)
-        newX = Math.max(0, Math.min(cropImageWidth.value - cropSize.value, newX));
-        newY = Math.max(0, Math.min(cropImageHeight.value - cropSize.value, newY));
+        newX = Math.max(0, Math.min(cropImageWidth.value - cropWidth.value, newX));
+        newY = Math.max(0, Math.min(cropImageHeight.value - cropHeight.value, newY));
         
         cropX.value = Math.round(newX);
         cropY.value = Math.round(newY);
     } else if (isResizingCrop) {
-        // リサイズ処理 (1:1正方形アスペクト比を完璧に維持)
         const pixelDx = dx * scaleX;
         const pixelDy = dy * scaleY;
-        let change = 0;
         
-        if (resizeCorner === 'bottom-right') {
-            change = Math.max(pixelDx, pixelDy);
-        } else if (resizeCorner === 'bottom-left') {
-            change = Math.max(-pixelDx, pixelDy);
-        } else if (resizeCorner === 'top-right') {
-            change = Math.max(pixelDx, -pixelDy);
-        } else if (resizeCorner === 'top-left') {
-            change = Math.max(-pixelDx, -pixelDy);
-        }
-        
-        let newSize = startCropSize + change;
-        
-        // 制限範囲の決定
-        const minSize = 40; // 最小40px
-        let maxSize = cropImageWidth.value;
-        
-        if (resizeCorner === 'bottom-right') {
-            maxSize = Math.min(cropImageWidth.value - startCropX, cropImageHeight.value - startCropY);
-        } else if (resizeCorner === 'bottom-left') {
-            maxSize = Math.min(startCropX + startCropSize, cropImageHeight.value - startCropY);
-        } else if (resizeCorner === 'top-right') {
-            maxSize = Math.min(cropImageWidth.value - startCropX, startCropY + startCropSize);
-        } else if (resizeCorner === 'top-left') {
-            maxSize = Math.min(startCropX + startCropSize, startCropY + startCropSize);
-        }
-        
-        newSize = Math.max(minSize, Math.min(maxSize, newSize));
-        
+        let newWidth = startCropWidth;
+        let newHeight = startCropHeight;
         let newX = startCropX;
         let newY = startCropY;
-        const actualChange = newSize - startCropSize;
         
-        if (resizeCorner === 'top-left') {
-            newX = startCropX - actualChange;
-            newY = startCropY - actualChange;
-        } else if (resizeCorner === 'top-right') {
-            newY = startCropY - actualChange;
-        } else if (resizeCorner === 'bottom-left') {
-            newX = startCropX - actualChange;
+        const minSize = 30; // 最小30px
+        const isShiftPressed = event.shiftKey; // Shiftキーの押下状態
+
+        if (resizeCorner === 'top') {
+            // 上枠: 縦幅のみ修正 (Y座標と高さを変化)
+            newHeight = startCropHeight - pixelDy;
+            newHeight = Math.max(minSize, Math.min(startCropY + startCropHeight, newHeight));
+            newY = startCropY + startCropHeight - newHeight;
+        } else if (resizeCorner === 'bottom') {
+            // 下枠: 縦幅のみ修正 (高さを変化)
+            newHeight = startCropHeight + pixelDy;
+            newHeight = Math.max(minSize, Math.min(cropImageHeight.value - startCropY, newHeight));
+        } else if (resizeCorner === 'left') {
+            // 左枠: 横幅のみ修正 (X座標と幅を変化)
+            newWidth = startCropWidth - pixelDx;
+            newWidth = Math.max(minSize, Math.min(startCropX + startCropWidth, newWidth));
+            newX = startCropX + startCropWidth - newWidth;
+        } else if (resizeCorner === 'right') {
+            // 右枠: 横幅のみ修正 (幅を変化)
+            newWidth = startCropWidth + pixelDx;
+            newWidth = Math.max(minSize, Math.min(cropImageWidth.value - startCropX, newWidth));
+        } else {
+            // 四隅のハンドル（■）: Shiftキー押下で比率ロック、未押下で自由変形
+            if (isShiftPressed) {
+                // アスペクト比同じで縦横リサイズ
+                let change = 0;
+                if (resizeCorner === 'bottom-right') {
+                    change = Math.max(pixelDx, pixelDy * startAspectRatio);
+                } else if (resizeCorner === 'bottom-left') {
+                    change = Math.max(-pixelDx, pixelDy * startAspectRatio);
+                } else if (resizeCorner === 'top-right') {
+                    change = Math.max(pixelDx, -pixelDy * startAspectRatio);
+                } else if (resizeCorner === 'top-left') {
+                    change = Math.max(-pixelDx, -pixelDy * startAspectRatio);
+                }
+                
+                newWidth = startCropWidth + change;
+                newHeight = newWidth / startAspectRatio;
+                
+                // 制限範囲
+                let maxW = cropImageWidth.value;
+                let maxH = cropImageHeight.value;
+                
+                if (resizeCorner === 'bottom-right') {
+                    maxW = cropImageWidth.value - startCropX;
+                    maxH = cropImageHeight.value - startCropY;
+                } else if (resizeCorner === 'bottom-left') {
+                    maxW = startCropX + startCropWidth;
+                    maxH = cropImageHeight.value - startCropY;
+                } else if (resizeCorner === 'top-right') {
+                    maxW = cropImageWidth.value - startCropX;
+                    maxH = startCropY + startCropHeight;
+                } else if (resizeCorner === 'top-left') {
+                    maxW = startCropX + startCropWidth;
+                    maxH = startCropY + startCropHeight;
+                }
+                
+                const boundWidthByHeight = maxH * startAspectRatio;
+                const allowedMaxW = Math.min(maxW, boundWidthByHeight);
+                
+                newWidth = Math.max(minSize, Math.min(allowedMaxW, newWidth));
+                newHeight = newWidth / startAspectRatio;
+                
+                const actualChangeW = newWidth - startCropWidth;
+                
+                if (resizeCorner === 'top-left') {
+                    newX = startCropX - actualChangeW;
+                    newY = startCropY - (newHeight - startCropHeight);
+                } else if (resizeCorner === 'top-right') {
+                    newY = startCropY - (newHeight - startCropHeight);
+                } else if (resizeCorner === 'bottom-left') {
+                    newX = startCropX - actualChangeW;
+                }
+            } else {
+                // 自由幅リサイズ (アスペクト比維持なし)
+                if (resizeCorner.includes('right')) {
+                    newWidth = startCropWidth + pixelDx;
+                    newWidth = Math.max(minSize, Math.min(cropImageWidth.value - startCropX, newWidth));
+                } else if (resizeCorner.includes('left')) {
+                    newWidth = startCropWidth - pixelDx;
+                    newWidth = Math.max(minSize, Math.min(startCropX + startCropWidth, newWidth));
+                    newX = startCropX + startCropWidth - newWidth;
+                }
+                
+                if (resizeCorner.includes('bottom')) {
+                    newHeight = startCropHeight + pixelDy;
+                    newHeight = Math.max(minSize, Math.min(cropImageHeight.value - startCropY, newHeight));
+                } else if (resizeCorner.includes('top')) {
+                    newHeight = startCropHeight - pixelDy;
+                    newHeight = Math.max(minSize, Math.min(startCropY + startCropHeight, newHeight));
+                    newY = startCropY + startCropHeight - newHeight;
+                }
+            }
         }
         
         // 安全領域内にある場合のみ代入
-        if (newX >= 0 && newY >= 0 && newX + newSize <= cropImageWidth.value && newY + newSize <= cropImageHeight.value) {
-            cropSize.value = Math.round(newSize);
+        if (newX >= 0 && newY >= 0 && newX + newWidth <= cropImageWidth.value && newY + newHeight <= cropImageHeight.value) {
+            cropWidth.value = Math.round(newWidth);
+            cropHeight.value = Math.round(newHeight);
             cropX.value = Math.round(newX);
             cropY.value = Math.round(newY);
         }
@@ -151,8 +214,8 @@ const executeCrop = async () => {
     await new Promise((resolve) => (img.onload = resolve));
     
     const canvas = document.createElement('canvas');
-    canvas.width = cropSize.value;
-    canvas.height = cropSize.value;
+    canvas.width = cropWidth.value;
+    canvas.height = cropHeight.value;
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
@@ -160,12 +223,12 @@ const executeCrop = async () => {
             img,
             cropX.value,
             cropY.value,
-            cropSize.value,
-            cropSize.value,
+            cropWidth.value,
+            cropHeight.value,
             0,
             0,
-            cropSize.value,
-            cropSize.value
+            cropWidth.value,
+            cropHeight.value
         );
         
         const croppedBase64 = canvas.toDataURL('image/png');
@@ -214,14 +277,23 @@ onMounted(() => {
                         v-if="cropImageWidth > 0 && cropImageRef"
                         class="crop-box absolute border-2 border-purple-500 cursor-move"
                         :style="{
-                            width: ((cropSize / cropImageWidth) * 100) + '%',
-                            height: ((cropSize / cropImageHeight) * 100) + '%',
+                            width: ((cropWidth / cropImageWidth) * 100) + '%',
+                            height: ((cropHeight / cropImageHeight) * 100) + '%',
                             left: ((cropX / cropImageWidth) * 100) + '%',
                             top: ((cropY / cropImageHeight) * 100) + '%',
                             boxShadow: '0 0 0 9999px rgba(255, 255, 255, 0.45)'
                         }"
                         @mousedown="onCropMouseDown"
                     >
+                        <!-- 上下の枠（ボーダー検出用バー） -->
+                        <div class="crop-edge edge-top" @mousedown.stop="onResizeMouseDown($event, 'top')"></div>
+                        <div class="crop-edge edge-bottom" @mousedown.stop="onResizeMouseDown($event, 'bottom')"></div>
+                        
+                        <!-- 左右の枠（ボーダー検出用バー） -->
+                        <div class="crop-edge edge-left" @mousedown.stop="onResizeMouseDown($event, 'left')"></div>
+                        <div class="crop-edge edge-right" @mousedown.stop="onResizeMouseDown($event, 'right')"></div>
+
+                        <!-- 四隅のハンドル (■) -->
                         <div class="crop-corner top-left" @mousedown.stop="onResizeMouseDown($event, 'top-left')"></div>
                         <div class="crop-corner top-right" @mousedown.stop="onResizeMouseDown($event, 'top-right')"></div>
                         <div class="crop-corner bottom-left" @mousedown.stop="onResizeMouseDown($event, 'bottom-left')"></div>
@@ -273,15 +345,51 @@ onMounted(() => {
     border-top: 1px solid #e2e8f0 !important;
 }
 
+/* トリミング枠の境界線の検出用バー (見えないが太めの判定領域) */
+.crop-edge {
+    position: absolute;
+    z-index: 5;
+}
+.crop-edge.edge-top {
+    top: -4px;
+    left: 4px;
+    right: 4px;
+    height: 8px;
+    cursor: ns-resize;
+}
+.crop-edge.edge-bottom {
+    bottom: -4px;
+    left: 4px;
+    right: 4px;
+    height: 8px;
+    cursor: ns-resize;
+}
+.crop-edge.edge-left {
+    left: -4px;
+    top: 4px;
+    bottom: 4px;
+    width: 8px;
+    cursor: ew-resize;
+}
+.crop-edge.edge-right {
+    right: -4px;
+    top: 4px;
+    bottom: 4px;
+    width: 8px;
+    cursor: ew-resize;
+}
+
+/* 四隅のハンドル (■) */
 .crop-corner {
     position: absolute;
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     background: #a855f7;
     border: 1px solid white;
+    z-index: 10;
 }
-.crop-corner.top-left { top: -4px; left: -4px; cursor: nwse-resize; }
-.crop-corner.top-right { top: -4px; right: -4px; cursor: nesw-resize; }
-.crop-corner.bottom-left { bottom: -4px; left: -4px; cursor: nesw-resize; }
-.crop-corner.bottom-right { bottom: -4px; right: -4px; cursor: nwse-resize; }
+.crop-corner.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
+.crop-corner.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
+.crop-corner.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.crop-corner.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
 </style>
