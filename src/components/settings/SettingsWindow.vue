@@ -8,6 +8,7 @@ import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
 import { useConfigStore } from '../../store/config';
 import { storeToRefs } from 'pinia';
+import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
 
 const configStore = useConfigStore();
 const {
@@ -268,6 +269,14 @@ const saveSettings = async () => {
     isSaving.value = true;
     saveStatus.value = '保存中...';
 
+    // 編集中のマスコットデータを強制同期 (spliceを使用してリアクティブ検知と保存を保証)
+    if (editingMascot.value && editingMascot.value.id) {
+        const idx = mascots.value.findIndex(m => m.id === editingMascot.value.id);
+        if (idx !== -1) {
+            mascots.value.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+        }
+    }
+
     // ストアに現在の設定値を一括保存
     await configStore.saveConfig();
 
@@ -339,22 +348,90 @@ const editingMascot = ref<MascotData>({
     assets: { outfits: [], expressions: [], poses: [] }
 });
 
-const activeOutfit = ref<MascotAsset | null>(null);
+const activeOutfit = computed(() => {
+    const mascot = editingMascot.value;
+    if (!mascot || !mascot.assets?.outfits) return null;
+    return mascot.assets.outfits.find(o => o.id === mascot.currentOutfitId) || mascot.assets.outfits[0] || null;
+});
+
+const activePose = computed(() => {
+    const mascot = editingMascot.value;
+    if (!mascot || !mascot.assets?.poses) return null;
+    return mascot.assets.poses.find(p => p.id === mascot.currentPoseId) || mascot.assets.poses[0] || null;
+});
+
 const activeExpression = ref<MascotAsset | null>(null);
-const activePose = ref<MascotAsset | null>(null);
+
+const editingMascotImageSet = computed(() => {
+    const mascot = editingMascot.value;
+    if (!mascot) return null;
+    
+    const assets = [
+        ...(mascot.assets?.outfits || []),
+        ...(mascot.assets?.expressions || []),
+        ...(mascot.assets?.poses || [])
+    ];
+    
+    return MascotImageSetBuilder.CreateFromAssets(mascot.name, assets);
+});
+
+const defaultFrontAvatar = computed(() => {
+    return editingMascotImageSet.value?.getFrontImage() || null;
+});
 
 const selectMascot = (mascot: MascotData) => {
     if (editingMascot.value && editingMascot.value.id) {
         const idx = mascots.value.findIndex(m => m.id === editingMascot.value.id);
         if (idx !== -1) {
-            mascots.value[idx] = JSON.parse(JSON.stringify(editingMascot.value));
+            mascots.value.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
         }
     }
     activeMascotId.value = mascot.id;
     editingMascot.value = JSON.parse(JSON.stringify(mascot));
     activeExpression.value = mascot.assets.expressions.find(e => e.name === '通常') || mascot.assets.expressions[0] || null;
-    activeOutfit.value = mascot.assets.outfits?.[0] || null;
-    activePose.value = mascot.assets.poses?.[0] || null;
+};
+
+// --- 立ち絵アセット（全身像）操作関数群 ---
+const addOutfitImage = async () => {
+    if (!window.electronAPI) return;
+    const result = await window.electronAPI.selectLocalImage();
+    if (result && result.success) {
+        if (!editingMascot.value.assets.outfits) {
+            editingMascot.value.assets.outfits = [];
+        }
+        
+        const newOutfit: MascotAsset = {
+            id: 'outfit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: '衣装_' + (editingMascot.value.assets.outfits.length + 1),
+            path: result.path,
+            offsetX: 0,
+            offsetY: 0,
+            scale: 1.0
+        };
+        
+        editingMascot.value.assets.outfits.push(newOutfit);
+        
+        if (editingMascot.value.assets.outfits.length === 1 || !editingMascot.value.currentOutfitId) {
+            editingMascot.value.currentOutfitId = newOutfit.id;
+        }
+        
+        handleLiveUpdate();
+    }
+};
+
+const setMainOutfit = (outfit: MascotAsset) => {
+    editingMascot.value.currentOutfitId = outfit.id;
+    handleLiveUpdate();
+};
+
+const deleteOutfit = (outfit: MascotAsset) => {
+    if (confirm(`立ち絵アセットを削除しますか？`)) {
+        editingMascot.value.assets.outfits = editingMascot.value.assets.outfits.filter(o => o.id !== outfit.id);
+        if (editingMascot.value.currentOutfitId === outfit.id) {
+            editingMascot.value.currentOutfitId = editingMascot.value.assets.outfits[0]?.id || '';
+        }
+        handleLiveUpdate();
+    }
 };
 
 // サイドバー開閉管理
@@ -475,10 +552,10 @@ const openExpressionEditModalWithExpression = (expr: MascotAsset) => {
 // 表情の微調整値を即座に反映させるためのハンドラー
 const handleLiveUpdate = async () => {
     // ユーザー要望によりモーダル起動中のマスコットウィンドウへの即時反映は行わない
-    // 編集中のマスコットデータを同期
+    // 編集中のマスコットデータを同期 (spliceを使ってVueのリアクティブ検知を確実化)
     const idx = mascots.value.findIndex(m => m.id === editingMascot.value.id);
     if (idx !== -1) {
-        mascots.value[idx] = JSON.parse(JSON.stringify(editingMascot.value));
+        mascots.value.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
         // 表情モーダル表示中はI/O負荷軽減のためディスク書き込みはスキップ
         if (!isEditingExpressionsModal.value && !isAssigningEmotionsModal.value) {
             await saveSettings();
@@ -915,6 +992,13 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                                             @click="activeMascotSubTab = 'expression'"
                                         />
                                         <Button 
+                                            label="立ち絵（全身像）" 
+                                            icon="pi pi-image" 
+                                            class="p-button-sm"
+                                            :class="activeMascotSubTab === 'outfit' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
+                                            @click="activeMascotSubTab = 'outfit'"
+                                        />
+                                        <Button 
                                             label="プロフィール" 
                                             icon="pi pi-user" 
                                             class="p-button-sm"
@@ -1005,6 +1089,51 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                                             <span class="text-xxs text-gray-500 select-none">
                                                 ※表情スロットに画像が登録されたもののみドロップダウンで選択できます。
                                             </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- サブタブ中身: 立ち絵（全身像） -->
+                                    <div v-else-if="activeMascotSubTab === 'outfit'" class="flex flex-column gap-3">
+                                        <div class="flex gap-2">
+                                            <Button 
+                                                label="ローカル画像から立ち絵を追加" 
+                                                icon="pi pi-file-import" 
+                                                class="p-button-primary p-button-sm flex-1"
+                                                @click="addOutfitImage"
+                                            />
+                                        </div>
+
+                                        <div class="form-field p-3 bg-white border-round border-1 border-gray-200 mt-2 flex flex-column gap-2">
+                                            <label class="font-bold text-xs text-gray-700 flex align-items-center gap-1 select-none">
+                                                <i class="pi pi-image text-purple-500"></i>
+                                                <span>登録済みの立ち絵 (全身像)</span>
+                                            </label>
+
+                                            <div v-if="editingMascot.assets.outfits && editingMascot.assets.outfits.length > 0" class="outfit-grid-container pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 300px; overflow-y: auto; width: 100%;">
+                                                <div 
+                                                    v-for="outfit in editingMascot.assets.outfits" 
+                                                    :key="outfit.id"
+                                                    class="outfit-grid-cell relative flex flex-column align-items-center justify-content-center border-round border-1 border-gray-200 bg-white p-2"
+                                                    style="height: 160px; min-width: 0;"
+                                                >
+                                                    <!-- アクティブバッジ -->
+                                                    <div v-if="editingMascot.currentOutfitId === outfit.id" class="absolute" style="top: 6px; right: 6px; z-index: 2;" title="現在使用中">
+                                                        <i class="pi pi-check-circle text-green-500" style="font-size: 14px;"></i>
+                                                    </div>
+
+                                                    <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden cursor-pointer" style="width: 70px; height: 100px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0;" @click="setMainOutfit(outfit)" title="クリックしてデフォルトの立ち絵に設定">
+                                                        <img :src="outfit.path" class="w-full h-full object-contain" />
+                                                    </div>
+                                                    
+                                                    <div class="flex gap-2 mt-2 w-full justify-content-center">
+                                                        <Button icon="pi pi-trash" class="p-button-danger p-button-text p-button-sm" @click="deleteOutfit(outfit)" title="削除" />
+                                                        <Button :icon="editingMascot.currentOutfitId === outfit.id ? 'pi pi-star-fill text-yellow-500' : 'pi pi-star'" class="p-button-text p-button-sm" @click="setMainOutfit(outfit)" title="メイン立ち絵に設定" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else class="text-xs text-gray-400 text-center py-4 select-none">
+                                                ※立ち絵が登録されていません。「ローカル画像から立ち絵を追加」から全身画像を設定してください。
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1457,14 +1586,32 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             <!-- プレビューカード -->
                             <div class="flex-1 border-1 border-gray-700 border-round bg-gray-950 flex align-items-center justify-content-center relative overflow-hidden" style="height: 520px;">
                                 <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 420px;">
-                                    <!-- ポーズ/服装ベースアバター -->
-                                    <template v-if="activePose">
-                                        <img v-if="activePose.path.startsWith('data:image/')" :src="activePose.path" class="preview-full-img w-full h-full object-contain" />
-                                        <span v-else class="preview-base-avatar font-bold text-4xl text-gray-500 select-none">{{ activePose.path }}</span>
+                                    <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
+                                    <!-- 1. ポーズ画像優先 -->
+                                    <template v-if="activePose && activePose.path.startsWith('data:image/')">
+                                        <img :src="activePose.path" class="preview-full-img w-full h-full object-contain" />
                                     </template>
-                                    <template v-else-if="activeOutfit">
-                                        <img v-if="activeOutfit.path.startsWith('data:image/')" :src="activeOutfit.path" class="preview-full-img w-full h-full object-contain" />
-                                        <span v-else class="preview-base-avatar font-bold text-4xl text-gray-500 select-none">{{ activeOutfit.path }}</span>
+                                    <!-- 2. 衣装画像優先 -->
+                                    <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
+                                        <img :src="activeOutfit.path" class="preview-full-img w-full h-full object-contain" />
+                                    </template>
+                                    <!-- 3. フロント画像優先 -->
+                                    <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
+                                        <img :src="defaultFrontAvatar.path" class="preview-full-img w-full h-full object-contain" />
+                                    </template>
+                                    <!-- 4. アバター画像優先 -->
+                                    <template v-else-if="editingMascot && editingMascot.avatar && editingMascot.avatar.startsWith('data:image/')">
+                                        <img :src="editingMascot.avatar" class="preview-full-img w-full h-full object-contain" />
+                                    </template>
+                                    <!-- 5. 画像がなければ文字列アセット（ポーズ > 衣装 > アバター > ロボット）の順で表示 -->
+                                    <template v-else-if="activePose && activePose.path">
+                                        <span class="preview-base-avatar font-bold text-6xl text-gray-500 select-none">{{ activePose.path }}</span>
+                                    </template>
+                                    <template v-else-if="activeOutfit && activeOutfit.path">
+                                        <span class="preview-base-avatar font-bold text-6xl text-gray-500 select-none">{{ activeOutfit.path }}</span>
+                                    </template>
+                                    <template v-else-if="editingMascot">
+                                        <span class="preview-base-avatar font-bold text-6xl text-gray-600 select-none">{{ editingMascot.avatar || '🤖' }}</span>
                                     </template>
                                     <span v-else class="preview-base-avatar font-bold text-6xl text-gray-600 select-none">🤖</span>
 
@@ -2323,5 +2470,42 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 
 .expression-grid-cell.has-image .expression-cell-label {
     color: #475569 !important;
+}
+
+.mascot-composite-preview {
+    position: relative;
+    width: 420px;
+    height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* アセットプレビューレイヤー用スタイル */
+.preview-full-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    z-index: 1;
+}
+.preview-base-avatar {
+    position: absolute;
+    z-index: 1;
+}
+.preview-layer-img {
+    position: absolute;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 10;
+}
+.preview-layer {
+    position: absolute;
+    z-index: 10;
 }
 </style>

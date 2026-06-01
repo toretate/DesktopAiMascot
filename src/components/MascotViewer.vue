@@ -34,6 +34,7 @@ const previewState = ref<{
 } | null>(null);
 
 let unsubscribePreview: (() => void) | null = null;
+let unsubscribeConfig: (() => void) | null = null;
 
 const activeMascotImageSet = computed(() => {
     const mascot = activeMascot.value;
@@ -309,12 +310,21 @@ onMounted(async () => {
         window.electronAPI.onEmotionChanged((emotion: string) => {
             mascotStore.setEmotion(emotion);
         });
+
+        // 設定更新の購読
+        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
+            console.log('[MascotViewer] Config updated via IPC:', newConfig);
+            configStore.updateConfig(newConfig);
+        });
     }
 });
 
 onUnmounted(() => {
     if (unsubscribePreview) {
         unsubscribePreview();
+    }
+    if (unsubscribeConfig) {
+        unsubscribeConfig();
     }
 });
 </script>
