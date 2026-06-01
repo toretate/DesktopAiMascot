@@ -8,8 +8,13 @@
 - [x] 大画面（420x420）とのアスペクト比を完全に一致させるため、140x140の正方形中間コンテナと position: relative を導入し、表情プレビューの位置ズレ問題を根本解決
 - [x] 表情エディタモーダルにおいて、モーダル再表示時やマスコット切替時に初期表情（通常等）が確実に選択されるよう watch によるリアクティブ初期選択を実装し、コントロール類やプレビューが消えてしまう不具合を解決
 - [x] 表情エディタ内のリストやプレビューカードの固定高さを 520px から 430px へスリム化し、全体の最大高さ780pxの中にスライダーやフッターコントロールがすべて綺麗に収まるようにして見切れレイアウト不具合を根本修正
-- [x] プロジェクトに存在しない Tailwind / PrimeFlex CSS ユーティリティクラス（flex, gap, flex-column, justify-content-* 等）が ExpressionEditorModal.vue で効かず、要素がすべて縦積みに崩壊していた問題を解決するため、style scoped 内にこれらレイアウト用ユーティリティクラスを Vanilla CSS として完璧に実装
+- [x] プロジェクト全体への `primeflex` パッケージのインストールおよび `@import` 設定によるレイアウトの修復
+- [x] プロジェクト全体への `tailwindcss@3` および `postcss` / `autoprefixer` のインストール
+- [x] `tailwind.config.js` の初期化とコンテンツスキャンパス（Vueファイル対象）の設定
+- [x] グローバルCSS `main.css` への Tailwind および PrimeFlex ディレクティブの統合設定
+- [x] `ExpressionEditorModal.vue` の style scoped に一時的に入れた Vanilla 補完用 CSS を綺麗にクリーンアップ（削除）
 - [x] ビルド検証 (`cmd /c npm run build`) を行い、エラーなしで正常終了することを確認
+
 
 
 

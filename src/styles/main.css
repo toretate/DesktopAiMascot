@@ -1,4 +1,9 @@
+@import "primeflex/primeflex.css";
 @import "primeicons/primeicons.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 
 /* グローバルフォントおよび基本変数の定義 */
 :root {

@@ -41,16 +41,15 @@
   - `computedListPreviewExpressionStyle` 内のスケール補正率 `scaleFactor` を `140 / 420` に固定。
   - `avatar-container` のマークアップを変更し、内部に正方形プレビューラッパーを追加して、ベース全身像アセットと表情画像をその中に重ね合わせるように構造をリファクタリング。
 
-### 表情エディタコンポーネント
-- **対象ファイル**: [ExpressionEditorModal.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/settings/ExpressionEditorModal.vue)
-- **修正内容**:
-  - 子コンポーネントがマウントされたまま親から再度モーダルが開かれた際（`visible` が `true` に変化した時）やマスコットアセットデータ（`editingMascot`）が動的に渡された際に、setup直下の1回限りの初期化だと表情データが選択されず `null` になり、右カラムのプレビューやコントロール類が丸ごと消えてしまうバグを修正。
-  - `watch` を用いて、`visible` や `editingMascot` の変化をリアクティブに監視し、開かれた時点で必ず「通常」もしくは最初の登録表情を `selectedModalExpression` に自動的に選択・代入するように改修。
-  - **縦幅制限による画面下部見切れの修正（レイアウト調整）**:
-    モーダル全体の高さ（最大780px/90vh）に対し、内部 of プレビューカードおよび左スリムリストが `520px` に固定されていたため、下部コントロール（スライダーや各種ボタン）が画面外（overflow-hidden）に押し出されて見切れてしまう不具合を解決。プレビューカードおよび左縦リストの固定高さを `430px` にスリム化し、縦スライダーを `310px` に調整することで、コントロールやフッターボタンがすべて完全に1画面にきれいに収まるようにレイアウトを修正。
-  - **CSSユーティリティ（PrimeFlex/Tailwind）欠落によるFlexレイアウト崩壊の根本解決**:
-    プロジェクト環境に PrimeFlex や Tailwind CSS が導入されていないため、モーダルテンプレートで多用されている `.flex`, `.flex-column`, `.flex-1`, `.gap-4`, `.justify-content-between`, `.align-items-center` などのレイアウト補助クラスが一切動作せず、ヘッダーの×ボタンが左上に配置されたり、プレビュー領域全体が左リストの下側に縦積み（ブロック配置）で回り込んでしまい、すべてのコントロール類が画面外へはみ出していたバグを解決。
-    `<style scoped>` の末尾に、テンプレートで使われているすべてのレイアウト用ユーティリティクラス（`.flex`, `.flex-column`, `.flex-1`, `.gap-*`, `.justify-content-*`, `.align-items-*` など）を Vanilla CSS の強制的スタイル（`!important` 指定）として定義・補完することで、外部ライブラリに一切依存せず、横並びレイアウトや配置位置を完璧に動作させます。
+### プロジェクト全体へのスタイリング環境統合
+- **インストール**:
+  - `primeflex`: 既存のユーティリティレイアウト動作を維持・保証するためインストール。
+  - `tailwindcss@3`, `postcss`, `autoprefixer`: ユーザーの明示的指定に基づき Tailwind CSS v3 環境をインストール。
+- **設定統合**:
+  - `tailwind.config.js` を生成し、`./src/**/*.{vue,js,ts,jsx,tsx}` および `./index.html` をスキャン対象に指定。
+  - `src/styles/main.css` の先頭で `@import "primeflex/primeflex.css";` を追加し、さらに `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` を宣言することで、Vite/PostCSSによる自動ビルド・統合を構築。
+  - `ExpressionEditorModal.vue` の `<style scoped>` 内に一時追加していた Vanilla CSS 補完用ユーティリティ定義を、正式インポートされたグローバルライブラリと競合・冗長化しないようすべてクリーンアップ（削除）。
+
 
 
 
