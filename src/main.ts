@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
 import App from './App.vue';
@@ -7,6 +8,9 @@ import App from './App.vue';
 import './styles/main.css';
 
 const app = createApp(App);
+const pinia = createPinia();
+
+app.use(pinia);
 
 // PrimeVueの初期化とAuraテーマの設定
 app.use(PrimeVue, {
