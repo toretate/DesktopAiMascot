@@ -198,6 +198,59 @@ const openSettings = () => {
     }
 };
 
+// --- ドラッグおよびクリックの制御 ---
+const isDragging = ref(false);
+let startMouseX = 0;
+let startMouseY = 0;
+let hasMoved = false;
+
+const onMouseDown = (e: MouseEvent) => {
+    if (e.button === 0) { // 左クリックのみ対象
+        isDragging.value = true;
+        startMouseX = e.screenX;
+        startMouseY = e.screenY;
+        hasMoved = false;
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }
+};
+
+const onMouseMove = (e: MouseEvent) => {
+    if (!isDragging.value) return;
+
+    // マウス左ボタンが押されていない状態ならドラッグ終了とする（予期しないmouseup漏れ対策）
+    if (e.buttons !== 1) {
+        onMouseUp();
+        return;
+    }
+
+    const dx = e.screenX - startMouseX;
+    const dy = e.screenY - startMouseY;
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        hasMoved = true;
+        if (window.electronAPI && window.electronAPI.dragWindow) {
+            window.electronAPI.dragWindow({ dx, dy });
+        }
+        startMouseX = e.screenX;
+        startMouseY = e.screenY;
+    }
+};
+
+const onMouseUp = () => {
+    if (!isDragging.value) return;
+    isDragging.value = false;
+
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+
+    if (!hasMoved) {
+        // ドラッグ移動しなかった場合はクリックとみなし、チャットトグル
+        toggleChat();
+    }
+};
+
 const loadMascotConfig = (configData: any) => {
     if (!configData) return;
     console.log('[MascotViewer] loadMascotConfig loaded settings:', configData);
@@ -254,7 +307,7 @@ onUnmounted(() => {
 <template>
     <div class="mascot-wrapper app-dark">
         <!-- マスコットのキャラクター描画部分 -->
-        <div class="mascot-character drag-area" @contextmenu.prevent="openSettings">
+        <div class="mascot-character" @mousedown="onMouseDown" @contextmenu.prevent="openSettings" @dragstart.prevent>
             <div class="mascot-visual" :class="emotionClass">
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->

@@ -189,6 +189,9 @@ let chatWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let savePositionTimeout: NodeJS.Timeout | null = null;
 let saveSettingsBoundsTimeout: NodeJS.Timeout | null = null;
+let chatOffsetX = 300; // マスコットとのX軸相対オフセット (初期値はマスコット幅300)
+let chatOffsetY = 0;   // マスコットとのY軸相対オフセット
+let isSyncingChatPosition = false; // moveイベントのループを防ぐフラグ
 
 // --- ウィンドウ位置の保存（デバウンス処理） ---
 function debouncedSaveMascotPosition() {
@@ -220,11 +223,10 @@ function debouncedSaveSettingsBounds() {
 function syncChatWindowPosition() {
     if (!mascotWindow || !chatWindow || !chatWindow.isVisible()) return;
 
+    isSyncingChatPosition = true;
     const [mascotX, mascotY] = mascotWindow.getPosition();
-    const [mascotW] = mascotWindow.getSize();
-    
-    // チャットウィンドウをマスコットの右隣にぴったり追従させる
-    chatWindow.setPosition(mascotX + mascotW, mascotY);
+    chatWindow.setPosition(mascotX + chatOffsetX, mascotY + chatOffsetY);
+    isSyncingChatPosition = false;
 }
 
 // --- 設定ウィンドウの作成・管理関数 ---
@@ -394,6 +396,15 @@ function createWindows() {
 
     // --- イベントリスナーの登録 ---
 
+    // チャットウィンドウ自体の移動を検知して相対オフセットを更新
+    chatWindow.on('move', () => {
+        if (isSyncingChatPosition || !mascotWindow || !chatWindow) return;
+        const [mascotX, mascotY] = mascotWindow.getPosition();
+        const [chatX, chatY] = chatWindow.getPosition();
+        chatOffsetX = chatX - mascotX;
+        chatOffsetY = chatY - mascotY;
+    });
+
     // ドラッグ移動時の追従と位置保存
     mascotWindow.on('move', () => {
         syncChatWindowPosition();
@@ -462,12 +473,13 @@ app.whenReady().then(() => {
     });
 
     // 4. アプリ内ドラッグ移動の実装 (HTML要素をドラッグ可能にする場合のサポート)
-    ipcMain.on('start-window-drag', (event) => {
+    ipcMain.on('drag-window', (event, offset: { dx: number; dy: number }) => {
         const webContents = event.sender;
         const win = BrowserWindow.fromWebContents(webContents);
         if (win) {
-            // メインプロセス側でウィンドウのネイティブドラッグを開始する
-            // （Vite/Electron環境でCSSの-webkit-app-region: dragがうまく動かない際のフォールバックとして有用）
+            const [x, y] = win.getPosition();
+            win.setPosition(x + offset.dx, y + offset.dy);
+            debouncedSaveMascotPosition();
         }
     });
 
