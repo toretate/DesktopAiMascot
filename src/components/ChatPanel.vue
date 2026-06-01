@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUnmounted, computed } from 'vue';
+import { ref, nextTick, onMounted, computed } from 'vue';
+import { useConfigStore } from '../store/config';
+import { useMascotStore } from '../store/mascot';
+import { storeToRefs } from 'pinia';
 
 interface Message {
     id: number;
@@ -14,31 +17,20 @@ const messages = ref<Message[]>([
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
 
-const isAiResponding = ref(false);
+// ---- Stores ----
+const configStore = useConfigStore();
+const mascotStore = useMascotStore();
 
-// --- チャットウィンドウの個別設定 ---
-const chatSendKey = ref('enter');
-const chatFontFamily = ref('sans-serif');
-const chatOpacity = ref(0.65);
-let unsubscribeConfig: (() => void) | null = null;
+const {
+    chatSendKey,
+    chatFontFamily,
+    chatOpacity,
+    activeMascot
+} = storeToRefs(configStore);
 
-// --- マスコット関連の設定 ---
-const mascots = ref<any[]>([]);
-const activeMascotId = ref('');
-const activeMascot = computed(() => {
-    return mascots.value.find(m => m.id === activeMascotId.value) || null;
-});
-
-const loadChatSettings = (configData: any) => {
-    if (!configData) return;
-    chatSendKey.value = configData.chatSendKey || 'enter';
-    chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
-    chatOpacity.value = configData.chatOpacity !== undefined ? configData.chatOpacity : 0.65;
-    
-    // マスコットデータの読み込み
-    mascots.value = configData.mascots || [];
-    activeMascotId.value = configData.activeMascotId || '';
-};
+const {
+    isLoading: isAiResponding
+} = storeToRefs(mascotStore);
 
 const sendMessage = async () => {
     if (!inputText.value.trim() || isAiResponding.value) return;
@@ -52,102 +44,50 @@ const sendMessage = async () => {
         text: userQuery
     });
 
-    isAiResponding.value = true;
+    mascotStore.setLoading(true);
 
     await nextTick();
     scrollToBottom();
 
-    // 設定データのロード
-    let apiKey = '';
-    let engine = 'gemini';
-    let lmsModel = '';
-    let lmsEndpoint = 'http://127.0.0.1:1234/v1/';
-    let geminiModel = 'gemini-2.0-flash-exp';
-    let openaiModel = 'gpt-4o';
-    let anthropicModel = 'claude-3-5-sonnet-latest';
-    let voicevoxSpeakerId = 2;
-    let voicevoxEndpointUrl = 'http://localhost:50021';
-    let systemPrompt = '';
-
-    // アクティブなマスコットがいる場合はその個別設定を優先
+    // アクティブなマスコットとそのAI設定を取得
     const mascot = activeMascot.value;
-
-    if (window.electronAPI) {
-        const configData = await window.electronAPI.getAppConfig();
-        if (configData) {
-            // エンジン選択：マスコット個別の設定を優先し、無ければシステム設定を使用
-            engine = mascot?.aiConfig?.chat?.engine || configData.selectedEngine || 'gemini';
-            
-            // APIキーの取得（これはシステム全体のAPIキーから取得）
-            if (engine === 'gemini') {
-                apiKey = configData.googleAiStudioApiKey || '';
-            } else if (engine === 'openai') {
-                apiKey = configData.openaiApiKey || '';
-            } else if (engine === 'anthropic') {
-                apiKey = configData.anthropicApiKey || '';
-            }
-
-            lmsEndpoint = configData.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
-            voicevoxEndpointUrl = configData.voicevoxEndpoint || 'http://localhost:50021';
-
-            // モデル名：マスコット個別のモデル名を優先
-            if (mascot?.aiConfig?.chat?.model) {
-                if (engine === 'lmstudio') {
-                    lmsModel = mascot.aiConfig.chat.model;
-                } else if (engine === 'gemini') {
-                    geminiModel = mascot.aiConfig.chat.model;
-                } else if (engine === 'openai') {
-                    openaiModel = mascot.aiConfig.chat.model;
-                } else if (engine === 'anthropic') {
-                    anthropicModel = mascot.aiConfig.chat.model;
-                }
-            } else {
-                lmsModel = configData.lmstudioModel || '';
-                geminiModel = configData.geminiModel || 'gemini-2.0-flash-exp';
-                openaiModel = configData.openaiModel || 'gpt-4o';
-                anthropicModel = configData.anthropicModel || 'claude-3-5-sonnet-latest';
-            }
-
-            // 音声話者：マスコット個別の話者IDを優先
-            voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
-                ? mascot.aiConfig.voice.speaker_id 
-                : (configData.voicevoxSpeaker !== undefined ? configData.voicevoxSpeaker : 2);
-        }
-    } else {
-        engine = mascot?.aiConfig?.chat?.engine || localStorage.getItem('selectedEngine') || 'gemini';
-        if (engine === 'gemini') {
-            apiKey = localStorage.getItem('GoogleAiStudioApiKey') || '';
-        } else if (engine === 'openai') {
-            apiKey = localStorage.getItem('openaiApiKey') || '';
-        } else if (engine === 'anthropic') {
-            apiKey = localStorage.getItem('anthropicApiKey') || '';
-        }
-
-        lmsEndpoint = localStorage.getItem('lmstudioEndpoint') || 'http://127.0.0.1:1234/v1/';
-        voicevoxEndpointUrl = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
-
-        if (mascot?.aiConfig?.chat?.model) {
-            if (engine === 'lmstudio') lmsModel = mascot.aiConfig.chat.model;
-            else if (engine === 'gemini') geminiModel = mascot.aiConfig.chat.model;
-            else if (engine === 'openai') openaiModel = mascot.aiConfig.chat.model;
-            else if (engine === 'anthropic') anthropicModel = mascot.aiConfig.chat.model;
-        } else {
-            lmsModel = localStorage.getItem('lmstudioModel') || '';
-            geminiModel = localStorage.getItem('geminiModel') || 'gemini-2.0-flash-exp';
-            openaiModel = localStorage.getItem('openaiModel') || 'gpt-4o';
-            anthropicModel = localStorage.getItem('anthropicModel') || 'claude-3-5-sonnet-latest';
-        }
-
-        const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
-        voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
-            ? mascot.aiConfig.voice.speaker_id 
-            : (savedSpeaker ? parseInt(savedSpeaker) : 2);
+    
+    // エンジン選択：マスコット個別の設定を優先し、無ければシステム設定を使用
+    const engine = mascot?.aiConfig?.chat?.engine || configStore.selectedEngine || 'gemini';
+    
+    // APIキーの取得
+    let apiKey = '';
+    if (engine === 'gemini') {
+        apiKey = configStore.googleAiStudioApiKey || '';
+    } else if (engine === 'openai') {
+        apiKey = configStore.openaiApiKey || '';
+    } else if (engine === 'anthropic') {
+        apiKey = configStore.anthropicApiKey || '';
     }
 
+    const lmsEndpoint = configStore.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
+    const voicevoxEndpointUrl = configStore.voicevoxEndpoint || 'http://localhost:50021';
+
+    // モデル名：マスコット個別のモデル名を優先
+    let model = '';
+    if (mascot?.aiConfig?.chat?.model) {
+        model = mascot.aiConfig.chat.model;
+    } else {
+        if (engine === 'lmstudio') model = configStore.lmstudioModel || '';
+        else if (engine === 'gemini') model = configStore.geminiModel || 'gemini-2.0-flash-exp';
+        else if (engine === 'openai') model = configStore.openaiModel || 'gpt-4o';
+        else if (engine === 'anthropic') model = configStore.anthropicModel || 'claude-3-5-sonnet-latest';
+    }
+
+    // 音声話者：マスコット個別の話者IDを優先
+    const voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
+        ? mascot.aiConfig.voice.speaker_id 
+        : (configStore.voicevoxSpeaker !== undefined ? configStore.voicevoxSpeaker : 2);
+
     // システムプロンプト：マスコットのプロフィールを優先
+    let systemPrompt = '';
     if (mascot && mascot.profile) {
         systemPrompt = mascot.profile;
-        // プロンプトに感情タグの指示が含まれていない場合は自動で付与する
         if (!systemPrompt.includes('[happy]') && !systemPrompt.includes('感情タグ')) {
             systemPrompt += "\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
         }
@@ -170,37 +110,33 @@ const sendMessage = async () => {
         let reply = '';
         if (window.electronAPI) {
             if (engine === 'lmstudio') {
-                // 1. LM Studioの呼び出し
-                reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, lmsModel, lmsEndpoint);
+                reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint);
             } else {
-                // 1. Gemini API呼び出し
                 if (!apiKey) {
                     throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);
                 }
-                const model = engine === 'gemini' 
-                    ? geminiModel 
-                    : (engine === 'openai' 
-                        ? openaiModel 
-                        : (engine === 'anthropic' 
-                            ? anthropicModel 
-                            : engine));
                 reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model);
             }
         } else {
             reply = 'ブラウザ実行時のモック回答です。[happy]';
         }
 
-        // 2. メッセージを実際の応答で更新
+        // メッセージを実際の応答で更新
         const mascotMsg = messages.value.find(m => m.id === aiMessageId);
         if (mascotMsg) {
             mascotMsg.text = reply;
         }
 
-        // 応答テキストから感情タグ（[happy]など）をパースし、表情変更イベントを送信
+        // 応答テキストから感情タグ（[happy]など）をパースし、表情変更
         const emotionMatch = reply.match(/\[(\w+)\]/);
         if (emotionMatch && emotionMatch[1]) {
             const detectedEmotion = emotionMatch[1].toLowerCase();
+            
+            // ストア経由で表情を変更
+            mascotStore.setEmotion(detectedEmotion);
+
             if (window.electronAPI) {
+                // 必要であれば後方互換性のためにメインプロセスにも通知
                 window.electronAPI.changeEmotion(detectedEmotion);
             }
         }
@@ -208,14 +144,28 @@ const sendMessage = async () => {
         await nextTick();
         scrollToBottom();
 
-        // 3. VOICEVOX音声合成と再生
+        // VOICEVOX音声合成と再生
         if (window.electronAPI) {
-            // 音声合成用に、感情タグ `[happy]` などを取り除く
             const speechText = reply.replace(/\[\w+\]/g, '').trim();
+            
+            // 発話中フラグをON
+            mascotStore.setSpeaking(true);
+
             const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, voicevoxSpeakerId, voicevoxEndpointUrl);
             if (base64Audio) {
                 const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
-                audio.play();
+                
+                // 再生終了時に発話中フラグをOFF
+                audio.onended = () => {
+                    mascotStore.setSpeaking(false);
+                };
+                audio.onerror = () => {
+                    mascotStore.setSpeaking(false);
+                };
+
+                await audio.play();
+            } else {
+                mascotStore.setSpeaking(false);
             }
         }
 
@@ -224,8 +174,9 @@ const sendMessage = async () => {
         if (mascotMsg) {
             mascotMsg.text = `接続に失敗しました: ${error.message}`;
         }
+        mascotStore.setSpeaking(false);
     } finally {
-        isAiResponding.value = false;
+        mascotStore.setLoading(false);
         await nextTick();
         scrollToBottom();
     }
@@ -241,13 +192,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
     if (event.isComposing) return;
 
     if (chatSendKey.value === 'enter') {
-        // Enterで送信（Shift + Enterで改行）
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             sendMessage();
         }
     } else {
-        // Shift + Enterで送信（Enterで改行）
         if (event.key === 'Enter' && event.shiftKey) {
             event.preventDefault();
             sendMessage();
@@ -256,27 +205,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 };
 
 onMounted(async () => {
-    // 初期ロード
-    if (window.electronAPI) {
-        const configData = await window.electronAPI.getAppConfig();
-        loadChatSettings(configData);
-
-        // 設定更新の購読
-        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
-            loadChatSettings(newConfig);
-        });
-    } else {
-        // ブラウザ環境でのフォールバック
-        chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
-        chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
-        const opacity = localStorage.getItem('chatOpacity');
-        chatOpacity.value = opacity ? parseFloat(opacity) : 0.65;
-    }
-});
-
-onUnmounted(() => {
-    if (unsubscribeConfig) {
-        unsubscribeConfig();
+    // ストアの設定データを読み込み
+    if (!configStore.isLoaded) {
+        await configStore.loadConfig();
     }
 });
 </script>
