@@ -24,6 +24,12 @@
   - `tailwind.config.js` および `postcss.config.js` を初期化し、Vueコンポーネントのスキャン設定を追加。
   - グローバルCSSである `src/styles/main.css` 内に `@import "primeflex/primeflex.css";` および Tailwind CSS のディレクティブを定義し、プロジェクト全域で強力なレイアウトおよびスタイリングユーティリティが使用可能となりました。
   - `ExpressionEditorModal.vue` の `style scoped` に一時的に追加していた Vanilla 補完用 CSS をきれいに削除し、競合を排除して元のスッキリとしたコンポーネント状態に完全修復しました。
+- **画像切り出し枠（ImageCropModal）の四隅ドラッグリサイズ機能の完全実装**:
+  - 表情画像の切り出し（トリミング）モーダルにおいて、紫色の切り出し枠がドラッグによる移動（D&D）しかできず、サイズ変更（リサイズ）が行えなかった問題を解決しました。
+  - `isResizingCrop` 等の状態変数を新設し、四隅の `.crop-corner` ハンドル要素に `@mousedown.stop="onResizeMouseDown($event, 'corner')"` を実装しました。これにより、親のドラッグイベントとの競合（バブリング）を完璧に遮断しつつ、リサイズ開始を検知できるようになりました。
+  - `onCropMouseMove` 内に、アスペクト比 `1:1` の正方形を完全に維持したままサイズを変更するリサイズドラッグロジックを統合しました。
+  - 枠がベースとなる画像アセットの境界外に絶対にはみ出さないよう、ドラッグした角に応じた動的な位置（X/Y軸）補正ロジックと、最大・最小サイズ（最小40px）の強力な制限アルゴリズムを実装しました。
+  - CSS側で四隅のハンドルにそれぞれリサイズ用マウスカーソル（`cursor: nwse-resize`, `cursor: nesw-resize`）を設定し、直感的で premium な操作体験を実現しました。
 
 
 ## 検証結果

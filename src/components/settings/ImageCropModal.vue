@@ -29,13 +29,17 @@ const handleCropImageLoaded = (event: Event) => {
 
 // ドラッグ処理用の変数
 let isDraggingCrop = false;
+let isResizingCrop = false;
+let resizeCorner = ''; // 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 let startDragX = 0;
 let startDragY = 0;
 let startCropX = 0;
 let startCropY = 0;
+let startCropSize = 0;
 
 const onCropMouseDown = (event: MouseEvent) => {
     isDraggingCrop = true;
+    isResizingCrop = false;
     startDragX = event.clientX;
     startDragY = event.clientY;
     startCropX = cropX.value;
@@ -43,8 +47,21 @@ const onCropMouseDown = (event: MouseEvent) => {
     event.preventDefault();
 };
 
+const onResizeMouseDown = (event: MouseEvent, corner: string) => {
+    isResizingCrop = true;
+    isDraggingCrop = false;
+    resizeCorner = corner;
+    startDragX = event.clientX;
+    startDragY = event.clientY;
+    startCropX = cropX.value;
+    startCropY = cropY.value;
+    startCropSize = cropSize.value;
+    event.preventDefault();
+    event.stopPropagation(); // 枠自体の移動イベント（onCropMouseDown）を遮断
+};
+
 const onCropMouseMove = (event: MouseEvent) => {
-    if (!isDraggingCrop || !cropContainerRef.value || !cropImageRef.value) return;
+    if ((!isDraggingCrop && !isResizingCrop) || !cropContainerRef.value || !cropImageRef.value) return;
     
     const dx = event.clientX - startDragX;
     const dy = event.clientY - startDragY;
@@ -55,19 +72,75 @@ const onCropMouseMove = (event: MouseEvent) => {
     const scaleX = cropImageWidth.value / imageRect.width;
     const scaleY = cropImageHeight.value / imageRect.height;
     
-    let newX = startCropX + dx * scaleX;
-    let newY = startCropY + dy * scaleY;
-    
-    // 範囲制限 (画像内)
-    newX = Math.max(0, Math.min(cropImageWidth.value - cropSize.value, newX));
-    newY = Math.max(0, Math.min(cropImageHeight.value - cropSize.value, newY));
-    
-    cropX.value = Math.round(newX);
-    cropY.value = Math.round(newY);
+    if (isDraggingCrop) {
+        let newX = startCropX + dx * scaleX;
+        let newY = startCropY + dy * scaleY;
+        
+        // 範囲制限 (画像内)
+        newX = Math.max(0, Math.min(cropImageWidth.value - cropSize.value, newX));
+        newY = Math.max(0, Math.min(cropImageHeight.value - cropSize.value, newY));
+        
+        cropX.value = Math.round(newX);
+        cropY.value = Math.round(newY);
+    } else if (isResizingCrop) {
+        // リサイズ処理 (1:1正方形アスペクト比を完璧に維持)
+        const pixelDx = dx * scaleX;
+        const pixelDy = dy * scaleY;
+        let change = 0;
+        
+        if (resizeCorner === 'bottom-right') {
+            change = Math.max(pixelDx, pixelDy);
+        } else if (resizeCorner === 'bottom-left') {
+            change = Math.max(-pixelDx, pixelDy);
+        } else if (resizeCorner === 'top-right') {
+            change = Math.max(pixelDx, -pixelDy);
+        } else if (resizeCorner === 'top-left') {
+            change = Math.max(-pixelDx, -pixelDy);
+        }
+        
+        let newSize = startCropSize + change;
+        
+        // 制限範囲の決定
+        const minSize = 40; // 最小40px
+        let maxSize = cropImageWidth.value;
+        
+        if (resizeCorner === 'bottom-right') {
+            maxSize = Math.min(cropImageWidth.value - startCropX, cropImageHeight.value - startCropY);
+        } else if (resizeCorner === 'bottom-left') {
+            maxSize = Math.min(startCropX + startCropSize, cropImageHeight.value - startCropY);
+        } else if (resizeCorner === 'top-right') {
+            maxSize = Math.min(cropImageWidth.value - startCropX, startCropY + startCropSize);
+        } else if (resizeCorner === 'top-left') {
+            maxSize = Math.min(startCropX + startCropSize, startCropY + startCropSize);
+        }
+        
+        newSize = Math.max(minSize, Math.min(maxSize, newSize));
+        
+        let newX = startCropX;
+        let newY = startCropY;
+        const actualChange = newSize - startCropSize;
+        
+        if (resizeCorner === 'top-left') {
+            newX = startCropX - actualChange;
+            newY = startCropY - actualChange;
+        } else if (resizeCorner === 'top-right') {
+            newY = startCropY - actualChange;
+        } else if (resizeCorner === 'bottom-left') {
+            newX = startCropX - actualChange;
+        }
+        
+        // 安全領域内にある場合のみ代入
+        if (newX >= 0 && newY >= 0 && newX + newSize <= cropImageWidth.value && newY + newSize <= cropImageHeight.value) {
+            cropSize.value = Math.round(newSize);
+            cropX.value = Math.round(newX);
+            cropY.value = Math.round(newY);
+        }
+    }
 };
 
 const onCropMouseUp = () => {
     isDraggingCrop = false;
+    isResizingCrop = false;
 };
 
 const executeCrop = async () => {
@@ -149,10 +222,10 @@ onMounted(() => {
                         }"
                         @mousedown="onCropMouseDown"
                     >
-                        <div class="crop-corner top-left"></div>
-                        <div class="crop-corner top-right"></div>
-                        <div class="crop-corner bottom-left"></div>
-                        <div class="crop-corner bottom-right"></div>
+                        <div class="crop-corner top-left" @mousedown.stop="onResizeMouseDown($event, 'top-left')"></div>
+                        <div class="crop-corner top-right" @mousedown.stop="onResizeMouseDown($event, 'top-right')"></div>
+                        <div class="crop-corner bottom-left" @mousedown.stop="onResizeMouseDown($event, 'bottom-left')"></div>
+                        <div class="crop-corner bottom-right" @mousedown.stop="onResizeMouseDown($event, 'bottom-right')"></div>
                     </div>
                 </div>
             </div>
@@ -207,8 +280,8 @@ onMounted(() => {
     background: #a855f7;
     border: 1px solid white;
 }
-.crop-corner.top-left { top: -4px; left: -4px; }
-.crop-corner.top-right { top: -4px; right: -4px; }
-.crop-corner.bottom-left { bottom: -4px; left: -4px; }
-.crop-corner.bottom-right { bottom: -4px; right: -4px; }
+.crop-corner.top-left { top: -4px; left: -4px; cursor: nwse-resize; }
+.crop-corner.top-right { top: -4px; right: -4px; cursor: nesw-resize; }
+.crop-corner.bottom-left { bottom: -4px; left: -4px; cursor: nesw-resize; }
+.crop-corner.bottom-right { bottom: -4px; right: -4px; cursor: nwse-resize; }
 </style>

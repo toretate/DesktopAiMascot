@@ -47,11 +47,16 @@
   - `tailwindcss@3`, `postcss`, `autoprefixer`: ユーザーの明示的指定に基づき Tailwind CSS v3 環境をインストール。
 - **設定統合**:
   - `tailwind.config.js` を生成し、`./src/**/*.{vue,js,ts,jsx,tsx}` および `./index.html` をスキャン対象に指定。
-  - `src/styles/main.css` の先頭で `@import "primeflex/primeflex.css";` を追加し、さらに `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` を宣言することで、Vite/PostCSSによる自動ビルド・統合を構築。
-  - `ExpressionEditorModal.vue` の `<style scoped>` 内に一時追加していた Vanilla CSS 補完用ユーティリティ定義を、正式インポートされたグローバルライブラリと競合・冗長化しないようすべてクリーンアップ（削除）。
+  - グローバルCSSである `src/styles/main.css` 内に `@import "primeflex/primeflex.css";` および Tailwind CSS のディレクティブを定義し、プロジェクト全域で強力なレイアウトおよびスタイリングユーティリティが使用可能となりました。
+  - `ExpressionEditorModal.vue` の `style scoped` に一時的に追加していた Vanilla 補完用 CSS をきれいに削除し、競合を排除して元のスッキリとしたコンポーネント状態に完全修復しました。
 
-
-
+### 画像トリミングコンポーネント
+- **対象ファイル**: [ImageCropModal.vue](file:///c:/workspace/workspace-win/DesktopAiMascot/src/components/settings/ImageCropModal.vue)
+- **修正内容**:
+  - トリミング用の紫の四角形枠について、ドラッグによる位置移動は行えるものの、四隅のハンドル（`.crop-corner`）を操作してのサイズ変更（リサイズ）が行えなかった問題を解決。
+  - `isResizingCrop`, `resizeCorner`, `startCropSize` の状態変数を新設し、四隅のハンドル要素それぞれに対し `@mousedown.stop="onResizeMouseDown($event, 'corner-name')"` をバインドして、枠移動イベントの干渉を遮断しつつリサイズ動作を検知。
+  - `onCropMouseMove` 内にリサイズ処理を統合。X/Y軸のドラッグ方向（角の位置）に応じた拡大縮小サイズを算出し、かつ `1:1` の正方形比率を保ちながら、切り抜き枠が画像のアセット領域外に絶対にはみ出さないよう移動制限と最大・最小サイズ制限をかける堅牢なアルゴリズムを実装。
+  - CSSスタイルで各ハンドルに対し、リサイズ方向に応じた適切なマウスカーソル（`cursor: nwse-resize`, `cursor: nesw-resize`）を設定。
 
 ## 検証計画
 
