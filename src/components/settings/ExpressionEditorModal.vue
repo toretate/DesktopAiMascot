@@ -450,4 +450,83 @@ const clearExpression = () => {
     position: absolute;
     z-index: 10;
 }
+
+/* --- Flexbox & Layout Utilities (Vanilla CSS補完) --- */
+.flex {
+    display: flex !important;
+}
+.flex-column {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.flex-1 {
+    flex: 1 1 0% !important;
+}
+.flex-shrink-0 {
+    flex-shrink: 0 !important;
+}
+.gap-1 {
+    gap: 4px !important;
+}
+.gap-2 {
+    gap: 8px !important;
+}
+.gap-3 {
+    gap: 12px !important;
+}
+.gap-4 {
+    gap: 16px !important;
+}
+.justify-content-between {
+    justify-content: space-between !important;
+}
+.justify-content-center {
+    justify-content: center !important;
+}
+.justify-content-end {
+    justify-content: flex-end !important;
+}
+.align-items-center {
+    align-items: center !important;
+}
+.overflow-hidden {
+    overflow: hidden !important;
+}
+.m-0 {
+    margin: 0 !important;
+}
+.mt-2 {
+    margin-top: 8px !important;
+}
+.mt-3 {
+    margin-top: 12px !important;
+}
+.pb-2 {
+    padding-bottom: 8px !important;
+}
+.pt-0 {
+    padding-top: 0 !important;
+}
+.pt-2 {
+    padding-top: 8px !important;
+}
+.pt-3 {
+    padding-top: 12px !important;
+}
+.px-4 {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+.w-full {
+    width: 100% !important;
+}
+.h-full {
+    height: 100% !important;
+}
+.text-base {
+    font-size: 16px !important;
+}
+.font-bold {
+    font-weight: 700 !important;
+}
 </style>
