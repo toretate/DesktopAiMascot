@@ -162,7 +162,6 @@ class AppConfig {
             settingsX: -1,
             settingsY: -1,
             mascotScale: 1.0,
-            alwaysOnTop: true,
             useServer: false,
             serverHost: 'localhost',
             serverPort: 3000
