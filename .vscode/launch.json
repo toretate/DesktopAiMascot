@@ -19,6 +19,28 @@
             "outFiles": [
                 "${workspaceFolder}/dist-electron/**/*.js"
             ]
+        },
+        {
+            "name": "Server: Dev (tsx)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/server",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "tsx",
+                "watch",
+                "src/index.ts"
+            ],
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Mascot: Server + Client (同時起動)",
+            "configurations": [
+                "Server: Dev (tsx)",
+                "Electron: All (Vite + Electron)"
+            ]
         }
     ]
 }

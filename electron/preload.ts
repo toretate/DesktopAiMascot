@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAppConfig: () => ipcRenderer.invoke('get-app-config'),
     updateAppConfig: (config: any) => ipcRenderer.invoke('update-app-config', config),
     
+    // サーバーへの疎通チェック
+    testServerConnection: (host: string, port: number) =>
+        ipcRenderer.invoke('test-server-connection', host, port),
+    
     // Gemini APIによる対話処理を呼び出す
     askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => 
         ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName),

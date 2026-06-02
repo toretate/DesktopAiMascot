@@ -29,6 +29,11 @@ export interface AppConfig {
     mascotScale: number;
     alwaysOnTop: boolean;
     
+    // サーバー接続設定
+    useServer: boolean;
+    serverHost: string;
+    serverPort: number;
+    
     // マスコットデータ
     mascots: any[];
     activeMascotId: string;
@@ -66,6 +71,11 @@ export const useConfigStore = defineStore('config', () => {
     // マスコット設定
     const mascotScale = ref(1.0);
     const alwaysOnTop = ref(true);
+
+    // サーバー接続設定
+    const useServer = ref(false);
+    const serverHost = ref('localhost');
+    const serverPort = ref(3000);
 
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
@@ -121,6 +131,10 @@ export const useConfigStore = defineStore('config', () => {
             mascotScale.value = configData.mascotScale !== undefined ? Number(configData.mascotScale) : 1.0;
             alwaysOnTop.value = configData.alwaysOnTop !== undefined ? !!configData.alwaysOnTop : true;
             
+            useServer.value = configData.useServer !== undefined ? !!configData.useServer : false;
+            serverHost.value = configData.serverHost || 'localhost';
+            serverPort.value = configData.serverPort !== undefined ? Number(configData.serverPort) : 3000;
+            
             mascots.value = configData.mascots || [];
             activeMascotId.value = configData.activeMascotId || '';
         } else {
@@ -163,10 +177,34 @@ export const useConfigStore = defineStore('config', () => {
             const scale = localStorage.getItem('mascotScale');
             mascotScale.value = scale ? parseFloat(scale) : 1.0;
             alwaysOnTop.value = localStorage.getItem('alwaysOnTop') !== 'false';
+            
+            useServer.value = localStorage.getItem('useServer') === 'true';
+            serverHost.value = localStorage.getItem('serverHost') || 'localhost';
+            const savedServerPort = localStorage.getItem('serverPort');
+            serverPort.value = savedServerPort ? parseInt(savedServerPort) : 3000;
 
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
             activeMascotId.value = localStorage.getItem('activeMascotId') || '';
+        }
+
+        // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
+        if (useServer.value) {
+            try {
+                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
+                console.log(`[Config] Fetching latest config from server: ${serverUrl}`);
+                const response = await fetch(serverUrl);
+                if (response.ok) {
+                    const resJson = await response.json();
+                    if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
+                        console.log('[Config] Config successfully loaded from server');
+                        // サーバーの設定でストアを上書き
+                        updateConfig(resJson.config);
+                    }
+                }
+            } catch (e: any) {
+                console.warn('[Config] Failed to fetch config from server, using local fallback:', e.message);
+            }
         }
         
         isLoaded.value = true;
@@ -196,12 +234,42 @@ export const useConfigStore = defineStore('config', () => {
             chatFontFamily: chatFontFamily.value,
             mascotScale: Number(mascotScale.value),
             alwaysOnTop: alwaysOnTop.value,
+            useServer: useServer.value,
+            serverHost: serverHost.value,
+            serverPort: Number(serverPort.value),
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value
         };
 
+        // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
+        let savedPayload = payload;
+        if (useServer.value) {
+            try {
+                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
+                console.log(`[Config] Saving config to server: ${serverUrl}`);
+                const response = await fetch(serverUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    const resJson = await response.json();
+                    if (resJson.success && resJson.config) {
+                        console.log('[Config] Config successfully updated with server resolved static URLs');
+                        // サーバーで画像パスが置換された最新の設定にストアを同期
+                        updateConfig(resJson.config);
+                        savedPayload = resJson.config;
+                    }
+                }
+            } catch (e: any) {
+                console.warn('[Config] Failed to save config to server:', e.message);
+            }
+        }
+
         if (window.electronAPI) {
-            await window.electronAPI.updateAppConfig(payload);
+            await window.electronAPI.updateAppConfig(savedPayload);
         }
 
         // localStorage へのバックアップ書き込み
@@ -226,6 +294,9 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('chatFontFamily', chatFontFamily.value);
         localStorage.setItem('mascotScale', mascotScale.value.toString());
         localStorage.setItem('alwaysOnTop', alwaysOnTop.value.toString());
+        localStorage.setItem('useServer', useServer.value.toString());
+        localStorage.setItem('serverHost', serverHost.value);
+        localStorage.setItem('serverPort', serverPort.value.toString());
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
     };
@@ -254,6 +325,9 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.chatFontFamily !== undefined) chatFontFamily.value = newConfig.chatFontFamily;
         if (newConfig.mascotScale !== undefined) mascotScale.value = Number(newConfig.mascotScale);
         if (newConfig.alwaysOnTop !== undefined) alwaysOnTop.value = !!newConfig.alwaysOnTop;
+        if (newConfig.useServer !== undefined) useServer.value = !!newConfig.useServer;
+        if (newConfig.serverHost !== undefined) serverHost.value = newConfig.serverHost;
+        if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
@@ -282,6 +356,9 @@ export const useConfigStore = defineStore('config', () => {
         chatFontFamily,
         mascotScale,
         alwaysOnTop,
+        useServer,
+        serverHost,
+        serverPort,
         mascots,
         activeMascotId,
         activeMascot,

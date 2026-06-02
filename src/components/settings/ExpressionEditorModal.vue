@@ -1,7 +1,29 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import { useConfigStore } from '../../store/config';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
+
+const configStore = useConfigStore();
+
+// 画像かどうかの判定
+const isImage = (path: string | undefined | null): boolean => {
+    if (!path) return false;
+    return path.startsWith('data:image/') || 
+           path.startsWith('/mascots/') || 
+           path.startsWith('http://') || 
+           path.startsWith('https://') ||
+           /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
+};
+
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        return `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    return path;
+};
 
 interface MascotAsset {
     id: string;
@@ -139,7 +161,7 @@ const adjustScale = (delta: number) => {
                             @click="selectExpression(slot)"
                         >
                             <div class="slot-thumbnail flex align-items-center justify-content-center border-round overflow-hidden bg-slate-100">
-                                <img v-if="slot.path" :src="slot.path" class="thumbnail-img" />
+                                <img v-if="slot.path && isImage(slot.path)" :src="resolveImageUrl(slot.path)" class="thumbnail-img" />
                                 <i v-else class="pi pi-image text-slate-400 text-xs"></i>
                             </div>
                             <div class="flex flex-column flex-1 overflow-hidden">
@@ -163,17 +185,17 @@ const adjustScale = (delta: number) => {
                         <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 570px;">
                             <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 560px;">
                                 <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
-                                <template v-if="activePose && activePose.path.startsWith('data:image/')">
-                                    <img :src="activePose.path" class="preview-full-img w-full h-full object-contain" />
+                                <template v-if="activePose && isImage(activePose.path)">
+                                    <img :src="resolveImageUrl(activePose.path)" class="preview-full-img w-full h-full object-contain" />
                                 </template>
-                                <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
-                                    <img :src="activeOutfit.path" class="preview-full-img w-full h-full object-contain" />
+                                <template v-else-if="activeOutfit && isImage(activeOutfit.path)">
+                                    <img :src="resolveImageUrl(activeOutfit.path)" class="preview-full-img w-full h-full object-contain" />
                                 </template>
-                                <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
-                                    <img :src="defaultFrontAvatar.path" class="preview-full-img w-full h-full object-contain" />
+                                <template v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)">
+                                    <img :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-full-img w-full h-full object-contain" />
                                 </template>
-                                <template v-else-if="editingMascot && editingMascot.avatar && editingMascot.avatar.startsWith('data:image/')">
-                                    <img :src="editingMascot.avatar" class="preview-full-img w-full h-full object-contain" />
+                                <template v-else-if="editingMascot && editingMascot.avatar && isImage(editingMascot.avatar)">
+                                    <img :src="resolveImageUrl(editingMascot.avatar)" class="preview-full-img w-full h-full object-contain" />
                                 </template>
                                 <template v-else-if="activePose && activePose.path">
                                     <span class="preview-base-avatar font-bold text-6xl text-slate-400 select-none">{{ activePose.path }}</span>
@@ -189,8 +211,8 @@ const adjustScale = (delta: number) => {
                                 <!-- 表情重ね合わせ (offsetX, offsetY, scale 補正) -->
                                 <template v-if="selectedModalExpression.path">
                                     <img 
-                                        v-if="selectedModalExpression.path.startsWith('data:image/')" 
-                                        :src="selectedModalExpression.path" 
+                                        v-if="isImage(selectedModalExpression.path)" 
+                                        :src="resolveImageUrl(selectedModalExpression.path)" 
                                         class="preview-layer-img expression absolute"
                                         :style="{
                                             width: '140px',
@@ -302,7 +324,7 @@ const adjustScale = (delta: number) => {
                                     @click="clearExpression" 
                                 />
                                 <Button 
-                                    v-if="selectedModalExpression.path && selectedModalExpression.path.startsWith('data:image/')"
+                                    v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
                                     label="切り抜き直す" 
                                     icon="pi pi-scissors" 
                                     class="p-button-outlined p-button-info p-button-sm" 

@@ -4,6 +4,28 @@ import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
+import { useConfigStore } from '../../store/config';
+
+const configStore = useConfigStore();
+
+// 画像かどうかの判定
+const isImage = (path: string | undefined | null): boolean => {
+    if (!path) return false;
+    return path.startsWith('data:image/') || 
+           path.startsWith('/mascots/') || 
+           path.startsWith('http://') || 
+           path.startsWith('https://') ||
+           /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
+};
+
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        return `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    return path;
+};
 
 // 新規切り出しモーダルのインポート
 import ExpressionEditorModal from './ExpressionEditorModal.vue';
@@ -451,34 +473,34 @@ const closeAssigningEmotionsModal = async () => {
                         <!-- 1. ベースキャラクターアバターの優先度表示 -->
                         <template v-if="activeMascotId === mascot.id">
                             <!-- ポーズ画像優先 -->
-                            <template v-if="activePose && activePose.path.startsWith('data:image/')">
-                                <img :src="activePose.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <template v-if="activePose && isImage(activePose.path)">
+                                <img :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             </template>
                             <!-- 衣装画像優先 -->
-                            <template v-else-if="activeOutfit && activeOutfit.path.startsWith('data:image/')">
-                                <img :src="activeOutfit.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <template v-else-if="activeOutfit && isImage(activeOutfit.path)">
+                                <img :src="resolveImageUrl(activeOutfit.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             </template>
                             <!-- フロント画像優先 -->
-                            <template v-else-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')">
-                                <img :src="defaultFrontAvatar.path" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <template v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)">
+                                <img :src="resolveImageUrl(defaultFrontAvatar.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             </template>
                             <!-- ベースアバター優先 -->
-                            <template v-else-if="mascot.avatar && mascot.avatar.startsWith('data:image/')">
-                                <img :src="mascot.avatar" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <template v-else-if="mascot.avatar && isImage(mascot.avatar)">
+                                <img :src="resolveImageUrl(mascot.avatar)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             </template>
                             <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
                         <template v-else>
                             <!-- 非アクティブなマスコットはベースアバターを表示 -->
-                            <img v-if="mascot.avatar && mascot.avatar.startsWith('data:image/')" :src="mascot.avatar" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <img v-if="mascot.avatar && isImage(mascot.avatar)" :src="resolveImageUrl(mascot.avatar)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
 
                         <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
                         <template v-if="activeMascotId === mascot.id && activePreviewExpression && activePreviewExpression.path">
                             <img 
-                                v-if="activePreviewExpression.path.startsWith('data:image/')" 
-                                :src="activePreviewExpression.path" 
+                                v-if="isImage(activePreviewExpression.path)" 
+                                :src="resolveImageUrl(activePreviewExpression.path)" 
                                 class="absolute"
                                 :style="computedListPreviewExpressionStyle"
                             />
@@ -587,11 +609,12 @@ const closeAssigningEmotionsModal = async () => {
 
                             <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden" style="width: 52px; height: 52px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0; position: relative;">
                                 <img 
-                                    v-if="expr.path" 
-                                    :src="expr.path" 
+                                    v-if="expr.path && isImage(expr.path)" 
+                                    :src="resolveImageUrl(expr.path)" 
                                     class="w-full h-full object-contain" 
                                     style="width: 52px !important; height: 52px !important; max-width: 52px !important; max-height: 52px !important; object-fit: contain !important; position: static !important;"
                                 />
+                                <span v-else-if="expr.path" class="text-xs" style="position: absolute;">{{ expr.path }}</span>
                                 <i v-else class="pi pi-plus text-gray-300 hover-text-gray-400" style="font-size: 12px;" title="表情を追加"></i>
                             </div>
 
@@ -648,8 +671,9 @@ const closeAssigningEmotionsModal = async () => {
                                 <i class="pi pi-check-circle text-green-500" style="font-size: 14px;"></i>
                             </div>
 
-                            <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden cursor-pointer" style="width: 70px; height: 100px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0;" @click="setMainOutfit(outfit)" title="クリックしてデフォルトの立ち絵に設定">
-                                <img :src="outfit.path" class="w-full h-full object-contain" />
+                             <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden cursor-pointer" style="width: 70px; height: 100px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0;" @click="setMainOutfit(outfit)" title="クリックしてデフォルトの立ち絵に設定">
+                                <img v-if="isImage(outfit.path)" :src="resolveImageUrl(outfit.path)" class="w-full h-full object-contain" />
+                                <span v-else class="text-xs">{{ outfit.path }}</span>
                             </div>
                             
                             <div class="flex gap-2 mt-2 w-full justify-content-center">

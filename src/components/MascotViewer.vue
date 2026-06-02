@@ -378,6 +378,25 @@ onMounted(async () => {
     }
 });
 
+// 画像かどうかの判定
+const isImage = (path: string | undefined | null): boolean => {
+    if (!path) return false;
+    return path.startsWith('data:image/') || 
+           path.startsWith('/mascots/') || 
+           path.startsWith('http://') || 
+           path.startsWith('https://') ||
+           /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
+};
+
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        return `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    return path;
+};
+
 onUnmounted(() => {
     window.removeEventListener('mousemove', handleWindowMouseMove);
 
@@ -405,26 +424,26 @@ onUnmounted(() => {
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->
                 <template v-if="activePose">
-                    <img v-if="activePose.path.startsWith('data:image/')" :src="activePose.path" class="preview-full-img" />
+                    <img v-if="isImage(activePose.path)" :src="resolveImageUrl(activePose.path)" class="preview-full-img" />
                     <span v-else class="preview-base-avatar">{{ activePose.path }}</span>
                 </template>
                 <!-- ポーズがなければ服装 -->
                 <template v-else-if="activeOutfit">
-                    <img v-if="activeOutfit.path.startsWith('data:image/')" :src="activeOutfit.path" class="preview-full-img" />
+                    <img v-if="isImage(activeOutfit.path)" :src="resolveImageUrl(activeOutfit.path)" class="preview-full-img" />
                     <span v-else class="preview-base-avatar">{{ activeOutfit.path }}</span>
                 </template>
                 <!-- 何もなければベースアバター (front画像を優先) -->
                 <template v-else-if="activeMascot">
-                    <img v-if="defaultFrontAvatar && defaultFrontAvatar.path.startsWith('data:image/')" :src="defaultFrontAvatar.path" class="preview-full-img" />
-                    <img v-else-if="activeMascot.avatar.startsWith('data:image/')" :src="activeMascot.avatar" class="preview-full-img" />
+                    <img v-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-full-img" />
+                    <img v-else-if="isImage(activeMascot.avatar)" :src="resolveImageUrl(activeMascot.avatar)" class="preview-full-img" />
                     <span v-else class="preview-base-avatar">{{ activeMascot.avatar }}</span>
                 </template>
                 <span v-else class="preview-base-avatar">🤖</span>
                 
                 <!-- 表情レイヤー (これのみ重ね合わせ可能とする) -->
                 <img 
-                    v-if="activeExpressionEmoji.startsWith('data:image/')" 
-                    :src="activeExpressionEmoji" 
+                    v-if="isImage(activeExpressionEmoji)" 
+                    :src="resolveImageUrl(activeExpressionEmoji)" 
                     class="preview-layer-img expression"
                     :style="activeExpressionStyle"
                 />

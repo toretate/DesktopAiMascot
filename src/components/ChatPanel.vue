@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, computed } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useConfigStore } from '../store/config';
 import { useMascotStore } from '../store/mascot';
 import { storeToRefs } from 'pinia';
@@ -52,8 +52,8 @@ const sendMessage = async () => {
     // アクティブなマスコットとそのAI設定を取得
     const mascot = activeMascot.value;
     
-    // エンジン選択：マスコット個別の設定を優先し、無ければシステム設定を使用
-    const engine = mascot?.aiConfig?.chat?.engine || configStore.selectedEngine || 'gemini';
+    // エンジン選択：システム全般設定の選択エンジンを最優先とし、無ければマスコット個別設定を使用
+    const engine = configStore.selectedEngine || mascot?.aiConfig?.chat?.engine || 'gemini';
     
     // APIキーの取得
     let apiKey = '';
@@ -68,15 +68,16 @@ const sendMessage = async () => {
     const lmsEndpoint = configStore.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
     const voicevoxEndpointUrl = configStore.voicevoxEndpoint || 'http://localhost:50021';
 
-    // モデル名：マスコット個別のモデル名を優先
+    // モデル名：システム全般設定の選択モデルを最優先とし、無ければマスコット個別設定を使用
     let model = '';
-    if (mascot?.aiConfig?.chat?.model) {
-        model = mascot.aiConfig.chat.model;
-    } else {
-        if (engine === 'lmstudio') model = configStore.lmstudioModel || '';
-        else if (engine === 'gemini') model = configStore.geminiModel || 'gemini-2.0-flash-exp';
-        else if (engine === 'openai') model = configStore.openaiModel || 'gpt-4o';
-        else if (engine === 'anthropic') model = configStore.anthropicModel || 'claude-3-5-sonnet-latest';
+    if (engine === 'lmstudio') {
+        model = configStore.lmstudioModel || mascot?.aiConfig?.chat?.model || '';
+    } else if (engine === 'gemini') {
+        model = configStore.geminiModel || mascot?.aiConfig?.chat?.model || 'gemini-1.5-flash';
+    } else if (engine === 'openai') {
+        model = configStore.openaiModel || mascot?.aiConfig?.chat?.model || 'gpt-4o';
+    } else if (engine === 'anthropic') {
+        model = configStore.anthropicModel || mascot?.aiConfig?.chat?.model || 'claude-3-5-sonnet-latest';
     }
 
     // 音声話者：マスコット個別の話者IDを優先
@@ -105,6 +106,34 @@ const sendMessage = async () => {
     
     await nextTick();
     scrollToBottom();
+
+    // サーバー連携（WebSocket）の場合の送信処理
+    if (configStore.useServer) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            connectWebSocket();
+            const errorMsg = messages.value.find(m => m.id === aiMessageId);
+            if (errorMsg) {
+                errorMsg.text = 'サーバーに接続されていません。再接続を試みています。もう一度送信してください。';
+            }
+            mascotStore.setLoading(false);
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            event: 'chat-send',
+            data: {
+                message: userQuery,
+                apiKey: apiKey,
+                systemPrompt: systemPrompt,
+                model: model,
+                voicevoxSpeakerId: voicevoxSpeakerId,
+                voicevoxEndpoint: voicevoxEndpointUrl,
+                engine: engine,
+                lmstudioEndpoint: lmsEndpoint
+            }
+        }));
+        return;
+    }
 
     try {
         let reply = '';
@@ -204,10 +233,134 @@ const handleKeyDown = (event: KeyboardEvent) => {
     }
 };
 
+let socket: WebSocket | null = null;
+const isWsConnected = ref(false);
+
+const connectWebSocket = () => {
+    if (!configStore.useServer) {
+        disconnectWebSocket();
+        return;
+    }
+
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
+
+    const wsUrl = `ws://${configStore.serverHost}:${configStore.serverPort}`;
+    console.log(`[ChatPanel] Connecting to WebSocket: ${wsUrl}`);
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+        console.log('[ChatPanel] WebSocket connected');
+        isWsConnected.value = true;
+    };
+
+    socket.onmessage = async (event) => {
+        try {
+            const parsed = JSON.parse(event.data);
+            const { event: wsEvent, data } = parsed;
+
+            if (wsEvent === 'chat-status') {
+                if (data.status === 'thinking') {
+                    mascotStore.setLoading(true);
+                }
+            } else if (wsEvent === 'chat-response') {
+                const { text, emotion } = data;
+                
+                // メッセージを実際の応答で更新
+                updateLastMascotMessage(text);
+                
+                // 表情を変更
+                mascotStore.setEmotion(emotion);
+                if (window.electronAPI) {
+                    window.electronAPI.changeEmotion(emotion);
+                }
+
+                mascotStore.setLoading(false);
+                await nextTick();
+                scrollToBottom();
+            } else if (wsEvent === 'chat-audio') {
+                const { audio: base64Audio } = data;
+                if (base64Audio) {
+                    mascotStore.setSpeaking(true);
+                    const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+                    audio.onended = () => {
+                        mascotStore.setSpeaking(false);
+                    };
+                    audio.onerror = () => {
+                        mascotStore.setSpeaking(false);
+                    };
+                    await audio.play();
+                } else {
+                    mascotStore.setSpeaking(false);
+                }
+            } else if (wsEvent === 'chat-error') {
+                updateLastMascotMessage(`接続エラー: ${data.message}`);
+                mascotStore.setLoading(false);
+                mascotStore.setSpeaking(false);
+            }
+        } catch (e: any) {
+            console.error('[ChatPanel] WebSocket message parsing error:', e.message);
+        }
+    };
+
+    socket.onclose = () => {
+        console.log('[ChatPanel] WebSocket disconnected');
+        isWsConnected.value = false;
+        socket = null;
+        // 5秒後に自動再接続
+        if (configStore.useServer) {
+            setTimeout(connectWebSocket, 5000);
+        }
+    };
+
+    socket.onerror = (err) => {
+        console.error('[ChatPanel] WebSocket connection error:', err);
+    };
+};
+
+const disconnectWebSocket = () => {
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+    isWsConnected.value = false;
+};
+
+// mascot側メッセージの最後の一つを更新するヘルパー
+const updateLastMascotMessage = (text: string) => {
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+        if (messages.value[i].sender === 'mascot') {
+            messages.value[i].text = text;
+            break;
+        }
+    }
+};
+
 onMounted(async () => {
     // ストアの設定データを読み込み
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
+    }
+
+    // WebSocketの接続
+    connectWebSocket();
+});
+
+onUnmounted(() => {
+    disconnectWebSocket();
+});
+
+// 設定変更時の再接続トリガーの監視
+watch(() => configStore.useServer, (val) => {
+    if (val) connectWebSocket();
+    else disconnectWebSocket();
+});
+
+watch([() => configStore.serverHost, () => configStore.serverPort], () => {
+    if (configStore.useServer) {
+        disconnectWebSocket();
+        connectWebSocket();
     }
 });
 </script>

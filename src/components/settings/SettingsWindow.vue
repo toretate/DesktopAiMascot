@@ -35,6 +35,9 @@ const {
     chatFontFamily,
     mascotScale,
     alwaysOnTop,
+    useServer,
+    serverHost,
+    serverPort,
     mascots,
     activeMascotId
 } = storeToRefs(configStore);
@@ -182,6 +185,54 @@ const testVoicevoxConnection = async () => {
     }
     isTestingVoicevox.value = false;
 };
+
+// --- サーバー接続 疎通確認用の状態変数・関数 ---
+const isTestingServerConnection = ref(false);
+const serverConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
+const serverConnectionErrorMsg = ref('');
+
+const testServerConnection = async () => {
+    isTestingServerConnection.value = true;
+    serverConnectionState.value = 'idle';
+    serverConnectionErrorMsg.value = '';
+    
+    if (window.electronAPI && window.electronAPI.testServerConnection) {
+        try {
+            const result = await window.electronAPI.testServerConnection(serverHost.value, serverPort.value);
+            if (result.success) {
+                serverConnectionState.value = 'success';
+            } else {
+                serverConnectionState.value = 'failed';
+                serverConnectionErrorMsg.value = result.error || '接続に失敗しました。';
+            }
+        } catch (e: any) {
+            serverConnectionState.value = 'failed';
+            serverConnectionErrorMsg.value = '通信エラーが発生しました。';
+        }
+    } else {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        serverConnectionState.value = 'success';
+    }
+    isTestingServerConnection.value = false;
+};
+
+const serverConnectionClass = computed(() => {
+    if (serverConnectionState.value === 'success') return 'status-success';
+    if (serverConnectionState.value === 'failed') return 'status-failed';
+    return 'status-idle';
+});
+
+const serverConnectionIcon = computed(() => {
+    if (serverConnectionState.value === 'success') return 'pi pi-check-circle text-green-400';
+    if (serverConnectionState.value === 'failed') return 'pi pi-times-circle text-red-400';
+    return 'pi pi-info-circle text-gray-400';
+});
+
+const serverConnectionText = computed(() => {
+    if (serverConnectionState.value === 'success') return '接続成功！サーバーは稼働しています。';
+    if (serverConnectionState.value === 'failed') return `接続失敗: ${serverConnectionErrorMsg.value}`;
+    return 'ホストとポートを入力して疎通テストを行ってください。';
+});
 
 // 疎通確認ステータスに応じた動的クラスおよびテキスト
 const connectionClass = computed(() => {
@@ -611,6 +662,45 @@ const menuItems = ref([
                                     />
                                 </div>
 
+                                <!-- サーバー連携設定 -->
+                                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-purple-600 flex align-items-center gap-2">
+                                    <i class="pi pi-server text-purple-500"></i>
+                                    <span>サーバー連携設定 (マルチデバイス・軽量化)</span>
+                                </div>
+
+                                <div class="form-field mt-2 flex align-items-center gap-2">
+                                    <input type="checkbox" id="useServer" v-model="useServer" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                                    <label for="useServer" class="font-medium cursor-pointer ml-2">外部サーバーと連携する (クライアント＆サーバ構成を有効化)</label>
+                                </div>
+
+                                <div v-if="useServer" class="form-field mt-3 flex flex-column gap-3">
+                                    <div class="flex gap-3">
+                                        <div class="flex-1">
+                                            <label class="font-medium">サーバーホスト (IPアドレス / ドメイン)</label>
+                                            <InputText v-model="serverHost" placeholder="例: localhost または 192.168.1.10" class="w-full mt-1" />
+                                        </div>
+                                        <div style="width: 150px;">
+                                            <label class="font-medium">ポート番号</label>
+                                            <input v-model.number="serverPort" type="number" placeholder="例: 3000" class="p-inputtext p-component w-full mt-1" />
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-content-end mt-1">
+                                        <Button 
+                                            label="接続テストを実行" 
+                                            icon="pi pi-sync" 
+                                            class="p-button-outlined p-button-sm"
+                                            :loading="isTestingServerConnection"
+                                            @click="testServerConnection" 
+                                        />
+                                    </div>
+
+                                    <div class="connection-status mt-1" :class="serverConnectionClass">
+                                        <i :class="serverConnectionIcon"></i>
+                                        <span class="ml-2">{{ serverConnectionText }}</span>
+                                    </div>
+                                </div>
+
                                 <div class="flex justify-content-end mt-4">
                                     <Button 
                                         :label="saveStatus" 
@@ -839,18 +929,23 @@ const menuItems = ref([
 
 /* 左サイドバー */
 .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: 240px;
     background: #0f172a; /* ダークネイビー (コントラスト用) */
     color: #cbd5e1;
     display: flex;
     flex-direction: column;
     padding: 1.5rem 1rem;
-    transition: width 0.3s ease;
-    flex-shrink: 0;
-    z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
 }
 .sidebar.collapsed {
     width: 72px;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
 }
 
 .brand h2 {
@@ -920,6 +1015,7 @@ const menuItems = ref([
     flex-grow: 1;
     overflow-y: auto;
     padding: 2rem;
+    margin-left: 72px; /* 折りたたみ時のサイドバー幅分の固定余白を確保してオーバーレイ化 */
 }
 
 .content-container {
