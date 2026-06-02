@@ -153,7 +153,14 @@ wss.on('connection', (ws) => {
                     lmstudioEndpoint
                 } = data;
 
-                console.log(`[WS] chat-send received (Engine: ${engine || 'gemini'}): "${message}"`);
+                console.log(`=========================================`);
+                console.log(`[WS] chat-send received!`);
+                console.log(` - Message: "${message}"`);
+                console.log(` - Engine: "${engine}"`);
+                console.log(` - Model: "${model}"`);
+                console.log(` - API Key: ${apiKey ? '***(設定あり)***' : '(設定なし)'}`);
+                console.log(` - LM Studio Endpoint: "${lmstudioEndpoint}"`);
+                console.log(`=========================================`);
 
                 // 1. 考え中ステータスをプッシュ
                 ws.send(JSON.stringify({
@@ -173,6 +180,8 @@ wss.on('connection', (ws) => {
                         const apiBase = lmstudioEndpoint || defaultEndpoint;
                         const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
                         const targetModel = model || 'unspecified';
+
+                        console.log(`[WS] Routing to LM Studio: ${url} (Model: ${targetModel})`);
 
                         const response = await fetch(url, {
                             method: 'POST',
@@ -198,8 +207,10 @@ wss.on('connection', (ws) => {
                         reply = resJson.choices?.[0]?.message?.content || '';
                     } else {
                         // Gemini への接続
-                        const targetModel = model || 'gemini-2.0-flash-exp';
+                        const targetModel = model || 'gemini-1.5-flash';
                         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+
+                        console.log(`[WS] Routing to Gemini: ${geminiUrl} (Model: ${targetModel})`);
 
                         const response = await fetch(geminiUrl, {
                             method: 'POST',
