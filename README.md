@@ -1,6 +1,6 @@
 # Desktop AI Mascot
 
-デスクトップ上に常駐するAIマスコットアプリケーションです。C#とWPFで構築されており、ローカルLLM（LM Studio）や音声合成サービス（Style-Bert-VITS2）と連携して、キャラクターとの対話を楽しむことができます。
+デスクトップ上に常駐するAIマスコットアプリケーションです。C#とGodotで構築されており、ローカルLLM（LM Studio）や音声合成サービス（Style-Bert-VITS2）と連携して、キャラクターとの対話を楽しむことができます。
 
 ## 主な機能
 
@@ -19,10 +19,10 @@
 - **.NET**: .NET 8.0以降
 - **外部サービス**（任意）:
   - チャット
-      - LM Studio
-      - Foundry Local
+	  - LM Studio
+	  - Foundry Local
   - Text-To-Speach(TTS)（音声合成）
-      - Style-Bert-VITS2（音声合成を使用する場合）
+	  - Style-Bert-VITS2（音声合成を使用する場合）
 
 ## インストールと実行
 
@@ -30,12 +30,12 @@
 
 1. [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) をインストール
 2. （任意）LLMの用意
-    - [LM Studio](https://lmstudio.ai/) をインストールしてローカルでLLMを実行
-    - [Foundry Local](https://learn.microsoft.com/ja-jp/azure/ai-foundry/foundry-local/get-started?view=foundry-classic) をインストールし、サービス開始
-        - [10分あればFoundry LocalをインストールしてローカルLLMで遊べるようになります](https://qiita.com/yoshiwatanabe/items/0b016c75541483fd7f17)
-        - [Foundry Localをさわってみた](https://zenn.dev/headwaters/articles/546f40c1adbd15)
+	- [LM Studio](https://lmstudio.ai/) をインストールしてローカルでLLMを実行
+	- [Foundry Local](https://learn.microsoft.com/ja-jp/azure/ai-foundry/foundry-local/get-started?view=foundry-classic) をインストールし、サービス開始
+		- [10分あればFoundry LocalをインストールしてローカルLLMで遊べるようになります](https://qiita.com/yoshiwatanabe/items/0b016c75541483fd7f17)
+		- [Foundry Localをさわってみた](https://zenn.dev/headwaters/articles/546f40c1adbd15)
 3. （任意）TTSの用意
-    - [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) をインストールして音声合成サーバーを実行
+	- [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) をインストールして音声合成サーバーを実行
 
 ＊画像生成、動画生成などは未実装です。今後のバージョンで対応予定です。
 ＊キャラクター追加用のコンフィグや画像生成は今後のバージョンで対応予定です。
@@ -185,7 +185,7 @@ DesktopAiMascot/
 │   ├── MascotAnimationManager.cs # アニメーション管理
 │   └── MascotConfigIO.cs         # 設定の読み書き
 └── assets/                        # リソースファイル
-    └── icons/                     # アイコン画像
+	└── icons/                     # アイコン画像
 ```
 
 ## 技術仕様
@@ -234,4 +234,3 @@ DesktopAiMascot/
 - **YamlDotNet** (MIT License)
 
 詳細なライセンス情報は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
-

@@ -1,0 +1,6 @@
+{
+    // Godot Tools 拡張機能: Godot エディタ(コンソール版)のパス
+    "godotTools.editorPath.godot4": "c:\\Free\\Godot_v4.6.1-stable_mono_win64\\Godot_v4.6.1-stable_mono_win64\\Godot_v4.6.1-stable_mono_win64_console.exe",
+    // C# Tools for Godot: デバッグ時にアタッチするポート (Godot デフォルト: 23685)
+    "godotTools.gdscriptLSP.serverPort": 6005
+}

@@ -1,0 +1,113 @@
+AI Agent Instruction: Mascot Settings Dialog UI Implementation
+1. 概要と基本レイアウト (Overview & Base Layout)
+
+本タスクは、チャットマスコットアプリの「設定ダイアログ（Settings Dialog）」のUI実装である。
+洗練されたモダンでクリーンなライトテーマのデザインとし、すべてのコンポーネントはウィンドウのサイズ変更に柔軟に追従（レスポンシブ対応）しなければならない。
+📁 ノード階層構造の基本方針
+
+    Root (Window または AcceptDialog / PopupPanel): 初期サイズは 1024x768 程度を想定。最小サイズ（Min Size）を設定し、極端な縮小によるレイアウト崩れを防ぐこと。
+
+    └── MarginContainer (全体の余白): Theme Overrides/Constants で 16px〜20px の内側余白（Padding）を確保。
+
+        └── HBoxContainer (メインの横並び配置): 画面を左・中・中央右・右の4カラム構造に分割する。
+
+2. カラム別レイアウト・レスポンシブ仕様 (Columns & Responsiveness)
+
+画面は左から順に以下の4つのエリアで構成する。ウィンドウ幅（Width）が拡張された際、どのエリアが伸縮するか（Size Flags）を厳密に制御すること。
+① 左端：メインナビゲーション（Mascot, Chat AI...）
+
+    使用ノード: VBoxContainer または ItemList（背景透過・枠なし設定）
+
+    サイズ変更挙動 (Size Flags):
+
+        Horizontal: Shrink Begin（固定幅、拡張しない。幅目安: 160px〜180px）
+
+        Vertical: Expand Fill
+
+    スタイル:
+
+        選択されているアイテム（現在は「Mascot」）は、淡い青色の角丸背景（StyleBoxFlat）と、左端にアクセントカラーの縦線を配置する。
+
+② 中央左：マスコット一覧リスト（スクロールエリア）
+
+    使用ノード: VBoxContainer の中に ScrollContainer、その子に VBoxContainer（アイテム並び用）
+
+    縦スクロール仕様:
+
+        ScrollContainer は Horizontal Scroll Mode = Disabled（横スクロール禁止）、Vertical Scroll Mode = Auto（必要な場合のみ縦スクロール表示）とする。
+
+        スクロールバー（VScrollBar）のカスタムテーマを設定し、標準の無骨なバーではなく、細めで角丸のスマートなデザインにすること。
+
+    リストアイテム（default, metan, miku...）:
+
+        各アイテムは PanelContainer（または Button）でカプセル化し、白背景・薄い影（Shadow）・角丸（Corner Radius = 8）を持つカード型にする。
+
+        ホバー時、選択時（現在は「miyako」）で視覚的フィードバック（薄いブルーのハイライトやボーダーライン）を返すこと。
+
+    下部固定ボタン: リストの最下部（スクロール領域の外）に「Add」ボタンを固定配置する。
+
+    サイズ変更挙動 (Size Flags):
+
+        Horizontal: Shrink Begin（固定幅、拡張しない。幅目安: 220px）
+
+        Vertical: Expand Fill
+
+③ 中央右：キャラクター大型プレビュー（新規追加セクション）
+
+    使用ノード: PanelContainer 💡内に TextureRect
+
+    サイズ変更挙動 (Size Flags):
+
+        Horizontal: Expand Fill（ウィンドウが横に広がった際、このエリアが最も引き伸ばされる）
+
+        Vertical: Expand Fill
+
+    画像表示仕様:
+
+        TextureRect の Expand Mode は Keep Aspect Centered（アスペクト比を維持して中央表示）に設定し、ウィンドウが伸縮してもキャラクターの比率が絶対に崩れないようにすること。
+
+        背景は白またはごく薄いグレーの大きな角丸プレビュー枠とする。
+
+④ 右端：詳細設定・操作パネル（miyako, Voice Settings...）
+
+    使用ノード: VBoxContainer
+
+    サイズ変更挙動 (Size Flags):
+
+        Horizontal: Shrink End または固定幅設定（幅目安: 320px〜360px）
+
+        Vertical: Expand Fill
+
+    コンポーネント構成:
+
+        テキストエリア: 「名前（大文字・太字）」「現在の音声設定」「音声スタイル」を適切なマージン（VSeparator や Constants/Separation）を空けて垂直に配置。文字サイズにメリハリをつけること。
+
+        ボタンエリア: 下部に「Edit」「Generate Emotes」「Remove Background」の3つのボタンを配置。
+
+            Edit ボタン：最も重要なアクション（プライマリ）。青などのアクセントカラーで塗りつぶし、アイコンを左側に配置。
+
+            Generate Emotes / Remove Background ボタン：セカンダリアクション。枠線のみ（アウトライン）または薄いカラーにし、主役のEditボタンより目立たせない。
+
+3. スタイリング・テーマ共通仕様 (Styling & Theme)
+
+Godotの Theme リソース、または各ノードの Theme Overrides を使用して以下を適用すること。
+
+    フォント: 視認性の高いシステムサンセリフフォント（例: Segoe UI, Noto Sans CJK JP 等）を指定。アンチエイリアスを有効化すること。
+
+    角丸 (Corner Radius): すべてのパネル、カード、ボタンの StyleBoxFlat において、Corner Radius を 8px（ボタンは 6px）に統一し、柔らかいモダンな印象を与えること。
+
+    カラーパレット:
+
+        ベース背景: #EFEFF4（あるいはアプリアイコンに合わせた非常に淡いグラデーション）
+
+        カード・パネル背景: #FFFFFF
+
+        テキスト（主）: #1A1A1A
+
+        テキスト（副）: #666666
+
+        アクセント（選択・プライマリ）: #3478F6（鮮やかなシステムブルー）
+
+🤖 エージェントへの出力要求 (Output Requirement)
+
+上記仕様を満たす Godotのシーンファイル（.tscn）の構造定義、または GDScriptによる動的なUI構築・コンテナ制御のコード を生成してください。特に各コンテナの size_flags_horizontal と size_flags_vertical の設定値が上記指示通りになっていることを確認してください。

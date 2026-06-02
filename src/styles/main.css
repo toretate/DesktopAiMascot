@@ -1,0 +1,47 @@
+@import "primeflex/primeflex.css";
+@import "primeicons/primeicons.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* グローバルフォントおよび基本変数の定義 */
+:root {
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: transparent; /* マスコット描画のためにデフォルト透過 */
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    place-content: center;
+    min-width: 320px;
+    min-height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+}
+
+/* 透過ウィンドウでのドラッグ領域の設定（一部要素のみドラッグ可能にする場合） */
+.drag-area {
+    -webkit-app-region: drag;
+}
+
+.no-drag {
+    -webkit-app-region: no-drag;
+}

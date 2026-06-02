@@ -1,16 +1,46 @@
 {
-    "version": "0.2.1",
+    "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (console)",
-            "type": "coreclr",
+            "name": "Electron: All (Vite + Electron)",
+            "type": "node",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net8.0-windows/win-x64/DesktopAiMascot.dll",
-            "args": [],
             "cwd": "${workspaceFolder}",
-            "console": "internalConsole",
-            "stopAtEntry": false
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd",
+            "args": [
+                "${workspaceFolder}/dist-electron/main.js"
+            ],
+            "preLaunchTask": "npm: dev",
+            "env": {
+                "VITE_DEV_SERVER_URL": "http://localhost:5173",
+                "START_SETTINGS": "false"
+            },
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/dist-electron/**/*.js"
+            ]
+        },
+        {
+            "name": "Server: Dev (tsx)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/server",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "tsx",
+                "watch",
+                "src/index.ts"
+            ],
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Mascot: Server + Client (同時起動)",
+            "configurations": [
+                "Server: Dev (tsx)",
+                "Electron: All (Vite + Electron)"
+            ]
         }
     ]
 }

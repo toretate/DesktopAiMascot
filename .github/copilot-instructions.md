@@ -58,6 +58,7 @@
 - [x] テストコードのメソッド名はテスト対象のメソッド名と、テスト内容を日本語で記述する
 - [x] マスコット固有の設定値は各マスコットの config.yaml に保存する。カバー画像やアニメーション設定、音声設定など。
 - [x] アプリケーションの設定値(ウィンドウ位置、現在の選択マスコットなど)は SystemConfig を使用して管理する
+- [x] Godot をコマンドラインから実行する際は、必ず `--headless` オプションを付与すること。
 
 # Comfy Workflow
 - [x] Comfy Workflow の ID 指定のセパレータ文字は":"です。例1) "10" 例2) "29:40" 
@@ -73,13 +74,14 @@
 	* 前回の位置を記憶し、次回起動時に同じ位置に表示する。
 * システムトレイに常駐し、右クリックメニューから表示/非表示や終了ができる。
 
+# 仕様書
 
-# コントロール配置
-
-* 右半分に Mascot を配置。マスコットの描画とアニメーションを担当。
-    * 背景は透過に設定する
-* 左半分に InteractionPanel を配置。ユーザーとの対話を担当。
-    * 背景を透過に設定する
-	* ユーザーとの対話処理は、LINEの用に吹き出し形式で表示する
-	* 最下にユーザーのテキスト入力欄を用意する。ENTERキーで送信する。SHIFT+ENTERで改行する。
-	* キャラクターとの対話メッセージは、ChatAiService を用いて生成する
+* デザインガイドラインは docs/DESIGN_GUIDELINES.md に記載します
+* アプリケーションの全体的な仕様は docs/specs/Application.spec.md に記載します
+* マスコット編集画面の仕様は docs/specs/マスコット編集画面仕様書.md に記載します
+* マスコット編集画面のレイアウト仕様は docs/specs/マスコット編集画面レイアウト仕様書.md に記載します
+* Chat AI 設定画面の仕様は docs/specs/ChatAIConfigWindow.spec.md に記載します
+* 音声 AI 設定画面の仕様は docs/specs/VoiceAIConfigWindow.spec.md に記載します
+* 画像生成 AI 設定画面の仕様は docs/specs/ImageGenAIConfigWindow.spec.md に記載します
+* 動画生成 AI 設定画面の仕様は docs/specs/VideoGenAIConfigWindow.spec.md に記載します
+* API KEY 設定画面の仕様は docs/specs/ApiKeyConfigWindow.spec.md に記載します
