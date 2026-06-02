@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 設定画面を開くリクエストを送信
     openSettings: () => ipcRenderer.send('open-settings'),
     
+    // マスコットのサイズ変更を送信
+    setMascotScale: (scale: number) => ipcRenderer.send('set-mascot-scale', scale),
+    
     // マウス透過状態の切り替えを送信 (ignore: true でマウスイベントを透過)
     setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', ignore),
     
@@ -41,6 +44,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getVoicevoxSpeakers: (endpoint: string) =>
         ipcRenderer.invoke('get-voicevox-speakers', endpoint),
     
+    // AIによる表情スプライト生成
+    generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string, label: string }[], userPromptTemplate: string, engine?: string, model?: string) =>
+        ipcRenderer.invoke('generate-mascot-expressions', base64Image, apiKey, emotions, userPromptTemplate, engine, model),
+        
+    // 利用可能なImagenモデルをAPIで取得する
+    getImagenModels: (apiKey: string) =>
+        ipcRenderer.invoke('get-imagen-models', apiKey),
+        
     // Gemini Visionによるスプライトシート解析
     analyzeSpriteSheet: (base64Image: string, apiKey: string) =>
         ipcRenderer.invoke('analyze-sprite-sheet', base64Image, apiKey),

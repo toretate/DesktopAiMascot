@@ -9,14 +9,17 @@ import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
 import ExpressionEditorModal from './ExpressionEditorModal.vue';
 import EmotionAssignmentModal from './EmotionAssignmentModal.vue';
 import ImageCropModal from './ImageCropModal.vue';
+import AiExpressionGeneratorModal from './AiExpressionGeneratorModal.vue';
 
 interface MascotAsset {
     id: string;
     name: string;
     path: string;
+    originalPath?: string;
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    expressions?: MascotAsset[];
 }
 
 interface MascotData {
@@ -87,13 +90,18 @@ const activePose = computed(() => {
 
 const activeExpression = ref<MascotAsset | null>(null);
 
+const currentExpressions = computed(() => {
+    if (!editingMascot.value) return [];
+    return activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
+});
+
 const editingMascotImageSet = computed(() => {
     const mascot = editingMascot.value;
     if (!mascot) return null;
     
     const assets = [
         ...(mascot.assets?.outfits || []),
-        ...(mascot.assets?.expressions || []),
+        ...currentExpressions.value,
         ...(mascot.assets?.poses || [])
     ];
     
@@ -160,7 +168,9 @@ const selectMascot = (mascot: MascotData) => {
     }
     emit('update:activeMascotId', mascot.id);
     editingMascot.value = JSON.parse(JSON.stringify(mascot));
-    activeExpression.value = mascot.assets.expressions.find(e => e.name === '通常') || mascot.assets.expressions[0] || null;
+    const currentMascotOutfit = mascot.assets.outfits.find((o: any) => o.id === mascot.currentOutfitId) || mascot.assets.outfits[0] || null;
+    const currentMascotExpressions = currentMascotOutfit?.expressions || mascot.assets.expressions || [];
+    activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     activePreviewExpression.value = activeExpression.value;
 };
 
@@ -168,7 +178,9 @@ const selectMascot = (mascot: MascotData) => {
 if (props.mascots.length > 0) {
     const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
     editingMascot.value = JSON.parse(JSON.stringify(active));
-    activeExpression.value = editingMascot.value.assets.expressions.find(e => e.name === '通常') || editingMascot.value.assets.expressions[0] || null;
+    const currentMascotOutfit = editingMascot.value.assets.outfits.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets.outfits[0] || null;
+    const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets.expressions || [];
+    activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     activePreviewExpression.value = activeExpression.value;
 }
 
@@ -190,13 +202,16 @@ const addOutfitImage = async () => {
             editingMascot.value.assets.outfits = [];
         }
         
-        const newOutfit: MascotAsset = {
+        const defaultExpressions = JSON.parse(JSON.stringify(editingMascot.value.assets.expressions || []));
+
+        const newOutfit: MascotAsset & { expressions?: MascotAsset[] } = {
             id: 'outfit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             name: '衣装_' + (editingMascot.value.assets.outfits.length + 1),
             path: result.path,
             offsetX: 0,
             offsetY: 0,
-            scale: 1.0
+            scale: 1.0,
+            expressions: defaultExpressions
         };
         
         editingMascot.value.assets.outfits.push(newOutfit);
@@ -228,6 +243,7 @@ const deleteOutfit = (outfit: MascotAsset) => {
 const isEditingExpressionsModal = ref(false);
 const isAssigningEmotionsModal = ref(false);
 const isCropModalActive = ref(false);
+const isAiGeneratingModalActive = ref(false);
 
 const cropImageSrc = ref('');
 const selectedCropExpression = ref<MascotAsset | null>(null);
@@ -244,7 +260,8 @@ const openExpressionEditModalWithExpression = (expr: MascotAsset) => {
 
 const closeExpressionEditModal = async () => {
     isEditingExpressionsModal.value = false;
-    activeExpression.value = editingMascot.value.assets.expressions.find(e => e.name === '通常') || editingMascot.value.assets.expressions[0] || null;
+    const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets.expressions || [];
+    activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     
     // 一括保存
     const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
@@ -267,15 +284,18 @@ const handleClearExpression = (slot: MascotAsset) => {
 const handleCropCurrent = (slot: MascotAsset) => {
     if (slot.path) {
         selectedCropExpression.value = slot;
-        cropImageSrc.value = slot.path;
+        cropImageSrc.value = slot.originalPath || slot.path;
         isCropModalActive.value = true;
     }
 };
 
-const handleCropNew = async () => {
+const handleCropNew = async (slot?: MascotAsset) => {
     if (!window.electronAPI) return;
     const result = await window.electronAPI.selectLocalImage();
     if (result && result.success) {
+        if (slot) {
+            selectedCropExpression.value = slot;
+        }
         cropImageSrc.value = result.path;
         isCropModalActive.value = true;
     }
@@ -283,9 +303,11 @@ const handleCropNew = async () => {
 
 const handleCropDone = (croppedBase64: string) => {
     // もし切り出し対象の表情スロットが選択されていれば、そのスロットに割り当てる
-    const targetSlot = selectedCropExpression.value || editingMascot.value.assets.expressions.find(e => e.name === '通常') || editingMascot.value.assets.expressions[0];
+    const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets.expressions || [];
+    const targetSlot = selectedCropExpression.value || currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0];
     if (targetSlot) {
         targetSlot.path = croppedBase64;
+        targetSlot.originalPath = cropImageSrc.value;
     }
     
     isCropModalActive.value = false;
@@ -294,15 +316,24 @@ const handleCropDone = (croppedBase64: string) => {
 };
 
 const registeredExpressions = computed(() => {
-    if (!editingMascot.value || !Array.isArray(editingMascot.value.assets?.expressions)) return [];
-    return editingMascot.value.assets.expressions.filter(e => e.path) || [];
+    if (!editingMascot.value) return [];
+    const expressions = activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
+    return expressions.filter((e: any) => e.path) || [];
 });
 
 // AI表情インポート処理
-const importFromSpriteSheet = async () => {
+const importFromSpriteSheet = async (preloadedBase64?: string) => {
     if (!window.electronAPI) return;
-    const result = await window.electronAPI.selectLocalImage();
-    if (!result || !result.success) return;
+    
+    let imagePath = '';
+    
+    if (preloadedBase64) {
+        imagePath = preloadedBase64;
+    } else {
+        const result = await window.electronAPI.selectLocalImage();
+        if (!result || !result.success) return;
+        imagePath = result.path;
+    }
     
     isScanningSprite.value = true;
     
@@ -315,13 +346,13 @@ const importFromSpriteSheet = async () => {
             return;
         }
         
-        const scanResults = await window.electronAPI.analyzeSpriteSheet(result.path, apiKey);
+        const scanResults = await window.electronAPI.analyzeSpriteSheet(imagePath, apiKey);
         if (scanResults.error) {
             throw new Error(scanResults.error);
         }
         
         const img = new Image();
-        img.src = result.path;
+        img.src = imagePath;
         await new Promise((resolve) => (img.onload = resolve));
         
         scannedSprites.value = [];
@@ -364,8 +395,9 @@ const importFromSpriteSheet = async () => {
                 const translatedLabel = emotionTranslationMap[rawLabel.toLowerCase()] || rawLabel;
                 
                 // 自動分別
-                const targetSlot = editingMascot.value.assets.expressions.find(
-                    e => e.name.toLowerCase() === translatedLabel.toLowerCase()
+                const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
+                const targetSlot = currentMascotExpressions.find(
+                    (e: any) => e.name.toLowerCase() === translatedLabel.toLowerCase()
                 );
                 if (targetSlot) {
                     targetSlot.path = croppedBase64;
@@ -390,7 +422,8 @@ const importFromSpriteSheet = async () => {
 
 const closeAssigningEmotionsModal = async () => {
     isAssigningEmotionsModal.value = false;
-    activeExpression.value = editingMascot.value.assets.expressions.find(e => e.name === '通常') || editingMascot.value.assets.expressions[0] || null;
+    const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets.expressions || [];
+    activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     
     // 一括保存
     const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
@@ -514,11 +547,17 @@ const closeAssigningEmotionsModal = async () => {
                         @click="isAssigningEmotionsModal = true"
                     />
                     <Button 
+                        label="AI表情生成" 
+                        icon="pi pi-sparkles" 
+                        class="p-button-sm p-button-outlined p-button-primary"
+                        @click="isAiGeneratingModalActive = true"
+                    />
+                    <Button 
                         label="AIスプライトインポート" 
                         icon="pi pi-sparkles" 
                         class="p-button-sm p-button-outlined p-button-secondary"
                         :loading="isScanningSprite"
-                        @click="importFromSpriteSheet"
+                        @click="importFromSpriteSheet()"
                     />
                 </div>
 
@@ -531,7 +570,7 @@ const closeAssigningEmotionsModal = async () => {
                     
                     <div class="expression-grid-container pt-1" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 420px; overflow-y: auto; width: 100%;">
                         <div 
-                            v-for="expr in editingMascot.assets.expressions" 
+                            v-for="expr in currentExpressions" 
                             :key="expr.id"
                             class="expression-grid-cell"
                             :class="{
@@ -661,6 +700,7 @@ const closeAssigningEmotionsModal = async () => {
         :visible="isAssigningEmotionsModal"
         v-model:scanned-sprites="scannedSprites"
         :editing-mascot="editingMascot"
+        :active-outfit="activeOutfit"
         @close="closeAssigningEmotionsModal"
         @live-update="syncAndSave"
     />
@@ -671,6 +711,17 @@ const closeAssigningEmotionsModal = async () => {
         :image-src="cropImageSrc"
         @close="isCropModalActive = false"
         @crop="handleCropDone"
+    />
+
+    <!-- AI表情スプライト自動生成モーダル -->
+    <AiExpressionGeneratorModal 
+        :visible="isAiGeneratingModalActive"
+        :editing-mascot="editingMascot"
+        :default-front-avatar="defaultFrontAvatar"
+        :active-outfit="activeOutfit"
+        :gemini-api-key="geminiApiKey"
+        @close="isAiGeneratingModalActive = false"
+        @import-sprite="importFromSpriteSheet"
     />
 </template>
 

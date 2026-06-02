@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Button from 'primevue/button';
 
 interface MascotAsset {
     id: string;
     name: string;
     path: string;
+    expressions?: MascotAsset[];
 }
 
 interface MascotData {
@@ -20,6 +21,7 @@ const props = defineProps<{
     visible: boolean;
     scannedSprites: { id: string; name: string; path: string }[];
     editingMascot: MascotData;
+    activeOutfit?: MascotAsset | null;
 }>();
 
 const emit = defineEmits<{
@@ -27,6 +29,10 @@ const emit = defineEmits<{
     (e: 'update:scannedSprites', sprites: { id: string; name: string; path: string }[]): void;
     (e: 'live-update'): void;
 }>();
+
+const currentExpressions = computed(() => {
+    return props.activeOutfit?.expressions || props.editingMascot.assets?.expressions || [];
+});
 
 const localSelectedSprite = ref<{ id: string; name: string; path: string } | null>(null);
 
@@ -119,7 +125,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                 <div class="flex-1 overflow-y-auto pr-1">
                     <div class="grid-modal-slots flex flex-wrap gap-2 justify-content-start">
                         <div 
-                            v-for="slot in editingMascot.assets.expressions" 
+                            v-for="slot in currentExpressions" 
                             :key="slot.id"
                             class="assignment-slot-card border-round p-2 border-1 cursor-pointer transition-all flex align-items-center gap-2 bg-slate-50 border-gray-200"
                             :class="{

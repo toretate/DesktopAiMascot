@@ -12,10 +12,20 @@ export default defineConfig({
             {
                 // メインプロセスのエントリーポイント
                 entry: 'electron/main.ts',
+                onstart(options) {
+                    if (process.env.VSCODE_DEBUG) {
+                        console.log('VS Code Debug mode: Skip auto startup');
+                    } else {
+                        options.startup();
+                    }
+                },
             },
             {
                 // プリロードスクリプトのエントリーポイント
                 entry: 'electron/preload.ts',
+                onstart(options) {
+                    options.reload();
+                },
             },
         ]),
         renderer(),

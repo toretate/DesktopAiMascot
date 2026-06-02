@@ -5,6 +5,11 @@
             "label": "npm: dev",
             "type": "shell",
             "command": "npm.cmd run dev",
+            "options": {
+                "env": {
+                    "VSCODE_DEBUG": "true"
+                }
+            },
             "isBackground": true,
             "problemMatcher": {
                 "owner": "typescript",

@@ -236,6 +236,29 @@ const executeCrop = async () => {
     }
 };
 
+const resetCropArea = () => {
+    if (cropImageWidth.value > 0 && cropImageHeight.value > 0) {
+        // 画像全体の最大サイズ（正方形アスペクト比）で中央に配置する
+        const size = Math.min(cropImageWidth.value, cropImageHeight.value);
+        cropWidth.value = size;
+        cropHeight.value = size;
+        cropX.value = Math.round((cropImageWidth.value - size) / 2);
+        cropY.value = Math.round((cropImageHeight.value - size) / 2);
+    } else {
+        cropX.value = 50;
+        cropY.value = 50;
+        cropWidth.value = 120;
+        cropHeight.value = 120;
+    }
+};
+
+const executeResetToOriginal = () => {
+    if (props.imageSrc) {
+        // トリミングを行わずに、元の画像ソース（全体像）そのものを親に適用する
+        emit('crop', props.imageSrc);
+    }
+};
+
 onMounted(() => {
     // マウスアップイベントをグローバルで検知して安全にドラッグを終了する
     window.addEventListener('mouseup', onCropMouseUp);
@@ -305,9 +328,15 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="modal-footer flex justify-content-end gap-2 pt-2 border-top border-gray-200 mt-2">
-                <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm px-3" @click="emit('close')" />
-                <Button label="この範囲で切り抜く" icon="pi pi-check" class="p-button-primary p-button-sm px-4" @click="executeCrop" />
+            <div class="modal-footer flex justify-content-between gap-2 pt-2 border-top border-gray-200 mt-2">
+                <div class="flex gap-2">
+                    <Button label="範囲リセット" icon="pi pi-refresh" class="p-button-outlined p-button-secondary p-button-sm px-2" style="font-size: 11px;" @click="resetCropArea" title="切り抜き枠を最大範囲にリセットします" />
+                    <Button label="切り抜き解除 (元画像全体)" icon="pi pi-image" class="p-button-outlined p-button-info p-button-sm px-2" style="font-size: 11px;" @click="executeResetToOriginal" title="トリミングをせず、元の全体画像そのものを設定します" />
+                </div>
+                <div class="flex gap-2">
+                    <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm px-3" style="font-size: 11px;" @click="emit('close')" />
+                    <Button label="この範囲で切り抜く" icon="pi pi-check" class="p-button-primary p-button-sm px-4" style="font-size: 11px;" @click="executeCrop" />
+                </div>
             </div>
         </div>
     </div>

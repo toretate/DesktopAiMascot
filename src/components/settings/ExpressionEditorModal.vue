@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
 
@@ -7,9 +7,11 @@ interface MascotAsset {
     id: string;
     name: string;
     path: string;
+    originalPath?: string;
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    expressions?: MascotAsset[];
 }
 
 interface MascotData {
@@ -35,8 +37,12 @@ const emit = defineEmits<{
     (e: 'live-update'): void;
     (e: 'clear-expression', slot: MascotAsset): void;
     (e: 'crop-current', slot: MascotAsset): void;
-    (e: 'crop-new'): void;
+    (e: 'crop-new', slot?: MascotAsset): void;
 }>();
+
+const currentExpressions = computed(() => {
+    return props.activeOutfit?.expressions || props.editingMascot.assets?.expressions || [];
+});
 
 const selectedModalExpression = ref<MascotAsset | null>(null);
 
@@ -45,8 +51,9 @@ watch(
     () => props.visible,
     (newVal) => {
         if (newVal) {
-            if (props.editingMascot && props.editingMascot.assets?.expressions?.length > 0) {
-                selectedModalExpression.value = props.editingMascot.assets.expressions.find(e => e.name === '通常') || props.editingMascot.assets.expressions[0] || null;
+            const expressions = currentExpressions.value;
+            if (expressions && expressions.length > 0) {
+                selectedModalExpression.value = expressions.find((e: any) => e.name === '通常') || expressions[0] || null;
             } else {
                 selectedModalExpression.value = null;
             }
@@ -59,8 +66,11 @@ watch(
 watch(
     () => props.editingMascot,
     (newMascot) => {
-        if (props.visible && newMascot && newMascot.assets?.expressions?.length > 0) {
-            selectedModalExpression.value = newMascot.assets.expressions.find(e => e.name === '通常') || newMascot.assets.expressions[0] || null;
+        if (props.visible) {
+            const expressions = currentExpressions.value;
+            if (expressions && expressions.length > 0) {
+                selectedModalExpression.value = expressions.find((e: any) => e.name === '通常') || expressions[0] || null;
+            }
         }
     }
 );
@@ -89,6 +99,16 @@ const clearExpression = () => {
         emit('clear-expression', selectedModalExpression.value);
     }
 };
+
+const adjustScale = (delta: number) => {
+    if (selectedModalExpression.value) {
+        const current = selectedModalExpression.value.scale ?? 1.0;
+        let next = Math.round((current + delta) * 100) / 100;
+        next = Math.max(0.3, Math.min(2.0, next));
+        selectedModalExpression.value.scale = next;
+        handleLiveUpdate();
+    }
+};
 </script>
 
 <template>
@@ -105,10 +125,10 @@ const clearExpression = () => {
 
             <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1" style="min-height: 0;">
                 <!-- 左カラム: 表情スロット縦スリムリスト (幅240px、ラベルなし) -->
-                <div class="flex flex-column" style="width: 240px; min-width: 240px; height: 430px; overflow: hidden !important;">
+                <div class="flex flex-column" style="width: 240px; min-width: 240px; height: 570px; overflow: hidden !important;">
                     <div class="pr-1 expression-vertical-list">
                         <div 
-                            v-for="slot in editingMascot.assets.expressions" 
+                            v-for="slot in currentExpressions" 
                             :key="slot.id"
                             class="expression-vertical-item flex align-items-center gap-2 p-2 border-round cursor-pointer transition-all border-1"
                             :class="{
@@ -140,8 +160,8 @@ const clearExpression = () => {
                     <!-- プレビューと縦スライダーのコンテナ -->
                     <div class="flex-1 flex gap-3 align-items-center justify-content-center overflow-hidden">
                         <!-- プレビューカード (白飛びを防ぐための高級感のある市松模様背景) -->
-                        <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 430px;">
-                            <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 420px;">
+                        <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 570px;">
+                            <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 560px;">
                                 <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
                                 <template v-if="activePose && activePose.path.startsWith('data:image/')">
                                     <img :src="activePose.path" class="preview-full-img w-full h-full object-contain" />
@@ -193,11 +213,11 @@ const clearExpression = () => {
                         <!-- 縦スライダー (Y方向オフセット) -->
                         <div class="flex flex-column align-items-center gap-2" style="width: 40px;">
                             <span class="text-xxs text-slate-500 select-none font-bold">上 (Y-)</span>
-                            <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 310px;">
+                            <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 450px;">
                                 <Slider 
                                     v-model="selectedModalExpression.offsetY" 
-                                    :min="-150" 
-                                    :max="150" 
+                                    :min="-250" 
+                                    :max="250" 
                                     :step="1" 
                                     orientation="vertical"
                                     class="h-full vertical-slider"
@@ -217,16 +237,32 @@ const clearExpression = () => {
                                     <label class="text-xs font-semibold text-slate-700 select-none">横位置調整 (X)</label>
                                     <span class="text-xxs text-purple-600 font-mono font-bold">{{ selectedModalExpression.offsetX || 0 }}px</span>
                                 </div>
-                                <Slider v-model="selectedModalExpression.offsetX" :min="-150" :max="150" :step="1" @change="handleLiveUpdate" />
+                                <Slider v-model="selectedModalExpression.offsetX" :min="-250" :max="250" :step="1" @change="handleLiveUpdate" />
                             </div>
 
                             <!-- 拡大率スライダー (Scale) -->
                             <div class="flex-1 flex flex-column gap-1">
                                 <div class="flex justify-content-between align-items-center">
                                     <label class="text-xs font-semibold text-slate-700 select-none">拡大率 / スケール (S)</label>
-                                    <span class="text-xxs text-purple-600 font-mono font-bold">{{ (selectedModalExpression.scale || 1.0).toFixed(2) }}倍</span>
+                                    <div class="flex align-items-center gap-1 bg-purple-50 border-round px-2 py-0.5 border-1 border-purple-200 select-none">
+                                        <span class="text-xxs text-purple-600 font-mono font-bold">{{ (selectedModalExpression.scale || 1.0).toFixed(2) }}倍</span>
+                                        <div class="flex flex-column gap-0" style="line-height: 0.8;">
+                                            <i 
+                                                class="pi pi-chevron-up text-purple-400 hover:text-purple-600 cursor-pointer" 
+                                                style="font-size: 8px; padding: 1px;" 
+                                                @click="adjustScale(0.01)"
+                                                title="拡大率を0.01増やす"
+                                            ></i>
+                                            <i 
+                                                class="pi pi-chevron-down text-purple-400 hover:text-purple-600 cursor-pointer" 
+                                                style="font-size: 8px; padding: 1px;" 
+                                                @click="adjustScale(-0.01)"
+                                                title="拡大率を0.01減らす"
+                                            ></i>
+                                        </div>
+                                    </div>
                                 </div>
-                                <Slider v-model="selectedModalExpression.scale" :min="0.3" :max="2.5" :step="0.05" @change="handleLiveUpdate" />
+                                <Slider v-model="selectedModalExpression.scale" :min="0.3" :max="2.0" :step="0.05" @change="handleLiveUpdate" />
                             </div>
                         </div>
 
@@ -276,7 +312,7 @@ const clearExpression = () => {
                                     label="画像から切り出し" 
                                     icon="pi pi-file-import" 
                                     class="p-button-outlined p-button-success p-button-sm" 
-                                    @click="emit('crop-new')" 
+                                    @click="emit('crop-new', selectedModalExpression)" 
                                 />
                             </div>
                         </div>
@@ -335,8 +371,8 @@ const clearExpression = () => {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
-    height: 422px !important;
-    max-height: 422px !important;
+    height: 560px !important;
+    max-height: 560px !important;
     overflow-y: auto !important;
     scrollbar-width: thin;
     scrollbar-color: rgba(168, 85, 247, 0.4) transparent;

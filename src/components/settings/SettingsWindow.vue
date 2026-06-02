@@ -33,6 +33,8 @@ const {
     chatAlwaysOnTop,
     chatSendKey,
     chatFontFamily,
+    mascotScale,
+    alwaysOnTop,
     mascots,
     activeMascotId
 } = storeToRefs(configStore);
@@ -79,9 +81,15 @@ const voicevoxConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
 const voicevoxConnectionErrorMsg = ref('');
 const voicevoxSpeakers = ref<{ name: string; value: number }[]>([]);
 
-const alwaysOnTopOptions = ref([
+const mascotAlwaysOnTopOptions = ref([
     { name: '常に最前面に表示する', value: true },
     { name: '最前面に表示しない', value: false }
+]);
+
+const chatAlwaysOnTopOptions = ref([
+    { name: '常に最前面に表示する', value: true },
+    { name: '最前面に表示しない', value: false },
+    { name: 'マスコットと連動', value: 'sync' }
 ]);
 
 const sendKeyOptions = ref([
@@ -276,6 +284,15 @@ onMounted(async () => {
     } else {
         mascots.value.forEach(m => {
             m.assets.expressions = ensure28Expressions(m.assets.expressions);
+            if (Array.isArray(m.assets.outfits)) {
+                m.assets.outfits.forEach((o: any) => {
+                    if (!o.expressions) {
+                        o.expressions = JSON.parse(JSON.stringify(m.assets.expressions));
+                    } else {
+                        o.expressions = ensure28Expressions(o.expressions);
+                    }
+                });
+            }
         });
     }
 
@@ -311,6 +328,18 @@ const quitApp = () => {
     }
 };
 
+// --- マスコットサイズ調整用ハンドラー ---
+const updateMascotScale = () => {
+    if (window.electronAPI && window.electronAPI.setMascotScale) {
+        window.electronAPI.setMascotScale(mascotScale.value);
+    }
+};
+
+const changeScalePreset = (scale: number) => {
+    mascotScale.value = scale;
+    updateMascotScale();
+};
+
 // サイドバー開閉管理
 const isSidebarCollapsed = ref(true);
 
@@ -325,7 +354,7 @@ const handleMouseLeave = () => {
 const menuItems = ref([
     { name: 'マスコット', value: 'mascot', icon: 'pi pi-user' },
     { name: 'チャットAI', value: 'chat', icon: 'pi pi-comments' },
-    { name: 'チャットウィンドウ', value: 'chatwindow', icon: 'pi pi-window-maximize' },
+    { name: 'ウィンドウ設定', value: 'chatwindow', icon: 'pi pi-window-maximize' },
     { name: '音声AI', value: 'voice', icon: 'pi pi-volume-up' },
     { name: '画像AI', value: 'image', icon: 'pi pi-image' },
     { name: '動画AI', value: 'video', icon: 'pi pi-video' },
@@ -494,12 +523,52 @@ const menuItems = ref([
                     </Card>
                 </div>
 
-                <!-- パネル2.5: チャットウィンドウ -->
+                <!-- パネル2.5: ウィンドウ・ディスプレイ設定 -->
                 <div v-else-if="activeMenu === 'chatwindow'" class="panel-section">
                     <Card class="premium-card">
-                        <template #title>チャットウィンドウ設定</template>
+                        <template #title>ウィンドウ設定</template>
                         <template #content>
                             <div class="flex flex-column gap-4">
+                                <!-- マスコットウィンドウ設定 -->
+                                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
+                                    <i class="pi pi-user text-purple-500"></i>
+                                    <span>マスコットウィンドウ設定</span>
+                                </div>
+
+                                <div class="form-field">
+                                    <label class="font-medium flex justify-content-between">
+                                        <span>表示サイズ (スケール): {{ Math.round((mascotScale || 1.0) * 100) }}%</span>
+                                    </label>
+                                    <Slider v-model="mascotScale" :min="0.5" :max="2.0" :step="0.1" class="mt-2" @change="updateMascotScale" />
+                                </div>
+
+                                <div class="form-field">
+                                    <label class="font-medium">クイックサイズ変更</label>
+                                    <div class="flex gap-2 mt-2">
+                                        <Button label="50%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 0.5}" @click="changeScalePreset(0.5)" />
+                                        <Button label="75%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 0.75}" @click="changeScalePreset(0.75)" />
+                                        <Button label="100% (標準)" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 1.0}" @click="changeScalePreset(1.0)" />
+                                        <Button label="150%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 1.5}" @click="changeScalePreset(1.5)" />
+                                    </div>
+                                </div>
+
+                                <div class="form-field mt-3">
+                                    <label class="font-medium">最前面表示</label>
+                                    <Select 
+                                        v-model="alwaysOnTop" 
+                                        :options="mascotAlwaysOnTopOptions" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        class="w-full" 
+                                    />
+                                </div>
+
+                                <!-- チャットウィンドウ設定 -->
+                                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-purple-600 flex align-items-center gap-2">
+                                    <i class="pi pi-comments text-purple-500"></i>
+                                    <span>チャットウィンドウ設定</span>
+                                </div>
+
                                 <div class="form-field">
                                     <label class="font-medium flex justify-content-between">
                                         <span>不透明度 (透明度): {{ Math.round(chatOpacity * 100) }}%</span>
@@ -511,7 +580,7 @@ const menuItems = ref([
                                     <label class="font-medium">最前面表示</label>
                                     <Select 
                                         v-model="chatAlwaysOnTop" 
-                                        :options="alwaysOnTopOptions" 
+                                        :options="chatAlwaysOnTopOptions" 
                                         optionLabel="name" 
                                         optionValue="value" 
                                         class="w-full" 

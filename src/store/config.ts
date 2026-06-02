@@ -21,9 +21,13 @@ export interface AppConfig {
     
     // チャットウィンドウ設定
     chatOpacity: number;
-    chatAlwaysOnTop: boolean;
+    chatAlwaysOnTop: boolean | 'sync';
     chatSendKey: string;
     chatFontFamily: string;
+    
+    // マスコット設定
+    mascotScale: number;
+    alwaysOnTop: boolean;
     
     // マスコットデータ
     mascots: any[];
@@ -55,9 +59,13 @@ export const useConfigStore = defineStore('config', () => {
 
     // チャットウィンドウ設定
     const chatOpacity = ref(1.0);
-    const chatAlwaysOnTop = ref(true);
+    const chatAlwaysOnTop = ref<boolean | 'sync'>(true);
     const chatSendKey = ref('enter');
     const chatFontFamily = ref('sans-serif');
+    
+    // マスコット設定
+    const mascotScale = ref(1.0);
+    const alwaysOnTop = ref(true);
 
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
@@ -100,9 +108,18 @@ export const useConfigStore = defineStore('config', () => {
             temperature.value = configData.temperature !== undefined ? Number(configData.temperature) : 0.7;
             
             chatOpacity.value = configData.chatOpacity !== undefined ? Number(configData.chatOpacity) : 1.0;
-            chatAlwaysOnTop.value = configData.chatAlwaysOnTop !== undefined ? !!configData.chatAlwaysOnTop : true;
+            
+            if (configData.chatAlwaysOnTop === 'sync') {
+                chatAlwaysOnTop.value = 'sync';
+            } else {
+                chatAlwaysOnTop.value = configData.chatAlwaysOnTop !== undefined ? !!configData.chatAlwaysOnTop : true;
+            }
+            
             chatSendKey.value = configData.chatSendKey || 'enter';
             chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
+            
+            mascotScale.value = configData.mascotScale !== undefined ? Number(configData.mascotScale) : 1.0;
+            alwaysOnTop.value = configData.alwaysOnTop !== undefined ? !!configData.alwaysOnTop : true;
             
             mascots.value = configData.mascots || [];
             activeMascotId.value = configData.activeMascotId || '';
@@ -132,9 +149,20 @@ export const useConfigStore = defineStore('config', () => {
             
             const opacity = localStorage.getItem('chatOpacity');
             chatOpacity.value = opacity ? parseFloat(opacity) : 1.0;
-            chatAlwaysOnTop.value = localStorage.getItem('chatAlwaysOnTop') !== 'false';
+            
+            const savedChatAlwaysOnTop = localStorage.getItem('chatAlwaysOnTop');
+            if (savedChatAlwaysOnTop === 'sync') {
+                chatAlwaysOnTop.value = 'sync';
+            } else {
+                chatAlwaysOnTop.value = savedChatAlwaysOnTop !== 'false';
+            }
+            
             chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
             chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
+
+            const scale = localStorage.getItem('mascotScale');
+            mascotScale.value = scale ? parseFloat(scale) : 1.0;
+            alwaysOnTop.value = localStorage.getItem('alwaysOnTop') !== 'false';
 
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
@@ -166,6 +194,8 @@ export const useConfigStore = defineStore('config', () => {
             chatAlwaysOnTop: chatAlwaysOnTop.value,
             chatSendKey: chatSendKey.value,
             chatFontFamily: chatFontFamily.value,
+            mascotScale: Number(mascotScale.value),
+            alwaysOnTop: alwaysOnTop.value,
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value
         };
@@ -194,6 +224,8 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
         localStorage.setItem('chatSendKey', chatSendKey.value);
         localStorage.setItem('chatFontFamily', chatFontFamily.value);
+        localStorage.setItem('mascotScale', mascotScale.value.toString());
+        localStorage.setItem('alwaysOnTop', alwaysOnTop.value.toString());
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
     };
@@ -217,9 +249,11 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.temperature !== undefined) temperature.value = Number(newConfig.temperature);
         
         if (newConfig.chatOpacity !== undefined) chatOpacity.value = Number(newConfig.chatOpacity);
-        if (newConfig.chatAlwaysOnTop !== undefined) chatAlwaysOnTop.value = !!newConfig.chatAlwaysOnTop;
+        if (newConfig.chatAlwaysOnTop !== undefined) chatAlwaysOnTop.value = newConfig.chatAlwaysOnTop;
         if (newConfig.chatSendKey !== undefined) chatSendKey.value = newConfig.chatSendKey;
         if (newConfig.chatFontFamily !== undefined) chatFontFamily.value = newConfig.chatFontFamily;
+        if (newConfig.mascotScale !== undefined) mascotScale.value = Number(newConfig.mascotScale);
+        if (newConfig.alwaysOnTop !== undefined) alwaysOnTop.value = !!newConfig.alwaysOnTop;
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
@@ -246,6 +280,8 @@ export const useConfigStore = defineStore('config', () => {
         chatAlwaysOnTop,
         chatSendKey,
         chatFontFamily,
+        mascotScale,
+        alwaysOnTop,
         mascots,
         activeMascotId,
         activeMascot,

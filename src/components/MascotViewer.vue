@@ -15,7 +15,8 @@ const mascotStore = useMascotStore();
 const {
     activeMascot,
     mascots,
-    activeMascotId
+    activeMascotId,
+    mascotScale
 } = storeToRefs(configStore);
 
 const {
@@ -80,7 +81,7 @@ const activeExpression = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot) return null;
     
-    const expressions = mascot.assets?.expressions || [];
+    const expressions = activeOutfit.value?.expressions || mascot.assets?.expressions || [];
 
     // 1. プレビュー中なら指定されたアセットを強制表示
     if (previewState.value?.expressionId) {
@@ -204,9 +205,9 @@ const activeExpressionStyle = computed(() => {
         const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
         const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
         
-        // 表情エディタ（420px）とMascotViewer（180px）のスケール比率を適用して
+        // 表情エディタのベースサイズ（420px）とマスコットウィンドウ（512px）のスケール比率を適用して
         // 位置調整パラメータがデスクトップ上でも正確に再現されるように補正する。
-        const scaleFactor = 180 / 420;
+        const scaleFactor = 512 / 420;
         const scaledOx = ox * scaleFactor;
         const scaledOy = oy * scaleFactor;
         
@@ -221,6 +222,11 @@ const activeExpressionStyle = computed(() => {
 // 既定の正面画像
 const defaultFrontAvatar = computed(() => {
     return activeMascotImageSet.value?.getFrontImage() || null;
+});
+
+// トータルスケール値の計算 (余計な縮小スケールを廃止し、設定スライダーの scale 値を等倍基準としてそのまま適用)
+const totalMascotScale = computed(() => {
+    return mascotScale.value || 1.0;
 });
 
 const toggleChat = () => {
@@ -286,6 +292,32 @@ const onMouseUp = () => {
     }
 };
 
+// --- Ctrl + マウスホイールによるその場サイズ変更 ---
+const onWheel = (e: WheelEvent) => {
+    if (e.ctrlKey) {
+        e.preventDefault(); // 既定のズーム動作を抑制
+        
+        const scaleStep = 0.1;
+        const currentScale = configStore.mascotScale || 1.0;
+        let newScale = currentScale;
+        
+        if (e.deltaY < 0) {
+            // 上スクロール -> 拡大
+            newScale = Math.min(2.0, currentScale + scaleStep);
+        } else {
+            // 下スクロール -> 縮小
+            newScale = Math.max(0.5, currentScale - scaleStep);
+        }
+        
+        // 小数点第1位までに丸める (浮動小数点の誤差対策)
+        newScale = Math.round(newScale * 10) / 10;
+        
+        if (newScale !== currentScale && window.electronAPI && window.electronAPI.setMascotScale) {
+            window.electronAPI.setMascotScale(newScale);
+        }
+    }
+};
+
 // ---- Watchers ----
 // 感情変化のリアクティブ監視による演出アニメーション
 watch(() => mascotStore.currentEmotion, () => {
@@ -295,11 +327,32 @@ watch(() => mascotStore.currentEmotion, () => {
     }, 600);
 });
 
+// --- マウス透過の動的制御 ---
+const handleWindowMouseMove = (e: MouseEvent) => {
+    // ドラッグ中は透過処理をスキップしてドラッグ操作の追従を維持する
+    if (isDragging.value) return;
+
+    if (!window.electronAPI || !window.electronAPI.setIgnoreMouseEvents) return;
+    
+    const target = e.target as HTMLElement;
+    if (!target) return;
+    
+    // キャラクターのコンテナやコントロールパネル、またはそれらの内部の要素であるか判定
+    const isOnInteractiveElement = 
+        target.closest('.mascot-character') !== null || 
+        target.closest('.control-panel') !== null;
+    
+    window.electronAPI.setIgnoreMouseEvents(!isOnInteractiveElement);
+};
+
 onMounted(async () => {
     // ストアの設定データを初期ロード
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
     }
+
+    // マウス透過制御用のイベント登録
+    window.addEventListener('mousemove', handleWindowMouseMove);
 
     if (window.electronAPI) {
         // プレビュー状態の購読
@@ -326,6 +379,8 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+    window.removeEventListener('mousemove', handleWindowMouseMove);
+
     if (unsubscribePreview) {
         unsubscribePreview();
     }
@@ -337,8 +392,15 @@ onUnmounted(() => {
 
 <template>
     <div class="mascot-wrapper app-dark">
-        <!-- マスコットのキャラクター描画部分 -->
-        <div class="mascot-character" @mousedown="onMouseDown" @contextmenu.prevent="openSettings" @dragstart.prevent>
+        <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
+        <div 
+            class="mascot-character" 
+            :style="{ transform: `scale(${totalMascotScale})` }"
+            @mousedown="onMouseDown" 
+            @contextmenu.prevent="openSettings" 
+            @dragstart.prevent 
+            @wheel="onWheel"
+        >
             <div class="mascot-visual" :class="emotionClass">
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->
@@ -368,17 +430,33 @@ onUnmounted(() => {
                 />
                 <span v-else class="preview-layer expression" :style="activeExpressionStyle">{{ activeExpressionEmoji }}</span>
             </div>
-            <div class="hover-tip no-drag">右クリックで設定</div>
-        </div>
-        
-        <!-- コントロールボタン -->
-        <div class="control-panel no-drag">
-            <button class="control-btn" :class="{ active: isChatVisible }" @click="toggleChat" title="チャットを開く">
-                <i class="pi pi-comments"></i>
-            </button>
-            <button class="control-btn" @click="openSettings" title="設定画面を開く">
-                <i class="pi pi-cog"></i>
-            </button>
+
+            <!-- コントロールボタン (逆スケールを掛けて100%サイズを維持し、動的マージンで見た目上常に16pxの間隔をキープ) -->
+            <div 
+                class="control-panel no-drag"
+                :style="{ 
+                    transform: `scale(${1 / totalMascotScale})`,
+                    marginTop: `${16 / totalMascotScale}px`
+                }"
+            >
+                <button class="control-btn" :class="{ active: isChatVisible }" @click="toggleChat" title="チャットを開く">
+                    <i class="pi pi-comments"></i>
+                </button>
+                <button class="control-btn" @click="openSettings" title="設定画面を開く">
+                    <i class="pi pi-cog"></i>
+                </button>
+            </div>
+
+            <!-- hover-tip (右クリックで設定ヒント。逆スケールを適用してフォント縮小を防ぎます) -->
+            <div 
+                class="hover-tip no-drag" 
+                :style="{ 
+                    transform: `scale(${1 / totalMascotScale})`,
+                    marginTop: `${8 / totalMascotScale}px`
+                }"
+            >
+                右クリックで設定
+            </div>
         </div>
     </div>
 </template>
@@ -401,6 +479,8 @@ onUnmounted(() => {
     align-items: center;
     cursor: grab;
     user-select: none;
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
 }
 
 .mascot-character:active {
@@ -408,13 +488,13 @@ onUnmounted(() => {
 }
 
 .mascot-visual {
-    width: 180px;
-    height: 180px;
-    position: relative;
+    width: 512px;
+    height: 683px;
+    position: relative; /* フレックスコンテナ内のフロー配置に戻す */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 110px;
+    font-size: 250px;
     animation: float 4s ease-in-out infinite;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
 }
@@ -434,7 +514,7 @@ onUnmounted(() => {
 }
 
 .preview-layer.expression {
-    transform: translateY(-10px) scale(0.38);
+    transform: translateY(0px) scale(0.406);
     z-index: 4;
 }
 
@@ -449,7 +529,7 @@ onUnmounted(() => {
     color: rgba(255, 255, 255, 0.8);
     padding: 2px 8px;
     border-radius: 10px;
-    margin-top: 8px;
+    transform-origin: center top;
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -460,8 +540,6 @@ onUnmounted(() => {
 }
 
 .control-panel {
-    position: absolute;
-    bottom: 20px;
     display: flex;
     gap: 12px;
     background: rgba(18, 18, 18, 0.6);
@@ -470,6 +548,8 @@ onUnmounted(() => {
     padding: 6px 12px;
     border-radius: 20px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transform-origin: center top; /* 逆スケール変形の基準点を上部に設定し、マージン計算を安定化 */
+    z-index: 10;
 }
 
 .control-btn {
@@ -538,9 +618,8 @@ onUnmounted(() => {
     pointer-events: none;
 }
 .preview-layer-img.expression {
-    width: 60px;
-    height: 60px;
-    transform: translateY(-8px);
+    width: 171px;
+    height: 171px;
     z-index: 4;
 }
 

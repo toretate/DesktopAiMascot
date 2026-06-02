@@ -10,6 +10,7 @@ interface MascotAsset {
 export interface IElectronAPI {
     toggleChat: () => void;
     openSettings: () => void;
+    setMascotScale: (scale: number) => void;
     setIgnoreMouseEvents: (ignore: boolean) => void;
     dragWindow: (offset: { dx: number; dy: number }) => void;
     quitApp: () => void;
@@ -20,6 +21,8 @@ export interface IElectronAPI {
     getLmStudioModels: (endpoint: string) => Promise<{ success: boolean; models: string[]; error?: string }>;
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => Promise<string | null>;
     getVoicevoxSpeakers: (endpoint: string) => Promise<{ success: boolean; speakers: { name: string; value: number }[]; error?: string }>;
+    generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string; label: string }[], userPromptTemplate: string, engine?: string, model?: string) => Promise<{ success: boolean; imageBytes?: string; error?: string }>;
+    getImagenModels: (apiKey: string) => Promise<string[]>;
     analyzeSpriteSheet: (base64Image: string, apiKey: string) => Promise<any>;
     selectLocalImage: () => Promise<{ success: boolean; path: string; name: string } | null>;
     previewMascotState: (previewState: any) => void;
