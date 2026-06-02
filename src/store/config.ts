@@ -187,6 +187,25 @@ export const useConfigStore = defineStore('config', () => {
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
             activeMascotId.value = localStorage.getItem('activeMascotId') || '';
         }
+
+        // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
+        if (useServer.value) {
+            try {
+                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
+                console.log(`[Config] Fetching latest config from server: ${serverUrl}`);
+                const response = await fetch(serverUrl);
+                if (response.ok) {
+                    const resJson = await response.json();
+                    if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
+                        console.log('[Config] Config successfully loaded from server');
+                        // サーバーの設定でストアを上書き
+                        updateConfig(resJson.config);
+                    }
+                }
+            } catch (e: any) {
+                console.warn('[Config] Failed to fetch config from server, using local fallback:', e.message);
+            }
+        }
         
         isLoaded.value = true;
     };
@@ -224,6 +243,23 @@ export const useConfigStore = defineStore('config', () => {
 
         if (window.electronAPI) {
             await window.electronAPI.updateAppConfig(payload);
+        }
+
+        // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
+        if (useServer.value) {
+            try {
+                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
+                console.log(`[Config] Saving config to server: ${serverUrl}`);
+                await fetch(serverUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e: any) {
+                console.warn('[Config] Failed to save config to server:', e.message);
+            }
         }
 
         // localStorage へのバックアップ書き込み
