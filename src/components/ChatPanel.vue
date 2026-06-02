@@ -52,8 +52,8 @@ const sendMessage = async () => {
     // アクティブなマスコットとそのAI設定を取得
     const mascot = activeMascot.value;
     
-    // エンジン選択：マスコット個別の設定を優先し、無ければシステム設定を使用
-    const engine = mascot?.aiConfig?.chat?.engine || configStore.selectedEngine || 'gemini';
+    // エンジン選択：システム全般設定の選択エンジンを最優先とし、無ければマスコット個別設定を使用
+    const engine = configStore.selectedEngine || mascot?.aiConfig?.chat?.engine || 'gemini';
     
     // APIキーの取得
     let apiKey = '';
@@ -68,15 +68,16 @@ const sendMessage = async () => {
     const lmsEndpoint = configStore.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
     const voicevoxEndpointUrl = configStore.voicevoxEndpoint || 'http://localhost:50021';
 
-    // モデル名：マスコット個別のモデル名を優先
+    // モデル名：システム全般設定の選択モデルを最優先とし、無ければマスコット個別設定を使用
     let model = '';
-    if (mascot?.aiConfig?.chat?.model) {
-        model = mascot.aiConfig.chat.model;
-    } else {
-        if (engine === 'lmstudio') model = configStore.lmstudioModel || '';
-        else if (engine === 'gemini') model = configStore.geminiModel || 'gemini-2.0-flash-exp';
-        else if (engine === 'openai') model = configStore.openaiModel || 'gpt-4o';
-        else if (engine === 'anthropic') model = configStore.anthropicModel || 'claude-3-5-sonnet-latest';
+    if (engine === 'lmstudio') {
+        model = configStore.lmstudioModel || mascot?.aiConfig?.chat?.model || '';
+    } else if (engine === 'gemini') {
+        model = configStore.geminiModel || mascot?.aiConfig?.chat?.model || 'gemini-1.5-flash';
+    } else if (engine === 'openai') {
+        model = configStore.openaiModel || mascot?.aiConfig?.chat?.model || 'gpt-4o';
+    } else if (engine === 'anthropic') {
+        model = configStore.anthropicModel || mascot?.aiConfig?.chat?.model || 'claude-3-5-sonnet-latest';
     }
 
     // 音声話者：マスコット個別の話者IDを優先
