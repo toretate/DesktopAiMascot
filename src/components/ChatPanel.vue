@@ -126,7 +126,9 @@ const sendMessage = async () => {
                 systemPrompt: systemPrompt,
                 model: model,
                 voicevoxSpeakerId: voicevoxSpeakerId,
-                voicevoxEndpoint: voicevoxEndpointUrl
+                voicevoxEndpoint: voicevoxEndpointUrl,
+                engine: engine,
+                lmstudioEndpoint: lmsEndpoint
             }
         }));
         return;
