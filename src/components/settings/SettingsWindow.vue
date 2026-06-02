@@ -681,7 +681,7 @@ const menuItems = ref([
                                         </div>
                                         <div style="width: 150px;">
                                             <label class="font-medium">ポート番号</label>
-                                            <InputText v-model.number="serverPort" type="number" placeholder="例: 3000" class="w-full mt-1" />
+                                            <input v-model.number="serverPort" type="number" placeholder="例: 3000" class="p-inputtext p-component w-full mt-1" />
                                         </div>
                                     </div>
 
