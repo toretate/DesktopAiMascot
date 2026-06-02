@@ -929,18 +929,23 @@ const menuItems = ref([
 
 /* 左サイドバー */
 .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: 240px;
     background: #0f172a; /* ダークネイビー (コントラスト用) */
     color: #cbd5e1;
     display: flex;
     flex-direction: column;
     padding: 1.5rem 1rem;
-    transition: width 0.3s ease;
-    flex-shrink: 0;
-    z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
 }
 .sidebar.collapsed {
     width: 72px;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
 }
 
 .brand h2 {
@@ -1010,6 +1015,7 @@ const menuItems = ref([
     flex-grow: 1;
     overflow-y: auto;
     padding: 2rem;
+    margin-left: 72px; /* 折りたたみ時のサイドバー幅分の固定余白を確保してオーバーレイ化 */
 }
 
 .content-container {
