@@ -148,10 +148,12 @@ wss.on('connection', (ws) => {
                     systemPrompt, 
                     model, 
                     voicevoxSpeakerId, 
-                    voicevoxEndpoint 
+                    voicevoxEndpoint,
+                    engine,
+                    lmstudioEndpoint
                 } = data;
 
-                console.log(`[WS] chat-send received: "${message}"`);
+                console.log(`[WS] chat-send received (Engine: ${engine || 'gemini'}): "${message}"`);
 
                 // 1. 考え中ステータスをプッシュ
                 ws.send(JSON.stringify({
@@ -159,40 +161,72 @@ wss.on('connection', (ws) => {
                     data: { status: 'thinking' }
                 }));
 
-                // 2. Gemini APIリクエストの実行
-                const targetModel = model || 'gemini-2.0-flash-exp';
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
-
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 60000);
 
                 let reply = '';
                 try {
-                    const response = await fetch(geminiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ role: 'user', parts: [{ text: message }] }],
-                            systemInstruction: { parts: [{ text: systemPrompt || 'You are a helpful assistant.' }] }
-                        }),
-                        signal: controller.signal
-                    });
+                    const currentEngine = engine || 'gemini';
+                    if (currentEngine === 'lmstudio') {
+                        // LM Studio への接続
+                        const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
+                        const apiBase = lmstudioEndpoint || defaultEndpoint;
+                        const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+                        const targetModel = model || 'unspecified';
 
-                    clearTimeout(timeoutId);
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: targetModel,
+                                messages: [
+                                    { role: 'system', content: systemPrompt },
+                                    { role: 'user', content: message }
+                                ]
+                            }),
+                            signal: controller.signal
+                        });
 
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`LM Studio Error: ${response.status} ${errorText}`);
+                        }
+
+                        const resJson: any = await response.json();
+                        reply = resJson.choices?.[0]?.message?.content || '';
+                    } else {
+                        // Gemini への接続
+                        const targetModel = model || 'gemini-2.0-flash-exp';
+                        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`;
+
+                        const response = await fetch(geminiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ role: 'user', parts: [{ text: message }] }],
+                                systemInstruction: { parts: [{ text: systemPrompt || 'You are a helpful assistant.' }] }
+                            }),
+                            signal: controller.signal
+                        });
+
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
+                        }
+
+                        const resJson: any = await response.json();
+                        reply = resJson.candidates?.[0]?.content?.parts?.[0]?.text || '';
                     }
-
-                    const resJson: any = await response.json();
-                    reply = resJson.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                } catch (geminiError: any) {
+                } catch (aiError: any) {
                     clearTimeout(timeoutId);
-                    console.error('[WS] Gemini Error:', geminiError.message);
+                    console.error('[WS] AI Engine Error:', aiError.message);
                     ws.send(JSON.stringify({
                         event: 'chat-error',
-                        data: { message: `Geminiとの通信エラー: ${geminiError.message}` }
+                        data: { message: `AIサーバーとの通信エラー: ${aiError.message}` }
                     }));
                     return;
                 }
