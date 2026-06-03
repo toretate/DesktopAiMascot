@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
+import InputText from 'primevue/inputtext';
 import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
 import { useConfigStore } from '../../store/config';
 
@@ -812,8 +813,26 @@ const closeAssigningEmotionsModal = async () => {
             </div>
 
             <!-- サブタブ中身: プロフィール -->
-            <div v-else class="flex flex-column gap-2">
-                <div class="form-field">
+            <div v-else class="flex flex-column gap-3">
+                <div class="form-field flex flex-column gap-1">
+                    <label class="text-xs font-semibold text-gray-700">マスコット名</label>
+                    <InputText 
+                        v-model="editingMascot.name" 
+                        placeholder="例: デフォルトロボット" 
+                        class="w-full p-inputtext-sm" 
+                        @change="syncAndSave"
+                    />
+                </div>
+                <div class="form-field flex flex-column gap-1">
+                    <label class="text-xs font-semibold text-gray-700">アバター (絵文字または画像URL)</label>
+                    <InputText 
+                        v-model="editingMascot.avatar" 
+                        placeholder="例: 🤖" 
+                        class="w-full p-inputtext-sm" 
+                        @change="syncAndSave"
+                    />
+                </div>
+                <div class="form-field flex flex-column gap-1">
                     <label class="text-xs font-semibold text-gray-700">マスコットキャラクターの性格・プロファイル</label>
                     <textarea 
                         v-model="editingMascot.profile" 
