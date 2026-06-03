@@ -318,13 +318,20 @@ const onImageLoad = (event: Event) => {
     const charLeft = drawLeft + relativeLeft * drawW;
     const charRight = drawLeft + relativeRight * drawW;
     
-    if (window.electronAPI && window.electronAPI.updateCharacterBounds) {
-        window.electronAPI.updateCharacterBounds({
-            top: charTop,
-            bottom: charBottom,
-            left: charLeft,
-            right: charRight
-        });
+    if (
+        Number.isFinite(charTop) && 
+        Number.isFinite(charBottom) && 
+        Number.isFinite(charLeft) && 
+        Number.isFinite(charRight)
+    ) {
+        if (window.electronAPI && window.electronAPI.updateCharacterBounds) {
+            window.electronAPI.updateCharacterBounds({
+                top: charTop,
+                bottom: charBottom,
+                left: charLeft,
+                right: charRight
+            });
+        }
     }
 };
 

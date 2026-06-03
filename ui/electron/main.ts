@@ -248,7 +248,7 @@ function debouncedSaveSettingsBounds() {
 
 // --- チャットウィンドウの表示時位置調整処理 ---
 function adjustChatWindowPosition() {
-    if (!mascotWindow || !chatWindow) return;
+    if (!mascotWindow || mascotWindow.isDestroyed() || !chatWindow || chatWindow.isDestroyed()) return;
 
     const mascotBounds = mascotWindow.getBounds();
     const chatBounds = chatWindow.getBounds();
@@ -260,11 +260,17 @@ function adjustChatWindowPosition() {
     const chatW = chatBounds.width;
     const chatH = chatBounds.height;
     
+    // characterBoundsの各値が有効な数値か検証し、不正な場合はフォールバック
+    const boundsTop = Number.isFinite(characterBounds.top) ? characterBounds.top : 0;
+    const boundsBottom = Number.isFinite(characterBounds.bottom) ? characterBounds.bottom : mascotBounds.height;
+    const boundsLeft = Number.isFinite(characterBounds.left) ? characterBounds.left : 0;
+    const boundsRight = Number.isFinite(characterBounds.right) ? characterBounds.right : mascotBounds.width;
+    
     // キャラクター画像のグローバル座標系での境界を算出
-    const globalCharTop = mascotBounds.y + characterBounds.top;
-    const globalCharBottom = mascotBounds.y + characterBounds.bottom;
-    const globalCharLeft = mascotBounds.x + characterBounds.left;
-    const globalCharRight = mascotBounds.x + characterBounds.right;
+    const globalCharTop = mascotBounds.y + boundsTop;
+    const globalCharBottom = mascotBounds.y + boundsBottom;
+    const globalCharLeft = mascotBounds.x + boundsLeft;
+    const globalCharRight = mascotBounds.x + boundsRight;
     
     // 基本位置：キャラクター画像の右側、ウィンドウの下をキャラクター画像の下に合わせる
     let targetX = globalCharRight;
@@ -292,6 +298,10 @@ function adjustChatWindowPosition() {
             targetY = displayBounds.y;
         }
     }
+    
+    // 最終的な座標値を四捨五入して整数値にする（Electronの座標エラーを防止）
+    targetX = Math.round(targetX);
+    targetY = Math.round(targetY);
     
     isSyncingChatPosition = true;
     chatWindow.setPosition(targetX, targetY);
