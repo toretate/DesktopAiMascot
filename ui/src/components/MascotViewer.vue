@@ -241,6 +241,93 @@ const totalMascotScale = computed(() => {
     return mascotScale.value || 1.0;
 });
 
+const getNonTransparentBounds = (img: HTMLImageElement) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 1;
+    canvas.height = img.naturalHeight || 1;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return { top: 0, bottom: canvas.height, left: 0, right: canvas.width };
+    
+    ctx.drawImage(img, 0, 0);
+    let imgData;
+    try {
+        imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    } catch (e) {
+        return { top: 0, bottom: canvas.height, left: 0, right: canvas.width };
+    }
+    const data = imgData.data;
+    
+    let minX = canvas.width;
+    let maxX = 0;
+    let minY = canvas.height;
+    let maxY = 0;
+    
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            const alpha = data[(y * canvas.width + x) * 4 + 3];
+            if (alpha > 0) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+    
+    if (maxX < minX || maxY < minY) {
+        return { top: 0, bottom: canvas.height, left: 0, right: canvas.width };
+    }
+    
+    return { top: minY, bottom: maxY, left: minX, right: maxX };
+};
+
+const onImageLoad = (event: Event) => {
+    const img = event.target as HTMLImageElement;
+    if (!img) return;
+
+    if (!img.naturalWidth || !img.naturalHeight) return;
+
+    const imgRect = img.getBoundingClientRect();
+    const imgW = imgRect.width;
+    const imgH = imgRect.height;
+    
+    const imgAspect = img.naturalWidth / img.naturalHeight;
+    const rectAspect = imgW / imgH;
+    
+    let drawW = imgW;
+    let drawH = imgH;
+    let drawTop = imgRect.top;
+    let drawLeft = imgRect.left;
+    
+    if (imgAspect > rectAspect) {
+        drawH = imgW / imgAspect;
+        drawTop = imgRect.top + (imgH - drawH) / 2;
+    } else {
+        drawW = imgH * imgAspect;
+        drawLeft = imgRect.left + (imgW - drawW) / 2;
+    }
+    
+    const bounds = getNonTransparentBounds(img);
+    const relativeTop = bounds.top / img.naturalHeight;
+    const relativeBottom = bounds.bottom / img.naturalHeight;
+    const relativeLeft = bounds.left / img.naturalWidth;
+    const relativeRight = bounds.right / img.naturalWidth;
+    
+    const charTop = drawTop + relativeTop * drawH;
+    const charBottom = drawTop + relativeBottom * drawH;
+    const charLeft = drawLeft + relativeLeft * drawW;
+    const charRight = drawLeft + relativeRight * drawW;
+    
+    if (window.electronAPI && window.electronAPI.updateCharacterBounds) {
+        window.electronAPI.updateCharacterBounds({
+            top: charTop,
+            bottom: charBottom,
+            left: charLeft,
+            right: charRight
+        });
+    }
+};
+
 const toggleChat = () => {
     if (window.electronAPI) {
         window.electronAPI.toggleChat();
@@ -446,18 +533,18 @@ onUnmounted(() => {
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->
                 <template v-if="activePose">
-                    <img v-if="isImage(activePose.path)" :src="resolveImageUrl(activePose.path)" class="preview-full-img" />
+                    <img v-if="isImage(activePose.path)" :src="resolveImageUrl(activePose.path)" class="preview-full-img" @load="onImageLoad" />
                     <span v-else class="preview-base-avatar">{{ activePose.path }}</span>
                 </template>
                 <!-- ポーズがなければ服装 -->
                 <template v-else-if="activeOutfit">
-                    <img v-if="isImage(activeOutfit.path)" :src="resolveImageUrl(activeOutfit.path)" class="preview-full-img" />
+                    <img v-if="isImage(activeOutfit.path)" :src="resolveImageUrl(activeOutfit.path)" class="preview-full-img" @load="onImageLoad" />
                     <span v-else class="preview-base-avatar">{{ activeOutfit.path }}</span>
                 </template>
                 <!-- 何もなければベースアバター (front画像を優先) -->
                 <template v-else-if="activeMascot">
-                    <img v-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-full-img" />
-                    <img v-else-if="isImage(activeMascot.avatar)" :src="resolveImageUrl(activeMascot.avatar)" class="preview-full-img" />
+                    <img v-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-full-img" @load="onImageLoad" />
+                    <img v-else-if="isImage(activeMascot.avatar)" :src="resolveImageUrl(activeMascot.avatar)" class="preview-full-img" @load="onImageLoad" />
                     <span v-else class="preview-base-avatar">{{ activeMascot.avatar }}</span>
                 </template>
                 <span v-else class="preview-base-avatar">🤖</span>

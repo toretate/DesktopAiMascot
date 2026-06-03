@@ -218,6 +218,7 @@ let saveSettingsBoundsTimeout: NodeJS.Timeout | null = null;
 let chatOffsetX = 300; // マスコットとのX軸相対オフセット (初期値はマスコット幅300)
 let chatOffsetY = 0;   // マスコットとのY軸相対オフセット
 let isSyncingChatPosition = false; // moveイベントのループを防ぐフラグ
+let characterBounds = { top: 0, bottom: 800, left: 0, right: 600 }; // キャラクター画像のウィンドウ内描画境界
 
 // --- ウィンドウ位置の保存（デバウンス処理） ---
 function debouncedSaveMascotPosition() {
@@ -259,20 +260,26 @@ function adjustChatWindowPosition() {
     const chatW = chatBounds.width;
     const chatH = chatBounds.height;
     
-    // 基本位置：キャラクターの右側、ウィンドウの下をキャラクターの下に合わせる
-    let targetX = mascotBounds.x + mascotBounds.width;
-    let targetY = mascotBounds.y + mascotBounds.height - chatH;
+    // キャラクター画像のグローバル座標系での境界を算出
+    const globalCharTop = mascotBounds.y + characterBounds.top;
+    const globalCharBottom = mascotBounds.y + characterBounds.bottom;
+    const globalCharLeft = mascotBounds.x + characterBounds.left;
+    const globalCharRight = mascotBounds.x + characterBounds.right;
+    
+    // 基本位置：キャラクター画像の右側、ウィンドウの下をキャラクター画像の下に合わせる
+    let targetX = globalCharRight;
+    let targetY = globalCharBottom - chatH;
     
     // 上にはみ出ないように補正
     if (targetY < displayBounds.y) {
         targetY = displayBounds.y;
     }
     
-    // キャラクターが画面右の方にいて、メッセージウィンドウが画面外にはみ出すとき
+    // キャラクター画像の右端に表示した場合に、メッセージウィンドウが画面外にはみ出すとき
     if (targetX + chatW > displayBounds.x + displayBounds.width) {
-        // キャラクターの左側に表示
-        targetX = mascotBounds.x - chatW;
-        targetY = mascotBounds.y + mascotBounds.height - chatH;
+        // キャラクター画像の左側に表示
+        targetX = globalCharLeft - chatW;
+        targetY = globalCharBottom - chatH;
         
         // 上にはみ出ないように補正
         if (targetY < displayBounds.y) {
@@ -605,6 +612,12 @@ app.whenReady().then(() => {
     ipcMain.on('quit-app', () => {
         console.log('[IPC] Quit App request received');
         app.quit();
+    });
+
+    // キャラクターの描画境界を受け取るハンドラー
+    ipcMain.on('update-character-bounds', (event, bounds: { top: number; bottom: number; left: number; right: number }) => {
+        characterBounds = bounds;
+        console.log(`[IPC] Character bounds updated:`, characterBounds);
     });
 
     // 3. マウススルー（イベント無視）の制御
