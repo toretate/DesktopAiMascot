@@ -245,6 +245,48 @@ function debouncedSaveSettingsBounds() {
     }, 1000); // 1秒間操作が静止した後に保存
 }
 
+// --- チャットウィンドウの表示時位置調整処理 ---
+function adjustChatWindowPosition() {
+    if (!mascotWindow || !chatWindow) return;
+
+    const mascotBounds = mascotWindow.getBounds();
+    const chatBounds = chatWindow.getBounds();
+    
+    // キャラクターが現在いる物理ディスプレイを取得
+    const targetDisplay = screen.getDisplayMatching(mascotBounds);
+    const displayBounds = targetDisplay.workArea;
+    
+    const chatW = chatBounds.width;
+    const chatH = chatBounds.height;
+    
+    // 基本位置：キャラクターの右側、ウィンドウの下をキャラクターの下に合わせる
+    let targetX = mascotBounds.x + mascotBounds.width;
+    let targetY = mascotBounds.y + mascotBounds.height - chatH;
+    
+    // 上にはみ出ないように補正
+    if (targetY < displayBounds.y) {
+        targetY = displayBounds.y;
+    }
+    
+    // キャラクターが画面右の方にいて、メッセージウィンドウが画面外にはみ出すとき
+    if (targetX + chatW > displayBounds.x + displayBounds.width) {
+        // キャラクターの左側に表示
+        targetX = mascotBounds.x - chatW;
+        targetY = mascotBounds.y + mascotBounds.height - chatH;
+        
+        // 上にはみ出ないように補正
+        if (targetY < displayBounds.y) {
+            targetY = displayBounds.y;
+        }
+    }
+    
+    isSyncingChatPosition = true;
+    chatWindow.setPosition(targetX, targetY);
+    chatOffsetX = targetX - mascotBounds.x;
+    chatOffsetY = targetY - mascotBounds.y;
+    isSyncingChatPosition = false;
+}
+
 // --- チャットウィンドウの追従移動処理 ---
 function syncChatWindowPosition() {
     if (!mascotWindow || !chatWindow || !chatWindow.isVisible()) return;
@@ -490,7 +532,7 @@ function createWindows() {
     mascotWindow.once('ready-to-show', () => {
         if (configData.chatVisible) {
             chatWindow?.showInactive(); // フォーカスを奪わずに表示
-            syncChatWindowPosition();
+            adjustChatWindowPosition();
         }
     });
 }
@@ -510,7 +552,7 @@ app.whenReady().then(() => {
             mascotWindow?.webContents.send('chat-toggled', false);
         } else {
             chatWindow.showInactive();
-            syncChatWindowPosition();
+            adjustChatWindowPosition();
             config.update({ chatVisible: true });
             mascotWindow?.webContents.send('chat-toggled', true);
         }
