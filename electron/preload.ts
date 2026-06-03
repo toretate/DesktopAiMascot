@@ -49,8 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('get-voicevox-speakers', endpoint),
     
     // AIによる表情スプライト生成
-    generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string, label: string }[], userPromptTemplate: string, engine?: string, model?: string) =>
-        ipcRenderer.invoke('generate-mascot-expressions', base64Image, apiKey, emotions, userPromptTemplate, engine, model),
+    generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string, label: string }[], userPromptTemplate: string, engine?: string, model?: string, history?: any[]) =>
+        ipcRenderer.invoke('generate-mascot-expressions', base64Image, apiKey, emotions, userPromptTemplate, engine, model, history),
         
     // 利用可能なImagenモデルをAPIで取得する
     getImagenModels: (apiKey: string) =>

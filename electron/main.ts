@@ -1,6 +1,16 @@
 import { app, BrowserWindow, ipcMain, screen, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { AiExpressionService } from '../src/skills/expression-service/expression-service';
+
+// AiExpressionService にプラットフォーム依存モジュールを注入
+AiExpressionService.setAdapter({
+    readFileSync: (p: string) => fs.readFileSync(p),
+    existsSync: (p: string) => fs.existsSync(p),
+    pathJoin: (...args: string[]) => path.join(...args),
+    pathExtname: (p: string) => path.extname(p),
+    cwd: () => process.cwd()
+});
 
 // 開発環境と本番環境の判定
 const isDev = process.env.VITE_DEV_SERVER_URL !== undefined;
@@ -76,7 +86,7 @@ interface ConfigData {
     settingsX: number;
     settingsY: number;
     mascotScale: number;
-    
+
     // サーバー接続設定
     useServer: boolean;
     serverHost: string;
@@ -255,9 +265,16 @@ function createSettingsWindow() {
 
     const configData = config.get();
 
+    // 保存済みサイズの範囲を安全値にクランプ（ウィンドウ幅が徐々に広がるバグを防止）
+    const savedWidth = Math.min(Math.max(configData.settingsWidth || 900, 700), 1600);
+    const savedHeight = Math.min(Math.max(configData.settingsHeight || 640, 480), 1200);
+
     const settingsOptions: Electron.BrowserWindowConstructorOptions = {
-        width: configData.settingsWidth || 800,
-        height: configData.settingsHeight || 600,
+        width: savedWidth,
+        height: savedHeight,
+        minWidth: 700,
+        maxWidth: 1600,
+        minHeight: 480,
         show: false, // 必要なタイミングまで非表示
         title: 'Desktop AI Mascot 設定',
         webPreferences: {
@@ -280,6 +297,12 @@ function createSettingsWindow() {
         settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
     }
 
+    // コンテンツ描画完了後に表示することで初期サイズを安定させる
+    settingsWindow.once('ready-to-show', () => {
+        // サイズが変わっていれば、保存された値に再度セットする（描画時の自動拡張を上書き）
+        settingsWindow?.setSize(savedWidth, savedHeight);
+    });
+
     settingsWindow.on('resize', () => {
         debouncedSaveSettingsBounds();
     });
@@ -301,9 +324,16 @@ function createWindows() {
 
     // 開発用：設定画面のみ直接起動するモードの処理
     if (process.env.START_SETTINGS === 'true') {
+        // 保存済みサイズの範囲を安全値にクランプ
+        const savedWidth = Math.min(Math.max(configData.settingsWidth || 900, 700), 1600);
+        const savedHeight = Math.min(Math.max(configData.settingsHeight || 640, 480), 1200);
+
         const settingsOptions: Electron.BrowserWindowConstructorOptions = {
-            width: configData.settingsWidth || 800,
-            height: configData.settingsHeight || 600,
+            width: savedWidth,
+            height: savedHeight,
+            minWidth: 700,
+            maxWidth: 1600,
+            minHeight: 480,
             show: true,
             title: 'Desktop AI Mascot 設定 - 開発用単体起動',
             webPreferences: {
@@ -650,453 +680,28 @@ app.whenReady().then(() => {
     });
 
     // 5-1. Generate mascot expressions with multiple engines
-    ipcMain.handle('generate-mascot-expressions', async (event, base64Image: string, apiKey: string, emotions: { name: string, label: string }[], userPromptTemplate: string, engine?: string, model?: string) => {
-        const geminiModel = 'gemini-3.1-flash-lite';
-        const currentEngine = engine || 'gemini';
-        const targetModel = model || '';
-
-        let imagenModel = 'imagen-3.0-generate-002';
-
-        // Auto-detect available Imagen models if engine is gemini
-        if (currentEngine === 'gemini') {
-            try {
-                console.log('[Imagen] Fetching available model list from Google AI Studio...');
-                const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-                const listResponse = await fetch(listUrl);
-                if (listResponse.ok) {
-                    const listData: any = await listResponse.json();
-                    const availableModels = listData.models || [];
-
-                    const foundModel = availableModels.find((m: any) =>
-                        m.name.includes('imagen') &&
-                        m.supportedGenerationMethods?.includes('predict')
-                    );
-
-                    if (foundModel) {
-                        imagenModel = foundModel.name.replace('models/', '');
-                        console.log(`[Imagen] Auto-detected predict-supported Imagen model: ${imagenModel}`);
-                    } else {
-                        const foundAnyImagen = availableModels.find((m: any) => m.name.includes('imagen'));
-                        if (foundAnyImagen) {
-                            imagenModel = foundAnyImagen.name.replace('models/', '');
-                            console.log(`[Imagen] Fallback to general Imagen model: ${imagenModel}`);
-                        } else {
-                            console.log('[Imagen] No Imagen model found in API list. Using default.');
-                        }
-                    }
-                } else {
-                    console.warn('[Imagen] Model list response was abnormal. Using default.');
-                }
-            } catch (listError: any) {
-                console.warn('[Imagen] Failed to retrieve model list. Using default:', listError.message);
-            }
-        }
-
-        let characterFeatures = '';
-
-        // 1. Analyze base image for style features using Gemini Vision
-        if (base64Image) {
-            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
-
-            let rawBase64 = '';
-            let mimeType = 'image/png';
-
-            if (base64Image.startsWith('data:')) {
-                rawBase64 = base64Image.split(',')[1] || base64Image;
-                mimeType = base64Image.split(';')[0]?.split(':')[1] || 'image/png';
-            } else {
-                try {
-                    let filePath = base64Image;
-                    if (filePath.startsWith('file:///')) {
-                        filePath = decodeURIComponent(filePath.replace('file:///', ''));
-                    }
-                    if (fs.existsSync(filePath)) {
-                        console.log(`[GeminiVision] Loading local image file: ${filePath}`);
-                        const fileBuffer = fs.readFileSync(filePath);
-                        rawBase64 = fileBuffer.toString('base64');
-
-                        const ext = path.extname(filePath).toLowerCase();
-                        if (ext === '.jpg' || ext === '.jpeg') {
-                            mimeType = 'image/jpeg';
-                        } else if (ext === '.gif') {
-                            mimeType = 'image/gif';
-                        } else if (ext === '.webp') {
-                            mimeType = 'image/webp';
-                        }
-                    } else {
-                        console.warn(`[GeminiVision] Image file does not exist: ${filePath}`);
-                    }
-                } catch (readError: any) {
-                    console.warn(`[GeminiVision] Failed to read image file:`, readError.message);
-                }
-            }
-
-            if (rawBase64) {
-                const featurePrompt = `
-                    You are an expert prompt engineer for image generation models like Imagen 3 and DALL-E 3.
-                    Analyze the mascot character in this reference image.
-                    Your goal is to write a highly detailed, descriptive English prompt describing this character so perfectly that an image generator can reproduce the EXACT SAME character in the EXACT SAME art style.
-                    
-                    Describe in detail:
-                    1. The precise art style: (e.g., flat 2D vector anime style, detailed digital art, chibi illustration, clean thick outline, pure white background).
-                    2. Detailed character features: hairstyle, hair length, precise hair color, eye shape, eye color, facial structure.
-                    3. Precise clothing & outfit: clothing items, colors, patterns, accessories, shoes.
-                    4. Proportions and design aesthetics: (e.g., cute, stylized 2D mascot).
-                    
-                    Output ONLY a single, comprehensive paragraph of English keywords and phrases describing the style and character, optimized for image generation.
-                    Do not include any greeting, conversational text, or introductions. Output only the prompt keywords.
-                `;
-
-                try {
-                    console.log('[GeminiVision] Extracting high-fidelity character features...');
-                    const geminiResponse = await fetch(geminiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: [
-                                        { text: featurePrompt },
-                                        {
-                                            inline_data: {
-                                                mime_type: mimeType,
-                                                data: rawBase64
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
-                        })
-                    });
-
-                    if (geminiResponse.ok) {
-                        const geminiData: any = await geminiResponse.json();
-                        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-                        characterFeatures = text ? text.trim() : '';
-                        console.log(`[GeminiVision] Extracted features: ${characterFeatures}`);
-                    } else {
-                        console.warn('Google AI Studio connection error (failed feature extraction)');
-                    }
-                } catch (error: any) {
-                    console.warn('Google AI Studio connection error:', error.message);
-                }
-            }
-        }
-
-        // 2. Assemble prompt
-        const emotionsStr = emotions.map(e => `${e.name} (${e.label})`).join(', ');
-        const emotionsLabels = emotions.map(e => e.label).join(', ');
-
-        let finalPrompt = userPromptTemplate;
-
-        // Character consistency enforcement prompt
-        const consistencyHook = `A multi-pose character sheet of the same single character, showing the exact same character with different facial expressions. The character design, clothing, face features, and hair style must remain 100% identical, uniform and consistent across all panels.`;
-
-        if (finalPrompt.includes('[FEATURES]')) {
-            finalPrompt = finalPrompt.replace('[FEATURES]', characterFeatures || 'a cute character');
-        } else if (characterFeatures) {
-            finalPrompt = `Appearance style and character design details: ${characterFeatures}. ${finalPrompt}`;
-        }
-
-        // Inject consistency hook to maintain identical look
-        finalPrompt = `${consistencyHook} ${finalPrompt}`;
-
-        const labelInstruction = `Each expression must have its English label strictly displayed under the face. The labels must be one of: [${emotionsLabels}]. The label text must be clear, clean, and in black font on a white background or directly below the face box. Make sure each face is separated by a solid black grid line.`;
-        finalPrompt = `${finalPrompt} ${labelInstruction}`;
-        finalPrompt = userPromptTemplate;
-
-        console.log(`[ImageGenerator] Engine: ${currentEngine}, Model: ${targetModel || imagenModel}`);
-        console.log(`[ImageGenerator] Final prompt: ${finalPrompt}`);
-
-        // 3. Generate image based on selected engine
-        if (currentEngine === 'openai') {
-            console.log('[OpenAI] Generating expressions using DALL-E...');
-            const appConfig = config.get();
-            const openaiKey = appConfig.openaiApiKey || apiKey;
-            if (!openaiKey) {
-                return { success: false, error: 'OpenAI API key is not registered. Please register in Settings.' };
-            }
-
-            const openaiUrl = 'https://api.openai.com/v1/images/generations';
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000);
-
-            try {
-                const response = await fetch(openaiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${openaiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: targetModel || 'dall-e-3',
-                        prompt: finalPrompt,
-                        n: 1,
-                        size: '1024x1024',
-                        response_format: 'b64_json'
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`OpenAI API Error: ${response.status} ${errorText}`);
-                }
-
-                const data: any = await response.json();
-                const b64Json = data.data?.[0]?.b64_json;
-
-                if (!b64Json) {
-                    throw new Error('Failed to retrieve image data.');
-                }
-
-                console.log('[OpenAI] Image generated successfully');
-                return {
-                    success: true,
-                    imageBytes: `data:image/png;base64,${b64Json}`
-                };
-            } catch (error: any) {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    console.warn('OpenAI connection error (timeout)');
-                    return { success: false, error: 'OpenAI generation timed out (90s).' };
-                } else {
-                    console.warn('OpenAI connection error:', error.message);
-                    return { success: false, error: 'OpenAI generation failed: ' + error.message };
-                }
-            }
-        }
-        else if (currentEngine === 'comfyui') {
-            console.log('[ComfyUI] Generating expressions using local ComfyUI...');
-            const targetWorkflow = targetModel || '29:40';
-            const [nodeIdStr, fieldKeyStr] = targetWorkflow.split(':');
-            const nodeId = nodeIdStr || '29';
-            const fieldKey = fieldKeyStr || 'text';
-
-            console.log(`[ComfyUI] Target node: ${nodeId}, field: ${fieldKey}`);
-
-            const comfyUrl = 'http://127.0.0.1:8188/prompt';
-
-            try {
-                const response = await fetch(comfyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: {
-                            [nodeId]: {
-                                class_type: "CLIPTextEncode",
-                                inputs: {
-                                    [fieldKey === '40' ? 'text' : fieldKey]: finalPrompt
-                                }
-                            }
-                        }
-                    })
-                });
-
-                if (response.ok) {
-                    return {
-                        success: false,
-                        error: 'Workflow submitted to ComfyUI successfully. Please import the generated sheet manually from ComfyUI output folder.'
-                    };
-                } else {
-                    throw new Error(`ComfyUI Server Error: ${response.status}`);
-                }
-            } catch (error: any) {
-                console.warn('ComfyUI connection error:', error.message);
-                return {
-                    success: false,
-                    error: `Could not connect to ComfyUI. Ensure local server (http://127.0.0.1:8188) is running. Target: [Node:${nodeId}, Field:${fieldKey}]`
-                };
-            }
-        }
-        else if (currentEngine === 'ollama') {
-            console.log('[Ollama] Ollama expression generation triggered...');
-            return {
-                success: false,
-                error: `Ollama (${targetModel || 'llava'}) is not an image model. Please select Gemini, OpenAI, or Comfy UI for generation.`
-            };
-        }
-        else {
-            const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel || imagenModel}:predict?key=${apiKey}`;
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000);
-
-            try {
-                console.log('[Imagen] Starting image generation...');
-                const response = await fetch(imagenUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        instances: [
-                            {
-                                prompt: finalPrompt
-                            }
-                        ],
-                        parameters: {
-                            sampleCount: 1,
-                            outputMimeType: 'image/png',
-                            aspectRatio: '1:1'
-                        }
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Imagen API Error: ${response.status} ${errorText}`);
-                }
-
-                const data: any = await response.json();
-                const base64Bytes = data.predictions?.[0]?.bytesBase64Encoded;
-
-                if (!base64Bytes) {
-                    throw new Error('Failed to retrieve image bytes from API.');
-                }
-
-                console.log('[Imagen] Image generated successfully');
-                return {
-                    success: true,
-                    imageBytes: `data:image/png;base64,${base64Bytes}`
-                };
-
-            } catch (error: any) {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    console.warn('Google AI Studio connection error (Imagen timeout)');
-                    return { success: false, error: 'Imagen generation timed out (90s).' };
-                } else {
-                    console.warn('Google AI Studio connection error (Imagen fail):', error.message);
-                    return { success: false, error: 'Imagen generation failed: ' + error.message };
-                }
-            }
-        }
+    ipcMain.handle('generate-mascot-expressions', async (event, base64Image: string, apiKey: string, emotions: any[], userPromptTemplate: string, engine?: string, model?: string, history?: any[]) => {
+        const appConfig = config.get();
+        return await AiExpressionService.generateExpressions(
+            base64Image,
+            apiKey,
+            emotions,
+            userPromptTemplate,
+            engine,
+            model,
+            history,
+            appConfig.openaiApiKey
+        );
     });
 
     // 5-3. Get available Imagen models from Google AI Studio
     ipcMain.handle('get-imagen-models', async (event, apiKey: string) => {
-        const defaultModels = ['imagen-3.0-generate-002', 'imagen-3.0-generate-001', 'imagen-3.0-generate'];
-        if (!apiKey) {
-            return defaultModels;
-        }
-
-        const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-        try {
-            console.log('[ImagenList] Fetching available Imagen models...');
-            const response = await fetch(listUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-
-            const data: any = await response.json();
-            const models = data.models || [];
-
-            const imagenModels = models
-                .filter((m: any) =>
-                    m.name.includes('imagen') &&
-                    m.supportedGenerationMethods?.includes('predict')
-                )
-                .map((m: any) => m.name.replace('models/', ''));
-
-            if (imagenModels.length > 0) {
-                console.log(`[ImagenList] Found Imagen models: ${imagenModels.join(', ')}`);
-                return imagenModels;
-            }
-
-            const anyImagen = models
-                .filter((m: any) => m.name.includes('imagen'))
-                .map((m: any) => m.name.replace('models/', ''));
-
-            if (anyImagen.length > 0) {
-                console.log(`[ImagenList] Found generic Imagen models: ${anyImagen.join(', ')}`);
-                return anyImagen;
-            }
-
-            return defaultModels;
-        } catch (error: any) {
-            clearTimeout(timeoutId);
-            console.warn('[ImagenList] Failed to fetch Imagen models, using defaults:', error.message);
-            return defaultModels;
-        }
+        return await AiExpressionService.getImagenModels(apiKey);
     });
 
     // 5-2. Gemini Visionによるスプライトシート解析（表情切り出し支援）
     ipcMain.handle('analyze-sprite-sheet', async (event, base64Image: string, apiKey: string) => {
-        const model = 'gemini-3.1-flash-lite';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-        // Base64データからプレフィックス（data:image/png;base64,）を除去
-        const rawBase64 = base64Image.split(',')[1] || base64Image;
-
-        const prompt = `
-            Analyze this expression sprite sheet. 
-            Identify each facial expression box. 
-            For each box, determine which of the following 28 SillyTavern emotion labels it best represents:
-            
-            [admiration, amusement, anger, annoyance, approval, caring, confusion, curiosity, desire, disappointment, disapproval, disgust, embarrassment, excitement, fear, gratitude, grief, joy, love, nervousness, optimism, pride, realization, relief, remorse, sadness, surprise, neutral]
-            
-            Return the result strictly in JSON format as an array of objects. 
-            For each detected face, specify the exact matched emotion label from the list above, and provide its normalized coordinates [ymin, xmin, ymax, xmax] (range 0-1000).
-            Ensure that each detected face is mapped to ONE of the 28 emotions above.
-            
-            Format:
-            [
-                {"label": "emotion_label_from_list", "box_2d": [ymin, xmin, ymax, xmax]},
-                ...
-            ]
-            
-            Important: Ensure the crop boxes focus accurately on the face area (including hair and head).
-        `;
-
-        try {
-            console.log('[GeminiVision] スプライトシート解析開始...');
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inline_data: {
-                                        mime_type: 'image/png',
-                                        data: rawBase64
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    generationConfig: {
-                        response_mime_type: "application/json"
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Vision API Error: ${response.status} ${errorText}`);
-            }
-
-            const data: any = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            console.log(`[GeminiVision] 解析結果受信: ${text}`);
-
-            return JSON.parse(text);
-
-        } catch (error: any) {
-            console.error('[GeminiVision] Error analyzing sprite sheet:', error);
-            return { error: error.message };
-        }
+        return await AiExpressionService.analyzeSpriteSheet(base64Image, apiKey);
     });
 
     // 6. VOICEVOXによる音声合成のハンドラー

@@ -46,16 +46,17 @@ const selectedEmotions = ref<string[]>([]);
 const isGenerating = ref(false);
 const generatedImage = ref<string>('');
 const errorMessage = ref('');
+const generationHistory = ref<any[]>([]); // 対話的編集のための履歴
 
 // 生成エンジン＆モデル設定
 const selectedEngine = ref('gemini');
-const selectedModel = ref('imagen-3.0-generate-002');
+const selectedModel = ref('gemini-3.1-flash-image');
 const customModel = ref('');
 const customModelEnabled = ref(false);
 const isFetchingModels = ref(false);
 
 const modelPresetsMap = ref<Record<string, string[]>>({
-    gemini: ['imagen-3.0-generate-002', 'imagen-3.0-generate-001', 'imagen-3.0-generate'],
+    gemini: ['gemini-3.1-flash-image', 'gemini-3-pro-image', 'gemini-2.5-flash-image', 'imagen-3.0-generate-002', 'imagen-3.0-generate-001'],
     openai: ['dall-e-3', 'dall-e-2'],
     ollama: [],
     comfyui: []
@@ -68,6 +69,16 @@ const hasModelPresets = computed(() => {
 const modelPresets = computed(() => {
     return modelPresetsMap.value[selectedEngine.value] || [];
 });
+
+const getModelDisplayName = (modelId: string) => {
+    const nicknames: Record<string, string> = {
+        'gemini-3-pro-image': 'Nano Banana Pro',
+        'gemini-3.1-pro-image': 'Nano Banana Pro',
+        'gemini-3.1-flash-image': 'Nano Banana 2',
+        'gemini-2.5-flash-image': 'Nano Banana'
+    };
+    return nicknames[modelId] || modelId;
+};
 
 const onEngineChange = () => {
     const presets = modelPresetsMap.value[selectedEngine.value] || [];
@@ -113,10 +124,14 @@ const fetchImagenModels = async () => {
 
 // プロンプトテンプレートの初期値
 const defaultPromptTemplate = 
-`添付した画像（スタイル特徴：[FEATURES]）を参照して、チャットマスコットとして必要な様々な表情を作成してください。
+`顔のアップで、チャットマスコットとして必要な様々な表情を作成してください。
 作成する表情は以下の通りです：
-[EMOTIONS]
-アニメ風のフラットなイラストで、背景は純白(#ffffff)にしてください。顔のアップで、各画像間はプログラム処理しやすいように黒の直線で区切ってください。また、各画像の下に対応する表情のラベルを表示してください。`;
+[__EMOTIONS_LABLE__]
+背景は純白(#ffffff)にしてください。`
+// `添付した画像（スタイル特徴：[FEATURES]）を参照して、チャットマスコットとして必要な様々な表情を作成してください。
+// 作成する表情は以下の通りです：
+// [EMOTIONS]
+// アニメ風のフラットなイラストで、背景は純白(#ffffff)にしてください。顔のアップで、各画像間はプログラム処理しやすいように黒の直線で区切ってください。また、各画像の下に対応する表情のラベルを表示してください。`;
 
 const userPrompt = ref(defaultPromptTemplate);
 
@@ -137,10 +152,11 @@ watch(
             generatedImage.value = '';
             errorMessage.value = '';
             isGenerating.value = false;
+            generationHistory.value = [];
             
             // エンジン初期値
             selectedEngine.value = 'gemini';
-            selectedModel.value = 'imagen-3.0-generate-002';
+            selectedModel.value = 'gemini-3.1-flash-image';
             customModel.value = '';
             customModelEnabled.value = false;
             
@@ -196,21 +212,20 @@ const generateExpressions = async () => {
         // ベース画像（全身像を最優先、なければ顔アップ）を取得
         let baseImageBase64 = '';
         
-        // 1. propsで渡された全身の立ち絵画像を最優先
-        if (props.activeOutfit && props.activeOutfit.path) {
-            baseImageBase64 = props.activeOutfit.path;
-        } 
-        // 2. editingMascotの登録衣装アセットの最初の全身像を使用
-        else if (props.editingMascot.assets && Array.isArray((props.editingMascot.assets as any).outfits) && (props.editingMascot.assets as any).outfits.length > 0) {
-            baseImageBase64 = (props.editingMascot.assets as any).outfits[0].path;
-        }
-        // 3. 全身像がない場合は、顔正面アセットを使用
-        else if (props.defaultFrontAvatar && props.defaultFrontAvatar.path) {
-            baseImageBase64 = props.defaultFrontAvatar.path;
-        } 
-        // 4. アバターを使用
-        else if (props.editingMascot.avatar) {
-            baseImageBase64 = props.editingMascot.avatar;
+        // 履歴がない場合（初回の生成）のみベース画像を送る
+        if (generationHistory.value.length === 0) {
+            if (props.activeOutfit && props.activeOutfit.path) {
+                baseImageBase64 = props.activeOutfit.path;
+            } 
+            else if (props.editingMascot.assets && Array.isArray((props.editingMascot.assets as any).outfits) && (props.editingMascot.assets as any).outfits.length > 0) {
+                baseImageBase64 = (props.editingMascot.assets as any).outfits[0].path;
+            }
+            else if (props.defaultFrontAvatar && props.defaultFrontAvatar.path) {
+                baseImageBase64 = props.defaultFrontAvatar.path;
+            } 
+            else if (props.editingMascot.avatar) {
+                baseImageBase64 = props.editingMascot.avatar;
+            }
         }
         
         // 選択された表情のオブジェクト配列を作成
@@ -231,11 +246,27 @@ const generateExpressions = async () => {
             emotionsToSend,
             userPrompt.value,
             selectedEngine.value,
-            finalModelName.value
+            finalModelName.value,
+            JSON.parse(JSON.stringify(generationHistory.value)) // プレーンなオブジェクトに変換して渡す
         );
         
         if (result.success && result.imageBytes) {
             generatedImage.value = result.imageBytes;
+            // 履歴を更新（マルチターン対応）
+            if (result.history) {
+                // 今回のユーザープロンプトを履歴に追加
+                generationHistory.value.push({
+                    role: 'user',
+                    parts: [{ text: userPrompt.value }]
+                });
+                // モデルの回答（画像データ含む）を履歴に追加
+                generationHistory.value.push(result.history);
+                
+                // 次の指示を出しやすくするためにプロンプトを「修正用」に少し変える
+                if (generationHistory.value.length === 2) {
+                    userPrompt.value = "生成された画像を修正してください。具体的には、表情をもっと豊かにし、色調をより鮮やかにしてください。";
+                }
+            }
         } else {
             throw new Error(result.error || '画像生成中にエラーが発生しました。');
         }
@@ -326,7 +357,7 @@ const importGeneratedSprite = () => {
                                         class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
                                         :disabled="isGenerating"
                                     >
-                                        <option v-for="m in modelPresets" :key="m" :value="m">{{ m }}</option>
+                                        <option v-for="m in modelPresets" :key="m" :value="m">{{ getModelDisplayName(m) }}</option>
                                         <option value="custom">カスタム（直接入力）</option>
                                     </select>
                                     

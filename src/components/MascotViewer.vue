@@ -43,7 +43,7 @@ const activeMascotImageSet = computed(() => {
     
     const assets = [
         ...(mascot.assets?.outfits || []),
-        ...(mascot.assets?.expressions || []),
+        ...(activeOutfit.value?.expressions || []),
         ...(mascot.assets?.poses || [])
     ];
     
@@ -55,8 +55,15 @@ const activeOutfit = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot || !mascot.assets?.outfits) return null;
     
-    const targetId = previewState.value?.outfitId || mascot.currentOutfitId;
-    return mascot.assets.outfits.find((o: any) => o.id === targetId) || null;
+    // previewState がある場合はその outfitId を優先
+    const outfitId = previewState?.value?.outfitId;
+    if (outfitId !== undefined) {
+        const found = mascot.assets.outfits.find((o: any) => o.id === outfitId);
+        if (found) return found;
+    }
+    
+    // previewState がない、または見つからない場合は現在の設定値を参照
+    return mascot.assets.outfits.find((o: any) => o.id === mascot.currentOutfitId) || mascot.assets.outfits[0] || null;
 });
 
 // 現在のポーズアセット
@@ -64,7 +71,12 @@ const activePose = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot || !mascot.assets?.poses) return null;
     
-    const targetId = previewState.value?.poseId || mascot.currentPoseId;
+    // previewState がある場合はその poseId を優先（明示的な空指定も考慮）
+    const targetId = (previewState.value && previewState.value.poseId !== undefined) 
+        ? previewState.value.poseId 
+        : mascot.currentPoseId;
+        
+    if (!targetId) return null;
     return mascot.assets.poses.find((p: any) => p.id === targetId) || null;
 });
 
@@ -81,7 +93,7 @@ const activeExpression = computed(() => {
     const mascot = activeMascot.value;
     if (!mascot) return null;
     
-    const expressions = activeOutfit.value?.expressions || mascot.assets?.expressions || [];
+    const expressions = activeOutfit.value?.expressions || [];
 
     // 1. プレビュー中なら指定されたアセットを強制表示
     if (previewState.value?.expressionId) {
@@ -93,7 +105,7 @@ const activeExpression = computed(() => {
     const normalized = currentEmotion.value.toLowerCase().trim();
 
     // 2.2 アイドル待機状態(neutral)で、マスコットに指定された標準表情(defaultExpressionId)がある場合はそれを最優先で使用
-    if (normalized === 'neutral' && mascot.defaultExpressionId) {
+    if ((normalized === 'neutral' || normalized === '通常' || normalized === 'normal') && mascot.defaultExpressionId) {
         const foundDefault = expressions.find((expr: any) => expr.id === mascot.defaultExpressionId);
         if (foundDefault && foundDefault.path) return foundDefault;
     }
@@ -374,6 +386,8 @@ onMounted(async () => {
         unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
             console.log('[MascotViewer] Config updated via IPC:', newConfig);
             configStore.updateConfig(newConfig);
+            // 正式な設定が届いたらプレビュー状態をクリアする
+            previewState.value = null;
         });
     }
 });

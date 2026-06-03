@@ -32,6 +32,7 @@ import ExpressionEditorModal from './ExpressionEditorModal.vue';
 import EmotionAssignmentModal from './EmotionAssignmentModal.vue';
 import ImageCropModal from './ImageCropModal.vue';
 import AiExpressionGeneratorModal from './AiExpressionGeneratorModal.vue';
+import BackgroundRemovalModal from './BackgroundRemovalModal.vue';
 
 interface MascotAsset {
     id: string;
@@ -114,7 +115,7 @@ const activeExpression = ref<MascotAsset | null>(null);
 
 const currentExpressions = computed(() => {
     if (!editingMascot.value) return [];
-    return activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
+    return activeOutfit.value?.expressions || [];
 });
 
 const editingMascotImageSet = computed(() => {
@@ -164,20 +165,27 @@ const computedListPreviewExpressionStyle = computed(() => {
     };
 });
 
-const selectExpressionForPreview = (expr: MascotAsset) => {
-    activePreviewExpression.value = expr;
-    
-    // デスクトップマスコット（別プロセス・別ウィンドウ）へのリアルタイム表情プレビュー状態の通知
+const updateMascotPreview = (overrides: { expressionId?: string; outfitId?: string; poseId?: string } = {}) => {
     if (window.electronAPI && window.electronAPI.previewMascotState) {
+        // 現在のプレビュー対象の表情アセットを取得
+        const currentExpr = (overrides.expressionId !== undefined)
+            ? currentExpressions.value.find(e => e.id === overrides.expressionId)
+            : activePreviewExpression.value;
+        
         window.electronAPI.previewMascotState({
-            expressionId: expr.id,
-            expressionOffsetX: expr.offsetX ?? 0,
-            expressionOffsetY: expr.offsetY ?? 0,
-            expressionScale: expr.scale ?? 1.0,
-            outfitId: editingMascot.value.currentOutfitId,
-            poseId: editingMascot.value.currentPoseId
+            expressionId: currentExpr?.id || editingMascot.value.defaultExpressionId,
+            expressionOffsetX: currentExpr?.offsetX ?? 0,
+            expressionOffsetY: currentExpr?.offsetY ?? 0,
+            expressionScale: currentExpr?.scale ?? 1.0,
+            outfitId: overrides.outfitId !== undefined ? overrides.outfitId : editingMascot.value.currentOutfitId,
+            poseId: overrides.poseId !== undefined ? overrides.poseId : editingMascot.value.currentPoseId
         });
     }
+};
+
+const selectExpressionForPreview = (expr: MascotAsset) => {
+    activePreviewExpression.value = expr;
+    updateMascotPreview({ expressionId: expr.id });
 };
 
 const selectMascot = (mascot: MascotData) => {
@@ -194,6 +202,9 @@ const selectMascot = (mascot: MascotData) => {
     const currentMascotExpressions = currentMascotOutfit?.expressions || mascot.assets.expressions || [];
     activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     activePreviewExpression.value = activeExpression.value;
+    
+    // マスコット切り替え時もプレビューを更新
+    updateMascotPreview();
 };
 
 // 初期ロード時の選択処理用
@@ -224,8 +235,8 @@ const addOutfitImage = async () => {
             editingMascot.value.assets.outfits = [];
         }
         
-        const defaultExpressions = JSON.parse(JSON.stringify(editingMascot.value.assets.expressions || []));
-
+        // 立ち絵ごとに独立した表情を持つため、ここではコピーせず空で初期化する
+        // (SettingsWindow.vue 側で空の28スロットが確保される)
         const newOutfit: MascotAsset & { expressions?: MascotAsset[] } = {
             id: 'outfit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             name: '衣装_' + (editingMascot.value.assets.outfits.length + 1),
@@ -233,31 +244,63 @@ const addOutfitImage = async () => {
             offsetX: 0,
             offsetY: 0,
             scale: 1.0,
-            expressions: defaultExpressions
+            expressions: []
         };
         
         editingMascot.value.assets.outfits.push(newOutfit);
         
         if (editingMascot.value.assets.outfits.length === 1 || !editingMascot.value.currentOutfitId) {
             editingMascot.value.currentOutfitId = newOutfit.id;
+            updateMascotPreview({ outfitId: newOutfit.id });
         }
         
-        syncAndSave();
+        // 立ち絵追加は重要な操作なので、内容同期後に即座に永続化する
+        await syncAndSave();
+        emit('save-settings');
     }
 };
 
 const setMainOutfit = (outfit: MascotAsset) => {
     editingMascot.value.currentOutfitId = outfit.id;
+    
+    // 衣装が変わったので、プレビュー対象の表情も新しい衣装の同名のものに更新する
+    // これにより、プレビューIDが新しい衣装側で解決できない問題を防止する
+    if (activePreviewExpression.value) {
+        const newExpr = outfit.expressions?.find(e => e.name === activePreviewExpression.value?.name);
+        if (newExpr) {
+            activePreviewExpression.value = newExpr;
+        }
+    }
+
+    // プレビューを即座に反映（衣装切り替え時はポーズを強制的にクリアして衣装を見せる）
+    updateMascotPreview({ 
+        outfitId: outfit.id,
+        poseId: '' 
+    });
+
+    // メイン立ち絵の切り替えも即座に永続化する
     syncAndSave();
+    emit('save-settings');
 };
 
 const deleteOutfit = (outfit: MascotAsset) => {
     if (confirm(`立ち絵アセットを削除しますか？`)) {
         editingMascot.value.assets.outfits = editingMascot.value.assets.outfits.filter(o => o.id !== outfit.id);
         if (editingMascot.value.currentOutfitId === outfit.id) {
-            editingMascot.value.currentOutfitId = editingMascot.value.assets.outfits[0]?.id || '';
+            const nextOutfit = editingMascot.value.assets.outfits[0];
+            const nextOutfitId = nextOutfit?.id || '';
+            editingMascot.value.currentOutfitId = nextOutfitId;
+            
+            // 削除時も対応するプレビュー更新を行う
+            if (nextOutfit) {
+                const newExpr = nextOutfit.expressions?.find(e => e.name === activePreviewExpression.value?.name);
+                if (newExpr) activePreviewExpression.value = newExpr;
+            }
+            updateMascotPreview({ outfitId: nextOutfitId });
         }
+        // 立ち絵削除も即座に永続化する
         syncAndSave();
+        emit('save-settings');
     }
 };
 
@@ -266,6 +309,38 @@ const isEditingExpressionsModal = ref(false);
 const isAssigningEmotionsModal = ref(false);
 const isCropModalActive = ref(false);
 const isAiGeneratingModalActive = ref(false);
+const isBackgroundRemovalModalActive = ref(false);
+// outfit参照ではなくIDを保持することで、Vueリアクティビティを介した安全な更新を保証する
+const backgroundRemovalTargetOutfitId = ref<string | null>(null);
+
+const backgroundRemovalTargetOutfitPath = computed(() => {
+    if (!backgroundRemovalTargetOutfitId.value) return '';
+    const outfit = editingMascot.value.assets.outfits.find(o => o.id === backgroundRemovalTargetOutfitId.value);
+    return outfit?.path || '';
+});
+
+const openBackgroundRemovalModal = (outfit: MascotAsset) => {
+    backgroundRemovalTargetOutfitId.value = outfit.id;
+    isBackgroundRemovalModalActive.value = true;
+};
+
+const handleBackgroundRemovalDone = async (newBase64: string) => {
+    if (backgroundRemovalTargetOutfitId.value) {
+        // editingMascotの配列からIDで直接検索して更新する
+        const targetOutfit = editingMascot.value.assets.outfits.find(o => o.id === backgroundRemovalTargetOutfitId.value);
+        if (targetOutfit) {
+            targetOutfit.path = newBase64;
+            // 変更を親リストへ同期して保存
+            const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+            if (idx !== -1) {
+                props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+                emit('save-settings');
+            }
+        }
+    }
+    isBackgroundRemovalModalActive.value = false;
+    backgroundRemovalTargetOutfitId.value = null;
+};
 
 const cropImageSrc = ref('');
 const selectedCropExpression = ref<MascotAsset | null>(null);
@@ -607,6 +682,11 @@ const closeAssigningEmotionsModal = async () => {
                                 <i class="pi pi-star-fill"></i>
                             </div>
 
+                            <!-- 左上の登録解除ボタン (画像がある場合のみ) -->
+                            <div v-if="expr.path" class="expression-clear-btn" @click.stop="handleClearExpression(expr)" title="登録解除">
+                                <i class="pi pi-trash"></i>
+                            </div>
+
                             <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden" style="width: 52px; height: 52px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0; position: relative;">
                                 <img 
                                     v-if="expr.path && isImage(expr.path)" 
@@ -633,12 +713,12 @@ const closeAssigningEmotionsModal = async () => {
                     </label>
                     <Select 
                         v-model="editingMascot.defaultExpressionId" 
-                        :options="registeredExpressions" 
+                        :options="currentExpressions" 
                         optionLabel="name" 
                         optionValue="id" 
                         placeholder="標準として表示する表情を選択..." 
                         class="w-full p-inputtext-sm" 
-                        @change="syncAndSave"
+                        @change="() => { updateMascotPreview(); syncAndSave(); emit('save-settings'); }"
                     />
                 </div>
             </div>
@@ -678,6 +758,7 @@ const closeAssigningEmotionsModal = async () => {
                             
                             <div class="flex gap-2 mt-2 w-full justify-content-center">
                                 <Button icon="pi pi-trash" class="p-button-danger p-button-text p-button-sm" @click="deleteOutfit(outfit)" title="削除" />
+                                <Button icon="pi pi-eraser" class="p-button-secondary p-button-text p-button-sm" @click="openBackgroundRemovalModal(outfit)" title="背景削除" />
                                 <Button :icon="editingMascot.currentOutfitId === outfit.id ? 'pi pi-star-fill text-yellow-500' : 'pi pi-star'" class="p-button-text p-button-sm" @click="setMainOutfit(outfit)" title="メイン立ち絵に設定" />
                             </div>
                         </div>
@@ -746,6 +827,15 @@ const closeAssigningEmotionsModal = async () => {
         :gemini-api-key="geminiApiKey"
         @close="isAiGeneratingModalActive = false"
         @import-sprite="importFromSpriteSheet"
+    />
+
+    <!-- 背景削除モーダル -->
+    <BackgroundRemovalModal
+        :visible="isBackgroundRemovalModalActive"
+        :image-src="backgroundRemovalTargetOutfitPath"
+        :mascot-id="editingMascot.id"
+        @close="isBackgroundRemovalModalActive = false"
+        @done="handleBackgroundRemovalDone"
     />
 </template>
 
@@ -867,6 +957,29 @@ const closeAssigningEmotionsModal = async () => {
 .default-star-badge i {
     font-size: 11px !important;
     color: #eab308 !important; /* 星のゴールド */
+}
+
+/* 表情登録解除ボタン (左上に配置) */
+.expression-clear-btn {
+    position: absolute !important;
+    top: 8px !important;
+    left: 8px !important;
+    z-index: 10 !important;
+    line-height: 1 !important;
+    display: none !important; /* 通常は非表示 */
+    padding: 2px !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+    color: #94a3b8 !important;
+}
+
+.expression-grid-cell:hover .expression-clear-btn {
+    display: block !important;
+}
+
+.expression-clear-btn:hover {
+    background-color: #fee2e2 !important;
+    color: #ef4444 !important;
 }
 
 /* 立ち絵全身像グリッドセル */
