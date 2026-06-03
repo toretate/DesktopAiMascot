@@ -3,7 +3,7 @@ import { IncomingMessage } from 'http';
 import * as url from 'url';
 import { ChatAiService } from '../services/chat-ai-service';
 import { VoiceAiService } from '../services/voice-ai-service';
-import { authenticateUserToken } from '../middlewares/auth-middleware';
+import { authenticateUserToken, parseCookies } from '../middlewares/auth-middleware';
 
 export function setupWebSocket(wss: WebSocketServer) {
     wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
@@ -11,7 +11,15 @@ export function setupWebSocket(wss: WebSocketServer) {
 
         const requestUrl = req.url || '';
         const parsedUrl = url.parse(requestUrl, true);
-        const token = parsedUrl.query.token as string;
+        
+        // 1. クエリパラメータから token を取得 (モバイル等)
+        let token = parsedUrl.query.token as string;
+
+        // 2. クエリパラメータにない場合は Cookie から取得 (Web/Electron)
+        if (!token) {
+            const cookies = parseCookies(req.headers.cookie);
+            token = cookies['session_token'];
+        }
 
         try {
             if (!process.env.GOOGLE_CLIENT_ID) {

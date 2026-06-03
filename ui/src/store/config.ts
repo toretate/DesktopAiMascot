@@ -194,7 +194,9 @@ export const useConfigStore = defineStore('config', () => {
             try {
                 const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
                 console.log(`[Config] Fetching latest config from server: ${serverUrl}`);
-                const response = await fetch(serverUrl);
+                const response = await fetch(serverUrl, {
+                    credentials: 'include'
+                });
                 if (response.ok) {
                     const resJson = await response.json();
                     if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
@@ -253,7 +255,8 @@ export const useConfigStore = defineStore('config', () => {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
                 });
                 if (response.ok) {
                     const resJson = await response.json();

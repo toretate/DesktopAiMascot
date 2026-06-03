@@ -7,12 +7,15 @@ import Select from 'primevue/select';
 import Slider from 'primevue/slider';
 import InputText from 'primevue/inputtext';
 import { useConfigStore } from '../../store/config';
+import { useAuthStore } from '../../store/auth';
 import { storeToRefs } from 'pinia';
 
 // リファクタリング済みマスコット設定コンポーネントのインポート
 import MascotSettings from './MascotSettings.vue';
 
 const configStore = useConfigStore();
+const authStore = useAuthStore();
+
 const {
     googleAiStudioApiKey: geminiApiKey,
     openaiApiKey,
@@ -41,6 +44,8 @@ const {
     mascots,
     activeMascotId
 } = storeToRefs(configStore);
+
+const { user, isAuthenticated } = storeToRefs(authStore);
 
 const activeMenu = ref('mascot');
 
@@ -307,6 +312,10 @@ const ensure28Expressions = (expressions: any[]): any[] => {
 // 設定データのロード
 onMounted(async () => {
     await configStore.loadConfig();
+
+    if (useServer.value) {
+        authStore.checkAuthStatus();
+    }
 
     if (selectedEngine.value === 'lmstudio') {
         testLmStudioConnection();
@@ -743,7 +752,35 @@ const menuItems = ref([
                                         <i :class="serverConnectionIcon"></i>
                                         <span class="ml-2">{{ serverConnectionText }}</span>
                                     </div>
-                                </div>
+
+                                     <!-- ログイン状態・認証UI -->
+                                     <div class="auth-section mt-3 p-3 border-round bg-gray-50 border-1 border-300">
+                                         <div class="flex align-items-center justify-content-between">
+                                             <div class="flex align-items-center gap-2">
+                                                 <i class="pi pi-user text-purple-500"></i>
+                                                 <span class="font-bold">ログイン状態:</span>
+                                                 <span v-if="isAuthenticated" class="text-green-600 font-semibold">{{ user?.email }}</span>
+                                                 <span v-else class="text-red-500 font-semibold">未ログイン</span>
+                                             </div>
+                                             <div>
+                                                 <Button 
+                                                     v-if="!isAuthenticated"
+                                                     label="Googleでログイン" 
+                                                     icon="pi pi-google" 
+                                                     class="p-button-sm p-button-success"
+                                                     @click="authStore.login" 
+                                                 />
+                                                 <Button 
+                                                     v-else
+                                                     label="ログアウト" 
+                                                     icon="pi pi-sign-out" 
+                                                     class="p-button-sm p-button-danger p-button-outlined"
+                                                     @click="authStore.logout" 
+                                                 />
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
 
                                 <div class="flex justify-content-end mt-4">
                                     <Button 
