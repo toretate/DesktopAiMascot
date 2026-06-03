@@ -5,9 +5,9 @@ import path from 'path';
 import fs from 'fs';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { removeBackground } from './services/remove-bg-service';
 import { VoiceAiService } from './services/voice-ai-service';
 import { ChatAiService } from './services/chat-ai-service';
+import removeBackgroundRoute from './routes/remove-background';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,7 +49,7 @@ function saveBase64Image(base64Data: string, mascotId: string, assetType: string
 
     const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
     const dataBuffer = Buffer.from(matches[2], 'base64');
-    
+
     // ディレクトリパスを作成
     const targetDir = path.join(MASCOTS_DIR, mascotId, assetType);
     if (!fs.existsSync(targetDir)) {
@@ -58,7 +58,7 @@ function saveBase64Image(base64Data: string, mascotId: string, assetType: string
 
     const filename = `${assetId}.${ext}`;
     const filePath = path.join(targetDir, filename);
-    
+
     fs.writeFileSync(filePath, dataBuffer);
     console.log(`[Server] Saved asset to ${filePath}`);
 
@@ -121,55 +121,8 @@ app.post('/api/config', (req, res) => {
     }
 });
 
-// 背景削除APIエンドポイント
-app.post('/api/remove-background', async (req, res) => {
-    try {
-        const { imagePath, mascotId, engine } = req.body;
-        console.log(`[Server] Background removal request received for mascot: ${mascotId}, engine: ${engine}`);
-
-        if (!imagePath) {
-            return res.status(400).json({ success: false, error: 'imagePath is required' });
-        }
-
-        let inputBuffer: Buffer;
-        let mimeType = 'image/png';
-
-        if (imagePath.startsWith('data:image/')) {
-            // Base64 DataURL → Buffer → Blob に変換して渡す
-            const matches = imagePath.match(/^data:([a-zA-Z+/]+);base64,(.+)$/s);
-            if (!matches || matches.length < 3) {
-                return res.status(400).json({ success: false, error: 'Invalid data URL format' });
-            }
-            mimeType = matches[1];
-            const base64Data = matches[2];
-            inputBuffer = Buffer.from(base64Data, 'base64');
-            console.log(`[Server] DataURL converted to Buffer (mimeType: ${mimeType}, size: ${inputBuffer.length} bytes)`);
-        } else if (imagePath.startsWith('/mascots/')) {
-            // サーバー静的ファイルパスからファイルを直接読み込む
-            const filePath = path.join(MASCOTS_DIR, imagePath.replace('/mascots/', ''));
-            if (!fs.existsSync(filePath)) {
-                return res.status(404).json({ success: false, error: `File not found: ${filePath}` });
-            }
-            inputBuffer = fs.readFileSync(filePath);
-            const ext = path.extname(filePath).replace('.', '').replace('jpg', 'jpeg');
-            mimeType = `image/${ext}`;
-            console.log(`[Server] File loaded as Buffer: ${filePath}`);
-        } else {
-            return res.status(400).json({ success: false, error: 'Unsupported image source format' });
-        }
-
-        console.log(`[Server] Processing background removal using engine: ${engine}...`);
-        
-        const outputBuffer = await removeBackground(inputBuffer, mimeType, engine);
-        const base64Image = `data:image/png;base64,${outputBuffer.toString('base64')}`;
-
-        console.log('[Server] Background removal succeeded');
-        return res.json({ success: true, image: base64Image });
-    } catch (error: any) {
-        console.error('[Server] Background removal failed:', error.message);
-        return res.status(500).json({ success: false, error: error.message });
-    }
-});
+// 背景削除APIルートの登録
+app.use('/api', removeBackgroundRoute);
 
 // 疎通確認(ping)用エンドポイント
 app.get('/api/ping', (req, res) => {
@@ -197,12 +150,12 @@ wss.on('connection', (ws) => {
             const { event, data } = parsed;
 
             if (event === 'chat-send') {
-                const { 
-                    message, 
-                    apiKey, 
-                    systemPrompt, 
-                    model, 
-                    voicevoxSpeakerId, 
+                const {
+                    message,
+                    apiKey,
+                    systemPrompt,
+                    model,
+                    voicevoxSpeakerId,
                     voicevoxEndpoint,
                     engine,
                     lmstudioEndpoint
