@@ -133,9 +133,8 @@ export class GeminiExpressionEngine {
     /**
      * Gemini Visionによるスプライトシート解析
      */
-    static async analyzeSpriteSheet(base64Image: string, apiKey: string) {
+    static async analyzeSpriteSheet(rawBase64: string, apiKey: string, mimeType: string = 'image/png') {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${apiKey}`;
-        const rawBase64 = base64Image.split(',')[1] || base64Image;
         const prompts = loadPrompts();
         const prompt = prompts['analyze-sprite-sheet'];
 
@@ -147,10 +146,27 @@ export class GeminiExpressionEngine {
                     contents: [{
                         parts: [
                             { text: prompt },
-                            { inline_data: { mime_type: 'image/png', data: rawBase64 } }
+                            { inline_data: { mime_type: mimeType, data: rawBase64 } }
                         ]
                     }],
-                    generationConfig: { response_mime_type: "application/json" }
+                    generationConfig: {
+                        response_mime_type: "application/json",
+                        response_schema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    label: { type: "STRING" },
+                                    box_2d: {
+                                        type: "ARRAY",
+                                        description: "[ymin, xmin, ymax, xmax] coordinates normalized to 0-1000",
+                                        items: { type: "INTEGER" }
+                                    }
+                                },
+                                required: ["label", "box_2d"]
+                            }
+                        }
+                    }
                 })
             });
             if (!response.ok) throw new Error(`Vision API Error: ${response.status}`);

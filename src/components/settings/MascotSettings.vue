@@ -464,8 +464,11 @@ const importFromSpriteSheet = async (preloadedBase64?: string) => {
         };
         
         for (const res of scanResults) {
-            const [ymin, xmin, ymax, xmax] = res.box_2d;
-            const label = res.label;
+            const box = res.box_2d || res.box || res.coordinates;
+            if (!box || !Array.isArray(box) || box.length < 4) continue;
+            const [ymin, xmin, ymax, xmax] = box;
+            const label = res.label || res.emotion;
+            if (!label) continue;
             
             const canvas = document.createElement('canvas');
             const width = ((xmax - xmin) * img.width) / 1000;
