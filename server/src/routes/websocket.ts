@@ -1,0 +1,132 @@
+import { WebSocket, WebSocketServer } from 'ws';
+import { IncomingMessage } from 'http';
+import * as url from 'url';
+import { ChatAiService } from '../services/chat-ai-service';
+import { VoiceAiService } from '../services/voice-ai-service';
+import { authenticateUserToken } from '../middlewares/auth-middleware';
+
+export function setupWebSocket(wss: WebSocketServer) {
+    wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+        console.log('[WS] Client connecting...');
+
+        const requestUrl = req.url || '';
+        const parsedUrl = url.parse(requestUrl, true);
+        const token = parsedUrl.query.token as string;
+
+        try {
+            if (!process.env.GOOGLE_CLIENT_ID) {
+                console.warn('[WS] 警告: GOOGLE_CLIENT_ID が環境変数に設定されていません。認証なしで接続を許可します。');
+            } else {
+                if (!token) {
+                    console.log('[WS] Authentication failed: No token provided');
+                    ws.close(4001, 'Unauthorized: Token is required');
+                    return;
+                }
+                const user = await authenticateUserToken(token);
+                console.log(`[WS] Authentication successful for user: ${user.email}`);
+            }
+        } catch (authError: any) {
+            console.error('[WS] Authentication failed:', authError.message);
+            ws.close(4003, `Forbidden: ${authError.message}`);
+            return;
+        }
+
+        console.log('[WS] Client connected successfully');
+
+
+        ws.on('message', async (messageData) => {
+            try {
+                const rawMessage = messageData.toString();
+                const parsed = JSON.parse(rawMessage);
+                const { event, data } = parsed;
+
+                if (event === 'chat-send') {
+                    const {
+                        message,
+                        apiKey,
+                        systemPrompt,
+                        model,
+                        voicevoxSpeakerId,
+                        voicevoxEndpoint,
+                        engine,
+                        lmstudioEndpoint
+                    } = data;
+
+                    console.log(`=========================================`);
+                    console.log(`[WS] chat-send received!`);
+                    console.log(` - Message: "${message}"`);
+                    console.log(` - Engine: "${engine}"`);
+                    console.log(` - Model: "${model}"`);
+                    console.log(` - API Key: ${apiKey ? '***(設定あり)***' : '(設定なし)'}`);
+                    console.log(` - LM Studio Endpoint: "${lmstudioEndpoint}"`);
+                    console.log(`=========================================`);
+
+                    // 1. 考え中ステータスをプッシュ
+                    ws.send(JSON.stringify({
+                        event: 'chat-status',
+                        data: { status: 'thinking' }
+                    }));
+
+                    let reply = '';
+                    try {
+                        reply = await ChatAiService.generateResponse({
+                            message,
+                            apiKey,
+                            systemPrompt,
+                            model,
+                            engine,
+                            lmstudioEndpoint
+                        });
+                    } catch (aiError: any) {
+                        console.error('[WS] AI Engine Error:', aiError.message);
+                        ws.send(JSON.stringify({
+                            event: 'chat-error',
+                            data: { message: `AIサーバーとの通信エラー: ${aiError.message}` }
+                        }));
+                        return;
+                    }
+
+                    // 感情タグのパース
+                    let detectedEmotion = 'neutral';
+                    const emotionMatch = reply.match(/\[(\w+)\]/);
+                    if (emotionMatch && emotionMatch[1]) {
+                        detectedEmotion = emotionMatch[1].toLowerCase().trim();
+                    }
+
+                    const speechText = reply.replace(/\[\w+\]/g, '').trim();
+
+                    // 3. AI応答テキストのプッシュ
+                    ws.send(JSON.stringify({
+                        event: 'chat-response',
+                        data: {
+                            text: reply,
+                            speechText: speechText,
+                            emotion: detectedEmotion
+                        }
+                    }));
+
+                    // 4. VOICEVOXによる音声合成
+                    if (speechText) {
+                        const baseUrl = voicevoxEndpoint || 'http://localhost:50021';
+                        const speaker = voicevoxSpeakerId !== undefined ? voicevoxSpeakerId : 2;
+
+                        const base64Audio = await VoiceAiService.synthesize(speechText, speaker, baseUrl);
+                        if (base64Audio) {
+                            // 4.3 音声データのプッシュ
+                            ws.send(JSON.stringify({
+                                event: 'chat-audio',
+                                data: { audio: base64Audio }
+                            }));
+                        }
+                    }
+                }
+            } catch (e: any) {
+                console.error('[WS] Error processing message:', e.message);
+            }
+        });
+
+        ws.on('close', () => {
+            console.log('[WS] Client disconnected');
+        });
+    });
+}

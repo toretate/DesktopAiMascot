@@ -4,7 +4,7 @@
     "main": "dist-electron/main.js",
     "scripts": {
         "dev": "vite",
-        "server:dev": "npm.cmd --prefix server run dev",
+        "server:dev": "npm.cmd --prefix ../server run dev",
         "build": "vue-tsc && vite build",
         "preview": "vite preview",
         "test": "vitest run",

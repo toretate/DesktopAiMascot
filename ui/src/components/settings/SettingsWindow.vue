@@ -355,6 +355,50 @@ const handleLiveUpdate = async () => {
     // リアクティブ同期の確認
 };
 
+// マスコットの追加処理
+const addMascot = () => {
+    const newId = 'mascot_' + Date.now();
+    const newMascot = {
+        id: newId,
+        name: '新しいマスコット',
+        avatar: '🤖',
+        profile: '新しいAIマスコットです。',
+        aiConfig: {
+            chat: { engine: 'gemini', model: 'gemini-2.0-flash-exp', temperature: 0.7 },
+            voice: { engine: 'voicevox', speaker_id: 2, style: 'normal' }
+        },
+        assets: {
+            outfits: [],
+            expressions: ensure28Expressions([]),
+            poses: []
+        }
+    };
+    mascots.value.push(newMascot);
+    activeMascotId.value = newId;
+    saveSettings();
+};
+
+// マスコットの削除処理
+const deleteMascot = (mascotId: string) => {
+    if (mascots.value.length <= 1) {
+        alert('最後の1つのマスコットは削除できません。');
+        return;
+    }
+    const targetMascot = mascots.value.find(m => m.id === mascotId);
+    const mascotName = targetMascot ? targetMascot.name : 'このマスコット';
+    if (!confirm(`マスコット「${mascotName}」を削除しますか？`)) {
+        return;
+    }
+    
+    mascots.value = mascots.value.filter(m => m.id !== mascotId);
+    
+    // 削除したマスコットがアクティブだった場合、別のアクティブマスコットを設定
+    if (activeMascotId.value === mascotId) {
+        activeMascotId.value = mascots.value[0].id;
+    }
+    saveSettings();
+};
+
 // 設定の保存処理
 const saveSettings = async () => {
     isSaving.value = true;
@@ -469,6 +513,8 @@ const menuItems = ref([
                                 :geminiApiKey="geminiApiKey"
                                 @live-update="handleLiveUpdate"
                                 @save-settings="saveSettings"
+                                @add-mascot="addMascot"
+                                @delete-mascot="deleteMascot"
                             />
                         </template>
                     </Card>
