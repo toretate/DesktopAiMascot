@@ -9,7 +9,13 @@ AiExpressionService.setAdapter({
     existsSync: (p: string) => fs.existsSync(p),
     pathJoin: (...args: string[]) => path.join(...args),
     pathExtname: (p: string) => path.extname(p),
-    cwd: () => process.cwd()
+    cwd: () => {
+        const currentCwd = process.cwd();
+        if (path.basename(currentCwd) === 'ui') {
+            return path.dirname(currentCwd);
+        }
+        return currentCwd;
+    }
 });
 
 // 開発環境と本番環境の判定
@@ -212,6 +218,7 @@ let saveSettingsBoundsTimeout: NodeJS.Timeout | null = null;
 let chatOffsetX = 300; // マスコットとのX軸相対オフセット (初期値はマスコット幅300)
 let chatOffsetY = 0;   // マスコットとのY軸相対オフセット
 let isSyncingChatPosition = false; // moveイベントのループを防ぐフラグ
+let characterBounds = { top: 0, bottom: 800, left: 0, right: 600 }; // キャラクター画像のウィンドウ内描画境界
 
 // --- ウィンドウ位置の保存（デバウンス処理） ---
 function debouncedSaveMascotPosition() {
@@ -237,6 +244,70 @@ function debouncedSaveSettingsBounds() {
         config.update({ settingsWidth: w, settingsHeight: h, settingsX: x, settingsY: y });
         console.log(`[Config] Settings bounds saved: X=${x}, Y=${y}, width=${w}, height=${h}`);
     }, 1000); // 1秒間操作が静止した後に保存
+}
+
+// --- チャットウィンドウの表示時位置調整処理 ---
+function adjustChatWindowPosition() {
+    if (!mascotWindow || mascotWindow.isDestroyed() || !chatWindow || chatWindow.isDestroyed()) return;
+
+    const mascotBounds = mascotWindow.getBounds();
+    const chatBounds = chatWindow.getBounds();
+    
+    // キャラクターが現在いる物理ディスプレイを取得
+    const targetDisplay = screen.getDisplayMatching(mascotBounds);
+    const displayBounds = targetDisplay.workArea;
+    
+    const chatW = chatBounds.width;
+    const chatH = chatBounds.height;
+    
+    // characterBoundsの各値が有効な数値か検証し、不正な場合はフォールバック
+    const boundsTop = Number.isFinite(characterBounds.top) ? characterBounds.top : 0;
+    const boundsBottom = Number.isFinite(characterBounds.bottom) ? characterBounds.bottom : mascotBounds.height;
+    const boundsLeft = Number.isFinite(characterBounds.left) ? characterBounds.left : 0;
+    const boundsRight = Number.isFinite(characterBounds.right) ? characterBounds.right : mascotBounds.width;
+    
+    // キャラクター画像のグローバル座標系での境界を算出
+    const globalCharTop = mascotBounds.y + boundsTop;
+    const globalCharBottom = mascotBounds.y + boundsBottom;
+    const globalCharLeft = mascotBounds.x + boundsLeft;
+    const globalCharRight = mascotBounds.x + boundsRight;
+    
+    // 基本位置：キャラクター画像の右側、ウィンドウの下をキャラクター画像の下に合わせる
+    let targetX = globalCharRight;
+    let targetY = globalCharBottom - chatH;
+    
+    // 上下方向のはみ出し補正
+    if (targetY + chatH > displayBounds.y + displayBounds.height) {
+        targetY = displayBounds.y + displayBounds.height - chatH;
+    }
+    if (targetY < displayBounds.y) {
+        targetY = displayBounds.y;
+    }
+    
+    // キャラクター画像の右端に表示した場合に、メッセージウィンドウが画面外にはみ出すとき
+    if (targetX + chatW > displayBounds.x + displayBounds.width) {
+        // キャラクター画像の左側に表示
+        targetX = globalCharLeft - chatW;
+        targetY = globalCharBottom - chatH;
+        
+        // 上下方向のはみ出し補正
+        if (targetY + chatH > displayBounds.y + displayBounds.height) {
+            targetY = displayBounds.y + displayBounds.height - chatH;
+        }
+        if (targetY < displayBounds.y) {
+            targetY = displayBounds.y;
+        }
+    }
+    
+    // 最終的な座標値を四捨五入して整数値にする（Electronの座標エラーを防止）
+    targetX = Math.round(targetX);
+    targetY = Math.round(targetY);
+    
+    isSyncingChatPosition = true;
+    chatWindow.setPosition(targetX, targetY);
+    chatOffsetX = targetX - mascotBounds.x;
+    chatOffsetY = targetY - mascotBounds.y;
+    isSyncingChatPosition = false;
 }
 
 // --- チャットウィンドウの追従移動処理 ---
@@ -484,7 +555,7 @@ function createWindows() {
     mascotWindow.once('ready-to-show', () => {
         if (configData.chatVisible) {
             chatWindow?.showInactive(); // フォーカスを奪わずに表示
-            syncChatWindowPosition();
+            adjustChatWindowPosition();
         }
     });
 }
@@ -504,7 +575,7 @@ app.whenReady().then(() => {
             mascotWindow?.webContents.send('chat-toggled', false);
         } else {
             chatWindow.showInactive();
-            syncChatWindowPosition();
+            adjustChatWindowPosition();
             config.update({ chatVisible: true });
             mascotWindow?.webContents.send('chat-toggled', true);
         }
@@ -557,6 +628,12 @@ app.whenReady().then(() => {
     ipcMain.on('quit-app', () => {
         console.log('[IPC] Quit App request received');
         app.quit();
+    });
+
+    // キャラクターの描画境界を受け取るハンドラー
+    ipcMain.on('update-character-bounds', (event, bounds: { top: number; bottom: number; left: number; right: number }) => {
+        characterBounds = bounds;
+        console.log(`[IPC] Character bounds updated:`, characterBounds);
     });
 
     // 3. マウススルー（イベント無視）の制御

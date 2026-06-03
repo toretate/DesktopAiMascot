@@ -13,6 +13,7 @@ export interface IElectronAPI {
     setMascotScale: (scale: number) => void;
     setIgnoreMouseEvents: (ignore: boolean) => void;
     dragWindow: (offset: { dx: number; dy: number }) => void;
+    updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => void;
     quitApp: () => void;
     getAppConfig: () => Promise<any>;
     updateAppConfig: (config: any) => Promise<void>;

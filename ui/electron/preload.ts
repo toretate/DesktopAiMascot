@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ウィンドウのドラッグ移動シグナルの送信 (HTML要素でドラッグを擬似実装する)
     dragWindow: (offset: { dx: number; dy: number }) => ipcRenderer.send('drag-window', offset),
     
+    // キャラクター画像の描画境界をメインプロセスに通知
+    updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => 
+        ipcRenderer.send('update-character-bounds', bounds),
+    
     // アプリケーションを終了する
     quitApp: () => ipcRenderer.send('quit-app'),
     
