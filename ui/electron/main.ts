@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AiExpressionService } from '../src/skills/expression-service/expression-service';
@@ -580,6 +580,16 @@ app.whenReady().then(() => {
             mascotWindow?.webContents.send('chat-toggled', true);
         }
         console.log(`[IPC] Toggle Chat: visible=${!isVisible}`);
+    });
+
+    // Googleログイン開始 (BFFのログインURLをシステムブラウザで開く)
+    ipcMain.on('auth:login', () => {
+        const configData = config.get();
+        const host = configData.serverHost || 'localhost';
+        const port = configData.serverPort || 3000;
+        const serverUrl = `http://${host}:${port}/api/auth/login`;
+        console.log(`[IPC] opening auth URL: ${serverUrl}`);
+        shell.openExternal(serverUrl);
     });
 
     // 2. 設定画面の起動

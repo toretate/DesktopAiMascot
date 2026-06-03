@@ -97,13 +97,38 @@ export async function authenticateUserToken(token: string): Promise<User> {
     throw new Error('このアカウントでのアクセスは許可されていません。');
 }
 
+// Cookieを手動でパースするヘルパー関数
+export function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+    const list: Record<string, string> = {};
+    if (!cookieHeader) return list;
+    cookieHeader.split(';').forEach(cookie => {
+        const parts = cookie.split('=');
+        const key = parts.shift()?.trim();
+        if (key) {
+            list[key] = decodeURIComponent(parts.join('='));
+        }
+    });
+    return list;
+}
+
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+    let token = '';
+
+    // 1. Authorization ヘッダーをチェック
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: '認証トークンが必要です。' });
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
     }
 
-    const token = authHeader.split(' ')[1];
+    // 2. Cookie をチェック (session_token)
+    if (!token) {
+        const cookies = parseCookies(req.headers.cookie);
+        token = cookies['session_token'];
+    }
+
+    if (!token) {
+        return res.status(401).json({ error: '認証トークンが必要です。' });
+    }
 
     try {
         const user = await authenticateUserToken(token);

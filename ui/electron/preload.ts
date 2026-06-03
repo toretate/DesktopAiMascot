@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // レンダラープロセス（Vue3）へ公開する安全なAPIブリッジ
 contextBridge.exposeInMainWorld('electronAPI', {
+    // Googleログインの開始
+    loginWithGoogle: () => ipcRenderer.send('auth:login'),
+
     // チャットパネルの表示・非表示のトグルを送信
     toggleChat: () => ipcRenderer.send('toggle-chat'),
     

@@ -7,12 +7,18 @@ import { WebSocketServer } from 'ws';
 import removeBackgroundRoute from './routes/remove-background';
 import configRoute from './routes/config';
 import pingRoute from './routes/ping';
+import authRoute from './routes/auth';
 import { setupWebSocket } from './routes/websocket';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORSでCookieの送受信を許可する設定
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
+
 // 画像データ（Base64）の送受信に対応するため、リクエストボディのサイズ上限を50MBに設定
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -26,6 +32,7 @@ console.log(`[Server] Hosting mascots directory from: ${MASCOTS_DIR}`);
 app.use('/api', removeBackgroundRoute);
 app.use('/api', configRoute);
 app.use('/api', pingRoute);
+app.use('/api', authRoute);
 
 // HTTP サーバーを作成し、Express をラップ
 const server = http.createServer(app);

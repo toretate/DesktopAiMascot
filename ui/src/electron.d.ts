@@ -8,6 +8,7 @@ interface MascotAsset {
 }
 
 export interface IElectronAPI {
+    loginWithGoogle: () => void;
     toggleChat: () => void;
     openSettings: () => void;
     setMascotScale: (scale: number) => void;
