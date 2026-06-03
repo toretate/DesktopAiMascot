@@ -270,7 +270,10 @@ function adjustChatWindowPosition() {
     let targetX = globalCharRight;
     let targetY = globalCharBottom - chatH;
     
-    // 上にはみ出ないように補正
+    // 上下方向のはみ出し補正
+    if (targetY + chatH > displayBounds.y + displayBounds.height) {
+        targetY = displayBounds.y + displayBounds.height - chatH;
+    }
     if (targetY < displayBounds.y) {
         targetY = displayBounds.y;
     }
@@ -281,7 +284,10 @@ function adjustChatWindowPosition() {
         targetX = globalCharLeft - chatW;
         targetY = globalCharBottom - chatH;
         
-        // 上にはみ出ないように補正
+        // 上下方向のはみ出し補正
+        if (targetY + chatH > displayBounds.y + displayBounds.height) {
+            targetY = displayBounds.y + displayBounds.height - chatH;
+        }
         if (targetY < displayBounds.y) {
             targetY = displayBounds.y;
         }
