@@ -6,6 +6,7 @@ import fs from 'fs';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import { removeBackground } from './services/remove-bg-service';
+import { VoiceAiService } from './services/voice-ai-service';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -319,60 +320,13 @@ wss.on('connection', (ws) => {
                     const baseUrl = voicevoxEndpoint || 'http://localhost:50021';
                     const speaker = voicevoxSpeakerId !== undefined ? voicevoxSpeakerId : 2;
 
-                    console.log(`[WS] VOICEVOX synthesize start for: "${speechText}"`);
-                    
-                    const voiceController = new AbortController();
-                    const voiceTimeoutId = setTimeout(() => voiceController.abort(), 60000);
-
-                    try {
-                        const encodedText = encodeURIComponent(speechText);
-                        const queryUrl = baseUrl.endsWith('/')
-                            ? `${baseUrl}audio_query?text=${encodedText}&speaker=${speaker}`
-                            : `${baseUrl}/audio_query?text=${encodedText}&speaker=${speaker}`;
-
-                        // 4.1 クエリ作成
-                        const queryResponse = await fetch(queryUrl, {
-                            method: 'POST',
-                            signal: voiceController.signal
-                        });
-
-                        if (!queryResponse.ok) {
-                            throw new Error(`VOICEVOX Query Error: ${queryResponse.status}`);
-                        }
-
-                        const audioQuery = await queryResponse.json();
-
-                        // 4.2 音声合成
-                        const synthesisUrl = baseUrl.endsWith('/')
-                            ? `${baseUrl}synthesis?speaker=${speaker}`
-                            : `${baseUrl}/synthesis?speaker=${speaker}`;
-                        
-                        const synthResponse = await fetch(synthesisUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(audioQuery),
-                            signal: voiceController.signal
-                        });
-
-                        clearTimeout(voiceTimeoutId);
-
-                        if (!synthResponse.ok) {
-                            throw new Error(`VOICEVOX Synthesis Error: ${synthResponse.status}`);
-                        }
-
-                        const arrayBuffer = await synthResponse.arrayBuffer();
-                        const base64Audio = Buffer.from(arrayBuffer).toString('base64');
-
-                        console.log(`[WS] VOICEVOX synthesize success`);
-
+                    const base64Audio = await VoiceAiService.synthesize(speechText, speaker, baseUrl);
+                    if (base64Audio) {
                         // 4.3 音声データのプッシュ
                         ws.send(JSON.stringify({
                             event: 'chat-audio',
                             data: { audio: base64Audio }
                         }));
-                    } catch (voiceError: any) {
-                        clearTimeout(voiceTimeoutId);
-                        console.error('[WS] VOICEVOX Error:', voiceError.message);
                     }
                 }
             }
