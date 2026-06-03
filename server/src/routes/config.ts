@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { authMiddleware } from '../middlewares/auth-middleware';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ function saveBase64Image(base64Data: string, mascotId: string, assetType: string
 }
 
 // 設定データをロードするエンドポイント
-router.get('/config', (req, res) => {
+router.get('/config', authMiddleware, (req, res) => {
     try {
         console.log('[Server] Load config request received');
         if (fs.existsSync(CONFIG_PATH)) {
@@ -51,7 +52,7 @@ router.get('/config', (req, res) => {
 });
 
 // 設定データをセーブするエンドポイント
-router.post('/config', (req, res) => {
+router.post('/config', authMiddleware, (req, res) => {
     try {
         console.log('[Server] Save config request received');
         const newConfig = req.body;
