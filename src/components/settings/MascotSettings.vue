@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
@@ -21,10 +21,18 @@ const isImage = (path: string | undefined | null): boolean => {
 // アセットURLの解決
 const resolveImageUrl = (path: string | undefined | null): string => {
     if (!path) return '';
-    if (path.startsWith('/mascots/') && configStore.useServer) {
-        return `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    if (path.startsWith('data:image/')) {
+        return path;
     }
-    return path;
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configStore.configVersion}`;
 };
 
 // 新規切り出しモーダルのインポート
@@ -208,14 +216,29 @@ const selectMascot = (mascot: MascotData) => {
 };
 
 // 初期ロード時の選択処理用
-if (props.mascots.length > 0) {
-    const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
-    editingMascot.value = JSON.parse(JSON.stringify(active));
-    const currentMascotOutfit = editingMascot.value.assets.outfits.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets.outfits[0] || null;
-    const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets.expressions || [];
-    activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
-    activePreviewExpression.value = activeExpression.value;
-}
+const initEditingMascot = () => {
+    if (props.mascots.length > 0) {
+        const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
+        editingMascot.value = JSON.parse(JSON.stringify(active));
+        const currentMascotOutfit = editingMascot.value.assets.outfits.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets.outfits[0] || null;
+        const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets.expressions || [];
+        activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
+        activePreviewExpression.value = activeExpression.value;
+    }
+};
+
+initEditingMascot();
+
+// activeMascotId や mascots が非同期でロードされたり変更されたりした場合に初期化
+watch(
+    [() => props.activeMascotId, () => props.mascots],
+    () => {
+        if (!editingMascot.value.id || editingMascot.value.id !== props.activeMascotId) {
+            initEditingMascot();
+        }
+    },
+    { deep: true }
+);
 
 // 編集バッファと親のリストを同期し保存するハンドラー
 const syncAndSave = async () => {
