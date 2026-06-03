@@ -1,10 +1,38 @@
 import { WebSocket, WebSocketServer } from 'ws';
+import { IncomingMessage } from 'http';
+import * as url from 'url';
 import { ChatAiService } from '../services/chat-ai-service';
 import { VoiceAiService } from '../services/voice-ai-service';
+import { authenticateUserToken } from '../middlewares/auth-middleware';
 
 export function setupWebSocket(wss: WebSocketServer) {
-    wss.on('connection', (ws: WebSocket) => {
-        console.log('[WS] Client connected');
+    wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+        console.log('[WS] Client connecting...');
+
+        const requestUrl = req.url || '';
+        const parsedUrl = url.parse(requestUrl, true);
+        const token = parsedUrl.query.token as string;
+
+        try {
+            if (!process.env.GOOGLE_CLIENT_ID) {
+                console.warn('[WS] 警告: GOOGLE_CLIENT_ID が環境変数に設定されていません。認証なしで接続を許可します。');
+            } else {
+                if (!token) {
+                    console.log('[WS] Authentication failed: No token provided');
+                    ws.close(4001, 'Unauthorized: Token is required');
+                    return;
+                }
+                const user = await authenticateUserToken(token);
+                console.log(`[WS] Authentication successful for user: ${user.email}`);
+            }
+        } catch (authError: any) {
+            console.error('[WS] Authentication failed:', authError.message);
+            ws.close(4003, `Forbidden: ${authError.message}`);
+            return;
+        }
+
+        console.log('[WS] Client connected successfully');
+
 
         ws.on('message', async (messageData) => {
             try {
