@@ -80,6 +80,7 @@ export const useConfigStore = defineStore('config', () => {
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
     const activeMascotId = ref('');
+    const configVersion = ref(0);
 
     // ---- Getters ----
     // アクティブなマスコットのデータを返す定義
@@ -331,6 +332,8 @@ export const useConfigStore = defineStore('config', () => {
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
+        
+        configVersion.value++;
     };
 
     return {
@@ -362,6 +365,7 @@ export const useConfigStore = defineStore('config', () => {
         mascots,
         activeMascotId,
         activeMascot,
+        configVersion,
         loadConfig,
         saveConfig,
         updateConfig

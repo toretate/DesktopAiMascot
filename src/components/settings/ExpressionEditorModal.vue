@@ -19,10 +19,18 @@ const isImage = (path: string | undefined | null): boolean => {
 // アセットURLの解決
 const resolveImageUrl = (path: string | undefined | null): string => {
     if (!path) return '';
-    if (path.startsWith('/mascots/') && configStore.useServer) {
-        return `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    if (path.startsWith('data:image/')) {
+        return path;
     }
-    return path;
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configStore.configVersion}`;
 };
 
 interface MascotAsset {
