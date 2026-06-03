@@ -337,11 +337,9 @@ onMounted(async () => {
             m.assets.expressions = ensure28Expressions(m.assets.expressions);
             if (Array.isArray(m.assets.outfits)) {
                 m.assets.outfits.forEach((o: any) => {
-                    if (!o.expressions) {
-                        o.expressions = JSON.parse(JSON.stringify(m.assets.expressions));
-                    } else {
-                        o.expressions = ensure28Expressions(o.expressions);
-                    }
+                    // 立ち絵ごとに独立した表情を持つため、グローバルからのコピーは廃止
+                    // 未設定の場合は空の28スロットを確保する
+                    o.expressions = ensure28Expressions(o.expressions || []);
                 });
             }
         });

@@ -1,0 +1,16 @@
+# 表情生成用のプロンプト文
+
+# 共通：キャラクターの一貫性を保つためのプロンプト
+"common": "KEEP CHARACTER CONSISTENCY.\n Showing the exact same character with different facial expressions. The character design, clothing, face features, and hair style must remain 100% identical, uniform and consistent across all panels."
+
+"user-template-base": |
+    顔のアップで、チャットマスコットとして必要な様々な表情を作成してください。
+    作成する表情は以下の通りです：
+    [__EMOTIONS_LABLE__]
+    背景は純白(#ffffff)にしてください。
+    
+# 表情プロンプト: 指定した表情を英語ラベル入りで、表情スプライトシートとして生成
+"labels": "Each expression must have its English label strictly displayed under the face. The labels must be one of: [__EMOTIONS_LABLE__]. The label text must be clear, clean, and in black font on a white background or directly below the face box. Make sure each face is separated by a solid black grid line."
+
+# スプライトシートの解析
+"analyze-sprite-sheet": "Analyze this expression sprite sheet. Identify each facial expression box and return JSON with emotion label and coordinates [ymin, xmin, ymax, xmax] (0-1000)."
