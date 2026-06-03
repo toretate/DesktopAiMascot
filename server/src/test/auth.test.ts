@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { verifyGoogleIdToken, GoogleTokenPayload } from '../services/auth-service';
-import { authenticateUserToken, User } from '../middlewares/auth-middleware';
+import { authenticateUserToken, User, parseCookies } from '../middlewares/auth-middleware';
 
 // テスト用の一時的な users.json パスを設定
 const ORIGINAL_USERS_FILE_PATH = path.resolve(__dirname, '../../../users.json');
@@ -30,6 +30,20 @@ describe('認証・認可機能のテスト', () => {
         } else if (fs.existsSync(ORIGINAL_USERS_FILE_PATH)) {
             fs.unlinkSync(ORIGINAL_USERS_FILE_PATH);
         }
+    });
+
+    describe('parseCookies_Cookieパース関数のテスト', () => {
+        it('parseCookies_Cookieヘッダー文字列を正しくオブジェクトにパースできること', () => {
+            const cookieHeader = 'session_token=test-jwt-token; other_cookie=val';
+            const parsed = parseCookies(cookieHeader);
+            assert.strictEqual(parsed['session_token'], 'test-jwt-token');
+            assert.strictEqual(parsed['other_cookie'], 'val');
+        });
+
+        it('parseCookies_ヘッダーが空またはundefinedのときに空オブジェクトを返すこと', () => {
+            assert.deepStrictEqual(parseCookies(undefined), {});
+            assert.deepStrictEqual(parseCookies(''), {});
+        });
     });
 
     describe('verifyGoogleIdToken_トークン検証のテスト', () => {
@@ -83,3 +97,4 @@ describe('認証・認可機能のテスト', () => {
         });
     });
 });
+
