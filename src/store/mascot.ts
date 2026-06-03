@@ -4,7 +4,7 @@ import { ref } from 'vue';
 export const useMascotStore = defineStore('mascot', () => {
     // ---- State ----
     // 現在の表情（sillyTavern28感情互換）
-    const currentEmotion = ref('通常');
+    const currentEmotion = ref('neutral');
     // 音声発声中フラグ
     const isSpeaking = ref(false);
     // アプリケーションローディング（応答生成中など）フラグ
