@@ -12,6 +12,8 @@
     },
     "dependencies": {
         "@primevue/themes": "^4.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "js-yaml": "^4.2.0",
         "pinia": "^3.0.4",
         "primeflex": "^4.0.0",
         "primeicons": "^7.0.0",

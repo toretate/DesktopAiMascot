@@ -22,3 +22,7 @@ out/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Project configs and dynamic mascot data
+config.json
+mascots/mascot_*/

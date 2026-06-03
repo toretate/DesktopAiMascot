@@ -38,7 +38,7 @@ export class GeminiExpressionEngine {
 
         // プロンプトの生成
         const prompts = loadPrompts();
-        const basePrompt = prompts.['common'];
+        const basePrompt = prompts['common'];
         const userPrompt = userPromptTemplate.replace("__EMOTIONS_LABLE__", emotionsLabels);
         const labelInstruction = prompts.labels.replace("__EMOTION_LABELS", emotionsLabels);
         const finalPrompt = `${basePrompt} ${userPrompt} ${labelInstruction}`;
