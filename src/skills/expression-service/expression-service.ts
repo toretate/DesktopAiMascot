@@ -172,7 +172,8 @@ export class AiExpressionService {
      * Gemini Visionによるスプライトシート解析
      */
     static async analyzeSpriteSheet(base64Image: string, apiKey: string) {
-        return await GeminiExpressionEngine.analyzeSpriteSheet(base64Image, apiKey);
+        const { rawBase64, mimeType } = await this.resolveImage(base64Image);
+        return await GeminiExpressionEngine.analyzeSpriteSheet(rawBase64, apiKey, mimeType);
     }
 
     /**

@@ -134,18 +134,7 @@ const handleApply = () => {
                             />
                         </div>
 
-                        <!-- 予備: rembgモデル選択 (非アクティブ) -->
-                        <div v-if="selectedEngine === 'rembg'" class="form-field flex flex-column gap-1">
-                            <label class="text-xs font-bold text-gray-700">rembgモデル</label>
-                            <Select 
-                                v-model="selectedRembgModel" 
-                                :options="rembgModels" 
-                                optionLabel="label" 
-                                optionValue="value" 
-                                class="w-full p-inputtext-sm"
-                                :disabled="isProcessing"
-                            />
-                        </div>
+
 
                         <div class="flex flex-column gap-2 mt-auto">
                             <Button 

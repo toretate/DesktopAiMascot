@@ -5,7 +5,7 @@ import { AiExpressionService } from '../src/skills/expression-service/expression
 
 // AiExpressionService にプラットフォーム依存モジュールを注入
 AiExpressionService.setAdapter({
-    readFileSync: (p: string) => fs.readFileSync(p),
+    readFileSync: (p: string) => fs.readFileSync(p) as any,
     existsSync: (p: string) => fs.existsSync(p),
     pathJoin: (...args: string[]) => path.join(...args),
     pathExtname: (p: string) => path.extname(p),
