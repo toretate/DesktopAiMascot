@@ -91,7 +91,10 @@ const {
     sendMessage,
     connectWebSocket,
     disconnectWebSocket,
-    handleKeyDown
+    handleKeyDown,
+    pendingAttachments,
+    attachFiles,
+    removeAttachment
 } = useChatConnection({
     messages,
     activeSessionId,
@@ -101,6 +104,40 @@ const {
     runCompaction,
     scrollToBottom
 });
+
+const fileInput = ref<HTMLInputElement | null>(null);
+
+const triggerFileInput = () => {
+    if (fileInput.value) {
+        fileInput.value.click();
+    }
+};
+
+const activeImageUrl = ref<string | null>(null);
+const openImageModal = (url: string) => {
+    activeImageUrl.value = url;
+};
+const closeImageModal = () => {
+    activeImageUrl.value = null;
+};
+
+const downloadFile = (att: any) => {
+    const link = document.createElement('a');
+    link.href = att.url;
+    link.download = att.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+const formatFileSize = (bytes?: number) => {
+    if (bytes === undefined) return '';
+    if (bytes < 1024) return bytes + ' B';
+    const kb = bytes / 1024;
+    if (kb < 1024) return kb.toFixed(1) + ' KB';
+    const mb = kb / 1024;
+    return mb.toFixed(1) + ' MB';
+};
 
 let unsubscribeConfig: (() => void) | null = null;
 
@@ -152,7 +189,27 @@ onUnmounted(() => {
                 :class="msg.sender"
             >
                 <div class="bubble">
-                    {{ msg.text }}
+                    <div class="message-text">{{ msg.text }}</div>
+                    
+                    <!-- 添付ファイル・画像一覧 -->
+                    <div v-if="msg.attachments && msg.attachments.length > 0" class="attachments-wrapper">
+                        <div 
+                            v-for="(att, attIndex) in msg.attachments" 
+                            :key="attIndex" 
+                            class="attachment-item"
+                        >
+                            <!-- 画像の場合 -->
+                            <div v-if="att.type === 'image'" class="attachment-image-box">
+                                <img :src="att.url" :alt="att.name" class="message-image" @click="openImageModal(att.url)" />
+                            </div>
+                            <!-- ファイルの場合 -->
+                            <div v-else class="attachment-file-box" @click="downloadFile(att)" :title="att.name">
+                                <i class="pi pi-file"></i>
+                                <span class="file-name">{{ att.name }}</span>
+                                <span v-if="att.size" class="file-size">({{ formatFileSize(att.size) }})</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -168,7 +225,31 @@ onUnmounted(() => {
 
         <!-- フッター（入力・送信） -->
         <footer v-if="!showHistoryList" class="chat-footer">
+            <!-- 送信前プレビュー一覧 -->
+            <div v-if="pendingAttachments.length > 0" class="preview-panel">
+                <div v-for="(att, idx) in pendingAttachments" :key="idx" class="preview-item">
+                    <img v-if="att.type === 'image'" :src="att.url" class="preview-thumb" />
+                    <div v-else class="preview-file-icon">
+                        <i class="pi pi-file"></i>
+                        <span class="preview-file-name" :title="att.name">{{ att.name }}</span>
+                    </div>
+                    <button class="remove-preview-btn" @click="removeAttachment(idx)" type="button">
+                        <i class="pi pi-times"></i>
+                    </button>
+                </div>
+            </div>
             <form @submit.prevent="sendMessage" class="input-form">
+                <!-- ファイル選択用の隠しinput -->
+                <input 
+                    type="file" 
+                    ref="fileInput" 
+                    style="display: none" 
+                    multiple 
+                    @change="attachFiles" 
+                />
+                <button type="button" class="attach-btn" @click="triggerFileInput" title="ファイル・画像を添付">
+                    <i class="pi pi-paperclip"></i>
+                </button>
                 <textarea 
                     v-model="inputText" 
                     placeholder="メッセージを入力..." 
@@ -176,11 +257,18 @@ onUnmounted(() => {
                     rows="1"
                     @keydown="handleKeyDown"
                 ></textarea>
-                <button type="submit" class="send-btn" :disabled="!inputText.trim()">
+                <button type="submit" class="send-btn" :disabled="!inputText.trim() && pendingAttachments.length === 0">
                     <i class="pi pi-send"></i>
                 </button>
             </form>
         </footer>
+
+        <!-- 画像拡大モーダル -->
+        <div v-if="activeImageUrl" class="image-modal" @click="closeImageModal">
+            <div class="image-modal-content">
+                <img :src="activeImageUrl" class="full-image" />
+            </div>
+        </div>
     </div>
 </template>
 
@@ -365,5 +453,210 @@ onUnmounted(() => {
 .active-btn {
     color: #a855f7 !important;
     background: rgba(168, 85, 247, 0.1) !important;
+}
+
+/* 添付ファイル・画像一覧スタイル */
+.attachments-wrapper {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attachment-item {
+    max-width: 100%;
+}
+
+.attachment-image-box {
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.attachment-image-box:hover {
+    transform: scale(1.02);
+}
+
+.message-image {
+    display: block;
+    max-width: 200px;
+    max-height: 150px;
+    object-fit: cover;
+}
+
+.attachment-file-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #475569;
+    transition: all 0.2s ease;
+    word-break: break-all;
+}
+
+.attachment-file-box:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: #a855f7;
+}
+
+.attachment-file-box i {
+    color: #a855f7;
+    font-size: 14px;
+}
+
+.file-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-size {
+    color: #94a3b8;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+/* 送信前プレビューパネル */
+.preview-panel {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
+}
+
+.preview-item {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.preview-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.preview-file-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+    color: #64748b;
+}
+
+.preview-file-icon i {
+    font-size: 20px;
+    color: #a855f7;
+}
+
+.preview-file-name {
+    font-size: 8px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 4px;
+}
+
+.remove-preview-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.remove-preview-btn:hover {
+    background: #dc2626;
+}
+
+/* アタッチボタン */
+.attach-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attach-btn:hover {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
+}
+
+/* 画像拡大モーダル */
+.image-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    cursor: zoom-out;
+    animation: fadeIn 0.2s ease;
+}
+
+.image-modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.full-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 </style>

@@ -3,10 +3,18 @@ import { useConfigStore } from '../../store/config';
 import { useMascotStore } from '../../store/mascot';
 import { storeToRefs } from 'pinia';
 
+export interface MessageAttachment {
+    type: 'image' | 'file';
+    name: string;
+    url: string;
+    size?: number;
+}
+
 export interface Message {
     id: number;
     sender: 'user' | 'mascot';
     text: string;
+    attachments?: MessageAttachment[];
 }
 
 export interface ChatSession {
