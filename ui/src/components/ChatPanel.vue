@@ -358,6 +358,11 @@ const sendMessage = async () => {
         systemPrompt += "\n# System Instructions\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
     }
 
+    // タイマー指示の追加
+    if (!systemPrompt.includes('[TIMER:')) {
+        systemPrompt += "\n# Timer Instructions\nユーザーから「〇分後に教えて」「後でお知らせして」「カップラーメンにお湯を入れた」など、特定の時間経過後のお知らせやリマインドを求められた場合は、会話の応答テキストの末尾（感情タグの直前）に、必ず次のフォーマットでタイマー起動タグを付与してください。\n[TIMER:秒数,お知らせ内容]\n※秒数は半角数字で指定してください。お知らせ内容には具体的なリマインド内容を記述してください。例:「了解、3分測るね。[TIMER:180,カップラーメンができました！] [happy]」";
+    }
+
     // 会話要約（コンパクションされた履歴）がある場合はシステムプロンプトに組み込む
     const currentSession = sessions.value.find(s => s.id === activeSessionId.value);
     if (currentSession && currentSession.summary) {
@@ -420,16 +425,33 @@ const sendMessage = async () => {
             reply = 'ブラウザ実行時のモック回答です。[happy]';
         }
 
+        // タイマータグのパースと除去
+        let timerData: { seconds: number; memo: string } | null = null;
+        const timerMatch = reply.match(/\[TIMER:(\d+),(.+?)\]/i);
+        if (timerMatch && timerMatch[1] && timerMatch[2]) {
+            timerData = {
+                seconds: parseInt(timerMatch[1], 10),
+                memo: timerMatch[2].trim()
+            };
+        }
+
+        const cleanReply = reply.replace(/\[TIMER:.*?\]/gi, '').trim();
+
         // メッセージを実際の応答で更新
         const mascotMsg = messages.value.find(m => m.id === aiMessageId);
         if (mascotMsg) {
-            mascotMsg.text = reply;
+            mascotMsg.text = cleanReply;
         }
         await runCompaction(mascot?.id || 'default', activeSessionId.value!);
         await saveHistory();
 
+        // ローカルタイマーの起動要求
+        if (timerData && window.electronAPI) {
+            window.electronAPI.startTimer(timerData.seconds, timerData.memo);
+        }
+
         // 応答テキストから感情タグ（[happy]など）をパースし、表情変更
-        const emotionMatch = reply.match(/\[(\w+)\]/);
+        const emotionMatch = cleanReply.match(/\[(\w+)\]/);
         if (emotionMatch && emotionMatch[1]) {
             const detectedEmotion = emotionMatch[1].toLowerCase();
             
@@ -448,7 +470,7 @@ const sendMessage = async () => {
         // VOICEVOX音声合成と再生
         if (window.electronAPI) {
             const api = window.electronAPI;
-            const speechText = reply.replace(/\[\w+\]/g, '').trim();
+            const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
             
             // 文節ごとに分割
             const sentences = speechText
@@ -566,6 +588,12 @@ const connectWebSocket = () => {
                 const { audio: base64Audio } = data;
                 if (base64Audio) {
                     playlist.push(base64Audio);
+                }
+            } else if (wsEvent === 'timer-trigger') {
+                const { memo } = data;
+                console.log('[ChatPanel] Timer triggered from server:', memo);
+                if (window.electronAPI) {
+                    window.electronAPI.triggerTimerNotification(memo);
                 }
             } else if (wsEvent === 'chat-error') {
                 updateLastMascotMessage(`接続エラー: ${data.message}`);

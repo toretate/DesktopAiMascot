@@ -40,6 +40,9 @@ export interface IElectronAPI {
     onEmotionChanged: (callback: (emotion: string) => void) => () => void;
     onChatToggled: (callback: (visible: boolean) => void) => () => void;
     onConfigUpdated: (callback: (config: any) => void) => () => void;
+    startTimer: (seconds: number, memo: string) => void;
+    triggerTimerNotification: (memo: string) => void;
+    onTimerTrigger: (callback: (memo: string) => void) => () => void;
 }
 
 declare global {
