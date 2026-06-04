@@ -42,6 +42,8 @@ import EmotionAssignmentModal from './EmotionAssignmentModal.vue';
 import ImageCropModal from './ImageCropModal.vue';
 import AiExpressionGeneratorModal from './AiExpressionGeneratorModal.vue';
 import BackgroundRemovalModal from './BackgroundRemovalModal.vue';
+import PromptEditorModal from './PromptEditorModal.vue';
+
 
 interface MascotAsset {
     id: string;
@@ -96,6 +98,22 @@ const emit = defineEmits<{
 }>();
 
 const activeMascotSubTab = ref<'profile' | 'outfit' | 'expression'>('expression');
+
+// プロンプトファイル（OpenClaw）の保持用状態
+const mascotPrompts = ref({ identity: '', soul: '', user: '', agents: '', memory: '' });
+const isPromptModalActive = ref(false);
+
+const loadMascotPrompts = async () => {
+    if (window.electronAPI && editingMascot.value && editingMascot.value.id) {
+        try {
+            const data = await window.electronAPI.getMascotPrompts(editingMascot.value.id);
+            mascotPrompts.value = data;
+        } catch (e) {
+            console.error('Failed to load mascot prompts in settings:', e);
+        }
+    }
+};
+
 
 // 編集・追加対象のワークバッファ
 const editingMascot = ref<MascotData>({
@@ -216,7 +234,9 @@ const selectMascot = (mascot: MascotData) => {
     
     // マスコット切り替え時もプレビューを更新
     updateMascotPreview();
+    loadMascotPrompts();
 };
+
 
 // 初期ロード時の選択処理用
 const initEditingMascot = () => {
@@ -227,6 +247,7 @@ const initEditingMascot = () => {
         const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets.expressions || [];
         activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
         activePreviewExpression.value = activeExpression.value;
+        loadMascotPrompts();
     }
 };
 
@@ -242,6 +263,15 @@ watch(
     },
     { deep: true }
 );
+
+// マスコットID変更時にプロンプトファイルを再読込
+watch(
+    () => editingMascot.value.id,
+    () => {
+        loadMascotPrompts();
+    }
+);
+
 
 // 編集バッファと親のリストを同期し保存するハンドラー
 const syncAndSave = async () => {
@@ -832,16 +862,80 @@ const closeAssigningEmotionsModal = async () => {
                         @change="() => { syncAndSave(); emit('save-settings'); }"
                     />
                 </div>
-                <div class="form-field flex flex-column gap-1">
-                    <label class="text-xs font-semibold text-gray-700">マスコットキャラクターの性格・プロファイル</label>
-                    <textarea 
-                        v-model="editingMascot.profile" 
-                        placeholder="例: ツンデレなアンドロイド女子高生..." 
-                        rows="5"
-                        class="w-full p-2 bg-white border-1 border-gray-200 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none"
-                        style="resize: none;"
-                        @change="() => { syncAndSave(); emit('save-settings'); }"
-                    ></textarea>
+
+
+                <!-- 詳細プロンプト表示エリア (readonly) -->
+                <div class="border-top border-gray-200 pt-3 mt-1 flex flex-column gap-2">
+                    <div class="flex justify-content-between align-items-center">
+                        <label class="text-xs font-bold text-gray-700 flex align-items-center gap-1 select-none">
+                            <i class="pi pi-file text-purple-500"></i>
+                            <span>詳細プロンプト設定 (外部ファイル)</span>
+                        </label>
+                        <Button 
+                            label="詳細プロンプトを編集する" 
+                            icon="pi pi-user-edit" 
+                            class="p-button-sm p-button-outlined p-button-primary py-1 px-2 text-xs"
+                            @click="isPromptModalActive = true"
+                        />
+                    </div>
+
+                    <div class="flex flex-column gap-2 mt-1">
+                        <!-- Identity -->
+                        <div class="flex flex-column gap-1">
+                            <span class="text-xxs font-bold text-gray-500 select-none">Identity.md (役割設定)</span>
+                            <textarea 
+                                :value="mascotPrompts.identity" 
+                                readonly 
+                                rows="2"
+                                class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
+                                style="resize: none;"
+                            ></textarea>
+                        </div>
+                        <!-- Soul -->
+                        <div class="flex flex-column gap-1">
+                            <span class="text-xxs font-bold text-gray-500 select-none">Soul.md (性格・口調)</span>
+                            <textarea 
+                                :value="mascotPrompts.soul" 
+                                readonly 
+                                rows="2"
+                                class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
+                                style="resize: none;"
+                            ></textarea>
+                        </div>
+                        <!-- User -->
+                        <div class="flex flex-column gap-1">
+                            <span class="text-xxs font-bold text-gray-500 select-none">User.md (関係性)</span>
+                            <textarea 
+                                :value="mascotPrompts.user" 
+                                readonly 
+                                rows="2"
+                                class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
+                                style="resize: none;"
+                            ></textarea>
+                        </div>
+                        <!-- Agents -->
+                        <div class="flex flex-column gap-1">
+                            <span class="text-xxs font-bold text-gray-500 select-none">Agents.md (行動規範)</span>
+                            <textarea 
+                                :value="mascotPrompts.agents" 
+                                readonly 
+                                rows="2"
+                                class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
+                                style="resize: none;"
+                            ></textarea>
+                        </div>
+                        <!-- Memory -->
+                        <div class="flex flex-column gap-1">
+                            <span class="text-xxs font-bold text-gray-500 select-none">Memory.md (長期記憶)</span>
+                            <textarea 
+                                :value="mascotPrompts.memory" 
+                                readonly 
+                                rows="2"
+                                class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
+                                style="resize: none;"
+                            ></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -897,6 +991,14 @@ const closeAssigningEmotionsModal = async () => {
         :mascot-id="editingMascot.id"
         @close="isBackgroundRemovalModalActive = false"
         @done="handleBackgroundRemovalDone"
+    />
+
+    <!-- プロンプト編集モーダル -->
+    <PromptEditorModal
+        :visible="isPromptModalActive"
+        :mascot-id="editingMascot.id"
+        @close="isPromptModalActive = false"
+        @save-done="loadMascotPrompts"
     />
 </template>
 

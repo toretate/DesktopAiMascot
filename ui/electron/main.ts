@@ -574,7 +574,8 @@ app.whenReady().then(() => {
             config.update({ chatVisible: false });
             mascotWindow?.webContents.send('chat-toggled', false);
         } else {
-            chatWindow.showInactive();
+            chatWindow.show();
+            chatWindow.focus();
             adjustChatWindowPosition();
             config.update({ chatVisible: true });
             mascotWindow?.webContents.send('chat-toggled', true);
@@ -1174,7 +1175,7 @@ app.whenReady().then(() => {
         shell.openPath(historyPath);
     });
 
-    // マスコットの openclaw スタイルプロンプト（soul, identity, user）の読み込みハンドラー
+    // マスコットの openclaw スタイルプロンプト（soul, identity, user, agents, memory）の読み込みハンドラー
     ipcMain.handle('get-mascot-prompts', async (event, mascotId: string) => {
         const currentCwd = process.cwd();
         const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
@@ -1183,13 +1184,17 @@ app.whenReady().then(() => {
         const result = {
             soul: '',
             identity: '',
-            user: ''
+            user: '',
+            agents: '',
+            memory: ''
         };
 
         if (fs.existsSync(mascotDir)) {
             const soulPath = path.join(mascotDir, 'soul.md');
             const identityPath = path.join(mascotDir, 'identity.md');
             const userPath = path.join(mascotDir, 'user.md');
+            const agentsPath = path.join(mascotDir, 'agents.md');
+            const memoryPath = path.join(mascotDir, 'memory.md');
 
             // テンプレート自動生成（初期化）
             if (!fs.existsSync(soulPath)) {
@@ -1204,12 +1209,45 @@ app.whenReady().then(() => {
                 const defaultUser = `# User Context\n\n- ユーザーへの呼び方: 「マスター」\n- 関係性: 常にマスターを第一に考え、応援している。\n`;
                 fs.writeFileSync(userPath, defaultUser, 'utf8');
             }
+            if (!fs.existsSync(agentsPath)) {
+                const defaultAgents = `# Mascot Agents & Rules\n\n- ルール: 不適切な表現や暴力的・攻撃的な発言は絶対に避けてください。\n- 安全基準: 常にマスターにとって安全で励みになる存在であり続けること。\n`;
+                fs.writeFileSync(agentsPath, defaultAgents, 'utf8');
+            }
+            if (!fs.existsSync(memoryPath)) {
+                const defaultMemory = `# Mascot Long-term Memory\n\n- 重要な決定事項: ここには会話を通じて学んだ情報や、重要な約束事を記録します。\n`;
+                fs.writeFileSync(memoryPath, defaultMemory, 'utf8');
+            }
 
             result.soul = fs.readFileSync(soulPath, 'utf8');
             result.identity = fs.readFileSync(identityPath, 'utf8');
             result.user = fs.readFileSync(userPath, 'utf8');
+            result.agents = fs.readFileSync(agentsPath, 'utf8');
+            result.memory = fs.readFileSync(memoryPath, 'utf8');
         }
         return result;
+    });
+ 
+    // マスコットの openclaw スタイルプロンプト（soul, identity, user, agents, memory）の保存ハンドラー
+    ipcMain.handle('save-mascot-prompts', async (event, mascotId: string, prompts: { soul: string; identity: string; user: string; agents: string; memory: string }) => {
+        const currentCwd = process.cwd();
+        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
+        const mascotDir = path.join(baseCwd, 'mascots', mascotId);
+
+        try {
+            if (!fs.existsSync(mascotDir)) {
+                fs.mkdirSync(mascotDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(mascotDir, 'soul.md'), prompts.soul || '', 'utf8');
+            fs.writeFileSync(path.join(mascotDir, 'identity.md'), prompts.identity || '', 'utf8');
+            fs.writeFileSync(path.join(mascotDir, 'user.md'), prompts.user || '', 'utf8');
+            fs.writeFileSync(path.join(mascotDir, 'agents.md'), prompts.agents || '', 'utf8');
+            fs.writeFileSync(path.join(mascotDir, 'memory.md'), prompts.memory || '', 'utf8');
+            console.log(`[Config] Mascot prompts saved for: ${mascotId}`);
+            return { success: true };
+        } catch (error: any) {
+            console.error('[Config] Failed to save mascot prompts:', error);
+            return { success: false, error: error.message };
+        }
     });
 
     // 9. 設定の取得および更新ハンドラー
