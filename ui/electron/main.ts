@@ -372,6 +372,7 @@ function createSettingsWindow() {
 
     if (isDev) {
         settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
+        settingsWindow.webContents.openDevTools();
     } else {
         settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
     }
