@@ -94,7 +94,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                         voicevoxEndpoint,
                         engine,
                         lmstudioEndpoint,
-                        history
+                        history,
+                        attachments
                     } = data;
 
                     console.log(`=========================================`);
@@ -105,6 +106,7 @@ export function setupWebSocket(wss: WebSocketServer) {
                     console.log(` - API Key: ${apiKey ? '***(設定あり)***' : '(設定なし)'}`);
                     console.log(` - LM Studio Endpoint: "${lmstudioEndpoint}"`);
                     console.log(` - History elements: ${history ? history.length : 0}`);
+                    console.log(` - Attachments count: ${attachments ? attachments.length : 0}`);
                     console.log(`=========================================`);
 
                     // 1. 考え中ステータスをプッシュ
@@ -122,7 +124,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                             model,
                             engine,
                             lmstudioEndpoint,
-                            history
+                            history,
+                            attachments
                         });
                     } catch (aiError: any) {
                         console.error('[WS] AI Engine Error:', aiError.message);

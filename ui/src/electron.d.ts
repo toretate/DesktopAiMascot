@@ -20,7 +20,7 @@ export interface IElectronAPI {
     getAppConfig: () => Promise<any>;
     updateAppConfig: (config: any) => Promise<void>;
     testServerConnection: (host: string, port: number) => Promise<{ success: boolean; message?: string; error?: string }>;
-    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[]) => Promise<string>;
+    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[], attachments?: any[]) => Promise<string>;
     askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) => Promise<string>;
     getChatHistory: () => Promise<any>;
     saveChatHistory: (history: any) => Promise<{ success: boolean; error?: string }>;

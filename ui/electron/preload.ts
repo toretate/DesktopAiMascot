@@ -39,8 +39,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('test-server-connection', host, port),
     
     // Gemini APIによる対話処理を呼び出す
-    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[]) => 
-        ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName, history),
+    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[], attachments?: any[]) => 
+        ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName, history, attachments),
         
     // LM Studio (ローカル)による対話処理を呼び出す
     askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) =>

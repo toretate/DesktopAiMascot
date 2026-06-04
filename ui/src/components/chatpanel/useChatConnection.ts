@@ -324,7 +324,7 @@ export function useChatConnection(params: {
                     if (!apiKey) {
                         throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);
                     }
-                    reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model, historyToSend);
+                    reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model, historyToSend, attachments.length > 0 ? attachments : undefined);
                 }
             } else {
                 reply = 'ブラウザ実行時のモック回答です。[happy]';

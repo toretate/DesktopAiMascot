@@ -11,8 +11,9 @@ export class ChatAiService {
         engine: string;
         lmstudioEndpoint: string;
         history?: any[];
+        attachments?: any[];
     }): Promise<string> {
-        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, history } = params;
+        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, history, attachments } = params;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -107,10 +108,29 @@ export class ChatAiService {
                     role: msg.sender === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.text }]
                 }));
+                
+                // 今回のメッセージと添付ファイルの構築
+                const parts: any[] = [{ text: message || '' }];
+                if (attachments && attachments.length > 0) {
+                    for (const att of attachments) {
+                        if (att.type === 'image' && att.url.startsWith('data:')) {
+                            const match = att.url.match(/^data:(image\/\w+);base64,(.+)$/);
+                            if (match) {
+                                parts.push({
+                                    inlineData: {
+                                        mimeType: match[1],
+                                        data: match[2]
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
                 // 最後に今回のメッセージを追加
                 contents.push({
                     role: 'user',
-                    parts: [{ text: message }]
+                    parts: parts
                 });
 
                 const response = await fetch(geminiUrl, {
