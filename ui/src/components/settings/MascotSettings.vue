@@ -820,7 +820,7 @@ const closeAssigningEmotionsModal = async () => {
                         v-model="editingMascot.name" 
                         placeholder="例: デフォルトロボット" 
                         class="w-full p-inputtext-sm" 
-                        @change="syncAndSave"
+                        @change="() => { syncAndSave(); emit('save-settings'); }"
                     />
                 </div>
                 <div class="form-field flex flex-column gap-1">
@@ -829,7 +829,7 @@ const closeAssigningEmotionsModal = async () => {
                         v-model="editingMascot.avatar" 
                         placeholder="例: 🤖" 
                         class="w-full p-inputtext-sm" 
-                        @change="syncAndSave"
+                        @change="() => { syncAndSave(); emit('save-settings'); }"
                     />
                 </div>
                 <div class="form-field flex flex-column gap-1">
@@ -840,7 +840,7 @@ const closeAssigningEmotionsModal = async () => {
                         rows="5"
                         class="w-full p-2 bg-white border-1 border-gray-200 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none"
                         style="resize: none;"
-                        @change="syncAndSave"
+                        @change="() => { syncAndSave(); emit('save-settings'); }"
                     ></textarea>
                 </div>
             </div>

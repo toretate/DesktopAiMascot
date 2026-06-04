@@ -424,6 +424,12 @@ const saveSettings = async () => {
     }, 600);
 };
 
+const relaunchApp = () => {
+    if (window.electronAPI && window.electronAPI.relaunchApp) {
+        window.electronAPI.relaunchApp();
+    }
+};
+
 const quitApp = () => {
     if (window.electronAPI) {
         window.electronAPI.quitApp();
@@ -502,6 +508,10 @@ const menuItems = ref([
             </nav>
 
             <div class="sidebar-footer no-drag">
+                <button class="relaunch-btn" @click="relaunchApp" :title="isSidebarCollapsed ? '再起動' : ''">
+                    <i class="pi pi-refresh"></i>
+                    <span v-if="!isSidebarCollapsed">再起動</span>
+                </button>
                 <button class="quit-btn" @click="quitApp" :title="isSidebarCollapsed ? 'アプリ終了' : ''">
                     <i class="pi pi-power-off"></i>
                     <span v-if="!isSidebarCollapsed">アプリ終了</span>
@@ -1072,6 +1082,30 @@ const menuItems = ref([
     background: #a855f7;
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+}
+
+.sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.relaunch-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: transparent;
+    border: none;
+    color: #eab308;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+.relaunch-btn:hover {
+    background: rgba(234, 179, 8, 0.1);
 }
 
 .quit-btn {

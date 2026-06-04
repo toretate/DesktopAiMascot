@@ -640,6 +640,30 @@ app.whenReady().then(() => {
         app.quit();
     });
 
+    // アプリケーションを再起動する
+    ipcMain.on('relaunch-app', () => {
+        console.log('[IPC] Relaunch App request received');
+        if (process.env.VITE_DEV_SERVER_URL) {
+            // 開発環境（Vite）では再起動時に元のプロセス監視が切れてクラッシュするため警告を表示
+            const parentWin = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : null;
+            const choice = dialog.showMessageBoxSync(parentWin!, {
+                type: 'info',
+                buttons: ['OK', 'キャンセル'],
+                title: 'アプリ再起動',
+                message: '開発環境（Vite）では自動再起動に対応していません。\n\nアプリを一旦終了しますので、手動で再度 `npm run dev` などを実行してください。',
+                defaultId: 0,
+                cancelId: 1
+            });
+            if (choice === 0) {
+                app.quit();
+            }
+        } else {
+            // 本番環境では安全に自動再起動
+            app.relaunch();
+            app.exit(0);
+        }
+    });
+
     // キャラクターの描画境界を受け取るハンドラー
     ipcMain.on('update-character-bounds', (event, bounds: { top: number; bottom: number; left: number; right: number }) => {
         characterBounds = bounds;
@@ -710,7 +734,7 @@ app.whenReady().then(() => {
     });
 
     // 5. Gemini APIによる対話処理のハンドラー
-    ipcMain.handle('ask-gemini', async (event, message: string, apiKey: string, systemPrompt: string, modelName: string) => {
+    ipcMain.handle('ask-gemini', async (event, message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[]) => {
         const model = modelName || 'gemini-3.1-flash-lite';
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -721,18 +745,24 @@ app.whenReady().then(() => {
             console.log('=== Google AI Studio 送信開始 ===');
             console.log(`[GoogleAiStudio] 使用モデル: ${model}`);
 
+            // 履歴のマッピング
+            const contents = (history || []).map((msg: any) => ({
+                role: msg.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            }));
+            // 最後に今回のメッセージを追加
+            contents.push({
+                role: 'user',
+                parts: [{ text: message }]
+            });
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    contents: [
-                        {
-                            role: 'user',
-                            parts: [{ text: message }]
-                        }
-                    ],
+                    contents: contents,
                     systemInstruction: {
                         parts: [{ text: systemPrompt || 'You are a helpful assistant.' }]
                     }
@@ -908,7 +938,7 @@ app.whenReady().then(() => {
     });
 
     // 7. LM Studio (ローカル) による対話処理のハンドラー
-    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string) => {
+    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) => {
         const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
         const apiBase = endpoint || defaultEndpoint;
         const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
@@ -923,6 +953,47 @@ app.whenReady().then(() => {
             console.log(`[LmStudio] 使用モデル: ${model}`);
             console.log(`[LmStudio] 送信メッセージ: ${message}`);
 
+            // 履歴のマッピング
+            const rawPayload: any[] = [];
+            if (history && history.length > 0) {
+                history.forEach((msg: any) => {
+                    const text = msg.text || '';
+                    if (text.trim()) {
+                        rawPayload.push({
+                            role: msg.sender === 'user' ? 'user' : 'assistant',
+                            content: text
+                        });
+                    }
+                });
+            }
+            rawPayload.push({ role: 'user', content: message || 'こんにちは' });
+
+            // 同一ロールの連続を結合する
+            const mergedPayload: any[] = [];
+            rawPayload.forEach((msg) => {
+                if (mergedPayload.length === 0) {
+                    mergedPayload.push(msg);
+                } else {
+                    const last = mergedPayload[mergedPayload.length - 1];
+                    if (last.role === msg.role) {
+                        last.content = `${last.content}\n${msg.content}`;
+                    } else {
+                        mergedPayload.push(msg);
+                    }
+                }
+            });
+
+            // 最初のメッセージが assistant の場合は除外する（Jinjaテンプレートのパースエラー対策）
+            while (mergedPayload.length > 0 && mergedPayload[0].role === 'assistant') {
+                mergedPayload.shift();
+            }
+
+            const messagesPayload: any[] = [];
+            if (systemPrompt && systemPrompt.trim()) {
+                messagesPayload.push({ role: 'system', content: systemPrompt });
+            }
+            messagesPayload.push(...mergedPayload);
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -930,10 +1001,7 @@ app.whenReady().then(() => {
                 },
                 body: JSON.stringify({
                     model: model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: message }
-                    ]
+                    messages: messagesPayload
                 }),
                 signal: controller.signal
             });
@@ -946,7 +1014,16 @@ app.whenReady().then(() => {
             }
 
             const data: any = await response.json();
-            const text = data.choices?.[0]?.message?.content;
+            const rawContent = data.choices?.[0]?.message?.content || '';
+
+            // 思考プロセス（Thinking Process や <thought> タグ）のクレンジング
+            let cleanedContent = rawContent
+                .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+                .replace(/<thought>[\s\S]*/gi, '')
+                .replace(/^Thinking Process:[\s\S]*?(?=\n\n\S|$)/i, '')
+                .replace(/\nThinking Process:[\s\S]*?(?=\n\n\S|$)/g, '');
+
+            const text = cleanedContent.trim();
 
             console.log(`[LmStudio] レスポンス内容: ${text}`);
             console.log('=== LmStudio 送信完了 ===');
@@ -1055,6 +1132,84 @@ app.whenReady().then(() => {
                 error: '画像のロードに失敗しました。'
             };
         }
+    });
+
+    // チャット履歴の取得ハンドラー
+    ipcMain.handle('get-chat-history', async () => {
+        const historyPath = path.join(app.getPath('userData'), 'chat_history.json');
+        try {
+            if (fs.existsSync(historyPath)) {
+                const data = fs.readFileSync(historyPath, 'utf8');
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error('[Config] Failed to load chat history:', error);
+        }
+        return {};
+    });
+
+    // チャット履歴の保存ハンドラー
+    ipcMain.handle('save-chat-history', async (event, history: any) => {
+        const historyPath = path.join(app.getPath('userData'), 'chat_history.json');
+        try {
+            fs.writeFileSync(historyPath, JSON.stringify(history, null, 4), 'utf8');
+            return { success: true };
+        } catch (error) {
+            console.error('[Config] Failed to save chat history:', error);
+            return { success: false, error: (error as Error).message };
+        }
+    });
+
+    // チャット履歴ファイルをシステムのエディタで開くハンドラー
+    ipcMain.on('open-chat-history', () => {
+        const historyPath = path.join(app.getPath('userData'), 'chat_history.json');
+        if (!fs.existsSync(historyPath)) {
+            try {
+                fs.writeFileSync(historyPath, JSON.stringify({}, null, 4), 'utf8');
+            } catch (error) {
+                console.error('[Config] Failed to create empty chat history file:', error);
+                return;
+            }
+        }
+        shell.openPath(historyPath);
+    });
+
+    // マスコットの openclaw スタイルプロンプト（soul, identity, user）の読み込みハンドラー
+    ipcMain.handle('get-mascot-prompts', async (event, mascotId: string) => {
+        const currentCwd = process.cwd();
+        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
+        const mascotDir = path.join(baseCwd, 'mascots', mascotId);
+
+        const result = {
+            soul: '',
+            identity: '',
+            user: ''
+        };
+
+        if (fs.existsSync(mascotDir)) {
+            const soulPath = path.join(mascotDir, 'soul.md');
+            const identityPath = path.join(mascotDir, 'identity.md');
+            const userPath = path.join(mascotDir, 'user.md');
+
+            // テンプレート自動生成（初期化）
+            if (!fs.existsSync(soulPath)) {
+                const defaultSoul = `# Mascot Soul & Tone\n\n- 口調: 親しみやすく、少し甘えん坊なトーンで話す。\n- 感情表現: ユーザーに懐いており、[happy] な感情になりやすい。\n- 語尾: 「〜だよ」「〜だね」を好んで使う。\n`;
+                fs.writeFileSync(soulPath, defaultSoul, 'utf8');
+            }
+            if (!fs.existsSync(identityPath)) {
+                const defaultIdentity = `# Mascot Identity\n\n- 名前: AIマスコット\n- 役割: ユーザーのデスクトップに住み着いた電子の妖精。\n- 目的: ユーザーの作業を見守り、おしゃべり相手になること。\n`;
+                fs.writeFileSync(identityPath, defaultIdentity, 'utf8');
+            }
+            if (!fs.existsSync(userPath)) {
+                const defaultUser = `# User Context\n\n- ユーザーへの呼び方: 「マスター」\n- 関係性: 常にマスターを第一に考え、応援している。\n`;
+                fs.writeFileSync(userPath, defaultUser, 'utf8');
+            }
+
+            result.soul = fs.readFileSync(soulPath, 'utf8');
+            result.identity = fs.readFileSync(identityPath, 'utf8');
+            result.user = fs.readFileSync(userPath, 'utf8');
+        }
+        return result;
     });
 
     // 9. 設定の取得および更新ハンドラー

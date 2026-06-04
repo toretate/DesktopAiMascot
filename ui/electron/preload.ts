@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // アプリケーションを終了する
     quitApp: () => ipcRenderer.send('quit-app'),
     
+    // アプリケーションを再起動する
+    relaunchApp: () => ipcRenderer.send('relaunch-app'),
+    
     // アプリケーション設定のロードと保存
     getAppConfig: () => ipcRenderer.invoke('get-app-config'),
     updateAppConfig: (config: any) => ipcRenderer.invoke('update-app-config', config),
@@ -36,16 +39,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('test-server-connection', host, port),
     
     // Gemini APIによる対話処理を呼び出す
-    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string) => 
-        ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName),
+    askGemini: (message: string, apiKey: string, systemPrompt: string, modelName: string, history?: any[]) => 
+        ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName, history),
         
     // LM Studio (ローカル)による対話処理を呼び出す
-    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string) =>
-        ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint),
+    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) =>
+        ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint, history),
         
     // LM Studio (ローカル)疎通確認およびモデル一覧取得を呼び出す
     getLmStudioModels: (endpoint: string) =>
         ipcRenderer.invoke('get-lmstudio-models', endpoint),
+
+    // チャット履歴の取得
+    getChatHistory: () => ipcRenderer.invoke('get-chat-history'),
+
+    // チャット履歴の保存
+    saveChatHistory: (history: any) => ipcRenderer.invoke('save-chat-history', history),
+
+    // チャット履歴ファイルをシステムのエディタで開く
+    openChatHistory: () => ipcRenderer.send('open-chat-history'),
+
+    // マスコットごとの openclaw プロンプトの取得
+    getMascotPrompts: (mascotId: string) => ipcRenderer.invoke('get-mascot-prompts', mascotId),
         
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => 
