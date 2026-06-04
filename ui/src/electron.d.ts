@@ -25,7 +25,8 @@ export interface IElectronAPI {
     getChatHistory: () => Promise<any>;
     saveChatHistory: (history: any) => Promise<{ success: boolean; error?: string }>;
     openChatHistory: () => void;
-    getMascotPrompts: (mascotId: string) => Promise<{ soul: string; identity: string; user: string }>;
+    getMascotPrompts: (mascotId: string) => Promise<{ soul: string; identity: string; user: string; agents: string; memory: string }>;
+    saveMascotPrompts: (mascotId: string, prompts: { soul: string; identity: string; user: string; agents: string; memory: string }) => Promise<{ success: boolean; error?: string }>;
     getLmStudioModels: (endpoint: string) => Promise<{ success: boolean; models: string[]; error?: string }>;
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => Promise<string | null>;
     getVoicevoxSpeakers: (endpoint: string) => Promise<{ success: boolean; speakers: { name: string; value: number }[]; error?: string }>;

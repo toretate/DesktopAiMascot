@@ -121,14 +121,33 @@ export function setupWebSocket(wss: WebSocketServer) {
                         const baseUrl = voicevoxEndpoint || 'http://localhost:50021';
                         const speaker = voicevoxSpeakerId !== undefined ? voicevoxSpeakerId : 2;
 
-                        const base64Audio = await VoiceAiService.synthesize(speechText, speaker, baseUrl);
-                        if (base64Audio) {
-                            // 4.3 音声データのプッシュ
-                            ws.send(JSON.stringify({
-                                event: 'chat-audio',
-                                data: { audio: base64Audio }
-                            }));
-                        }
+                        // 文節ごとに分割
+                        const sentences = speechText
+                            .split(/(?<=[。！？\n])/)
+                            .map(s => s.trim())
+                            .filter(s => s.length > 0);
+
+                        // 並行して音声合成リクエストを開始
+                        const synthPromises = sentences.map(sentence =>
+                            VoiceAiService.synthesize(sentence, speaker, baseUrl)
+                        );
+
+                        // 完了順（テキスト内の登場順）にクライアントにプッシュ送信
+                        (async () => {
+                            for (const promise of synthPromises) {
+                                try {
+                                    const base64Audio = await promise;
+                                    if (base64Audio) {
+                                        ws.send(JSON.stringify({
+                                            event: 'chat-audio',
+                                            data: { audio: base64Audio }
+                                        }));
+                                    }
+                                } catch (err) {
+                                    console.error('[WS] VOICEVOX並行合成エラー:', err);
+                                }
+                            }
+                        })();
                     }
                 }
             } catch (e: any) {

@@ -3,6 +3,7 @@ import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useConfigStore } from '../store/config';
 import { useMascotStore } from '../store/mascot';
 import { storeToRefs } from 'pinia';
+import { AudioPlaylist } from '../utils/AudioPlaylist';
 
 interface Message {
     id: number;
@@ -35,6 +36,10 @@ const messageContainer = ref<HTMLElement | null>(null);
 // ---- Stores ----
 const configStore = useConfigStore();
 const mascotStore = useMascotStore();
+
+const playlist = new AudioPlaylist((speaking) => {
+    mascotStore.setSpeaking(speaking);
+});
 
 const {
     chatSendKey,
@@ -255,6 +260,9 @@ const deleteSession = async (sessionId: string, event: Event) => {
 const sendMessage = async () => {
     if (!inputText.value.trim() || isAiResponding.value) return;
 
+    // 新しいメッセージの送信時は以前の再生を停止・クリアする
+    playlist.stop();
+
     const userQuery = inputText.value;
     inputText.value = '';
 
@@ -314,6 +322,10 @@ const sendMessage = async () => {
 
     // システムプロンプト：マスコット個別の soul, identity, user 設定を読み込んで構築 (openclawスタイル)
     let systemPrompt = '';
+    if (mascot && mascot.profile) {
+        systemPrompt += `# Mascot Character Profile\n${mascot.profile}\n\n`;
+    }
+
     if (window.electronAPI && window.electronAPI.getMascotPrompts && mascot) {
         try {
             const mascotPrompts = await window.electronAPI.getMascotPrompts(mascot.id);
@@ -326,17 +338,19 @@ const sendMessage = async () => {
             if (mascotPrompts.user) {
                 systemPrompt += `# User Context & Relations\n${mascotPrompts.user}\n\n`;
             }
+            if (mascotPrompts.agents) {
+                systemPrompt += `# Mascot Rules & Action Guidelines\n${mascotPrompts.agents}\n\n`;
+            }
+            if (mascotPrompts.memory) {
+                systemPrompt += `# Mascot Long-term Memory\n${mascotPrompts.memory}\n\n`;
+            }
         } catch (e) {
             console.error('Failed to load mascot prompts via IPC:', e);
         }
     }
 
     if (!systemPrompt.trim()) {
-        if (mascot && mascot.profile) {
-            systemPrompt = mascot.profile;
-        } else {
-            systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。`;
-        }
+        systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。`;
     }
 
     // 感情タグの指示を追加（必須）
@@ -433,28 +447,35 @@ const sendMessage = async () => {
 
         // VOICEVOX音声合成と再生
         if (window.electronAPI) {
+            const api = window.electronAPI;
             const speechText = reply.replace(/\[\w+\]/g, '').trim();
             
-            // 発話中フラグをON
-            mascotStore.setSpeaking(true);
+            // 文節ごとに分割
+            const sentences = speechText
+                .split(/(?<=[。！？\n])/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
 
-            const base64Audio = await window.electronAPI.synthesizeVoicevox(speechText, voicevoxSpeakerId, voicevoxEndpointUrl);
-            if (base64Audio) {
-                const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
-                
-                // 再生終了時に発話中フラグをOFF
-                audio.onended = () => {
-                    mascotStore.setSpeaking(false);
-                };
-                audio.onerror = () => {
-                    mascotStore.setSpeaking(false);
-                };
+            // 並行して音声合成リクエストを開始
+            const synthPromises = sentences.map(sentence =>
+                api.synthesizeVoicevox(sentence, voicevoxSpeakerId, voicevoxEndpointUrl)
+            );
 
-                await audio.play();
-            } else {
-                mascotStore.setSpeaking(false);
-            }
+            // 完了順（テキスト内の登場順）にプレイリストに追加していく
+            (async () => {
+                for (const promise of synthPromises) {
+                    try {
+                        const base64Audio = await promise;
+                        if (base64Audio) {
+                            playlist.push(base64Audio);
+                        }
+                    } catch (err) {
+                        console.error('[ChatPanel] VOICEVOX並行合成エラー:', err);
+                    }
+                }
+            })();
         }
+
 
     } catch (error: any) {
         const mascotMsg = messages.value.find(m => m.id === aiMessageId);
@@ -544,17 +565,7 @@ const connectWebSocket = () => {
             } else if (wsEvent === 'chat-audio') {
                 const { audio: base64Audio } = data;
                 if (base64Audio) {
-                    mascotStore.setSpeaking(true);
-                    const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
-                    audio.onended = () => {
-                        mascotStore.setSpeaking(false);
-                    };
-                    audio.onerror = () => {
-                        mascotStore.setSpeaking(false);
-                    };
-                    await audio.play();
-                } else {
-                    mascotStore.setSpeaking(false);
+                    playlist.push(base64Audio);
                 }
             } else if (wsEvent === 'chat-error') {
                 updateLastMascotMessage(`接続エラー: ${data.message}`);

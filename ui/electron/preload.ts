@@ -62,6 +62,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // マスコットごとの openclaw プロンプトの取得
     getMascotPrompts: (mascotId: string) => ipcRenderer.invoke('get-mascot-prompts', mascotId),
         
+    // マスコットごとの openclaw プロンプトの保存
+    saveMascotPrompts: (mascotId: string, prompts: { soul: string; identity: string; user: string; agents: string; memory: string }) =>
+        ipcRenderer.invoke('save-mascot-prompts', mascotId, prompts),
+        
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => 
         ipcRenderer.invoke('synthesize-voicevox', text, speakerId, endpoint),
