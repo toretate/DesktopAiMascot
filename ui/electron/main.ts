@@ -817,6 +817,44 @@ app.whenReady().then(() => {
         return await AiExpressionService.getImagenModels(apiKey);
     });
 
+    // 5-4. Get available chat models from Google AI Studio
+    ipcMain.handle('get-gemini-models', async (event, apiKey: string) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            console.log(`[GoogleAiStudio] Starting to fetch chat models`);
+            const response = await fetch(url, {
+                method: 'GET',
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+            }
+
+            const data: any = await response.json();
+            const models = (data.models || [])
+                .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+                .map((m: any) => m.name.replace('models/', ''));
+
+            console.log(`[GoogleAiStudio] Successfully fetched ${models.length} chat models`);
+            return { success: true, models };
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Google AI Studioとの接続確認エラー (タイムアウト)');
+                return { success: false, models: [], error: '接続がタイムアウトしました。' };
+            } else {
+                console.warn('Google AI Studioとの接続確認エラー:', error.message);
+                return { success: false, models: [], error: '接続に失敗しました。' };
+            }
+        }
+    });
+
     // 5-2. Gemini Visionによるスプライトシート解析（表情切り出し支援）
     ipcMain.handle('analyze-sprite-sheet', async (event, base64Image: string, apiKey: string) => {
         return await AiExpressionService.analyzeSpriteSheet(base64Image, apiKey);
