@@ -29,6 +29,7 @@ const sessions = ref<ChatSession[]>([]);
 const activeSessionId = ref<string | null>(null);
 const messages = ref<Message[]>([]);
 const showHistoryList = ref(false);
+const isHistoryLoaded = ref(false);
 
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
@@ -45,8 +46,42 @@ const {
     chatSendKey,
     chatFontFamily,
     chatOpacity,
+    chatBorderShow,
+    chatBorderColor,
+    chatBorderWidth,
+    chatBackgroundColor,
     activeMascot
 } = storeToRefs(configStore);
+
+const getRgbaBackground = computed(() => {
+    const hex = chatBackgroundColor.value || '#ffffff';
+    const opacity = chatOpacity.value !== undefined ? chatOpacity.value : 1.0;
+    
+    let r = 255, g = 255, b = 255;
+    const match = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (match) {
+        r = parseInt(match[1], 16);
+        g = parseInt(match[2], 16);
+        b = parseInt(match[3], 16);
+    } else {
+        const shortMatch = hex.match(/^#?([a-f\d])([a-f\d])([a-f\d])$/i);
+        if (shortMatch) {
+            r = parseInt(shortMatch[1] + shortMatch[1], 16);
+            g = parseInt(shortMatch[2] + shortMatch[2], 16);
+            b = parseInt(shortMatch[3] + shortMatch[3], 16);
+        }
+    }
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+});
+
+const getBorderStyle = computed(() => {
+    if (!chatBorderShow.value) {
+        return 'none';
+    }
+    const width = chatBorderWidth.value !== undefined ? chatBorderWidth.value : 1;
+    const color = chatBorderColor.value || '#a855f7';
+    return `${width}px solid ${color}`;
+});
 
 const {
     isLoading: isAiResponding
@@ -70,16 +105,18 @@ const loadHistory = async () => {
         try {
             const history = await window.electronAPI.getChatHistory();
             allHistories.value = history || {};
-            applyActiveMascotHistory();
         } catch (e) {
             console.error('Failed to load chat history:', e);
+            allHistories.value = {};
         }
-    } else {
-        applyActiveMascotHistory();
     }
+    isHistoryLoaded.value = true;
+    applyActiveMascotHistory();
 };
 
 const applyActiveMascotHistory = () => {
+    if (!isHistoryLoaded.value) return;
+
     const mascotId = activeMascot.value?.id || 'default';
     if (!allHistories.value[mascotId]) {
         const initialSession = createNewSession();
@@ -111,9 +148,9 @@ const applyActiveMascotHistory = () => {
     nextTick(() => scrollToBottom());
 };
 
-const saveHistory = async () => {
-    const mascotId = activeMascot.value?.id || 'default';
-    
+const saveHistoryForMascot = async (mascotId: string) => {
+    if (!isHistoryLoaded.value) return;
+
     if (activeSessionId.value) {
         const currentSession = sessions.value.find(s => s.id === activeSessionId.value);
         if (currentSession) {
@@ -137,6 +174,11 @@ const saveHistory = async () => {
             console.error('Failed to save chat history:', e);
         }
     }
+};
+
+const saveHistory = async () => {
+    const mascotId = activeMascot.value?.id || 'default';
+    await saveHistoryForMascot(mascotId);
 };
 
 const clearHistory = async () => {
@@ -639,10 +681,19 @@ const updateLastMascotMessage = (text: string) => {
     }
 };
 
+let unsubscribeConfig: (() => void) | null = null;
+
 onMounted(async () => {
     // ストアの設定データを読み込み
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
+    }
+
+    // 設定更新イベントの購読
+    if (window.electronAPI && window.electronAPI.onConfigUpdated) {
+        unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig) => {
+            configStore.updateConfig(newConfig);
+        });
     }
 
     // チャット履歴の読み込み
@@ -654,10 +705,17 @@ onMounted(async () => {
 
 onUnmounted(() => {
     disconnectWebSocket();
+    if (unsubscribeConfig) {
+        unsubscribeConfig();
+    }
 });
 
 // マスコット切り替え時の履歴適用
-watch(() => activeMascot.value?.id, () => {
+watch(() => activeMascot.value?.id, (newId, oldId) => {
+    if (!isHistoryLoaded.value) return;
+    if (oldId && newId !== oldId) {
+        saveHistoryForMascot(oldId);
+    }
     applyActiveMascotHistory();
 });
 
@@ -676,7 +734,7 @@ watch([() => configStore.serverHost, () => configStore.serverPort], () => {
 </script>
 
 <template>
-    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, backgroundColor: `rgba(255, 255, 255, ${chatOpacity})` }">
+    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, backgroundColor: getRgbaBackground, border: getBorderStyle }">
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
             <span class="chat-title">{{ activeMascot ? `${activeMascot.name} Chat` : 'Mascot Chat' }}</span>

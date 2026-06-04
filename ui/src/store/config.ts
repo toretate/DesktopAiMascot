@@ -24,6 +24,10 @@ export interface AppConfig {
     chatAlwaysOnTop: boolean | 'sync';
     chatSendKey: string;
     chatFontFamily: string;
+    chatBorderShow: boolean;
+    chatBorderColor: string;
+    chatBorderWidth: number;
+    chatBackgroundColor: string;
     
     // マスコット設定
     mascotScale: number;
@@ -67,6 +71,10 @@ export const useConfigStore = defineStore('config', () => {
     const chatAlwaysOnTop = ref<boolean | 'sync'>(true);
     const chatSendKey = ref('enter');
     const chatFontFamily = ref('sans-serif');
+    const chatBorderShow = ref(true);
+    const chatBorderColor = ref('#a855f7');
+    const chatBorderWidth = ref(1);
+    const chatBackgroundColor = ref('#ffffff');
     
     // マスコット設定
     const mascotScale = ref(1.0);
@@ -128,6 +136,10 @@ export const useConfigStore = defineStore('config', () => {
             
             chatSendKey.value = configData.chatSendKey || 'enter';
             chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
+            chatBorderShow.value = configData.chatBorderShow !== undefined ? !!configData.chatBorderShow : true;
+            chatBorderColor.value = configData.chatBorderColor || '#a855f7';
+            chatBorderWidth.value = configData.chatBorderWidth !== undefined ? Number(configData.chatBorderWidth) : 1;
+            chatBackgroundColor.value = configData.chatBackgroundColor || '#ffffff';
             
             mascotScale.value = configData.mascotScale !== undefined ? Number(configData.mascotScale) : 1.0;
             alwaysOnTop.value = configData.alwaysOnTop !== undefined ? !!configData.alwaysOnTop : true;
@@ -174,6 +186,11 @@ export const useConfigStore = defineStore('config', () => {
             
             chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
             chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
+            chatBorderShow.value = localStorage.getItem('chatBorderShow') !== 'false';
+            chatBorderColor.value = localStorage.getItem('chatBorderColor') || '#a855f7';
+            const savedBorderWidth = localStorage.getItem('chatBorderWidth');
+            chatBorderWidth.value = savedBorderWidth ? parseInt(savedBorderWidth) : 1;
+            chatBackgroundColor.value = localStorage.getItem('chatBackgroundColor') || '#ffffff';
 
             const scale = localStorage.getItem('mascotScale');
             mascotScale.value = scale ? parseFloat(scale) : 1.0;
@@ -235,6 +252,10 @@ export const useConfigStore = defineStore('config', () => {
             chatAlwaysOnTop: chatAlwaysOnTop.value,
             chatSendKey: chatSendKey.value,
             chatFontFamily: chatFontFamily.value,
+            chatBorderShow: chatBorderShow.value,
+            chatBorderColor: chatBorderColor.value,
+            chatBorderWidth: Number(chatBorderWidth.value),
+            chatBackgroundColor: chatBackgroundColor.value,
             mascotScale: Number(mascotScale.value),
             alwaysOnTop: alwaysOnTop.value,
             useServer: useServer.value,
@@ -296,6 +317,10 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
         localStorage.setItem('chatSendKey', chatSendKey.value);
         localStorage.setItem('chatFontFamily', chatFontFamily.value);
+        localStorage.setItem('chatBorderShow', chatBorderShow.value.toString());
+        localStorage.setItem('chatBorderColor', chatBorderColor.value);
+        localStorage.setItem('chatBorderWidth', chatBorderWidth.value.toString());
+        localStorage.setItem('chatBackgroundColor', chatBackgroundColor.value);
         localStorage.setItem('mascotScale', mascotScale.value.toString());
         localStorage.setItem('alwaysOnTop', alwaysOnTop.value.toString());
         localStorage.setItem('useServer', useServer.value.toString());
@@ -327,6 +352,10 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.chatAlwaysOnTop !== undefined) chatAlwaysOnTop.value = newConfig.chatAlwaysOnTop;
         if (newConfig.chatSendKey !== undefined) chatSendKey.value = newConfig.chatSendKey;
         if (newConfig.chatFontFamily !== undefined) chatFontFamily.value = newConfig.chatFontFamily;
+        if (newConfig.chatBorderShow !== undefined) chatBorderShow.value = !!newConfig.chatBorderShow;
+        if (newConfig.chatBorderColor !== undefined) chatBorderColor.value = newConfig.chatBorderColor;
+        if (newConfig.chatBorderWidth !== undefined) chatBorderWidth.value = Number(newConfig.chatBorderWidth);
+        if (newConfig.chatBackgroundColor !== undefined) chatBackgroundColor.value = newConfig.chatBackgroundColor;
         if (newConfig.mascotScale !== undefined) mascotScale.value = Number(newConfig.mascotScale);
         if (newConfig.alwaysOnTop !== undefined) alwaysOnTop.value = !!newConfig.alwaysOnTop;
         if (newConfig.useServer !== undefined) useServer.value = !!newConfig.useServer;
@@ -360,6 +389,10 @@ export const useConfigStore = defineStore('config', () => {
         chatAlwaysOnTop,
         chatSendKey,
         chatFontFamily,
+        chatBorderShow,
+        chatBorderColor,
+        chatBorderWidth,
+        chatBackgroundColor,
         mascotScale,
         alwaysOnTop,
         useServer,

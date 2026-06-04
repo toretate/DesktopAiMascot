@@ -83,6 +83,10 @@ interface ConfigData {
     chatAlwaysOnTop: boolean | 'sync';
     chatSendKey: string;
     chatFontFamily: string;
+    chatBorderShow: boolean;
+    chatBorderColor: string;
+    chatBorderWidth: number;
+    chatBackgroundColor: string;
     openaiApiKey: string;
     anthropicApiKey: string;
     mascots: MascotData[];
@@ -169,6 +173,10 @@ class AppConfig {
             chatAlwaysOnTop: true,
             chatSendKey: 'enter',
             chatFontFamily: 'sans-serif',
+            chatBorderShow: true,
+            chatBorderColor: '#a855f7',
+            chatBorderWidth: 1,
+            chatBackgroundColor: '#ffffff',
             openaiApiKey: '',
             anthropicApiKey: '',
             mascots: defaultMascots,
