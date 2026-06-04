@@ -443,10 +443,9 @@ const handleWindowMouseMove = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (!target) return;
     
-    // キャラクターのコンテナやコントロールパネル、またはそれらの内部の要素であるか判定
+    // キャラクターのコンテナまたはその内部の要素であるか判定
     const isOnInteractiveElement = 
-        target.closest('.mascot-character') !== null || 
-        target.closest('.control-panel') !== null;
+        target.closest('.mascot-character') !== null;
     
     window.electronAPI.setIgnoreMouseEvents(!isOnInteractiveElement);
 };
@@ -566,21 +565,7 @@ onUnmounted(() => {
                 <span v-else class="preview-layer expression" :style="activeExpressionStyle">{{ activeExpressionEmoji }}</span>
             </div>
 
-            <!-- コントロールボタン (逆スケールを掛けて100%サイズを維持し、動的マージンで見た目上常に16pxの間隔をキープ) -->
-            <div 
-                class="control-panel no-drag"
-                :style="{ 
-                    transform: `scale(${1 / totalMascotScale})`,
-                    marginTop: `${16 / totalMascotScale}px`
-                }"
-            >
-                <button class="control-btn" :class="{ active: isChatVisible }" @click="toggleChat" title="チャットを開く">
-                    <i class="pi pi-comments"></i>
-                </button>
-                <button class="control-btn" @click="openSettings" title="設定画面を開く">
-                    <i class="pi pi-cog"></i>
-                </button>
-            </div>
+
 
             <!-- hover-tip (右クリックで設定ヒント。逆スケールを適用してフォント縮小を防ぎます) -->
             <div 
