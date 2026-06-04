@@ -1138,11 +1138,22 @@ app.whenReady().then(() => {
             }
 
             const data: any = await response.json();
-            // 一般的な OpenAI / LM Studio / Llama.cpp 互換のレスポンス形式
-            const models = (data.data || []).map((m: any) => ({
-                id: m.id,
-                capabilities: m.capabilities || null
-            }));
+            let models: { id: string; capabilities?: any }[] = [];
+            
+            if (Array.isArray(data.models)) {
+                // LM Studio ネイティブ形式 (/api/v1/models)
+                models = data.models.map((m: any) => ({
+                    id: m.key || m.display_name || '',
+                    capabilities: m.capabilities || null
+                }));
+            } else if (Array.isArray(data.data)) {
+                // OpenAI / 互換形式 (/v1/models)
+                models = data.data.map((m: any) => ({
+                    id: m.id || '',
+                    capabilities: m.capabilities || null
+                }));
+            }
+            
             console.log(`[LmStudio] 疎通成功。取得モデル数: ${models.length}`);
             return { success: true, models };
         } catch (error: any) {
