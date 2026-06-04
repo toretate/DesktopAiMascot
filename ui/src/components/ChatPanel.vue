@@ -4,32 +4,8 @@ import { useConfigStore } from '../store/config';
 import { useMascotStore } from '../store/mascot';
 import { storeToRefs } from 'pinia';
 import { AudioPlaylist } from '../utils/AudioPlaylist';
-
-interface Message {
-    id: number;
-    sender: 'user' | 'mascot';
-    text: string;
-}
-
-interface ChatSession {
-    id: string;
-    title: string;
-    timestamp: number;
-    messages: Message[];
-    summary?: string;
-}
-
-interface MascotHistory {
-    activeSessionId?: string;
-    sessions: ChatSession[];
-}
-
-const allHistories = ref<Record<string, MascotHistory>>({});
-const sessions = ref<ChatSession[]>([]);
-const activeSessionId = ref<string | null>(null);
-const messages = ref<Message[]>([]);
-const showHistoryList = ref(false);
-const isHistoryLoaded = ref(false);
+import { useChatHistory } from './chatpanel/useChatHistory';
+import HistoryPanel from './chatpanel/HistoryPanel.vue';
 
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
@@ -87,217 +63,27 @@ const {
     isLoading: isAiResponding
 } = storeToRefs(mascotStore);
 
-const getDefaultMessage = () => {
-    return { id: 1, sender: 'mascot' as const, text: 'こんにちは！今日はどんなお話をしますか？' };
-};
-
-const createNewSession = (): ChatSession => {
-    return {
-        id: Date.now().toString(),
-        title: '新しい話題',
-        timestamp: Date.now(),
-        messages: [getDefaultMessage()]
-    };
-};
-
-const loadHistory = async () => {
-    if (window.electronAPI) {
-        try {
-            const history = await window.electronAPI.getChatHistory();
-            allHistories.value = history || {};
-        } catch (e) {
-            console.error('Failed to load chat history:', e);
-            allHistories.value = {};
-        }
-    }
-    isHistoryLoaded.value = true;
-    applyActiveMascotHistory();
-};
-
-const applyActiveMascotHistory = () => {
-    if (!isHistoryLoaded.value) return;
-
-    const mascotId = activeMascot.value?.id || 'default';
-    if (!allHistories.value[mascotId]) {
-        const initialSession = createNewSession();
-        allHistories.value[mascotId] = {
-            activeSessionId: initialSession.id,
-            sessions: [initialSession]
-        };
-    }
-    
-    const mascotHistory = allHistories.value[mascotId];
-    sessions.value = mascotHistory.sessions || [];
-    
-    let currentSession = sessions.value.find(s => s.id === mascotHistory.activeSessionId);
-    if (!currentSession && sessions.value.length > 0) {
-        currentSession = sessions.value[0];
-    }
-    
-    if (currentSession) {
-        activeSessionId.value = currentSession.id;
-        messages.value = [...currentSession.messages];
-    } else {
-        const initialSession = createNewSession();
-        sessions.value = [initialSession];
-        allHistories.value[mascotId].sessions = sessions.value;
-        allHistories.value[mascotId].activeSessionId = initialSession.id;
-        activeSessionId.value = initialSession.id;
-        messages.value = [...initialSession.messages];
-    }
-    nextTick(() => scrollToBottom());
-};
-
-const saveHistoryForMascot = async (mascotId: string) => {
-    if (!isHistoryLoaded.value) return;
-
-    if (activeSessionId.value) {
-        const currentSession = sessions.value.find(s => s.id === activeSessionId.value);
-        if (currentSession) {
-            currentSession.messages = [...messages.value];
-            const firstUserMsg = messages.value.find(m => m.sender === 'user');
-            if (firstUserMsg && currentSession.title === '新しい話題') {
-                currentSession.title = firstUserMsg.text.substring(0, 15) + (firstUserMsg.text.length > 15 ? '...' : '');
-            }
-        }
-    }
-    
-    allHistories.value[mascotId] = {
-        activeSessionId: activeSessionId.value || undefined,
-        sessions: sessions.value
-    };
-    
-    if (window.electronAPI) {
-        try {
-            await window.electronAPI.saveChatHistory(allHistories.value);
-        } catch (e) {
-            console.error('Failed to save chat history:', e);
-        }
+const scrollToBottom = () => {
+    if (messageContainer.value) {
+        messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
     }
 };
 
-const saveHistory = async () => {
-    const mascotId = activeMascot.value?.id || 'default';
-    await saveHistoryForMascot(mascotId);
-};
-
-const clearHistory = async () => {
-    const newSession = createNewSession();
-    sessions.value.unshift(newSession);
-    activeSessionId.value = newSession.id;
-    messages.value = [...newSession.messages];
-    showHistoryList.value = false;
-    await saveHistory();
-};
-
-const runCompaction = async (mascotId: string, sessionId: string) => {
-    const session = sessions.value.find(s => s.id === sessionId);
-    // メッセージが15件以上になったらコンパクションを実行
-    const COMPACTION_THRESHOLD = 15;
-    const PRESERVE_COUNT = 6; // 直近の6件はそのまま残す
-
-    if (!session || session.messages.length < COMPACTION_THRESHOLD) return;
-
-    // 最初の一件(デフォルト挨拶)と直近のPRESERVE_COUNT件以外のメッセージを要約対象にする
-    const messagesToSummarize = session.messages.slice(1, -PRESERVE_COUNT);
-    if (messagesToSummarize.length < 2) return;
-
-    console.log(`[Compaction] Running compaction for session ${sessionId}. Messages to summarize: ${messagesToSummarize.length}`);
-
-    // 要約用プロンプトの作成
-    const chatText = messagesToSummarize.map(m => `${m.sender === 'user' ? 'ユーザー' : 'マスコット'}: ${m.text}`).join('\n');
-    let summarizationPrompt = `以下の会話履歴を、今後の対話に必要な重要情報を残したまま、簡潔かつ日本語で1つの段落に要約してください。\n\n`;
-    if (session.summary) {
-        summarizationPrompt += `以前の要約:\n${session.summary}\n\n`;
-    }
-    summarizationPrompt += `要約対象の会話:\n${chatText}\n\n`;
-    summarizationPrompt += `要約には、決定事項、重要な話題、マスターとの約束事などを含め、語尾などの不要な会話表現は取り除いてください。`;
-
-    const mascot = activeMascot.value;
-    const engine = configStore.selectedEngine || mascot?.aiConfig?.chat?.engine || 'gemini';
-    let apiKey = '';
-    if (engine === 'gemini') {
-        apiKey = configStore.googleAiStudioApiKey || '';
-    } else if (engine === 'openai') {
-        apiKey = configStore.openaiApiKey || '';
-    }
-    const model = configStore.geminiModel || mascot?.aiConfig?.chat?.model || 'gemini-1.5-flash';
-    const lmsEndpoint = configStore.lmstudioEndpoint || 'http://127.0.0.1:1234/v1/';
-
-    let summary = '';
-    try {
-        if (window.electronAPI) {
-            if (engine === 'lmstudio') {
-                summary = await window.electronAPI.askLmStudio(summarizationPrompt, "あなたは優秀な対話要約アシスタントです。", model, lmsEndpoint);
-            } else {
-                if (!apiKey) return;
-                summary = await window.electronAPI.askGemini(summarizationPrompt, apiKey, "あなたは優秀な対話要約アシスタントです。", model);
-            }
-        }
-    } catch (e) {
-        console.error('[Compaction] Summarization failed:', e);
-        return;
-    }
-
-    if (summary && !summary.startsWith('Error:')) {
-        summary = summary.replace(/\[\w+\]/g, '').trim();
-
-        session.summary = summary;
-        // 要約されたメッセージを削除し、最新のメッセージと最初のデフォルトメッセージだけを保持する
-        const defaultMsg = session.messages[0];
-        const preservedMessages = session.messages.slice(-PRESERVE_COUNT);
-        session.messages = [defaultMsg, ...preservedMessages];
-        
-        // メッセージ表示を更新
-        if (activeSessionId.value === sessionId) {
-            messages.value = [...session.messages];
-        }
-        console.log('[Compaction] Compaction succeeded. New summary:', summary);
-    }
-};
-
-const toggleHistoryList = () => {
-    showHistoryList.value = !showHistoryList.value;
-};
-
-const selectSession = (sessionId: string) => {
-    activeSessionId.value = sessionId;
-    const currentSession = sessions.value.find(s => s.id === sessionId);
-    if (currentSession) {
-        messages.value = [...currentSession.messages];
-    }
-    showHistoryList.value = false;
-    const mascotId = activeMascot.value?.id || 'default';
-    if (allHistories.value[mascotId]) {
-        allHistories.value[mascotId].activeSessionId = sessionId;
-    }
-    saveHistory();
-    nextTick(() => scrollToBottom());
-};
-
-const deleteSession = async (sessionId: string, event: Event) => {
-    event.stopPropagation();
-    
-    sessions.value = sessions.value.filter(s => s.id !== sessionId);
-    
-    if (sessions.value.length === 0) {
-        const newSession = createNewSession();
-        sessions.value = [newSession];
-    }
-    
-    if (activeSessionId.value === sessionId) {
-        activeSessionId.value = sessions.value[0].id;
-        messages.value = [...sessions.value[0].messages];
-    }
-    
-    const mascotId = activeMascot.value?.id || 'default';
-    if (allHistories.value[mascotId]) {
-        allHistories.value[mascotId].sessions = sessions.value;
-        allHistories.value[mascotId].activeSessionId = activeSessionId.value || undefined;
-    }
-    
-    await saveHistory();
-};
+const {
+    sessions,
+    activeSessionId,
+    messages,
+    showHistoryList,
+    isHistoryLoaded,
+    loadHistory,
+    saveHistory,
+    clearHistory,
+    selectSession,
+    deleteSession,
+    runCompaction,
+    toggleHistoryList,
+    applyActiveMascotHistory
+} = useChatHistory(scrollToBottom);
 
 const sendMessage = async () => {
     if (!inputText.value.trim() || isAiResponding.value) return;
@@ -555,11 +341,6 @@ const sendMessage = async () => {
     }
 };
 
-const scrollToBottom = () => {
-    if (messageContainer.value) {
-        messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
-    }
-};
 
 const handleKeyDown = (event: KeyboardEvent) => {
     if (event.isComposing) return;
@@ -710,15 +491,6 @@ onUnmounted(() => {
     }
 });
 
-// マスコット切り替え時の履歴適用
-watch(() => activeMascot.value?.id, (newId, oldId) => {
-    if (!isHistoryLoaded.value) return;
-    if (oldId && newId !== oldId) {
-        saveHistoryForMascot(oldId);
-    }
-    applyActiveMascotHistory();
-});
-
 // 設定変更時の再接続トリガーの監視
 watch(() => configStore.useServer, (val) => {
     if (val) connectWebSocket();
@@ -759,28 +531,13 @@ watch([() => configStore.serverHost, () => configStore.serverPort], () => {
         </div>
 
         <!-- 履歴スレッド一覧領域 -->
-        <div v-else class="history-container">
-            <div class="history-list-header">
-                <h3>対話履歴スレッド一覧</h3>
-            </div>
-            <div class="history-list">
-                <div 
-                    v-for="session in sessions" 
-                    :key="session.id" 
-                    class="history-item"
-                    :class="{ active: session.id === activeSessionId }"
-                    @click="selectSession(session.id)"
-                >
-                    <div class="history-item-content">
-                        <span class="history-item-title">{{ session.title }}</span>
-                        <span class="history-item-time">{{ new Date(session.timestamp).toLocaleString() }}</span>
-                    </div>
-                    <button class="delete-session-btn" @click="deleteSession(session.id, $event)" title="削除">
-                        <i class="pi pi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+        <HistoryPanel
+            v-else
+            :sessions="sessions"
+            :activeSessionId="activeSessionId"
+            @select-session="selectSession"
+            @delete-session="({ sessionId, event }) => deleteSession(sessionId, event)"
+        />
 
         <!-- フッター（入力・送信） -->
         <footer v-if="!showHistoryList" class="chat-footer">
@@ -976,97 +733,7 @@ watch([() => configStore.serverHost, () => configStore.serverPort], () => {
     cursor: not-allowed;
 }
 
-/* 履歴スレッド一覧用スタイル */
-.history-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    background: rgba(255, 255, 255, 0.4);
-}
 
-.history-list-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.history-list-header h3 {
-    margin: 0;
-    font-size: 13px;
-    color: #475569;
-    text-align: left;
-}
-
-.history-list {
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    gap: 8px;
-}
-
-.history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-}
-
-.history-item:hover {
-    background: rgba(168, 85, 247, 0.05);
-    border-color: rgba(168, 85, 247, 0.2);
-}
-
-.history-item.active {
-    background: rgba(168, 85, 247, 0.1);
-    border-color: rgba(168, 85, 247, 0.3);
-}
-
-.history-item-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    overflow: hidden;
-}
-
-.history-item-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: #1e293b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-}
-
-.history-item-time {
-    font-size: 10px;
-    color: #94a3b8;
-    text-align: left;
-}
-
-.delete-session-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.delete-session-btn:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
 
 .active-btn {
     color: #a855f7 !important;
