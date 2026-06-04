@@ -36,6 +36,17 @@ const previewState = ref<{
 
 let unsubscribePreview: (() => void) | null = null;
 let unsubscribeConfig: (() => void) | null = null;
+let unsubscribeTimer: (() => void) | null = null;
+
+const balloonText = ref('');
+const balloonVisible = ref(false);
+let balloonTimeoutId: NodeJS.Timeout | null = null;
+
+// 音声再生用
+import { AudioPlaylist } from '../utils/AudioPlaylist';
+const playlist = new AudioPlaylist((speaking) => {
+    mascotStore.setSpeaking(speaking);
+});
 
 const activeMascotImageSet = computed(() => {
     const mascot = activeMascot.value;
@@ -482,6 +493,42 @@ onMounted(async () => {
             // 正式な設定が届いたらプレビュー状態をクリアする
             previewState.value = null;
         });
+
+        // タイマー満了イベントの購読
+        unsubscribeTimer = window.electronAPI.onTimerTrigger(async (memo: string) => {
+            console.log('[MascotViewer] Timer triggered via IPC:', memo);
+
+            // 表情を「surprised」に変更
+            mascotStore.setEmotion('surprised');
+
+            // 吹き出しを表示
+            balloonText.value = memo;
+            balloonVisible.value = true;
+
+            // 8秒後に吹き出しを消す
+            if (balloonTimeoutId) clearTimeout(balloonTimeoutId);
+            balloonTimeoutId = setTimeout(() => {
+                balloonVisible.value = false;
+            }, 8000);
+
+            // VOICEVOXによる音声合成と再生
+            const speakerId = activeMascot.value?.aiConfig?.voice?.speaker_id !== undefined 
+                ? activeMascot.value.aiConfig.voice.speaker_id 
+                : (configStore.voicevoxSpeaker !== undefined ? configStore.voicevoxSpeaker : 2);
+            const voicevoxEndpointUrl = configStore.voicevoxEndpoint || 'http://localhost:50021';
+
+            if (window.electronAPI) {
+                try {
+                    const base64Audio = await window.electronAPI.synthesizeVoicevox(memo, speakerId, voicevoxEndpointUrl);
+                    if (base64Audio) {
+                        playlist.stop();
+                        playlist.push(base64Audio);
+                    }
+                } catch (err) {
+                    console.error('[MascotViewer] Failed to synthesize timer alert voice:', err);
+                }
+            }
+        });
     }
 });
 
@@ -521,6 +568,12 @@ onUnmounted(() => {
     if (unsubscribeConfig) {
         unsubscribeConfig();
     }
+    if (unsubscribeTimer) {
+        unsubscribeTimer();
+    }
+    if (balloonTimeoutId) {
+        clearTimeout(balloonTimeoutId);
+    }
 });
 </script>
 
@@ -535,6 +588,13 @@ onUnmounted(() => {
             @dragstart.prevent 
             @wheel="onWheel"
         >
+            <!-- 吹き出し -->
+            <transition name="fade">
+                <div v-if="balloonVisible" class="speech-balloon no-drag">
+                    <p>{{ balloonText }}</p>
+                </div>
+            </transition>
+
             <div class="mascot-visual" :class="emotionClass">
                 <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
                 <!-- ポーズ優先 -->
@@ -582,6 +642,68 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.speech-balloon {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #a855f7;
+    border-radius: 16px;
+    padding: 10px 16px;
+    width: max-content;
+    max-width: 250px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    word-break: break-all;
+}
+
+.speech-balloon::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 10px 8px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.95) transparent transparent;
+    display: block;
+    width: 0;
+}
+
+.speech-balloon::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 12px 10px 0;
+    border-style: solid;
+    border-color: #a855f7 transparent transparent;
+    display: block;
+    width: 0;
+    z-index: -1;
+    margin-top: 1px;
+}
+
+.speech-balloon p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0px);
+}
+
 .mascot-wrapper {
     width: 100vw;
     height: 100vh;

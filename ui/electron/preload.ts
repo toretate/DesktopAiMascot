@@ -131,5 +131,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => {
             ipcRenderer.off('config-updated', listener);
         };
+    },
+
+    // ローカルタイマーの開始を要求する
+    startTimer: (seconds: number, memo: string) => ipcRenderer.send('start-timer', seconds, memo),
+
+    // タイマー発火の通知をメインプロセスへ要求する
+    triggerTimerNotification: (memo: string) => ipcRenderer.send('trigger-timer-notification', memo),
+
+    // タイマー満了イベントを購読する
+    onTimerTrigger: (callback: (memo: string) => void) => {
+        const listener = (_event: any, memo: string) => callback(memo);
+        ipcRenderer.on('timer-trigger', listener);
+        return () => {
+            ipcRenderer.off('timer-trigger', listener);
+        };
     }
 });

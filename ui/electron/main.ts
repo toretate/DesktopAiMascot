@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, dialog, shell, Notification } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AiExpressionService } from '../src/skills/expression-service/expression-service';
@@ -1299,6 +1299,23 @@ app.whenReady().then(() => {
         }
     });
 
+    // 11. ローカルタイマーの開始
+    ipcMain.on('start-timer', (event, seconds: number, memo: string) => {
+        const durationMs = seconds * 1000;
+        console.log(`[Timer] Local timer started: ${seconds} seconds. Memo: ${memo}`);
+
+        setTimeout(() => {
+            console.log(`[Timer] Local timer triggered: ${memo}`);
+            triggerTimerNotifications(memo);
+        }, durationMs);
+    });
+
+    // 12. タイマー発火の通知を要求する（サーバー側でのタイマー満了時など）
+    ipcMain.on('trigger-timer-notification', (event, memo: string) => {
+        console.log(`[Timer] Trigger timer notification requested. Memo: ${memo}`);
+        triggerTimerNotifications(memo);
+    });
+
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindows();
@@ -1311,3 +1328,22 @@ app.on('window-all-closed', () => {
         app.quit();
     }
 });
+
+// タイマー通知のトリガー処理（OSの通知およびマスコットウィンドウへの配信）
+function triggerTimerNotifications(memo: string) {
+    if (mascotWindow && !mascotWindow.isDestroyed()) {
+        mascotWindow.webContents.send('timer-trigger', memo);
+    }
+    if (chatWindow && !chatWindow.isDestroyed()) {
+        chatWindow.webContents.send('timer-trigger', memo);
+    }
+
+    if (Notification.isSupported()) {
+        const notification = new Notification({
+            title: 'デスクトップマスコットのお知らせ',
+            body: memo,
+            silent: false
+        });
+        notification.show();
+    }
+}
