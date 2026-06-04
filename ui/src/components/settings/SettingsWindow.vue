@@ -36,6 +36,10 @@ const {
     chatAlwaysOnTop,
     chatSendKey,
     chatFontFamily,
+    chatBorderShow,
+    chatBorderColor,
+    chatBorderWidth,
+    chatBackgroundColor,
     mascotScale,
     alwaysOnTop,
     useServer,
@@ -1100,35 +1104,74 @@ const menuItems = ref([
                                     <span>チャットウィンドウ設定</span>
                                 </div>
 
-                                <div class="form-field">
-                                    <label class="font-medium flex justify-content-between">
-                                        <span>不透明度 (透明度): {{ Math.round(chatOpacity * 100) }}%</span>
-                                    </label>
-                                    <Slider v-model="chatOpacity" :min="0.1" :max="1.0" :step="0.05" class="mt-2" />
+                                <!-- 背景色 & 不透明度の横並び -->
+                                <div class="flex gap-3 mt-2">
+                                    <div class="flex-1 form-field">
+                                        <label class="font-medium flex justify-content-between">
+                                            <span>メッセージエリア背景色</span>
+                                        </label>
+                                        <div class="flex align-items-center gap-2 mt-2">
+                                            <input type="color" v-model="chatBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
+                                            <InputText v-model="chatBackgroundColor" placeholder="#ffffff" class="flex-1" />
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 form-field flex flex-column justify-content-center">
+                                        <label class="font-medium flex justify-content-between">
+                                            <span>不透明度 (透明度): {{ Math.round(chatOpacity * 100) }}%</span>
+                                        </label>
+                                        <div class="mt-3">
+                                            <Slider v-model="chatOpacity" :min="0.1" :max="1.0" :step="0.05" />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div class="form-field mt-3">
-                                    <label class="font-medium">最前面表示</label>
-                                    <Select 
-                                        v-model="chatAlwaysOnTop" 
-                                        :options="chatAlwaysOnTopOptions" 
-                                        optionLabel="name" 
-                                        optionValue="value" 
-                                        class="w-full" 
-                                    />
+                                <!-- 境界線（枠）設定（グループボックス表示） -->
+                                <fieldset class="border-round p-3 mt-3" style="border: 1px solid rgba(0, 0, 0, 0.12);">
+                                    <legend class="px-2 text-sm font-semibold text-purple-600">枠</legend>
+                                    <div class="flex align-items-center gap-3">
+                                        <div class="flex align-items-center gap-2">
+                                            <input type="checkbox" id="chatBorderShow" v-model="chatBorderShow" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                                            <label for="chatBorderShow" class="cursor-pointer text-sm font-medium">表示</label>
+                                        </div>
+                                        
+                                        <div v-if="chatBorderShow" class="flex align-items-center gap-2">
+                                            <input type="color" v-model="chatBorderColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
+                                            <InputText v-model="chatBorderColor" placeholder="#a855f7" style="width: 100px; height: 32px;" />
+                                        </div>
+                                        
+                                        <div v-if="chatBorderShow" class="flex align-items-center gap-2">
+                                            <input v-model.number="chatBorderWidth" type="number" min="1" max="10" class="p-inputtext p-component" style="width: 60px; height: 32px;" />
+                                            <span class="text-sm font-medium">px</span>
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <!-- 最前面表示 & 送信キーの横並び -->
+                                <div class="flex gap-3 mt-3">
+                                    <div class="flex-1 form-field">
+                                        <label class="font-medium">最前面表示</label>
+                                        <Select 
+                                            v-model="chatAlwaysOnTop" 
+                                            :options="chatAlwaysOnTopOptions" 
+                                            optionLabel="name" 
+                                            optionValue="value" 
+                                            class="w-full mt-2" 
+                                        />
+                                    </div>
+
+                                    <div class="flex-1 form-field">
+                                        <label class="font-medium">送信キー割り当て</label>
+                                        <Select 
+                                            v-model="chatSendKey" 
+                                            :options="sendKeyOptions" 
+                                            optionLabel="name" 
+                                            optionValue="value" 
+                                            class="w-full mt-2" 
+                                        />
+                                    </div>
                                 </div>
 
-                                <div class="form-field mt-3">
-                                    <label class="font-medium">送信キー割り当て</label>
-                                    <Select 
-                                        v-model="chatSendKey" 
-                                        :options="sendKeyOptions" 
-                                        optionLabel="name" 
-                                        optionValue="value" 
-                                        class="w-full" 
-                                    />
-                                </div>
-
+                                <!-- フォント選択 -->
                                 <div class="form-field mt-3">
                                     <label class="font-medium">チャットウィンドウのフォント</label>
                                     <Select 
@@ -1138,7 +1181,7 @@ const menuItems = ref([
                                         optionValue="value" 
                                         editable
                                         placeholder="フォント名を選択または直接入力..."
-                                        class="w-full" 
+                                        class="w-full mt-2" 
                                     />
                                 </div>
 
