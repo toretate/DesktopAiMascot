@@ -3,7 +3,7 @@ import { useConfigStore } from '../../store/config';
 import { useMascotStore } from '../../store/mascot';
 import { storeToRefs } from 'pinia';
 import { AudioPlaylist } from '../../utils/AudioPlaylist';
-import { Message, ChatSession } from './useChatHistory';
+import { Message, ChatSession, MessageAttachment } from './useChatHistory';
 
 export function useChatConnection(params: {
     messages: Ref<Message[]>;
@@ -142,18 +142,51 @@ export function useChatConnection(params: {
         isWsConnected.value = false;
     };
 
+    const pendingAttachments = ref<MessageAttachment[]>([]);
+
+    const attachFiles = (event: Event) => {
+        const input = event.target as HTMLInputElement;
+        if (!input.files) return;
+        
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const url = e.target?.result as string;
+                const type = file.type.startsWith('image/') ? 'image' as const : 'file' as const;
+                pendingAttachments.value.push({
+                    type,
+                    name: file.name,
+                    url,
+                    size: file.size
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        input.value = '';
+    };
+
+    const removeAttachment = (index: number) => {
+        pendingAttachments.value.splice(index, 1);
+    };
+
     const sendMessage = async () => {
-        if (!inputText.value.trim() || isAiResponding.value) return;
+        if (!inputText.value.trim() && pendingAttachments.value.length === 0) return;
+        if (isAiResponding.value) return;
 
         playlist.stop();
 
         const userQuery = inputText.value;
         inputText.value = '';
 
+        const attachments = [...pendingAttachments.value];
+        pendingAttachments.value = [];
+
         messages.value.push({
             id: Date.now(),
             sender: 'user',
-            text: userQuery
+            text: userQuery,
+            attachments: attachments.length > 0 ? attachments : undefined
         });
 
         const historyToSend = messages.value
@@ -274,7 +307,8 @@ export function useChatConnection(params: {
                     voicevoxEndpoint: voicevoxEndpointUrl,
                     engine: engine,
                     lmstudioEndpoint: lmsEndpoint,
-                    history: historyToSend
+                    history: historyToSend,
+                    attachments: attachments.length > 0 ? attachments : undefined
                 }
             }));
             await saveHistory();
@@ -405,6 +439,9 @@ export function useChatConnection(params: {
         sendMessage,
         connectWebSocket,
         disconnectWebSocket,
-        handleKeyDown
+        handleKeyDown,
+        pendingAttachments,
+        attachFiles,
+        removeAttachment
     };
 }
