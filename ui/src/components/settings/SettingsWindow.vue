@@ -144,7 +144,7 @@ const videoEngines = ref([
 const isTestingConnection = ref(false);
 const connectionState = ref<'idle' | 'success' | 'failed'>('idle');
 const connectionErrorMsg = ref('');
-const lmstudioModels = ref<string[]>([]);
+const lmstudioModels = ref<any[]>([]);
 
 // 各エンジンのモデル選択肢
 const geminiModelOptions = ref([
@@ -207,6 +207,16 @@ const getModelCapabilities = (engine: string, modelName: string): ModelCapabilit
     }
     if (name.includes('vision') || name.includes('vl') || name.includes('gpt-4o') || name.includes('claude-3-5') || name.includes('gemini-1.5') || name.includes('gemini-2.0')) {
         caps.isVision = true;
+    }
+    
+    // LM StudioのAPIから取得した capabilities による正確な上書き判定
+    if (engine === 'lmstudio') {
+        const found = lmstudioModels.value.find(m => m && typeof m === 'object' && m.id === modelName);
+        if (found && found.capabilities) {
+            if (found.capabilities.vision !== undefined) {
+                caps.isVision = !!found.capabilities.vision;
+            }
+        }
     }
     if (name.includes('audio') || name.includes('voice') || name.includes('gemini-2.0-flash')) {
         caps.isAudio = true;
@@ -356,7 +366,7 @@ const testLmStudioConnection = async () => {
                 connectionState.value = 'success';
                 lmstudioModels.value = result.models;
                 if (!lmstudioModel.value && result.models.length > 0) {
-                    lmstudioModel.value = result.models[0];
+                    lmstudioModel.value = result.models[0].id;
                 }
             } else {
                 connectionState.value = 'failed';
@@ -371,7 +381,10 @@ const testLmStudioConnection = async () => {
     } else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         connectionState.value = 'success';
-        lmstudioModels.value = ['meta-llama-3-8b-instruct', 'mistral-7b-instruct-v0.2'];
+        lmstudioModels.value = [
+            { id: 'meta-llama-3-8b-instruct', capabilities: { vision: false } },
+            { id: 'mistral-7b-instruct-v0.2', capabilities: { vision: false } }
+        ];
         if (!lmstudioModel.value) {
             lmstudioModel.value = 'meta-llama-3-8b-instruct';
         }
@@ -870,23 +883,25 @@ const menuItems = ref([
                                         v-else-if="selectedEngine === 'lmstudio' && lmstudioModels.length > 0"
                                         v-model="lmstudioModel" 
                                         :options="lmstudioModels" 
+                                        optionLabel="id"
+                                        optionValue="id"
                                         editable
                                         placeholder="モデルを選択または直接入力..." 
                                         class="w-full" 
                                     >
                                         <template #option="slotProps">
                                             <div class="flex align-items-center justify-content-between w-full">
-                                                <span>{{ slotProps.option }}</span>
+                                                <span>{{ slotProps.option.id }}</span>
                                                 <div class="flex gap-1">
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
+                                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
                                                 </div>
                                             </div>
                                         </template>
