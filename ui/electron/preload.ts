@@ -82,6 +82,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getImagenModels: (apiKey: string) =>
         ipcRenderer.invoke('get-imagen-models', apiKey),
         
+    // Geminiの利用可能なチャットモデルをAPIで取得する
+    getGeminiModels: (apiKey: string) =>
+        ipcRenderer.invoke('get-gemini-models', apiKey),
+        
     // Gemini Visionによるスプライトシート解析
     analyzeSpriteSheet: (base64Image: string, apiKey: string) =>
         ipcRenderer.invoke('analyze-sprite-sheet', base64Image, apiKey),

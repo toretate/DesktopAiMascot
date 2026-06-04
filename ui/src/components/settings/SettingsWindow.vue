@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import Card from 'primevue/card';
 import Password from 'primevue/password';
 import Button from 'primevue/button';
@@ -51,11 +51,67 @@ const activeMenu = ref('mascot');
 
 // --- AIエンジンのデータ定義 ---
 const aiEngines = ref([
-    { name: 'Gemini AI Studio', value: 'gemini' },
-    { name: 'LM Studio (ローカル)', value: 'lmstudio' },
-    { name: 'OpenAI (GPT-4o)', value: 'openai' },
-    { name: 'Claude (Anthropic)', value: 'anthropic' }
+    { name: 'Gemini AI Studio', value: 'gemini', disabled: false },
+    { name: 'LM Studio (ローカル)', value: 'lmstudio', disabled: false },
+    { name: 'OpenAI (未実装)', value: 'openai', disabled: true },
+    { name: 'Claude (Anthropic) (未実装)', value: 'anthropic', disabled: true }
 ]);
+
+// Gemini モデル取得用の状態変数
+const isTestingGemini = ref(false);
+const geminiConnectionState = ref<'idle' | 'success' | 'failed'>('idle');
+const geminiConnectionErrorMsg = ref('');
+const geminiModels = ref<string[]>([]);
+
+const fetchGeminiModels = async () => {
+    if (!geminiApiKey.value) {
+        geminiConnectionState.value = 'failed';
+        geminiConnectionErrorMsg.value = 'APIキーを設定してください。';
+        return;
+    }
+    if (!window.electronAPI) return;
+    isTestingGemini.value = true;
+    geminiConnectionState.value = 'idle';
+    try {
+        const result = await window.electronAPI.getGeminiModels(geminiApiKey.value);
+        if (result.success) {
+            geminiModels.value = result.models;
+            geminiConnectionState.value = 'success';
+            if (result.models.length > 0) {
+                geminiModelOptions.value = result.models;
+                if (!geminiModel.value || !result.models.includes(geminiModel.value)) {
+                    geminiModel.value = result.models.find((m: string) => m.includes('2.0-flash')) || result.models[0];
+                }
+            }
+        } else {
+            geminiConnectionState.value = 'failed';
+            geminiConnectionErrorMsg.value = result.error || 'モデルの取得に失敗しました。';
+        }
+    } catch (e) {
+        geminiConnectionState.value = 'failed';
+        geminiConnectionErrorMsg.value = '通信エラーが発生しました。';
+    } finally {
+        isTestingGemini.value = false;
+    }
+};
+
+const geminiConnectionClass = computed(() => {
+    if (geminiConnectionState.value === 'success') return 'status-success';
+    if (geminiConnectionState.value === 'failed') return 'status-failed';
+    return 'status-idle';
+});
+
+const geminiConnectionIcon = computed(() => {
+    if (geminiConnectionState.value === 'success') return 'pi pi-check-circle text-green-400';
+    if (geminiConnectionState.value === 'failed') return 'pi pi-times-circle text-red-400';
+    return 'pi pi-info-circle text-gray-400';
+});
+
+const geminiConnectionText = computed(() => {
+    if (geminiConnectionState.value === 'success') return `モデル一覧取得成功 (取得モデル数: ${geminiModels.value.length})`;
+    if (geminiConnectionState.value === 'failed') return `取得失敗: ${geminiConnectionErrorMsg.value}`;
+    return '';
+});
 
 // 音声AIエンジン
 const voiceEngines = ref([
@@ -481,9 +537,19 @@ onMounted(async () => {
         authStore.checkAuthStatus();
     }
 
+    if (geminiApiKey.value) {
+        fetchGeminiModels();
+    }
+
     if (selectedEngine.value === 'lmstudio') {
         testLmStudioConnection();
     }
+
+    watch(geminiApiKey, (newKey) => {
+        if (newKey) {
+            fetchGeminiModels();
+        }
+    });
     
     if (selectedVoiceEngine.value === 'voicevox') {
         testVoicevoxConnection();
@@ -716,6 +782,7 @@ const menuItems = ref([
                                         :options="aiEngines" 
                                         optionLabel="name" 
                                         optionValue="value" 
+                                        optionDisabled="disabled"
                                         class="w-full" 
                                     />
                                 </div>
@@ -747,31 +814,45 @@ const menuItems = ref([
                                     <label class="font-medium">使用モデル名</label>
                                     
                                     <!-- Gemini -->
-                                    <Select 
-                                        v-if="selectedEngine === 'gemini'"
-                                        v-model="geminiModel" 
-                                        :options="geminiModelOptions" 
-                                        editable
-                                        placeholder="モデルを選択または直接入力..." 
-                                        class="w-full" 
-                                    >
-                                        <template #option="slotProps">
-                                            <div class="flex align-items-center justify-content-between w-full">
-                                                <span>{{ slotProps.option }}</span>
-                                                <div class="flex gap-1">
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                                    <i v-if="getModelCapabilities('gemini', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </Select>
+                                    <div v-if="selectedEngine === 'gemini'" class="flex flex-column gap-2 w-full">
+                                        <div class="flex gap-2 w-full">
+                                            <Select 
+                                                v-model="geminiModel" 
+                                                :options="geminiModelOptions" 
+                                                editable
+                                                placeholder="モデルを選択または直接入力..." 
+                                                class="flex-1" 
+                                            >
+                                                <template #option="slotProps">
+                                                    <div class="flex align-items-center justify-content-between w-full">
+                                                        <span>{{ slotProps.option }}</span>
+                                                        <div class="flex gap-1">
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
+                                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </Select>
+                                            <Button 
+                                                icon="pi pi-sync" 
+                                                class="p-button-secondary" 
+                                                title="APIキーからGeminiモデル一覧を再読み込み"
+                                                :loading="isTestingGemini"
+                                                @click="fetchGeminiModels" 
+                                            />
+                                        </div>
+                                        <div v-if="geminiConnectionState !== 'idle'" class="connection-status mt-1" :class="geminiConnectionClass">
+                                            <i :class="geminiConnectionIcon"></i>
+                                            <span class="ml-2 text-xs font-semibold">{{ geminiConnectionText }}</span>
+                                        </div>
+                                    </div>
                                     
                                     <!-- LM Studio -->
                                     <Select 

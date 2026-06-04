@@ -32,6 +32,7 @@ export interface IElectronAPI {
     getVoicevoxSpeakers: (endpoint: string) => Promise<{ success: boolean; speakers: { name: string; value: number }[]; error?: string }>;
     generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string; label: string }[], userPromptTemplate: string, engine?: string, model?: string, history?: any[]) => Promise<{ success: boolean; imageBytes?: string; error?: string; history?: any }>;
     getImagenModels: (apiKey: string) => Promise<string[]>;
+    getGeminiModels: (apiKey: string) => Promise<{ success: boolean; models: string[]; error?: string }>;
     analyzeSpriteSheet: (base64Image: string, apiKey: string) => Promise<any>;
     selectLocalImage: () => Promise<{ success: boolean; path: string; name: string } | null>;
     previewMascotState: (previewState: any) => void;
