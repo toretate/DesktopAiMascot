@@ -1,7 +1,33 @@
 import { app, BrowserWindow, ipcMain, screen, dialog, shell, Notification } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { LMStudioClient } from '@lmstudio/sdk';
 import { AiExpressionService } from '../src/skills/expression-service/expression-service';
+
+// HTTPエンドポイントをLM Studio SDK用のWebSocket/TCP形式に変換するヘルパー
+function getSdkEndpoint(httpEndpoint: string): string {
+    let wsEndpoint = (httpEndpoint || '').trim();
+    if (!wsEndpoint) {
+        return 'ws://127.0.0.1:1234';
+    }
+    // http(s):// を ws(s):// に変換
+    if (wsEndpoint.startsWith('http://')) {
+        wsEndpoint = wsEndpoint.replace('http://', 'ws://');
+    } else if (wsEndpoint.startsWith('https://')) {
+        wsEndpoint = wsEndpoint.replace('https://', 'wss://');
+    } else if (!wsEndpoint.startsWith('ws://') && !wsEndpoint.startsWith('wss://')) {
+        wsEndpoint = 'ws://' + wsEndpoint;
+    }
+    // 末尾の /v1 や /v1/ などを除去
+    wsEndpoint = wsEndpoint.replace(/\/v1\/?$/, '');
+    // 末尾の /api/v1/models などの独自パスがある場合も除去
+    wsEndpoint = wsEndpoint.replace(/\/api\/v1(\/models)?\/?$/, '');
+    // 末尾の / を除去
+    if (wsEndpoint.endsWith('/')) {
+        wsEndpoint = wsEndpoint.slice(0, -1);
+    }
+    return wsEndpoint;
+}
 
 // AiExpressionService にプラットフォーム依存モジュールを注入
 AiExpressionService.setAdapter({
@@ -1005,83 +1031,62 @@ app.whenReady().then(() => {
     });
 
     // 7. LM Studio (ローカル) による対話処理のハンドラー
-    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) => {
-        const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
-        const apiBase = endpoint || defaultEndpoint;
-        const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[], attachments?: any[]) => {
+        const sdkEndpoint = getSdkEndpoint(endpoint);
         const model = modelName || 'unspecified';
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
-
         try {
-            console.log('=== LmStudio 送信開始 ===');
-            console.log(`[LmStudio] エンドポイント: ${url}`);
+            console.log('=== LmStudio SDK 送信開始 ===');
+            console.log(`[LmStudio] SDK エンドポイント: ${sdkEndpoint}`);
             console.log(`[LmStudio] 使用モデル: ${model}`);
             console.log(`[LmStudio] 送信メッセージ: ${message}`);
 
+            const client = new LMStudioClient({ baseUrl: sdkEndpoint });
+            const llm = await client.llm.model(model);
+
             // 履歴のマッピング
-            const rawPayload: any[] = [];
+            const messagesPayload: any[] = [];
+            if (systemPrompt && systemPrompt.trim()) {
+                messagesPayload.push({ role: 'system', content: systemPrompt });
+            }
+
             if (history && history.length > 0) {
                 history.forEach((msg: any) => {
                     const text = msg.text || '';
                     if (text.trim()) {
-                        rawPayload.push({
+                        messagesPayload.push({
                             role: msg.sender === 'user' ? 'user' : 'assistant',
                             content: text
                         });
                     }
                 });
             }
-            rawPayload.push({ role: 'user', content: message || 'こんにちは' });
 
-            // 同一ロールの連続を結合する
-            const mergedPayload: any[] = [];
-            rawPayload.forEach((msg) => {
-                if (mergedPayload.length === 0) {
-                    mergedPayload.push(msg);
-                } else {
-                    const last = mergedPayload[mergedPayload.length - 1];
-                    if (last.role === msg.role) {
-                        last.content = `${last.content}\n${msg.content}`;
-                    } else {
-                        mergedPayload.push(msg);
+            // 今回のメッセージ（画像添付ありを考慮）
+            const userContent: any[] = [{ type: 'text', text: message || '' }];
+            if (attachments && attachments.length > 0) {
+                for (const att of attachments) {
+                    if (att.type === 'image' && att.url.startsWith('data:')) {
+                        const match = att.url.match(/^data:(image\/\w+);base64,(.+)$/);
+                        if (match) {
+                            userContent.push({
+                                type: 'image',
+                                image: {
+                                    base64: match[2]
+                                }
+                            });
+                        }
                     }
                 }
+            }
+
+            messagesPayload.push({
+                role: 'user',
+                content: userContent.length > 1 ? userContent : (message || 'こんにちは')
             });
 
-            // 最初のメッセージが assistant の場合は除外する（Jinjaテンプレートのパースエラー対策）
-            while (mergedPayload.length > 0 && mergedPayload[0].role === 'assistant') {
-                mergedPayload.shift();
-            }
-
-            const messagesPayload: any[] = [];
-            if (systemPrompt && systemPrompt.trim()) {
-                messagesPayload.push({ role: 'system', content: systemPrompt });
-            }
-            messagesPayload.push(...mergedPayload);
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: model,
-                    messages: messagesPayload
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`LM Studio Error: ${response.status} ${errorText}`);
-            }
-
-            const data: any = await response.json();
-            const rawContent = data.choices?.[0]?.message?.content || '';
+            const response = await llm.respond(messagesPayload);
+            const rawContent = response.content || '';
 
             // 思考プロセス（Thinking Process や <thought> タグ）のクレンジング
             let cleanedContent = rawContent
@@ -1093,78 +1098,38 @@ app.whenReady().then(() => {
             const text = cleanedContent.trim();
 
             console.log(`[LmStudio] レスポンス内容: ${text}`);
-            console.log('=== LmStudio 送信完了 ===');
+            console.log('=== LmStudio SDK 送信完了 ===');
             return text || 'Error: 空の返答を受信しました。';
 
         } catch (error: any) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.warn('LmStudioとの接続エラー (タイムアウト)');
-                return 'Error: LM Studioとの接続がタイムアウトしました。';
-            } else {
-                console.warn('LmStudioとの接続エラー');
-                return 'Error: LM Studioとの接続に失敗しました。ローカルサーバーが起動しているか確認してください。';
-            }
+            console.error('[LmStudio] SDK接続・対話エラー:', error);
+            return `Error: LM Studioとの接続に失敗しました。接続設定を確認してください。(${error.message})`;
         }
     });
 
     // 8. LM Studio (ローカル) 疎通確認およびモデル一覧取得のハンドラー
     ipcMain.handle('get-lmstudio-models', async (event, endpoint: string) => {
-        const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
-        const apiBase = endpoint || defaultEndpoint;
-        
-        // LM Studioの独自拡張API（/api/v1/models）を利用して、詳細な capabilities を取得する
-        let url = '';
-        if (/\/v1\/?$/.test(apiBase)) {
-            url = apiBase.replace(/\/v1\/?$/, '/api/v1/models');
-        } else {
-            url = apiBase.endsWith('/') ? `${apiBase}models` : `${apiBase}/models`;
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒タイムアウト
+        const sdkEndpoint = getSdkEndpoint(endpoint);
 
         try {
-            console.log(`[LmStudio] 疎通確認・モデル一覧取得開始: ${url}`);
-            const response = await fetch(url, {
-                method: 'GET',
-                signal: controller.signal
-            });
+            console.log(`[LmStudio] SDK 疎通確認・モデル一覧取得開始: ${sdkEndpoint}`);
+            const client = new LMStudioClient({ baseUrl: sdkEndpoint });
+            const loaded = await client.llm.listLoaded();
 
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-
-            const data: any = await response.json();
-            let models: { id: string; capabilities?: any }[] = [];
-            
-            if (Array.isArray(data.models)) {
-                // LM Studio ネイティブ形式 (/api/v1/models)
-                models = data.models.map((m: any) => ({
-                    id: m.key || m.display_name || '',
-                    capabilities: m.capabilities || null
-                }));
-            } else if (Array.isArray(data.data)) {
-                // OpenAI / 互換形式 (/v1/models)
-                models = data.data.map((m: any) => ({
-                    id: m.id || '',
-                    capabilities: m.capabilities || null
-                }));
-            }
+            const models = loaded.map((m: any) => ({
+                id: m.id || m.key || m.path || '',
+                capabilities: {
+                    vision: m.capabilities?.vision ?? false,
+                    trained_for_tool_use: m.capabilities?.trainedForToolUse ?? false,
+                    reasoning: m.capabilities?.reasoning ?? false
+                }
+            }));
             
             console.log(`[LmStudio] 疎通成功。取得モデル数: ${models.length}`);
             return { success: true, models };
         } catch (error: any) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.warn('LmStudioとの接続確認エラー (タイムアウト)');
-                return { success: false, models: [], error: '接続がタイムアウトしました。' };
-            } else {
-                console.warn('LmStudioとの接続確認エラー');
-                return { success: false, models: [], error: '接続に失敗しました。' };
-            }
+            console.error('[LmStudio] SDK 疎通エラー:', error);
+            return { success: false, models: [], error: `LM Studioへの接続に失敗しました。(${error.message})` };
         }
     });
 

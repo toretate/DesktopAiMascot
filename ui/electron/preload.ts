@@ -43,8 +43,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('ask-gemini', message, apiKey, systemPrompt, modelName, history, attachments),
         
     // LM Studio (ローカル)による対話処理を呼び出す
-    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[]) =>
-        ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint, history),
+    askLmStudio: (message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[], attachments?: any[]) =>
+        ipcRenderer.invoke('ask-lmstudio', message, systemPrompt, modelName, endpoint, history, attachments),
         
     // LM Studio (ローカル)疎通確認およびモデル一覧取得を呼び出す
     getLmStudioModels: (endpoint: string) =>

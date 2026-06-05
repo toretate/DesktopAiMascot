@@ -319,7 +319,7 @@ export function useChatConnection(params: {
             let reply = '';
             if (window.electronAPI) {
                 if (engine === 'lmstudio') {
-                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, historyToSend);
+                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, historyToSend, attachments.length > 0 ? attachments : undefined);
                 } else {
                     if (!apiKey) {
                         throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);

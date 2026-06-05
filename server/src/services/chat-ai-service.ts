@@ -1,3 +1,26 @@
+import { LMStudioClient } from '@lmstudio/sdk';
+
+// HTTPエンドポイントをLM Studio SDK用のWebSocket形式に変換するヘルパー
+function getSdkEndpoint(httpEndpoint: string): string {
+    let wsEndpoint = (httpEndpoint || '').trim();
+    if (!wsEndpoint) {
+        return 'ws://127.0.0.1:1234';
+    }
+    if (wsEndpoint.startsWith('http://')) {
+        wsEndpoint = wsEndpoint.replace('http://', 'ws://');
+    } else if (wsEndpoint.startsWith('https://')) {
+        wsEndpoint = wsEndpoint.replace('https://', 'wss://');
+    } else if (!wsEndpoint.startsWith('ws://') && !wsEndpoint.startsWith('wss://')) {
+        wsEndpoint = 'ws://' + wsEndpoint;
+    }
+    wsEndpoint = wsEndpoint.replace(/\/v1\/?$/, '');
+    wsEndpoint = wsEndpoint.replace(/\/api\/v1(\/models)?\/?$/, '');
+    if (wsEndpoint.endsWith('/')) {
+        wsEndpoint = wsEndpoint.slice(0, -1);
+    }
+    return wsEndpoint;
+}
+
 export class ChatAiService {
     /**
      * AIエンジンにメッセージを送信し、応答テキストを取得します。
@@ -20,74 +43,56 @@ export class ChatAiService {
         try {
             const currentEngine = engine || 'gemini';
             if (currentEngine === 'lmstudio') {
-                const defaultEndpoint = 'http://127.0.0.1:1234/v1/';
-                const apiBase = lmstudioEndpoint || defaultEndpoint;
-                const url = apiBase.endsWith('/') ? `${apiBase}chat/completions` : `${apiBase}/chat/completions`;
+                const sdkEndpoint = getSdkEndpoint(lmstudioEndpoint);
                 const targetModel = model || 'unspecified';
 
-                console.log(`[ChatAiService] Routing to LM Studio: ${url} (Model: ${targetModel})`);
+                console.log(`[ChatAiService] Routing to LM Studio SDK: ${sdkEndpoint} (Model: ${targetModel})`);
 
-                const rawPayload: any[] = [];
+                const client = new LMStudioClient({ baseUrl: sdkEndpoint });
+                const llm = await client.llm.model(targetModel);
+
+                const messagesPayload: any[] = [];
+                if (systemPrompt && systemPrompt.trim()) {
+                    messagesPayload.push({ role: 'system', content: systemPrompt });
+                }
+
                 if (history && history.length > 0) {
                     history.forEach((msg: any) => {
                         const text = msg.text || '';
                         if (text.trim()) {
-                            rawPayload.push({
+                            messagesPayload.push({
                                 role: msg.sender === 'user' ? 'user' : 'assistant',
                                 content: text
                             });
                         }
                     });
                 }
-                rawPayload.push({ role: 'user', content: message || 'こんにちは' });
 
-                // 同一ロールの連続を結合する
-                const mergedPayload: any[] = [];
-                rawPayload.forEach((msg) => {
-                    if (mergedPayload.length === 0) {
-                        mergedPayload.push(msg);
-                    } else {
-                        const last = mergedPayload[mergedPayload.length - 1];
-                        if (last.role === msg.role) {
-                            last.content = `${last.content}\n${msg.content}`;
-                        } else {
-                            mergedPayload.push(msg);
+                // 今回のメッセージ（画像添付ありを考慮）
+                const userContent: any[] = [{ type: 'text', text: message || '' }];
+                if (attachments && attachments.length > 0) {
+                    for (const att of attachments) {
+                        if (att.type === 'image' && att.url.startsWith('data:')) {
+                            const match = att.url.match(/^data:(image\/\w+);base64,(.+)$/);
+                            if (match) {
+                                userContent.push({
+                                    type: 'image',
+                                    image: {
+                                        base64: match[2]
+                                    }
+                                });
+                            }
                         }
                     }
+                }
+
+                messagesPayload.push({
+                    role: 'user',
+                    content: userContent.length > 1 ? userContent : (message || 'こんにちは')
                 });
 
-                // 最初のメッセージが assistant の場合は除外する（Jinjaテンプレートのパースエラー対策）
-                while (mergedPayload.length > 0 && mergedPayload[0].role === 'assistant') {
-                    mergedPayload.shift();
-                }
-
-                const messagesPayload: any[] = [];
-                if (systemPrompt && systemPrompt.trim()) {
-                    messagesPayload.push({ role: 'system', content: systemPrompt });
-                }
-                messagesPayload.push(...mergedPayload);
-
-                console.log(`[ChatAiService] Sending messages to LM Studio:`, JSON.stringify(messagesPayload, null, 2));
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: targetModel,
-                        messages: messagesPayload
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`LM Studio Error: ${response.status} ${errorText}`);
-                }
-
-                const resJson: any = await response.json();
-                const rawContent = resJson.choices?.[0]?.message?.content || '';
+                const response = await llm.respond(messagesPayload);
+                const rawContent = response.content || '';
                 
                 // 思考プロセス（Thinking Process や <thought> タグ）のクレンジング
                 let cleanedContent = rawContent
