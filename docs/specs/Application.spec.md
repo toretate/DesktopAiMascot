@@ -133,3 +133,48 @@
 
 * AIエンジン毎の API KEY 設定パネル
 
+---
+
+# アーキテクチャおよび実装仕様
+
+本アプリケーションは、将来的なブラウザ（Web UI）動作への移行を見据え、Electronに依存するプラットフォーム層（シェル層）と、UIおよびビジネスロジックを含むフロントエンド共通層（共通層）を疎結合に設計しています。
+
+## 1. ディレクトリ構造と責務
+
+```
+ui/
+├── electron/                   # Platform (Electron) 依存層
+│   ├── window/                 # ウィンドウ管理 (BrowserWindow)
+│   │   ├── chat-window.ts
+│   │   ├── mascot-window.ts
+│   │   └── settings-window.ts
+│   ├── ipc-handlers/           # Electron 固有の IPC ハンドラー
+│   │   ├── config-handler.ts   # 設定取得・更新、プロンプト I/O
+│   │   ├── window-handler.ts   # ウィンドウ移動、スケール、マウス透過
+│   │   ├── schedule-handler.ts # ローカルタイマー・アラート通知
+│   │   └── ... (他 AI 連携)
+│   ├── app-config.ts           # Electron 環境でのローカル設定永続化 (config.json)
+│   └── main.ts                 # エントリーポイント (初期化とウィンドウ起動)
+│
+└── src/                        # Web/Electron 共通のアプリケーション層
+    ├── config/
+    │   └── config-data.ts      # 設定データ型 (ConfigData) とデフォルト設定
+    ├── mascots/
+    │   ├── mascot-data.ts      # マスコットデータ型定義
+    │   ├── mascot-asset.ts     # アセット型定義
+    │   └── default-mascot.json # デフォルトマスコット設定
+    ├── components/             # Vue コンポーネント (UI)
+    ├── store/                  # 状態管理 (Pinia など)
+    └── ...
+```
+
+## 2. 共通化設計 (Web移行への備え)
+
+* **データモデルの分離**: 
+  マスコットの定義や設定データのスキーマ（`ConfigData`, `MascotData`）は `ui/src` 以下に配置され、プラットフォームから独立しています。
+* **ストレージの抽象化**:
+  `defaultData` や設定スキーマは共通化されており、Electron 環境では `app-config.ts` を介してローカルファイルとして読み書きされますが、Web環境では `localStorage` やサーバーAPI等に差し替え可能です。
+* **API / IPC ハンドラーのモジュール化**:
+  メインプロセスでの処理が IPC サービスごとに完全に分離されているため、通信層（IPC）を Web アプリケーション用の HTTP/WebSocket リクエストハンドラーに容易に置き換えることができます。
+
+
