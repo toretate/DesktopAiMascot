@@ -125,7 +125,8 @@ export function useChatHistory(scrollToBottom: () => void) {
         
         if (window.electronAPI) {
             try {
-                await window.electronAPI.saveChatHistory(allHistories.value);
+                const rawHistory = JSON.parse(JSON.stringify(allHistories.value));
+                await window.electronAPI.saveChatHistory(rawHistory);
             } catch (e) {
                 console.error('Failed to save chat history:', e);
             }
@@ -133,11 +134,13 @@ export function useChatHistory(scrollToBottom: () => void) {
     };
 
     const saveHistory = async () => {
+        if (!isHistoryLoaded.value) return;
         const mascotId = activeMascot.value?.id || 'default';
         await saveHistoryForMascot(mascotId);
     };
 
     const clearHistory = async () => {
+        if (!isHistoryLoaded.value) return;
         const newSession = createNewSession();
         sessions.value.unshift(newSession);
         activeSessionId.value = newSession.id;
@@ -253,7 +256,7 @@ export function useChatHistory(scrollToBottom: () => void) {
     // マスコット切り替え時の履歴適用
     watch(() => activeMascot.value?.id, (newId, oldId) => {
         if (!isHistoryLoaded.value) return;
-        if (oldId && newId !== oldId) {
+        if (oldId && newId && newId !== oldId) {
             saveHistoryForMascot(oldId);
         }
         applyActiveMascotHistory();
