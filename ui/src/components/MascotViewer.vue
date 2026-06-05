@@ -16,7 +16,8 @@ const {
     activeMascot,
     mascots,
     activeMascotId,
-    mascotScale
+    mascotScale,
+    windowMode
 } = storeToRefs(configStore);
 
 const {
@@ -247,8 +248,11 @@ const defaultFrontAvatar = computed(() => {
     return activeMascotImageSet.value?.getFrontImage() || null;
 });
 
-// トータルスケール値の計算 (余計な縮小スケールを廃止し、設定スライダーの scale 値を等倍基準としてそのまま適用)
+// トータルスケール値の計算 (余計な縮小スケールを廃止し、設定スライダーの scale 値を等倍基準としてそのまま適用。ただしコンパクトモード時は 0.5 固定とする)
 const totalMascotScale = computed(() => {
+    if (windowMode.value === 'compact') {
+        return 0.5;
+    }
     return mascotScale.value || 1.0;
 });
 
@@ -411,6 +415,7 @@ const onMouseUp = () => {
 
 // --- Ctrl + マウスホイールによるその場サイズ変更 ---
 const onWheel = (e: WheelEvent) => {
+    if (windowMode.value === 'compact') return; // コンパクト表示時はサイズ変更無効
     if (e.ctrlKey) {
         e.preventDefault(); // 既定のズーム動作を抑制
         
@@ -446,6 +451,9 @@ watch(() => mascotStore.currentEmotion, () => {
 
 // --- マウス透過の動的制御 ---
 const handleWindowMouseMove = (e: MouseEvent) => {
+    // 統合・コンパクトモードなど、分割モード以外ではマウスイベントの透過制御は行わない
+    if (windowMode.value && windowMode.value !== 'split') return;
+
     // ドラッグ中は透過処理をスキップしてドラッグ操作の追従を維持する
     if (isDragging.value) return;
 
@@ -578,7 +586,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="mascot-wrapper app-dark">
+    <div class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact' }">
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
         <div 
             class="mascot-character" 
@@ -726,6 +734,10 @@ onUnmounted(() => {
     font-size: 250px;
     animation: float 4s ease-in-out infinite;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
+}
+
+.is-compact .mascot-visual {
+    margin-bottom: -60px; /* 下部の透明余白分を相殺して底面に密着させる */
 }
 
 .preview-base-avatar {

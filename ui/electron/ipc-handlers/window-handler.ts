@@ -3,6 +3,8 @@ import { AppConfig } from '../app-config';
 import { getMascotWindow, debouncedSaveMascotPosition } from '../window/mascot-window';
 import { getChatWindow, setChatOffsets, getChatOffsets, syncChatWindowPosition } from '../window/chat-window';
 import { getSettingsWindow } from '../window/settings-window';
+import { getIntegratedWindow } from '../window/integrated-window';
+import { getCompactWindow } from '../window/compact-window';
 
 /**
  * Window 操作関連の IPC ハンドラーを登録する
@@ -34,6 +36,14 @@ export function registerWindowHandlers(config: AppConfig) {
         const chatWin = getChatWindow();
         if (chatWin && !chatWin.isDestroyed()) {
             chatWin.webContents.send('config-updated', updatedConfig);
+        }
+        const integratedWin = getIntegratedWindow();
+        if (integratedWin && !integratedWin.isDestroyed()) {
+            integratedWin.webContents.send('config-updated', updatedConfig);
+        }
+        const compactWin = getCompactWindow();
+        if (compactWin && !compactWin.isDestroyed()) {
+            compactWin.webContents.send('config-updated', updatedConfig);
         }
         const settingsWin = getSettingsWindow();
         if (settingsWin && !settingsWin.isDestroyed()) {

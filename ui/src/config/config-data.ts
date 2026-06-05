@@ -41,6 +41,18 @@ export interface ConfigData {
     useServer: boolean;
     serverHost: string;
     serverPort: number;
+
+    // ウィンドウモード
+    windowMode: 'split' | 'integrated' | 'compact';
+
+    integratedWidth?: number;
+    integratedHeight?: number;
+    integratedX?: number;
+    integratedY?: number;
+    compactWidth?: number;
+    compactHeight?: number;
+    compactX?: number;
+    compactY?: number;
 }
 
 export const defaultData: ConfigData = {
@@ -80,5 +92,14 @@ export const defaultData: ConfigData = {
     mascotScale: 1.0,
     useServer: false,
     serverHost: 'localhost',
-    serverPort: 3000
+    serverPort: 3000,
+    windowMode: 'split',
+    integratedWidth: 1100,
+    integratedHeight: 800,
+    integratedX: -1,
+    integratedY: -1,
+    compactWidth: 420,
+    compactHeight: 800,
+    compactX: -1,
+    compactY: -1
 };

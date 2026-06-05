@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import MascotViewer from './components/MascotViewer.vue';
 import ChatPanel from './components/ChatPanel.vue';
 import SettingsWindow from './components/settings/SettingsWindow.vue';
+import IntegratedLayout from './components/layouts/IntegratedLayout.vue';
+import CompactLayout from './components/layouts/CompactLayout.vue';
 
 const currentHash = ref(window.location.hash);
 
@@ -25,6 +27,8 @@ onUnmounted(() => {
         <MascotViewer v-if="currentHash === '#mascot' || currentHash === ''" />
         <ChatPanel v-else-if="currentHash === '#chat'" />
         <SettingsWindow v-else-if="currentHash === '#settings'" />
+        <IntegratedLayout v-else-if="currentHash === '#integrated'" />
+        <CompactLayout v-else-if="currentHash === '#compact'" />
         <div v-else class="fallback-view">
             <p>不明なウィンドウハッシュ: {{ currentHash }}</p>
         </div>

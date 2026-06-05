@@ -16,6 +16,8 @@ import { registerWindowHandlers } from './ipc-handlers/window-handler';
 import { initSettingsWindow, getSettingsWindow, createSettingsWindow, openSettingsWindow } from './window/settings-window';
 import { initMascotWindow, getMascotWindow, createMascotWindow, debouncedSaveMascotPosition } from './window/mascot-window';
 import { initChatWindow, getChatWindow, createChatWindow, syncChatWindowPosition, adjustChatWindowPosition, getEffectiveChatAlwaysOnTop, setChatOffsets, getChatOffsets } from './window/chat-window';
+import { initIntegratedWindow, createIntegratedWindow, getIntegratedWindow } from './window/integrated-window';
+import { initCompactWindow, createCompactWindow, getCompactWindow } from './window/compact-window';
 import { AppConfig, ConfigData } from './app-config';
 
 // AiExpressionService にプラットフォーム依存モジュールを注入
@@ -46,6 +48,8 @@ function createWindows() {
     initSettingsWindow(config, isDev);
     initMascotWindow(config, isDev);
     initChatWindow(config, isDev);
+    initIntegratedWindow(config, isDev);
+    initCompactWindow(config, isDev);
     const configData = config.get();
 
     // 開発用：設定画面のみ直接起動するモードの処理
@@ -58,29 +62,37 @@ function createWindows() {
         return;
     }
 
-    // 1. マスコットウィンドウの作成
-    const mascotWin = createMascotWindow(syncChatWindowPosition);
-    const mascotBounds = mascotWin.getBounds();
+    const mode = configData.windowMode || 'split';
 
-    // チャット追従オフセットのスケール適用
-    setChatOffsets(mascotBounds.width, 0);
+    if (mode === 'integrated') {
+        createIntegratedWindow();
+    } else if (mode === 'compact') {
+        createCompactWindow();
+    } else {
+        // 1. マスコットウィンドウの作成
+        const mascotWin = createMascotWindow(syncChatWindowPosition);
+        const mascotBounds = mascotWin.getBounds();
 
-    const initialX = mascotBounds.x;
-    const initialY = mascotBounds.y;
+        // チャット追従オフセットのスケール適用
+        setChatOffsets(mascotBounds.width, 0);
 
-    // 2. チャットウィンドウの作成
-    const chatWin = createChatWindow(initialX, initialY, mascotBounds.width);
+        const initialX = mascotBounds.x;
+        const initialY = mascotBounds.y;
+
+        // 2. チャットウィンドウの作成
+        const chatWin = createChatWindow(initialX, initialY, mascotBounds.width);
+
+        // 初期化完了時、チャットウィンドウの初期表示状態を適用
+        mascotWin.once('ready-to-show', () => {
+            if (configData.chatVisible) {
+                chatWin?.showInactive(); // フォーカスを奪わずに表示
+                adjustChatWindowPosition();
+            }
+        });
+    }
 
     // 3. 設定ウィンドウの作成（透過なし・通常ウィンドウ）
     createSettingsWindow();
-
-    // 初期化完了時、チャットウィンドウの初期表示状態を適用
-    mascotWin.once('ready-to-show', () => {
-        if (configData.chatVisible) {
-            chatWin?.showInactive(); // フォーカスを奪わずに表示
-            adjustChatWindowPosition();
-        }
-    });
 }
 
 // --- IPCハンドラーの実装 ---
@@ -101,10 +113,18 @@ app.whenReady().then(() => {
     // 感情変更のマルチウィンドウ中継ハンドラー
     ipcMain.on('emotion-changed', (event, emotion: string) => {
         const mascotWin = getMascotWindow();
-        if (mascotWin) {
+        if (mascotWin && !mascotWin.isDestroyed()) {
             mascotWin.webContents.send('emotion-changed', emotion);
-            console.log(`[IPC] Emotion broadcasted to MascotWindow: ${emotion}`);
         }
+        const integratedWin = getIntegratedWindow();
+        if (integratedWin && !integratedWin.isDestroyed()) {
+            integratedWin.webContents.send('emotion-changed', emotion);
+        }
+        const compactWin = getCompactWindow();
+        if (compactWin && !compactWin.isDestroyed()) {
+            compactWin.webContents.send('emotion-changed', emotion);
+        }
+        console.log(`[IPC] Emotion broadcasted: ${emotion}`);
     });
 
 
@@ -135,6 +155,14 @@ app.whenReady().then(() => {
         const mascotWin = getMascotWindow();
         if (mascotWin && !mascotWin.isDestroyed()) {
             mascotWin.webContents.send('apply-preview-state', previewState);
+        }
+        const integratedWin = getIntegratedWindow();
+        if (integratedWin && !integratedWin.isDestroyed()) {
+            integratedWin.webContents.send('apply-preview-state', previewState);
+        }
+        const compactWin = getCompactWindow();
+        if (compactWin && !compactWin.isDestroyed()) {
+            compactWin.webContents.send('apply-preview-state', previewState);
         }
     });
 

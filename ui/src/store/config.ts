@@ -38,6 +38,9 @@ export interface AppConfig {
     serverHost: string;
     serverPort: number;
     
+    // ウィンドウモード
+    windowMode: 'split' | 'integrated' | 'compact';
+
     // マスコットデータ
     mascots: any[];
     activeMascotId: string;
@@ -84,6 +87,9 @@ export const useConfigStore = defineStore('config', () => {
     const useServer = ref(false);
     const serverHost = ref('localhost');
     const serverPort = ref(3000);
+
+    // ウィンドウモード
+    const windowMode = ref<'split' | 'integrated' | 'compact'>('split');
 
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
@@ -148,6 +154,8 @@ export const useConfigStore = defineStore('config', () => {
             serverHost.value = configData.serverHost || 'localhost';
             serverPort.value = configData.serverPort !== undefined ? Number(configData.serverPort) : 3000;
             
+            windowMode.value = (configData.windowMode as any) || 'split';
+            
             mascots.value = configData.mascots || [];
             activeMascotId.value = configData.activeMascotId || '';
         } else {
@@ -200,6 +208,8 @@ export const useConfigStore = defineStore('config', () => {
             serverHost.value = localStorage.getItem('serverHost') || 'localhost';
             const savedServerPort = localStorage.getItem('serverPort');
             serverPort.value = savedServerPort ? parseInt(savedServerPort) : 3000;
+
+            windowMode.value = (localStorage.getItem('windowMode') as any) || 'split';
 
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
@@ -261,6 +271,7 @@ export const useConfigStore = defineStore('config', () => {
             useServer: useServer.value,
             serverHost: serverHost.value,
             serverPort: Number(serverPort.value),
+            windowMode: windowMode.value,
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value
         };
@@ -326,6 +337,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('useServer', useServer.value.toString());
         localStorage.setItem('serverHost', serverHost.value);
         localStorage.setItem('serverPort', serverPort.value.toString());
+        localStorage.setItem('windowMode', windowMode.value);
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
     };
@@ -361,6 +373,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.useServer !== undefined) useServer.value = !!newConfig.useServer;
         if (newConfig.serverHost !== undefined) serverHost.value = newConfig.serverHost;
         if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
+        if (newConfig.windowMode !== undefined) windowMode.value = newConfig.windowMode as any;
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
@@ -398,6 +411,7 @@ export const useConfigStore = defineStore('config', () => {
         useServer,
         serverHost,
         serverPort,
+        windowMode,
         mascots,
         activeMascotId,
         activeMascot,

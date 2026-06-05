@@ -5,6 +5,8 @@ import { AppConfig, ConfigData } from '../app-config';
 import { getChatWindow, getEffectiveChatAlwaysOnTop } from '../window/chat-window';
 import { getMascotWindow } from '../window/mascot-window';
 import { getSettingsWindow } from '../window/settings-window';
+import { getIntegratedWindow } from '../window/integrated-window';
+import { getCompactWindow } from '../window/compact-window';
 
 /**
  * Config 関連の IPC ハンドラーを登録する
@@ -46,6 +48,32 @@ export function registerConfigHandlers(config: AppConfig) {
                 }
             }
             mascotWin.webContents.send('config-updated', currentConfig);
+        }
+
+        // 4. 統合ウィンドウへの伝達と最前面制御
+        const integratedWin = getIntegratedWindow();
+        if (integratedWin && !integratedWin.isDestroyed()) {
+            if (newData.alwaysOnTop !== undefined) {
+                if (newData.alwaysOnTop) {
+                    integratedWin.setAlwaysOnTop(true, 'screen-saver');
+                } else {
+                    integratedWin.setAlwaysOnTop(false);
+                }
+            }
+            integratedWin.webContents.send('config-updated', currentConfig);
+        }
+
+        // 5. コンパクトウィンドウへの伝達と最前面制御
+        const compactWin = getCompactWindow();
+        if (compactWin && !compactWin.isDestroyed()) {
+            if (newData.alwaysOnTop !== undefined) {
+                if (newData.alwaysOnTop) {
+                    compactWin.setAlwaysOnTop(true, 'screen-saver');
+                } else {
+                    compactWin.setAlwaysOnTop(false);
+                }
+            }
+            compactWin.webContents.send('config-updated', currentConfig);
         }
 
         // 3. 設定ウィンドウへの伝達

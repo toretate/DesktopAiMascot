@@ -46,7 +46,8 @@ const {
     serverHost,
     serverPort,
     mascots,
-    activeMascotId
+    activeMascotId,
+    windowMode
 } = storeToRefs(configStore);
 
 const { user, isAuthenticated } = storeToRefs(authStore);
@@ -350,6 +351,12 @@ const fontFamilyOptions = ref([
     { name: 'MS PGothic / ＭＳ Ｐゴシック', value: '"MS PGothic", sans-serif' }
 ]);
 
+const windowModeOptions = ref([
+    { name: '分割', desc: 'マスコットとチャットを分離', value: 'split' },
+    { name: '統合', desc: 'マスコットとチャットを統合', value: 'integrated' },
+    { name: 'コンパクト', desc: 'チャット内にマスコット', value: 'compact' }
+]);
+
 const saveStatus = ref('設定を保存');
 const isSaving = ref(false);
 
@@ -550,9 +557,12 @@ const ensure28Expressions = (expressions: any[]): any[] => {
     });
 };
 
+let initialWindowMode = '';
+
 // 設定データのロード
 onMounted(async () => {
     await configStore.loadConfig();
+    initialWindowMode = windowMode.value;
 
     if (useServer.value) {
         authStore.checkAuthStatus();
@@ -668,11 +678,22 @@ const saveSettings = async () => {
     isSaving.value = true;
     saveStatus.value = '保存中...';
 
+    const modeChanged = windowMode.value !== initialWindowMode;
+
     await configStore.saveConfig();
 
     setTimeout(() => {
         saveStatus.value = '保存完了！';
         isSaving.value = false;
+
+        if (modeChanged) {
+            if (confirm('ウィンドウモードが変更されました。設定を反映するためにアプリケーションを再起動しますか？')) {
+                relaunchApp();
+            } else {
+                initialWindowMode = windowMode.value;
+            }
+        }
+
         setTimeout(() => {
             saveStatus.value = '設定を保存';
         }, 2000);
@@ -1080,6 +1101,29 @@ const menuItems = ref([
                         <template #title>ウィンドウ設定</template>
                         <template #content>
                             <div class="flex flex-column gap-4">
+                                <!-- ウィンドウモード設定 -->
+                                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
+                                    <i class="pi pi-th-large text-purple-500"></i>
+                                    <span>ウィンドウモード設定</span>
+                                </div>
+
+                                <div class="form-field">
+                                    <label class="font-medium">ウィンドウモード</label>
+                                    <Select 
+                                        v-model="windowMode" 
+                                        :options="windowModeOptions" 
+                                        optionLabel="name" 
+                                        optionValue="value" 
+                                        class="w-full mt-2" 
+                                    >
+                                        <template #option="slotProps">
+                                            <div class="flex align-items-center">
+                                                <span>{{ slotProps.option.name }} ｜ {{ slotProps.option.desc }}</span>
+                                            </div>
+                                        </template>
+                                    </Select>
+                                </div>
+
                                 <!-- マスコットウィンドウ設定 -->
                                 <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
                                     <i class="pi pi-user text-purple-500"></i>
@@ -1088,18 +1132,19 @@ const menuItems = ref([
 
                                 <div class="form-field">
                                     <label class="font-medium flex justify-content-between">
-                                        <span>表示サイズ (スケール): {{ Math.round((mascotScale || 1.0) * 100) }}%</span>
+                                        <span>表示サイズ (スケール): {{ windowMode === 'compact' ? 50 : Math.round((mascotScale || 1.0) * 100) }}%</span>
+                                        <span v-if="windowMode === 'compact'" class="text-xs text-yellow-500 font-normal">※コンパクト表示時は50%に固定されます</span>
                                     </label>
-                                    <Slider v-model="mascotScale" :min="0.5" :max="2.0" :step="0.1" class="mt-2" @change="updateMascotScale" />
+                                    <Slider :modelValue="windowMode === 'compact' ? 0.5 : mascotScale" :disabled="windowMode === 'compact'" :min="0.5" :max="2.0" :step="0.1" class="mt-2" @change="(val: any) => { if (windowMode !== 'compact' && typeof val === 'number') { mascotScale = val; updateMascotScale(); } }" />
                                 </div>
 
                                 <div class="form-field">
                                     <label class="font-medium">クイックサイズ変更</label>
                                     <div class="flex gap-2 mt-2">
-                                        <Button label="50%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 0.5}" @click="changeScalePreset(0.5)" />
-                                        <Button label="75%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 0.75}" @click="changeScalePreset(0.75)" />
-                                        <Button label="100% (標準)" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 1.0}" @click="changeScalePreset(1.0)" />
-                                        <Button label="150%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': mascotScale === 1.5}" @click="changeScalePreset(1.5)" />
+                                        <Button :label="windowMode === 'compact' ? '50%' : '50%'" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': (windowMode === 'compact' ? 0.5 : mascotScale) === (windowMode === 'compact' ? 0.5 : 0.5)}" :disabled="windowMode === 'compact'" @click="changeScalePreset(0.5)" />
+                                        <Button label="75%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': (windowMode === 'compact' ? null : mascotScale) === 0.75}" :disabled="windowMode === 'compact'" @click="changeScalePreset(0.75)" />
+                                        <Button label="100% (標準)" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': (windowMode === 'compact' ? null : mascotScale) === 1.0}" :disabled="windowMode === 'compact'" @click="changeScalePreset(1.0)" />
+                                        <Button label="150%" class="p-button-outlined p-button-sm flex-1" :class="{'p-button-primary': (windowMode === 'compact' ? null : mascotScale) === 1.5}" :disabled="windowMode === 'compact'" @click="changeScalePreset(1.5)" />
                                     </div>
                                 </div>
 

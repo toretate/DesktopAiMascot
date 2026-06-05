@@ -7,6 +7,7 @@ import { AudioPlaylist } from '../utils/AudioPlaylist';
 import { useChatHistory } from './chatpanel/useChatHistory';
 import { useChatConnection } from './chatpanel/useChatConnection';
 import HistoryPanel from './chatpanel/HistoryPanel.vue';
+import MascotViewer from './MascotViewer.vue';
 
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
@@ -27,7 +28,8 @@ const {
     chatBorderColor,
     chatBorderWidth,
     chatBackgroundColor,
-    activeMascot
+    activeMascot,
+    windowMode
 } = storeToRefs(configStore);
 
 const getRgbaBackground = computed(() => {
@@ -167,6 +169,12 @@ onUnmounted(() => {
         unsubscribeConfig();
     }
 });
+
+const openSettings = () => {
+    if (window.electronAPI && window.electronAPI.openSettings) {
+        window.electronAPI.openSettings();
+    }
+};
 </script>
 
 <template>
@@ -177,6 +185,7 @@ onUnmounted(() => {
             <div class="header-actions no-drag">
                 <button class="icon-btn" @click="clearHistory" title="新規話題"><i class="pi pi-plus"></i></button>
                 <button class="icon-btn" @click="toggleHistoryList" :class="{ 'active-btn': showHistoryList }" title="履歴一覧"><i class="pi pi-history"></i></button>
+                <button class="icon-btn" @click="openSettings" title="設定"><i class="pi pi-cog"></i></button>
             </div>
         </header>
 
@@ -222,6 +231,11 @@ onUnmounted(() => {
             @select-session="selectSession"
             @delete-session="({ sessionId, event }) => deleteSession(sessionId, event)"
         />
+
+        <!-- コンパクトモード時のマスコット領域 -->
+        <div v-if="!showHistoryList && windowMode === 'compact'" class="compact-mascot-container">
+            <MascotViewer />
+        </div>
 
         <!-- フッター（入力・送信） -->
         <footer v-if="!showHistoryList" class="chat-footer">
@@ -274,8 +288,8 @@ onUnmounted(() => {
 
 <style scoped>
 .chat-wrapper {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.65);
@@ -658,5 +672,29 @@ onUnmounted(() => {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* コンパクトモード時のマスコットコンテナスタイル */
+.compact-mascot-container {
+    height: 280px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent;
+}
+
+:deep(.compact-mascot-container .mascot-wrapper) {
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    justify-content: flex-end !important;
+}
+
+:deep(.compact-mascot-container .mascot-character) {
+    transform-origin: bottom center;
 }
 </style>
