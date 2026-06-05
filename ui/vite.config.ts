@@ -19,6 +19,14 @@ export default defineConfig({
                         options.startup();
                     }
                 },
+                vite: {
+                    build: {
+                        rollupOptions: {
+                            // ws のオプション依存（ネイティブモジュール）をバンドル対象から除外
+                            external: ['bufferutil', 'utf-8-validate'],
+                        },
+                    },
+                },
             },
             {
                 // プリロードスクリプトのエントリーポイント

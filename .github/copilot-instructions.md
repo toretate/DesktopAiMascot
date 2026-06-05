@@ -63,6 +63,9 @@
 # Comfy Workflow
 - [x] Comfy Workflow の ID 指定のセパレータ文字は":"です。例1) "10" 例2) "29:40" 
 
+- [x] Vue 3からElectronのIPCでオブジェクトや配列を送信する際は、必ずプレーンオブジェクトにシリアライズしてから送信する
+	<!-- Vue 3の `ref` や `reactive` が持つ `Proxy` オブジェクトを直接 `window.electronAPI` 経由で送信すると、Electronの構造化複製（Structured Clone）の制限によりデータが欠落または空のオブジェクトになるバグが発生します。そのため、送信するオブジェクトや配列に対して `JSON.parse(JSON.stringify(data))` や `toRaw` を適用し、確実にプレーンなJavaScriptオブジェクトにシリアライズした上で送信してください。 -->
+
 # プログラム定義
 デスクトップマスコットを表示して、ユーザーと対話するプログラムを作成します。このプログラムは、以下の機能を持ちます。
 

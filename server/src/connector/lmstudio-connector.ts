@@ -82,10 +82,12 @@ export class LmStudioConnector {
         const response = await llm.respond(messagesPayload);
         const rawContent = response.content || '';
         
-        // 思考プロセス（Thinking Process や <thought> タグ）のクレンジング
-        let cleanedContent = rawContent
+        // 思考プロセス（Thinking Process や <thought> タグ、<|channel>thought タグなど）のクレンジング
+        const cleanedContent = rawContent
             .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
             .replace(/<thought>[\s\S]*/gi, '')
+            .replace(/<\|channel>thought[\s\S]*?<channel\|>/gi, '')
+            .replace(/<\|channel>thought[\s\S]*/gi, '')
             .replace(/^Thinking Process:[\s\S]*?(?=\n\n\S|$)/i, '')
             .replace(/\nThinking Process:[\s\S]*?(?=\n\n\S|$)/g, '');
         

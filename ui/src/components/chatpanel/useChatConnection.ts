@@ -318,13 +318,15 @@ export function useChatConnection(params: {
         try {
             let reply = '';
             if (window.electronAPI) {
+                const rawHistory = JSON.parse(JSON.stringify(historyToSend));
+                const rawAttachments = attachments.length > 0 ? JSON.parse(JSON.stringify(attachments)) : undefined;
                 if (engine === 'lmstudio') {
-                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, historyToSend, attachments.length > 0 ? attachments : undefined);
+                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, rawHistory, rawAttachments);
                 } else {
                     if (!apiKey) {
                         throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);
                     }
-                    reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model, historyToSend, attachments.length > 0 ? attachments : undefined);
+                    reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model, rawHistory, rawAttachments);
                 }
             } else {
                 reply = 'ブラウザ実行時のモック回答です。[happy]';
