@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 // Web版専用のVite設定（Electron依存をすべて除外）
 export default defineConfig({
+    root: 'web',
     plugins: [
         vue()
     ],
@@ -13,12 +14,7 @@ export default defineConfig({
         }
     },
     build: {
-        outDir: 'dist-web',
-        emptyOutDir: true,
-        rollupOptions: {
-            input: {
-                main: fileURLToPath(new URL('./web/index.html', import.meta.url))
-            }
-        }
+        outDir: '../dist-web',
+        emptyOutDir: true
     }
 });
