@@ -24,10 +24,10 @@ onUnmounted(() => {
 <template>
     <!-- ウィンドウのハッシュパラメータ（ルーティング）に応じて表示コンポーネントを切り替え -->
     <div class="app-root">
-        <MascotViewer v-if="currentHash === '#mascot' || currentHash === ''" />
+        <MascotViewer v-if="currentHash === '#mascot'" />
         <ChatPanel v-else-if="currentHash === '#chat'" />
         <SettingsWindow v-else-if="currentHash === '#settings'" />
-        <IntegratedLayout v-else-if="currentHash === '#integrated'" />
+        <IntegratedLayout v-else-if="currentHash === '#integrated' || currentHash === '' || currentHash === '#/' || currentHash === '#web'" />
         <CompactLayout v-else-if="currentHash === '#compact'" />
         <div v-else class="fallback-view">
             <p>不明なウィンドウハッシュ: {{ currentHash }}</p>

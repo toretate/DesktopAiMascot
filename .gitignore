@@ -16,6 +16,7 @@ yarn-error.log*
 # Vite / Electron Build outputs
 dist/
 dist-electron/
+dist-web/
 out/
 
 # IDE and OS files
