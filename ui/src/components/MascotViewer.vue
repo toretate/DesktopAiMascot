@@ -624,19 +624,6 @@ onUnmounted(() => {
                 />
                 <span v-else class="preview-layer expression" :style="activeExpressionStyle">{{ activeExpressionEmoji }}</span>
             </div>
-
-
-
-            <!-- hover-tip (右クリックで設定ヒント。逆スケールを適用してフォント縮小を防ぎます) -->
-            <div 
-                class="hover-tip no-drag" 
-                :style="{ 
-                    transform: `scale(${1 / totalMascotScale})`,
-                    marginTop: `${8 / totalMascotScale}px`
-                }"
-            >
-                右クリックで設定
-            </div>
         </div>
     </div>
 </template>
