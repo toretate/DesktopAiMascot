@@ -238,42 +238,4 @@ export function calculateAlignment(
     );
 
     return { offsetX, offsetY, scale };
-}�有効コンテンツの中心からずれている場合のオフセット補正
-    const contentCenterXRatio = contentBounds.centerX / contentBounds.imageWidth - 0.5;
-    const contentCenterYRatio = contentBounds.centerY / contentBounds.imageHeight - 0.5;
-    
-    let contentOffsetCorrectionX = contentCenterXRatio * expressionBaseSize * rawScale;
-    let contentOffsetCorrectionY = contentCenterYRatio * expressionBaseSize * rawScale;
-
-    if (contentBounds.contentHeight < 150) {
-        if (contentCenterXRatio < 0) {
-            contentOffsetCorrectionX += 28;
-        } else if (contentCenterXRatio > 0) {
-            contentOffsetCorrectionX -= 32;
-        }
-        contentOffsetCorrectionY -= 10;
-    } else {
-        const xOffsetAdjust = baseImageSize.width <= 420 ? 0 : 28;
-        contentOffsetCorrectionX += xOffsetAdjust;
-        contentOffsetCorrectionY += 4;
-    }
-
-    // クランプ
-    const offsetX = clamp(
-        Math.round(rawOffsetX - contentOffsetCorrectionX),
-        ALIGNMENT_CONSTANTS.OFFSET_MIN,
-        ALIGNMENT_CONSTANTS.OFFSET_MAX
-    );
-    const offsetY = clamp(
-        Math.round(rawOffsetY - contentOffsetCorrectionY),
-        ALIGNMENT_CONSTANTS.OFFSET_MIN,
-        ALIGNMENT_CONSTANTS.OFFSET_MAX
-    );
-    const scale = clamp(
-        Math.round(rawScale * 100) / 100,
-        ALIGNMENT_CONSTANTS.SCALE_MIN,
-        ALIGNMENT_CONSTANTS.SCALE_MAX
-    );
-
-    return { offsetX, offsetY, scale };
 }
