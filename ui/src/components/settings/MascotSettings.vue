@@ -6,6 +6,7 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
 import { useConfigStore } from '../../store/config';
+import { alignBatch } from '../../skills/expression-alignment/expression-auto-align';
 
 const configStore = useConfigStore();
 
@@ -43,6 +44,7 @@ import ImageCropModal from './ImageCropModal.vue';
 import AiExpressionGeneratorModal from './AiExpressionGeneratorModal.vue';
 import BackgroundRemovalModal from './BackgroundRemovalModal.vue';
 import PromptEditorModal from './PromptEditorModal.vue';
+import SpriteImportModal from './SpriteImportModal.vue';
 
 
 interface MascotAsset {
@@ -144,7 +146,7 @@ const activeExpression = ref<MascotAsset | null>(null);
 
 const currentExpressions = computed(() => {
     if (!editingMascot.value) return [];
-    return activeOutfit.value?.expressions || [];
+    return activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
 });
 
 const editingMascotImageSet = computed(() => {
@@ -242,9 +244,23 @@ const selectMascot = (mascot: MascotData) => {
 const initEditingMascot = () => {
     if (props.mascots.length > 0) {
         const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
+        console.log('[MascotSettings] initEditingMascot active:', active);
         editingMascot.value = JSON.parse(JSON.stringify(active));
-        const currentMascotOutfit = editingMascot.value.assets.outfits.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets.outfits[0] || null;
-        const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets.expressions || [];
+        
+        // 28感情スロットの存在を保証・補正
+        if (editingMascot.value.assets) {
+            editingMascot.value.assets.expressions = ensure28Expressions(editingMascot.value.assets.expressions || []);
+            if (Array.isArray(editingMascot.value.assets.outfits)) {
+                editingMascot.value.assets.outfits.forEach((o: any) => {
+                    o.expressions = ensure28Expressions(o.expressions || []);
+                });
+            }
+        }
+        
+        console.log('[MascotSettings] initEditingMascot editingMascot:', editingMascot.value);
+        const currentMascotOutfit = editingMascot.value.assets?.outfits?.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets?.outfits?.[0] || null;
+        const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets?.expressions || [];
+        console.log('[MascotSettings] initEditingMascot currentMascotExpressions:', currentMascotExpressions);
         activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
         activePreviewExpression.value = activeExpression.value;
         loadMascotPrompts();
@@ -278,8 +294,43 @@ const syncAndSave = async () => {
     const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
     if (idx !== -1) {
         props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+        configStore.configVersion++;
         emit('live-update');
     }
+};
+
+
+// 28個の感情スロットの初期化保証
+const ensure28Expressions = (expressions: any[]): any[] => {
+    const defaultEmotions = [
+        '通常', '喜び', '怒り', '悲しみ', '驚き',
+        '面白がり', '苛立ち', '賛同', '気遣い', '混乱',
+        '好奇心', '欲求', '失望', '不賛成', '嫌悪',
+        '当惑', '興奮', '恐れ', '感謝', '深い悲しみ',
+        '愛情', '緊張', '楽観', '誇り', '気づき',
+        '安堵', '後悔', '賞賛'
+    ];
+    
+    const existingMap = new Map<string, any>();
+    if (Array.isArray(expressions)) {
+        expressions.forEach(e => {
+            if (e && e.name) {
+                existingMap.set(e.name.trim(), e);
+            }
+        });
+    }
+    
+    return defaultEmotions.map(emotion => {
+        const existing = existingMap.get(emotion);
+        return {
+            id: existing?.id || 'expr_' + emotion,
+            name: emotion,
+            path: existing?.path || '',
+            offsetX: existing?.offsetX ?? 0,
+            offsetY: existing?.offsetY ?? 0,
+            scale: existing?.scale ?? 1.0
+        };
+    });
 };
 
 // --- 立ち絵アセット（全身像）操作関数群 ---
@@ -291,8 +342,7 @@ const addOutfitImage = async () => {
             editingMascot.value.assets.outfits = [];
         }
         
-        // 立ち絵ごとに独立した表情を持つため、ここではコピーせず空で初期化する
-        // (SettingsWindow.vue 側で空の28スロットが確保される)
+        // 立ち絵ごとに独立した表情を持つため、28感情のスロットを初期化して追加する
         const newOutfit: MascotAsset & { expressions?: MascotAsset[] } = {
             id: 'outfit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
             name: '衣装_' + (editingMascot.value.assets.outfits.length + 1),
@@ -300,7 +350,7 @@ const addOutfitImage = async () => {
             offsetX: 0,
             offsetY: 0,
             scale: 1.0,
-            expressions: []
+            expressions: ensure28Expressions([])
         };
         
         editingMascot.value.assets.outfits.push(newOutfit);
@@ -366,6 +416,7 @@ const isAssigningEmotionsModal = ref(false);
 const isCropModalActive = ref(false);
 const isAiGeneratingModalActive = ref(false);
 const isBackgroundRemovalModalActive = ref(false);
+const isSpriteImportModalActive = ref(false);
 // outfit参照ではなくIDを保持することで、Vueリアクティビティを介した安全な更新を保証する
 const backgroundRemovalTargetOutfitId = ref<string | null>(null);
 
@@ -454,18 +505,60 @@ const handleCropNew = async (slot?: MascotAsset) => {
     }
 };
 
-const handleCropDone = (croppedBase64: string) => {
+const handleCropDone = async (croppedBase64: string) => {
     // もし切り出し対象の表情スロットが選択されていれば、そのスロットに割り当てる
     const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets.expressions || [];
     const targetSlot = selectedCropExpression.value || currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0];
     if (targetSlot) {
-        targetSlot.path = croppedBase64;
-        targetSlot.originalPath = cropImageSrc.value;
+        let finalPath = croppedBase64;
+        let finalOriginalPath = cropImageSrc.value;
+        if (window.electronAPI?.saveMascotImage && editingMascot.value?.id) {
+            try {
+                const sanitizedLabel = targetSlot.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+                const outfitName = activeOutfit.value?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
+
+                // 1. 元画像の保存 (元画像が Base64 の場合のみサーバーに保存し、恒久的なパスに置換)
+                if (cropImageSrc.value.startsWith('data:image/')) {
+                    try {
+                        const originalFilename = `expressions/${outfitName}/original/orig_expr_${sanitizedLabel}.png`;
+                        const saveOriginalResult = await window.electronAPI.saveMascotImage(
+                            editingMascot.value.id,
+                            originalFilename,
+                            cropImageSrc.value
+                        );
+                        if (saveOriginalResult.success && saveOriginalResult.path) {
+                            finalOriginalPath = saveOriginalResult.path;
+                        }
+                    } catch (originalErr) {
+                        console.warn('[MascotSettings] 元画像の保存に失敗しました:', originalErr);
+                    }
+                }
+
+                // 2. 切り抜いた画像の保存 (Base64 データURLの場合のみ)
+                if (croppedBase64.startsWith('data:image/')) {
+                    const filename = `expressions/${outfitName}/expr_${sanitizedLabel}.png`;
+                    const saveResult = await window.electronAPI.saveMascotImage(
+                        editingMascot.value.id,
+                        filename,
+                        croppedBase64
+                    );
+                    if (saveResult.success && saveResult.path) {
+                        finalPath = saveResult.path;
+                    }
+                }
+            } catch (err) {
+                console.warn('[MascotSettings] 切り抜き画像の保存に失敗しました:', err);
+            }
+        }
+        targetSlot.path = finalPath;
+        targetSlot.originalPath = finalOriginalPath;
     }
     
     isCropModalActive.value = false;
     selectedCropExpression.value = null;
-    syncAndSave();
+    await syncAndSave();
+    emit('save-settings');
+    updateMascotPreview();
 };
 
 const registeredExpressions = computed(() => {
@@ -475,17 +568,34 @@ const registeredExpressions = computed(() => {
 });
 
 // AI表情インポート処理
-const importFromSpriteSheet = async (preloadedBase64?: string) => {
+const importFromSpriteSheet = async (importData?: string | { imagePath: string; importId: string }) => {
     if (!window.electronAPI) return;
     
     let imagePath = '';
+    let importId = '';
+    let isBase64 = false;
+    let originalSource = '';
     
-    if (preloadedBase64) {
-        imagePath = preloadedBase64;
+    if (importData) {
+        if (typeof importData === 'string') {
+            imagePath = importData;
+            originalSource = importData;
+            isBase64 = imagePath.startsWith('data:image/');
+            const match = imagePath.match(/\/expressions\/working\/([^\/]+)\//);
+            importId = match ? match[1] : 'sheet_' + Date.now();
+        } else {
+            imagePath = importData.imagePath;
+            originalSource = importData.imagePath;
+            importId = importData.importId;
+            isBase64 = imagePath.startsWith('data:image/');
+        }
     } else {
         const result = await window.electronAPI.selectLocalImage();
         if (!result || !result.success) return;
         imagePath = result.path;
+        originalSource = result.path;
+        isBase64 = imagePath.startsWith('data:image/');
+        importId = 'sheet_' + Date.now();
     }
     
     isScanningSprite.value = true;
@@ -499,13 +609,31 @@ const importFromSpriteSheet = async (preloadedBase64?: string) => {
             return;
         }
         
+        // 元画像が Base64（新規インポート等）の場合、スプライトシート全体画像を先に expressions/working/$ID/ に保存する
+        if (isBase64 && editingMascot.value?.id) {
+            try {
+                const sheetFilename = `expressions/working/${importId}/spritesheet_${importId}.png`;
+                const saveResult = await window.electronAPI.saveMascotImage(
+                    editingMascot.value.id,
+                    sheetFilename,
+                    imagePath
+                );
+                if (saveResult.success && saveResult.path) {
+                    imagePath = saveResult.path;
+                }
+            } catch (saveErr) {
+                console.warn('[MascotSettings] スプライトシート全体の保存に失敗しました:', saveErr);
+            }
+        }
+        
         const scanResults = await window.electronAPI.analyzeSpriteSheet(imagePath, apiKey);
         if (scanResults.error) {
             throw new Error(scanResults.error);
         }
         
         const img = new Image();
-        img.src = imagePath;
+        img.crossOrigin = 'anonymous'; // 安全策としてのCORS許可指定
+        img.src = originalSource.startsWith('data:image/') ? originalSource : resolveImageUrl(originalSource); // キャンバスへのロードには汚染されない元のソースを使用
         await new Promise((resolve) => (img.onload = resolve));
         
         scannedSprites.value = [];
@@ -550,24 +678,44 @@ const importFromSpriteSheet = async (preloadedBase64?: string) => {
                 const rawLabel = label.trim();
                 const translatedLabel = emotionTranslationMap[rawLabel.toLowerCase()] || rawLabel;
                 
+                // 切り分けられた画像もサーバー側（expressions/working/$ID/）に保存する
+                let finalCroppedPath = croppedBase64;
+                if (window.electronAPI?.saveMascotImage && editingMascot.value?.id) {
+                    try {
+                        const sanitizedLabel = translatedLabel.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+                        const filename = `expressions/working/${importId}/expr_${sanitizedLabel}.png`;
+                        const saveResult = await window.electronAPI.saveMascotImage(
+                            editingMascot.value.id,
+                            filename,
+                            croppedBase64
+                        );
+                        if (saveResult.success && saveResult.path) {
+                            finalCroppedPath = saveResult.path;
+                        }
+                    } catch (saveErr) {
+                        console.warn(`[MascotSettings] 表情 ${translatedLabel} の保存に失敗しました:`, saveErr);
+                    }
+                }
+                
                 // 自動分別
                 const currentMascotExpressions = activeOutfit.value?.expressions || editingMascot.value.assets?.expressions || [];
                 const targetSlot = currentMascotExpressions.find(
                     (e: any) => e.name.toLowerCase() === translatedLabel.toLowerCase()
                 );
                 if (targetSlot) {
-                    targetSlot.path = croppedBase64;
+                    targetSlot.path = finalCroppedPath;
+                    targetSlot.originalPath = imagePath; // 元に戻せるように元の全体のシート画像パスを設定
                 }
                 
                 scannedSprites.value.push({
                     id: 'sprite_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                     name: translatedLabel,
-                    path: croppedBase64
+                    path: finalCroppedPath
                 });
             }
         }
         
-        alert(`${scanResults.length}個の表情を検出しました。感情割り当て画面で調整してください。`);
+        alert(`${scanResults.length}個の表情を検出・スロットへ自動割り当てしました。`);
         isAssigningEmotionsModal.value = true;
     } catch (e: any) {
         alert('解析に失敗しました: ' + e.message);
@@ -727,7 +875,7 @@ const closeAssigningEmotionsModal = async () => {
                         icon="pi pi-sparkles" 
                         class="p-button-sm p-button-outlined p-button-secondary"
                         :loading="isScanningSprite"
-                        @click="importFromSpriteSheet()"
+                        @click="isSpriteImportModalActive = true"
                     />
                 </div>
 
@@ -999,6 +1147,13 @@ const closeAssigningEmotionsModal = async () => {
         :mascot-id="editingMascot.id"
         @close="isPromptModalActive = false"
         @save-done="loadMascotPrompts"
+    />
+
+    <!-- AIスプライトインポートモーダル -->
+    <SpriteImportModal
+        :visible="isSpriteImportModalActive"
+        @close="isSpriteImportModalActive = false"
+        @import="importFromSpriteSheet"
     />
 </template>
 

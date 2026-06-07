@@ -1,6 +1,26 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Button from 'primevue/button';
+import { useConfigStore } from '../../store/config';
+
+const configStore = useConfigStore();
+
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) {
+        return path;
+    }
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configStore.configVersion}`;
+};
 
 interface MascotAsset {
     id: string;
@@ -112,7 +132,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             @dragstart="onSpriteDragStart($event, sprite)"
                             @click="selectScannedSprite(sprite)"
                         >
-                            <img :src="sprite.path" class="sprite-preview object-contain border-round bg-slate-200" style="width: 54px; height: 54px;" />
+                            <img :src="resolveImageUrl(sprite.path)" class="sprite-preview object-contain border-round bg-slate-200" style="width: 54px; height: 54px;" />
                             <span class="text-xxs font-bold text-slate-600 text-ellipsis overflow-hidden w-full text-center">{{ sprite.name }}</span>
                         </div>
                         <div v-if="scannedSprites.length === 0" class="flex-1 flex align-items-center justify-content-center text-xs text-purple-600 font-semibold select-none">
@@ -139,7 +159,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             style="width: calc(25% - 6px); min-width: 170px;"
                         >
                             <div class="slot-thumbnail flex align-items-center justify-content-center border-round overflow-hidden bg-slate-100" style="width: 44px; height: 44px; flex-shrink: 0;">
-                                <img v-if="slot.path" :src="slot.path" class="thumbnail-img object-contain w-full h-full" />
+                                <img v-if="slot.path" :src="resolveImageUrl(slot.path)" class="thumbnail-img object-contain w-full h-full" />
                                 <i v-else class="pi pi-image text-slate-400 text-sm"></i>
                             </div>
                             <div class="flex flex-column flex-1 overflow-hidden">

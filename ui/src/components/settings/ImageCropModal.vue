@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import Button from 'primevue/button';
+import { useConfigStore } from '../../store/config';
+import { detectFaceFeatures } from '../../skills/expression-alignment/feature-island-detector';
+import { detectContentBounds, loadImage } from '../../skills/expression-alignment/content-bounds-detector';
 
 const props = defineProps<{
     visible: boolean;
@@ -11,6 +14,25 @@ const emit = defineEmits<{
     (e: 'close'): void;
     (e: 'crop', base64: string): void;
 }>();
+
+const configStore = useConfigStore();
+
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) {
+        return path;
+    }
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configStore.configVersion}`;
+};
+
 
 const cropX = ref(50);
 const cropY = ref(50);
@@ -210,7 +232,8 @@ const executeCrop = async () => {
     if (!props.imageSrc) return;
     
     const img = new Image();
-    img.src = props.imageSrc;
+    img.crossOrigin = 'anonymous';
+    img.src = resolveImageUrl(props.imageSrc);
     await new Promise((resolve) => (img.onload = resolve));
     
     const canvas = document.createElement('canvas');
@@ -259,6 +282,72 @@ const executeResetToOriginal = () => {
     }
 };
 
+const isAutoDetecting = ref(false);
+
+const handleAutoDetectCropArea = async () => {
+    if (!props.imageSrc) return;
+    
+    isAutoDetecting.value = true;
+    try {
+        const resolvedUrl = resolveImageUrl(props.imageSrc);
+        
+        // 目・口などの特徴島を検出
+        const features = await detectFaceFeatures(resolvedUrl);
+        
+        const img = await loadImage(resolvedUrl);
+        const imgWidth = img.naturalWidth || img.width;
+        const imgHeight = img.naturalHeight || img.height;
+
+        let detectedBox = null;
+
+        if (features.leftEye && features.rightEye) {
+            const leftEyeX = features.leftEye.centerX;
+            const rightEyeX = features.rightEye.centerX;
+            const eyeY = (features.leftEye.centerY + features.rightEye.centerY) / 2;
+            
+            // 左右の目の距離
+            const eyeDist = rightEyeX - leftEyeX;
+
+            // 目の距離を基準とした眉・目・口に絞った最適な矩形の算出比率
+            const left = leftEyeX - eyeDist * 0.65;
+            const right = rightEyeX + eyeDist * 0.65;
+            const top = eyeY - eyeDist * 0.55;      // 目の上方向（眉毛をしっかりカバーする範囲）
+            const bottom = eyeY + eyeDist * 0.85;   // 目の下方向（鼻、口、顎をカバーする範囲）
+
+            detectedBox = {
+                left: Math.max(0, Math.round(left)),
+                right: Math.min(imgWidth, Math.round(right)),
+                top: Math.max(0, Math.round(top)),
+                bottom: Math.min(imgHeight, Math.round(bottom))
+            };
+        } else {
+            // フォールバック: 不透明領域の上部を切り取る（バストアップや立ち絵を想定）
+            const contentBounds = await detectContentBounds(resolvedUrl);
+            const contentWidth = contentBounds.box.right - contentBounds.box.left;
+            const contentHeight = contentBounds.box.bottom - contentBounds.box.top;
+
+            detectedBox = {
+                left: Math.max(0, Math.round(contentBounds.box.left + contentWidth * 0.2)),
+                right: Math.min(contentBounds.imageWidth, Math.round(contentBounds.box.right - contentWidth * 0.2)),
+                top: Math.max(0, Math.round(contentBounds.box.top + contentHeight * 0.15)),
+                bottom: Math.min(contentBounds.imageHeight, Math.round(contentBounds.box.top + contentHeight * 0.48))
+            };
+        }
+
+        if (detectedBox) {
+            cropX.value = detectedBox.left;
+            cropY.value = detectedBox.top;
+            cropWidth.value = detectedBox.right - detectedBox.left;
+            cropHeight.value = detectedBox.bottom - detectedBox.top;
+            console.log('[ImageCropModal] 自動顔検出に成功しました:', detectedBox);
+        }
+    } catch (e) {
+        console.error('[ImageCropModal] 自動顔検出に失敗しました:', e);
+    } finally {
+        isAutoDetecting.value = false;
+    }
+};
+
 onMounted(() => {
     // マウスアップイベントをグローバルで検知して安全にドラッグを終了する
     window.addEventListener('mouseup', onCropMouseUp);
@@ -291,7 +380,8 @@ onMounted(() => {
                     <div class="relative flex align-items-center justify-content-center" style="position: relative; max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center;">
                         <img 
                             ref="cropImageRef"
-                            :src="imageSrc" 
+                            :src="resolveImageUrl(imageSrc)" 
+                            crossorigin="anonymous"
                             class="crop-base-img select-none"
                             style="max-width: 100%; max-height: 100%; display: block; pointer-events: none; object-fit: contain;"
                             @load="handleCropImageLoaded"
@@ -331,6 +421,7 @@ onMounted(() => {
             <div class="modal-footer flex justify-content-between gap-2 pt-2 border-top border-gray-200 mt-2">
                 <div class="flex gap-2">
                     <Button label="範囲リセット" icon="pi pi-refresh" class="p-button-outlined p-button-secondary p-button-sm px-2" style="font-size: 11px;" @click="resetCropArea" title="切り抜き枠を最大範囲にリセットします" />
+                    <Button label="自動切り抜き" icon="pi pi-scissors" class="p-button-outlined p-button-warning p-button-sm px-2" style="font-size: 11px;" :loading="isAutoDetecting" @click="handleAutoDetectCropArea" title="画像から顔部分を自動的に検出して切り抜き枠を設定します" />
                     <Button label="切り抜き解除 (元画像全体)" icon="pi pi-image" class="p-button-outlined p-button-info p-button-sm px-2" style="font-size: 11px;" @click="executeResetToOriginal" title="トリミングをせず、元の全体画像そのものを設定します" />
                 </div>
                 <div class="flex gap-2">

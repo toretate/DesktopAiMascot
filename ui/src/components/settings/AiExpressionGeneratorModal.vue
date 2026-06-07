@@ -75,6 +75,8 @@ const EMOTIONS_MAP: Record<string, string> = {
 const selectedEmotions = ref<string[]>([]);
 const isGenerating = ref(false);
 const generatedImage = ref<string>('');
+const savedServerPath = ref<string>('');
+const currentGenerationId = ref<string>('');
 const errorMessage = ref('');
 const generationHistory = ref<any[]>([]); // 対話的編集のための履歴
 
@@ -180,6 +182,8 @@ watch(
                 .map((e: any) => e.name)
                 .filter((name: string) => defaultSelection.includes(name));
             generatedImage.value = '';
+            savedServerPath.value = '';
+            currentGenerationId.value = '';
             errorMessage.value = '';
             isGenerating.value = false;
             generationHistory.value = [];
@@ -281,7 +285,24 @@ const generateExpressions = async () => {
         );
         
         if (result.success && result.imageBytes) {
-            generatedImage.value = result.imageBytes;
+            generatedImage.value = result.imageBytes; // プレビュー用には常に Base64 (Data URL) を設定して表示崩れを防ぐ
+            
+            if (window.electronAPI?.saveMascotImage && props.editingMascot?.id) {
+                const importId = Date.now().toString();
+                currentGenerationId.value = importId;
+                const filename = `expressions/working/${importId}/spritesheet_${importId}.png`;
+                const saveResult = await window.electronAPI.saveMascotImage(
+                    props.editingMascot.id,
+                    filename,
+                    result.imageBytes
+                );
+                if (saveResult.success && saveResult.path) {
+                    savedServerPath.value = saveResult.path; // サーバーに保存したパスを保持
+                }
+            } else {
+                savedServerPath.value = '';
+                currentGenerationId.value = '';
+            }
             // 履歴を更新（マルチターン対応）
             if (result.history) {
                 // 今回のユーザープロンプトを履歴に追加
@@ -311,7 +332,11 @@ const generateExpressions = async () => {
 // 生成画像のインポート処理
 const importGeneratedSprite = () => {
     if (!generatedImage.value) return;
-    emit('import-sprite', generatedImage.value);
+    // サーバーに保存したアセットパスと生成IDをオブジェクトでインポートイベントに送る
+    emit('import-sprite', {
+        imagePath: savedServerPath.value || generatedImage.value,
+        importId: currentGenerationId.value || Date.now().toString()
+    });
     emit('close');
 };
 </script>
@@ -505,7 +530,7 @@ const importGeneratedSprite = () => {
 
                         <!-- プレビュー画像 -->
                         <div v-else-if="generatedImage" class="w-full h-full flex align-items-center justify-content-center p-2 relative">
-                            <img :src="generatedImage" class="max-w-full max-h-full object-contain border-round shadow-md" />
+                            <img :src="resolveImageUrl(generatedImage)" class="max-w-full max-h-full object-contain border-round shadow-md" />
                             <div class="absolute bottom-4 right-4 bg-slate-900/70 backdrop-blur text-white px-2.5 py-1 border-round text-xxs font-bold font-mono">
                                 Imagen 3 (1024x1024)
                             </div>

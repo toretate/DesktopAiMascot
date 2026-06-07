@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onUnmounted } from 'vue';
 import { useConfigStore } from '../../store/config';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
+import { alignSingle, isValidImageSource, autoCropImage, autoCropFaceRegion } from '../../skills/expression-alignment/expression-auto-align';
 
 const configStore = useConfigStore();
 
@@ -76,17 +77,57 @@ const currentExpressions = computed(() => {
 
 const selectedModalExpression = ref<MascotAsset | null>(null);
 
+// キーボードイベントハンドラ
+const handleKeyDown = (e: KeyboardEvent) => {
+    if (!props.visible || !selectedModalExpression.value) return;
+    
+    // 入力フォーム等のフォーカス時は矢印移動を行わない
+    const target = e.target as HTMLElement;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+    }
+
+    let handled = false;
+    const step = 1; // 1pxずつ移動
+
+    if (e.key === 'ArrowUp') {
+        const current = selectedModalExpression.value.offsetY || 0;
+        selectedModalExpression.value.offsetY = Math.max(-250, current - step);
+        handled = true;
+    } else if (e.key === 'ArrowDown') {
+        const current = selectedModalExpression.value.offsetY || 0;
+        selectedModalExpression.value.offsetY = Math.min(250, current + step);
+        handled = true;
+    } else if (e.key === 'ArrowLeft') {
+        const current = selectedModalExpression.value.offsetX || 0;
+        selectedModalExpression.value.offsetX = Math.max(-250, current - step);
+        handled = true;
+    } else if (e.key === 'ArrowRight') {
+        const current = selectedModalExpression.value.offsetX || 0;
+        selectedModalExpression.value.offsetX = Math.min(250, current + step);
+        handled = true;
+    }
+
+    if (handled) {
+        e.preventDefault();
+        handleLiveUpdate();
+    }
+};
+
 // visible が true になった時やマスコットデータが渡された時に、表情初期選択を確実に実行する
 watch(
     () => props.visible,
     (newVal) => {
         if (newVal) {
+            window.addEventListener('keydown', handleKeyDown);
             const expressions = currentExpressions.value;
             if (expressions && expressions.length > 0) {
                 selectedModalExpression.value = expressions.find((e: any) => e.name === '通常') || expressions[0] || null;
             } else {
                 selectedModalExpression.value = null;
             }
+        } else {
+            window.removeEventListener('keydown', handleKeyDown);
         }
     },
     { immediate: true }
@@ -137,6 +178,259 @@ const adjustScale = (delta: number) => {
         next = Math.max(0.3, Math.min(2.0, next));
         selectedModalExpression.value.scale = next;
         handleLiveUpdate();
+    }
+};
+
+// --- ドラッグ操作の実装 ---
+const isDragging = ref(false);
+let startX = 0;
+let startY = 0;
+let startOffsetX = 0;
+let startOffsetY = 0;
+
+const startDrag = (e: MouseEvent) => {
+    if (!selectedModalExpression.value) return;
+    isDragging.value = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startOffsetX = selectedModalExpression.value.offsetX || 0;
+    startOffsetY = selectedModalExpression.value.offsetY || 0;
+
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', stopDrag);
+};
+
+const handleDrag = (e: MouseEvent) => {
+    if (!isDragging.value || !selectedModalExpression.value) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    selectedModalExpression.value.offsetX = Math.round(startOffsetX + dx);
+    selectedModalExpression.value.offsetY = Math.round(startOffsetY + dy);
+    
+    // スライダーの範囲制限に合わせる
+    selectedModalExpression.value.offsetX = Math.max(-250, Math.min(250, selectedModalExpression.value.offsetX));
+    selectedModalExpression.value.offsetY = Math.max(-250, Math.min(250, selectedModalExpression.value.offsetY));
+    
+    handleLiveUpdate();
+};
+
+const stopDrag = () => {
+    isDragging.value = false;
+    window.removeEventListener('mousemove', handleDrag);
+    window.removeEventListener('mouseup', stopDrag);
+};
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('mousemove', handleDrag);
+    window.removeEventListener('mouseup', stopDrag);
+});
+
+// --- 自動調整機能 ---
+const isAutoCropping = ref(false);
+const isAutoScaling = ref(false);
+const isAutoAligning = ref(false);
+
+/**
+ * ベース画像のパスを解決する（位置合わせ共通ロジック）
+ */
+const resolveBaseImagePath = (): string => {
+    if (props.activePose && isImage(props.activePose.path)) {
+        return resolveImageUrl(props.activePose.path);
+    } else if (props.activeOutfit && isImage(props.activeOutfit.path)) {
+        return resolveImageUrl(props.activeOutfit.path);
+    } else if (props.defaultFrontAvatar && isImage(props.defaultFrontAvatar.path)) {
+        return resolveImageUrl(props.defaultFrontAvatar.path);
+    } else if (props.editingMascot?.avatar && isImage(props.editingMascot.avatar)) {
+        return resolveImageUrl(props.editingMascot.avatar);
+    }
+    return '';
+};
+
+/**
+ * 表情画像の有効領域を自動で検出して切り抜く
+ */
+const handleAutoCrop = async () => {
+    if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
+    if (!isImage(selectedModalExpression.value.path)) return;
+
+    isAutoCropping.value = true;
+    try {
+        const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
+        const cropped = await autoCropFaceRegion(expressionImagePath);
+        
+        let finalPath = cropped;
+        // Electron環境であればクロップ後の画像をファイルとして保存する
+        if (window.electronAPI?.saveMascotImage && props.editingMascot?.id) {
+            try {
+                const sanitizedLabel = selectedModalExpression.value.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+                const outfitName = props.activeOutfit?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
+                const filename = `expressions/${outfitName}/expr_${sanitizedLabel}.png`;
+                
+                const saveResult = await window.electronAPI.saveMascotImage(
+                    props.editingMascot.id,
+                    filename,
+                    cropped
+                );
+                if (saveResult.success && saveResult.path) {
+                    finalPath = saveResult.path;
+                }
+            } catch (saveErr) {
+                console.warn('[ExpressionEditorModal] 自動切り抜き後画像の保存に失敗しました:', saveErr);
+            }
+        }
+
+        // 自動切り抜き前の元の画像パスを originalPath に退避（未設定の場合のみ）
+        if (!selectedModalExpression.value.originalPath) {
+            selectedModalExpression.value.originalPath = selectedModalExpression.value.path;
+        }
+
+        selectedModalExpression.value.path = finalPath;
+        handleLiveUpdate();
+        console.log('[ExpressionEditorModal] 自動切り抜きに成功しました');
+    } catch (e) {
+        console.error('[ExpressionEditorModal] 自動切り抜きに失敗しました:', e);
+    } finally {
+        isAutoCropping.value = false;
+    }
+};
+
+/**
+ * ベース画像の顔サイズに合わせて表情の拡大率のみを自動調整する
+ */
+const handleAutoScaling = async () => {
+    if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
+    if (!isImage(selectedModalExpression.value.path)) return;
+
+    const baseImagePath = resolveBaseImagePath();
+    if (!isValidImageSource(baseImagePath)) {
+        console.warn('[ExpressionEditorModal] ベース画像が見つからないため自動Scalingをスキャンします');
+        return;
+    }
+
+    isAutoScaling.value = true;
+    try {
+        const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
+        const result = await alignSingle(baseImagePath, expressionImagePath, {
+            useAIDetection: false,
+        });
+        selectedModalExpression.value.scale = result.params.scale;
+        handleLiveUpdate();
+        console.log('[ExpressionEditorModal] 自動Scalingに成功しました:', result.params.scale);
+    } catch (e) {
+        console.error('[ExpressionEditorModal] 自動Scalingに失敗しました:', e);
+    } finally {
+        isAutoScaling.value = false;
+    }
+};
+
+/**
+ * ベース画像の顔位置に合わせて表情の表示位置(X, Y)のみを自動調整する
+ */
+const handleAutoAlign = async () => {
+    if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
+    if (!isImage(selectedModalExpression.value.path)) return;
+
+    const baseImagePath = resolveBaseImagePath();
+    if (!isValidImageSource(baseImagePath)) {
+        console.warn('[ExpressionEditorModal] ベース画像が見つからないため自動位置合わせをスキップします');
+        return;
+    }
+
+    isAutoAligning.value = true;
+    try {
+        const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
+        const currentScale = selectedModalExpression.value.scale ?? 1.0;
+        const result = await alignSingle(baseImagePath, expressionImagePath, {
+            useAIDetection: false,
+            overrideScale: currentScale
+        });
+        selectedModalExpression.value.offsetX = result.params.offsetX;
+        selectedModalExpression.value.offsetY = result.params.offsetY;
+        handleLiveUpdate();
+        console.log('[ExpressionEditorModal] 自動位置合わせ(位置のみ)に成功しました:', result.params.offsetX, result.params.offsetY);
+    } catch (e) {
+        console.error('[ExpressionEditorModal] 自動位置合わせに失敗しました:', e);
+    } finally {
+        isAutoAligning.value = false;
+    }
+};
+
+// --- 背景除去 ---
+const isRemovingBackground = ref(false);
+
+const handleRemoveBackground = async () => {
+    if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
+    if (!isImage(selectedModalExpression.value.path)) return;
+
+    isRemovingBackground.value = true;
+    try {
+        const expressionImagePath = selectedModalExpression.value.path;
+        
+        console.log(`[ExpressionEditorModal] 背景除去サービスへリクエスト送信: http://localhost:3000/api/remove-background`);
+        const response = await fetch('http://localhost:3000/api/remove-background', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                imagePath: expressionImagePath,
+                mascotId: props.editingMascot.id,
+                engine: 'node'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`背景削除エラー: ${response.statusText}`);
+        }
+
+        const resData = await response.json();
+        if (resData.success && resData.image) {
+            let finalPath = resData.image;
+
+            // Electron環境であれば背景除去済み画像をファイルとして保存する
+            if (window.electronAPI?.saveMascotImage && props.editingMascot?.id) {
+                try {
+                    const sanitizedLabel = selectedModalExpression.value.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+                    const outfitName = props.activeOutfit?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
+                    const filename = `expressions/${outfitName}/expr_${sanitizedLabel}.png`;
+                    
+                    const saveResult = await window.electronAPI.saveMascotImage(
+                        props.editingMascot.id,
+                        filename,
+                        resData.image
+                    );
+                    if (saveResult.success && saveResult.path) {
+                        finalPath = saveResult.path;
+                    }
+                } catch (saveErr) {
+                    console.warn('[ExpressionEditorModal] 背景除去後画像の保存に失敗しました:', saveErr);
+                }
+            }
+
+            // 背景削除前の元の画像パスを originalPath に退避（未設定の場合のみ）
+            if (!selectedModalExpression.value.originalPath) {
+                selectedModalExpression.value.originalPath = selectedModalExpression.value.path;
+            }
+
+            selectedModalExpression.value.path = finalPath;
+            handleLiveUpdate();
+            console.log('[ExpressionEditorModal] 背景除去に成功しました');
+        } else {
+            throw new Error(resData.error || '背景削除処理に失敗しました。');
+        }
+    } catch (e: any) {
+        // 外部通信接続エラー時のハンドリング
+        if (e instanceof TypeError && e.message.includes('fetch')) {
+            console.warn('[ExpressionEditorModal] 背景除去サービスとの接続エラー');
+            alert('背景除去サービスに接続できませんでした。サーバーが起動しているか確認してください。');
+        } else {
+            console.error('[ExpressionEditorModal] 背景除去に失敗しました:', e);
+            alert(`背景除去に失敗しました: ${e.message}`);
+        }
+    } finally {
+        isRemovingBackground.value = false;
     }
 };
 </script>
@@ -228,6 +522,7 @@ const adjustScale = (delta: number) => {
                                             objectFit: 'contain',
                                             transform: `translate(${selectedModalExpression.offsetX || 0}px, ${(selectedModalExpression.offsetY || 0)}px) scale(${selectedModalExpression.scale || 1.0})`
                                         }"
+                                        @mousedown="startDrag"
                                     />
                                     <span 
                                         v-else 
@@ -235,6 +530,7 @@ const adjustScale = (delta: number) => {
                                         :style="{
                                             transform: `translate(${selectedModalExpression.offsetX || 0}px, ${(selectedModalExpression.offsetY || 0)}px) scale(${selectedModalExpression.scale || 1.0})`
                                         }"
+                                        @mousedown="startDrag"
                                     >{{ selectedModalExpression.path }}</span>
                                 </template>
                             </div>
@@ -296,54 +592,94 @@ const adjustScale = (delta: number) => {
                             </div>
                         </div>
 
-                        <!-- ボタン類 & 標準設定 -->
-                        <div class="flex justify-content-between align-items-center pt-2 border-top border-gray-200">
-                            <!-- 標準表情チェックボックス -->
-                            <div v-if="selectedModalExpression.path" class="flex align-items-center gap-2">
-                                <input 
-                                    id="default-expr-checkbox"
-                                    type="checkbox" 
-                                    :checked="editingMascot.defaultExpressionId === selectedModalExpression.id"
-                                    @change="toggleDefaultExpression(($event.target as HTMLInputElement).checked)"
-                                    class="cursor-pointer"
-                                />
-                                <label for="default-expr-checkbox" class="text-xs text-slate-700 font-bold cursor-pointer select-none flex align-items-center gap-1">
-                                    <i class="pi pi-star-fill text-yellow-500"></i>
-                                    <span>この表情をマスコットの標準（通常表示）にする</span>
-                                </label>
+                        <!-- ボタン類 (2段レイアウト) -->
+                        <div class="flex flex-column gap-2 pt-2 border-top border-gray-200">
+                            <!-- 上の段 -->
+                            <div class="flex align-items-center gap-3">
+                                <div class="text-xs text-slate-500 font-bold select-none" style="width: 60px; min-width: 60px;">自動調整</div>
+                                <div class="text-slate-300 text-xs select-none">|</div>
+                                <div class="flex gap-2 flex-1">
+                                    <Button 
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isAutoCropping ? '処理中...' : '自動切り抜き'" 
+                                        icon="pi pi-scissors" 
+                                        class="p-button-outlined p-button-warning p-button-sm" 
+                                        :loading="isAutoCropping"
+                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground"
+                                        @click="handleAutoCrop" 
+                                        title="表情画像の余白を自動的に検出して切り抜きます"
+                                    />
+                                    <Button 
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isRemovingBackground ? '処理中...' : '背景削除'" 
+                                        icon="pi pi-eraser" 
+                                        class="p-button-outlined p-button-secondary p-button-sm" 
+                                        :loading="isRemovingBackground"
+                                        :disabled="isRemovingBackground || isAutoCropping || isAutoScaling || isAutoAligning"
+                                        @click="handleRemoveBackground" 
+                                        title="表情スプライト画像の背景を除去します"
+                                    />
+                                    <Button 
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isAutoScaling ? '処理中...' : '自動Scaling'" 
+                                        icon="pi pi-external-link" 
+                                        class="p-button-outlined p-button-help p-button-sm" 
+                                        :loading="isAutoScaling"
+                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground"
+                                        @click="handleAutoScaling" 
+                                        title="ベース画像の顔の大きさに合わせて表情の拡大率を自動調整します"
+                                    />
+                                    <Button 
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isAutoAligning ? '処理中...' : '自動位置合わせ'" 
+                                        icon="pi pi-bullseye" 
+                                        class="p-button-outlined p-button-info p-button-sm" 
+                                        :loading="isAutoAligning"
+                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground"
+                                        @click="handleAutoAlign" 
+                                        title="ベース画像の顔位置に合わせて表情の表示位置(X, Y)を自動調整します"
+                                    />
+                                    <div v-else class="text-xs text-slate-400 font-semibold select-none py-1">
+                                        ※画像を登録またはクロップすると各種パラメータの自動調整が行えます。
+                                    </div>
+                                </div>
                             </div>
-                            <div v-else class="text-xs text-slate-400 font-semibold select-none">
-                                ※画像を登録またはクロップすると各種パラメータの調整が行えます。
-                            </div>
-
-                            <!-- アクションボタン (ライトモード調) -->
-                            <div class="flex gap-2">
-                                <Button 
-                                    label="リセット" 
-                                    icon="pi pi-refresh" 
-                                    class="p-button-outlined p-button-secondary p-button-sm" 
-                                    @click="selectedModalExpression.offsetX = 0; selectedModalExpression.offsetY = 0; selectedModalExpression.scale = 1.0; handleLiveUpdate()" 
-                                />
-                                <Button 
-                                    v-if="selectedModalExpression.path"
-                                    label="表情解除" 
-                                    icon="pi pi-trash" 
-                                    class="p-button-outlined p-button-danger p-button-sm" 
-                                    @click="clearExpression" 
-                                />
-                                <Button 
-                                    v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
-                                    label="切り抜き直す" 
-                                    icon="pi pi-scissors" 
-                                    class="p-button-outlined p-button-info p-button-sm" 
-                                    @click="emit('crop-current', selectedModalExpression)" 
-                                />
-                                <Button 
-                                    label="画像から切り出し" 
-                                    icon="pi pi-file-import" 
-                                    class="p-button-outlined p-button-success p-button-sm" 
-                                    @click="emit('crop-new', selectedModalExpression)" 
-                                />
+                            <!-- 下の段 -->
+                            <div class="flex align-items-center gap-3 pt-2 border-top border-gray-100">
+                                <div class="text-xs text-slate-500 font-bold select-none" style="width: 60px; min-width: 60px;">手動調整</div>
+                                <div class="text-slate-300 text-xs select-none">|</div>
+                                <div class="flex gap-2 flex-1">
+                                    <Button 
+                                        label="リセット" 
+                                        icon="pi pi-refresh" 
+                                        class="p-button-outlined p-button-secondary p-button-sm" 
+                                        @click="selectedModalExpression.offsetX = 0; selectedModalExpression.offsetY = 0; selectedModalExpression.scale = 1.0; handleLiveUpdate()" 
+                                        title="位置とサイズを初期値に戻します"
+                                    />
+                                    <Button 
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        label="切り抜き" 
+                                        icon="pi pi-image" 
+                                        class="p-button-outlined p-button-info p-button-sm" 
+                                        @click="emit('crop-current', selectedModalExpression)" 
+                                        title="手動で画像を切り抜き直します"
+                                    />
+                                    <Button 
+                                        v-if="selectedModalExpression.path"
+                                        label="解除" 
+                                        icon="pi pi-trash" 
+                                        class="p-button-outlined p-button-danger p-button-sm" 
+                                        @click="clearExpression" 
+                                        title="このスロットの表情画像を解除します"
+                                    />
+                                    <Button 
+                                        label="画像から切り出し" 
+                                        icon="pi pi-file-import" 
+                                        class="p-button-outlined p-button-success p-button-sm" 
+                                        @click="emit('crop-new', selectedModalExpression)" 
+                                        title="新しい画像から切り出して登録します"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -509,11 +845,14 @@ const adjustScale = (delta: number) => {
 .preview-layer-img {
     position: absolute;
     object-fit: contain;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: move;
     z-index: 10;
 }
 .preview-layer {
     position: absolute;
+    pointer-events: auto;
+    cursor: move;
     z-index: 10;
 }
 </style>
