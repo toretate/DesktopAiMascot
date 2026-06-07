@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 顔領域検出結果と表情画像の有効領域情報をもとに、
  * 表情エディタの offsetX, offsetY, scale パラメータを算出するモジュール
  */
@@ -239,3 +239,4 @@ export function calculateAlignment(
 
     return { offsetX, offsetY, scale };
 }
+
