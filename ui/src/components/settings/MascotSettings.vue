@@ -117,6 +117,40 @@ const loadMascotPrompts = async () => {
 };
 
 
+// 28個の感情スロットの初期化保証
+const ensure28Expressions = (expressions: any[]): any[] => {
+    const defaultEmotions = [
+        '通常', '喜び', '怒り', '悲しみ', '驚き',
+        '面白がり', '苛立ち', '賛同', '気遣い', '混乱',
+        '好奇心', '欲求', '失望', '不賛成', '嫌悪',
+        '当惑', '興奮', '恐れ', '感謝', '深い悲しみ',
+        '愛情', '緊張', '楽観', '誇り', '気づき',
+        '安堵', '後悔', '賞賛'
+    ];
+    
+    const existingMap = new Map<string, any>();
+    if (Array.isArray(expressions)) {
+        expressions.forEach(e => {
+            if (e && e.name) {
+                existingMap.set(e.name.trim(), e);
+            }
+        });
+    }
+    
+    return defaultEmotions.map(emotion => {
+        const existing = existingMap.get(emotion);
+        return {
+            id: existing?.id || 'expr_' + emotion,
+            name: emotion,
+            path: existing?.path || '',
+            offsetX: existing?.offsetX ?? 0,
+            offsetY: existing?.offsetY ?? 0,
+            scale: existing?.scale ?? 1.0
+        };
+    });
+};
+
+
 // 編集・追加対象のワークバッファ
 const editingMascot = ref<MascotData>({
     id: '',
@@ -222,15 +256,15 @@ const selectExpressionForPreview = (expr: MascotAsset) => {
 const selectMascot = (mascot: MascotData) => {
     // 選択切り替え時に編集バッファの内容を親リストに同期
     if (editingMascot.value && editingMascot.value.id) {
-        const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+        const idx = configStore.mascots.findIndex(m => m.id === editingMascot.value.id);
         if (idx !== -1) {
-            props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+            configStore.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
         }
     }
     emit('update:activeMascotId', mascot.id);
     editingMascot.value = JSON.parse(JSON.stringify(mascot));
-    const currentMascotOutfit = mascot.assets.outfits.find((o: any) => o.id === mascot.currentOutfitId) || mascot.assets.outfits[0] || null;
-    const currentMascotExpressions = currentMascotOutfit?.expressions || mascot.assets.expressions || [];
+    const currentMascotOutfit = mascot.assets?.outfits?.find((o: any) => o.id === mascot.currentOutfitId) || mascot.assets?.outfits?.[0] || null;
+    const currentMascotExpressions = currentMascotOutfit?.expressions || mascot.assets?.expressions || [];
     activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     activePreviewExpression.value = activeExpression.value;
     
@@ -245,13 +279,23 @@ const selectMascot = (mascot: MascotData) => {
 
 // 初期ロード時の選択処理用
 const initEditingMascot = () => {
-    if (props.mascots.length > 0) {
-        const active = props.mascots.find(m => m.id === props.activeMascotId) || props.mascots[0];
+    const mascotsList = configStore.mascots || props.mascots;
+    if (mascotsList && mascotsList.length > 0) {
+        const active = mascotsList.find(m => m && m.id === props.activeMascotId) || mascotsList[0];
+        if (!active) {
+            console.warn('[MascotSettings] No active mascot found in list');
+            return;
+        }
         console.log('[MascotSettings] initEditingMascot active:', active);
-        editingMascot.value = JSON.parse(JSON.stringify(active));
+        try {
+            editingMascot.value = JSON.parse(JSON.stringify(active));
+        } catch (e) {
+            console.error('[MascotSettings] Failed to parse active mascot:', e);
+            return;
+        }
         
         // 28感情スロットの存在を保証・補正
-        if (editingMascot.value.assets) {
+        if (editingMascot.value && editingMascot.value.assets) {
             editingMascot.value.assets.expressions = ensure28Expressions(editingMascot.value.assets.expressions || []);
             if (Array.isArray(editingMascot.value.assets.outfits)) {
                 editingMascot.value.assets.outfits.forEach((o: any) => {
@@ -261,10 +305,10 @@ const initEditingMascot = () => {
         }
         
         console.log('[MascotSettings] initEditingMascot editingMascot:', editingMascot.value);
-        const currentMascotOutfit = editingMascot.value.assets?.outfits?.find((o: any) => o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets?.outfits?.[0] || null;
+        const currentMascotOutfit = editingMascot.value.assets?.outfits?.find((o: any) => o && o.id === editingMascot.value.currentOutfitId) || editingMascot.value.assets?.outfits?.[0] || null;
         const currentMascotExpressions = currentMascotOutfit?.expressions || editingMascot.value.assets?.expressions || [];
         console.log('[MascotSettings] initEditingMascot currentMascotExpressions:', currentMascotExpressions);
-        activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
+        activeExpression.value = currentMascotExpressions.find((e: any) => e && e.name === '通常') || currentMascotExpressions[0] || null;
         activePreviewExpression.value = activeExpression.value;
         loadMascotPrompts();
     }
@@ -272,11 +316,11 @@ const initEditingMascot = () => {
 
 initEditingMascot();
 
-// activeMascotId や mascots が非同期でロードされたり変更されたりした場合に初期化
+// activeMascotId や configStore.mascots が非同期でロードされたり変更されたりした場合に初期化
 watch(
-    [() => props.activeMascotId, () => props.mascots],
+    [() => props.activeMascotId, () => configStore.mascots],
     () => {
-        if (!editingMascot.value.id || editingMascot.value.id !== props.activeMascotId) {
+        if (!editingMascot.value || !editingMascot.value.id || editingMascot.value.id !== props.activeMascotId) {
             initEditingMascot();
         }
     },
@@ -285,7 +329,7 @@ watch(
 
 // マスコットID変更時にプロンプトファイルを再読込
 watch(
-    () => editingMascot.value.id,
+    () => editingMascot.value?.id,
     () => {
         loadMascotPrompts();
     }
@@ -294,47 +338,15 @@ watch(
 
 // 編集バッファと親のリストを同期し保存するハンドラー
 const syncAndSave = async () => {
-    const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+    const idx = configStore.mascots.findIndex(m => m.id === editingMascot.value.id);
     if (idx !== -1) {
-        props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+        configStore.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
         configStore.configVersion++;
         emit('live-update');
     }
 };
 
 
-// 28個の感情スロットの初期化保証
-const ensure28Expressions = (expressions: any[]): any[] => {
-    const defaultEmotions = [
-        '通常', '喜び', '怒り', '悲しみ', '驚き',
-        '面白がり', '苛立ち', '賛同', '気遣い', '混乱',
-        '好奇心', '欲求', '失望', '不賛成', '嫌悪',
-        '当惑', '興奮', '恐れ', '感謝', '深い悲しみ',
-        '愛情', '緊張', '楽観', '誇り', '気づき',
-        '安堵', '後悔', '賞賛'
-    ];
-    
-    const existingMap = new Map<string, any>();
-    if (Array.isArray(expressions)) {
-        expressions.forEach(e => {
-            if (e && e.name) {
-                existingMap.set(e.name.trim(), e);
-            }
-        });
-    }
-    
-    return defaultEmotions.map(emotion => {
-        const existing = existingMap.get(emotion);
-        return {
-            id: existing?.id || 'expr_' + emotion,
-            name: emotion,
-            path: existing?.path || '',
-            offsetX: existing?.offsetX ?? 0,
-            offsetY: existing?.offsetY ?? 0,
-            scale: existing?.scale ?? 1.0
-        };
-    });
-};
 
 // --- 立ち絵アセット（全身像）操作関数群 ---
 const addOutfitImage = async () => {
@@ -441,9 +453,9 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
         if (targetOutfit) {
             targetOutfit.path = newBase64;
             // 変更を親リストへ同期して保存
-            const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+            const idx = configStore.mascots.findIndex(m => m.id === editingMascot.value.id);
             if (idx !== -1) {
-                props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
+                configStore.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
                 emit('save-settings');
             }
         }
@@ -471,9 +483,9 @@ const closeExpressionEditModal = async () => {
     activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     
     // 一括保存
-    const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+    const idx = configStore.mascots.findIndex(m => m.id === editingMascot.value.id);
     if (idx !== -1) {
-        props.mascots[idx] = JSON.parse(JSON.stringify(editingMascot.value));
+        configStore.mascots[idx] = JSON.parse(JSON.stringify(editingMascot.value));
         emit('save-settings');
     }
 };
@@ -733,9 +745,9 @@ const closeAssigningEmotionsModal = async () => {
     activeExpression.value = currentMascotExpressions.find((e: any) => e.name === '通常') || currentMascotExpressions[0] || null;
     
     // 一括保存
-    const idx = props.mascots.findIndex(m => m.id === editingMascot.value.id);
+    const idx = configStore.mascots.findIndex(m => m.id === editingMascot.value.id);
     if (idx !== -1) {
-        props.mascots[idx] = JSON.parse(JSON.stringify(editingMascot.value));
+        configStore.mascots[idx] = JSON.parse(JSON.stringify(editingMascot.value));
         emit('save-settings');
     }
 };
@@ -789,27 +801,19 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                         <!-- 1. ベースキャラクターアバターの優先度表示 -->
                         <template v-if="activeMascotId === mascot.id">
                             <!-- ポーズ画像優先 -->
-                            <template v-if="activePose && isImage(activePose.path)">
-                                <img :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            </template>
+                            <img v-if="activePose && isImage(activePose.path)" key="active-pose" :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <!-- 衣装画像優先 -->
-                            <template v-else-if="activeOutfit && isImage(activeOutfit.path)">
-                                <img :src="resolveImageUrl(activeOutfit.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            </template>
+                            <img v-else-if="activeOutfit && isImage(activeOutfit.path)" key="active-outfit" :src="resolveImageUrl(activeOutfit.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <!-- フロント画像優先 -->
-                            <template v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)">
-                                <img :src="resolveImageUrl(defaultFrontAvatar.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            </template>
+                            <img v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" key="active-front" :src="resolveImageUrl(defaultFrontAvatar.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <!-- ベースアバター優先 -->
-                            <template v-else-if="mascot.avatar && isImage(mascot.avatar)">
-                                <img :src="resolveImageUrl(mascot.avatar)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            </template>
-                            <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
+                            <img v-else-if="mascot.avatar && isImage(mascot.avatar)" key="active-avatar" :src="resolveImageUrl(mascot.avatar)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <span v-else key="active-emoji" class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
                         <template v-else>
                             <!-- 非アクティブなマスコットは最適なカバー画像を表示 -->
-                            <img v-if="getMascotCoverImage(mascot)" :src="getMascotCoverImage(mascot)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            <span v-else class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
+                            <img v-if="getMascotCoverImage(mascot)" key="inactive-cover" :src="getMascotCoverImage(mascot)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <span v-else key="inactive-emoji" class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
                         </template>
 
                         <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
