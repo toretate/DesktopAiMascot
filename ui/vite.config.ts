@@ -3,6 +3,10 @@ import vue from '@vitejs/plugin-vue';
 import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
 import { fileURLToPath, URL } from 'node:url';
+import path from 'node:path';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -40,7 +44,22 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('./src', import.meta.url))
+            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            // expression-alignment パッケージ（TS ソースを直接参照）
+            '@desktop-ai-mascot/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),
+            '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser':
+                path.resolve(pkgRoot, 'adapters/opencv-browser.ts'),
+            // @techstark/opencv-js はパッケージの node_modules から解決
+            '@techstark/opencv-js': path.resolve(pkgRoot, 'node_modules/@techstark/opencv-js'),
         }
-    }
+    },
+    server: {
+        fs: {
+            // パッケージソースを dev server から参照できるよう許可
+            allow: ['../packages'],
+        }
+    },
+    optimizeDeps: {
+        exclude: ['@desktop-ai-mascot/expression-alignment'],
+    },
 });

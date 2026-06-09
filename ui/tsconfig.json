@@ -19,6 +19,12 @@
         "paths": {
             "@/*": [
                 "src/*"
+            ],
+            "@desktop-ai-mascot/expression-alignment": [
+                "../packages/expression-alignment/src/index.ts"
+            ],
+            "@desktop-ai-mascot/expression-alignment/adapters/opencv-browser": [
+                "../packages/expression-alignment/adapters/opencv-browser.ts"
             ]
         }
     },
