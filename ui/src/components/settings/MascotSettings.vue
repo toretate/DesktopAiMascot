@@ -208,6 +208,7 @@ const updateMascotPreview = (overrides: { expressionId?: string; outfitId?: stri
             expressionOffsetX: currentExpr?.offsetX ?? 0,
             expressionOffsetY: currentExpr?.offsetY ?? 0,
             expressionScale: currentExpr?.scale ?? 1.0,
+            expressionRotation: currentExpr?.rotation ?? 0,
             outfitId: overrides.outfitId !== undefined ? overrides.outfitId : editingMascot.value.currentOutfitId,
             poseId: overrides.poseId !== undefined ? overrides.poseId : editingMascot.value.currentPoseId
         });

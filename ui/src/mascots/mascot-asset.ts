@@ -5,4 +5,5 @@ export default interface MascotAsset {
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    rotation?: number;
 }

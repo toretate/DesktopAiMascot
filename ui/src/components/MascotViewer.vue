@@ -33,6 +33,7 @@ const previewState = ref<{
     expressionOffsetX?: number;
     expressionOffsetY?: number;
     expressionScale?: number;
+    expressionRotation?: number;
 } | null>(null);
 
 let unsubscribePreview: (() => void) | null = null;
@@ -228,15 +229,16 @@ const activeExpressionStyle = computed(() => {
         const ox = previewState.value ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
         const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
         const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
-        
+        const rot = previewState.value ? (previewState.value.expressionRotation ?? 0) : (found.rotation ?? 0);
+
         // 表情エディタのベースサイズ（420px）とマスコットウィンドウ（512px）のスケール比率を適用して
         // 位置調整パラメータがデスクトップ上でも正確に再現されるように補正する。
         const scaleFactor = 512 / 420;
         const scaledOx = ox * scaleFactor;
         const scaledOy = oy * scaleFactor;
-        
+
         return {
-            transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc})`
+            transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc}) rotate(${rot}deg)`
         };
     }
     

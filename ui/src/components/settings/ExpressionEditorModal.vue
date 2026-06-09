@@ -42,6 +42,7 @@ interface MascotAsset {
     offsetX?: number;
     offsetY?: number;
     scale?: number;
+    rotation?: number;
     expressions?: MascotAsset[];
 }
 
@@ -177,6 +178,16 @@ const adjustScale = (delta: number) => {
         let next = Math.round((current + delta) * 100) / 100;
         next = Math.max(0.3, Math.min(2.0, next));
         selectedModalExpression.value.scale = next;
+        handleLiveUpdate();
+    }
+};
+
+const adjustRotation = (delta: number) => {
+    if (selectedModalExpression.value) {
+        const current = selectedModalExpression.value.rotation ?? 0;
+        let next = Math.round(current + delta);
+        next = Math.max(-45, Math.min(45, next));
+        selectedModalExpression.value.rotation = next;
         handleLiveUpdate();
     }
 };
@@ -510,25 +521,25 @@ const handleRemoveBackground = async () => {
                                 </template>
                                 <span v-else class="preview-base-avatar font-bold text-6xl text-slate-400 select-none">🤖</span>
 
-                                <!-- 表情重ね合わせ (offsetX, offsetY, scale 補正) -->
+                                <!-- 表情重ね合わせ (offsetX, offsetY, scale, rotation 補正) -->
                                 <template v-if="selectedModalExpression.path">
-                                    <img 
-                                        v-if="isImage(selectedModalExpression.path)" 
-                                        :src="resolveImageUrl(selectedModalExpression.path)" 
+                                    <img
+                                        v-if="isImage(selectedModalExpression.path)"
+                                        :src="resolveImageUrl(selectedModalExpression.path)"
                                         class="preview-layer-img expression absolute"
                                         :style="{
                                             width: '140px',
                                             height: '140px',
                                             objectFit: 'contain',
-                                            transform: `translate(${selectedModalExpression.offsetX || 0}px, ${(selectedModalExpression.offsetY || 0)}px) scale(${selectedModalExpression.scale || 1.0})`
+                                            transform: `translate(${selectedModalExpression.offsetX || 0}px, ${selectedModalExpression.offsetY || 0}px) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
                                         }"
                                         @mousedown="startDrag"
                                     />
-                                    <span 
-                                        v-else 
+                                    <span
+                                        v-else
                                         class="preview-layer expression absolute font-bold text-4xl"
                                         :style="{
-                                            transform: `translate(${selectedModalExpression.offsetX || 0}px, ${(selectedModalExpression.offsetY || 0)}px) scale(${selectedModalExpression.scale || 1.0})`
+                                            transform: `translate(${selectedModalExpression.offsetX || 0}px, ${selectedModalExpression.offsetY || 0}px) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
                                         }"
                                         @mousedown="startDrag"
                                     >{{ selectedModalExpression.path }}</span>
@@ -573,15 +584,15 @@ const handleRemoveBackground = async () => {
                                     <div class="flex align-items-center gap-1 bg-purple-50 border-round px-2 py-0.5 border-1 border-purple-200 select-none">
                                         <span class="text-xxs text-purple-600 font-mono font-bold">{{ (selectedModalExpression.scale || 1.0).toFixed(2) }}倍</span>
                                         <div class="flex flex-column gap-0" style="line-height: 0.8;">
-                                            <i 
-                                                class="pi pi-chevron-up text-purple-400 hover:text-purple-600 cursor-pointer" 
-                                                style="font-size: 8px; padding: 1px;" 
+                                            <i
+                                                class="pi pi-chevron-up text-purple-400 hover:text-purple-600 cursor-pointer"
+                                                style="font-size: 8px; padding: 1px;"
                                                 @click="adjustScale(0.01)"
                                                 title="拡大率を0.01増やす"
                                             ></i>
-                                            <i 
-                                                class="pi pi-chevron-down text-purple-400 hover:text-purple-600 cursor-pointer" 
-                                                style="font-size: 8px; padding: 1px;" 
+                                            <i
+                                                class="pi pi-chevron-down text-purple-400 hover:text-purple-600 cursor-pointer"
+                                                style="font-size: 8px; padding: 1px;"
                                                 @click="adjustScale(-0.01)"
                                                 title="拡大率を0.01減らす"
                                             ></i>
@@ -589,6 +600,31 @@ const handleRemoveBackground = async () => {
                                     </div>
                                 </div>
                                 <Slider v-model="selectedModalExpression.scale" :min="0.3" :max="2.0" :step="0.05" @change="handleLiveUpdate" />
+                            </div>
+
+                            <!-- 回転スライダー (Rotation) -->
+                            <div class="flex-1 flex flex-column gap-1">
+                                <div class="flex justify-content-between align-items-center">
+                                    <label class="text-xs font-semibold text-slate-700 select-none">回転 (R)</label>
+                                    <div class="flex align-items-center gap-1 bg-blue-50 border-round px-2 py-0.5 border-1 border-blue-200 select-none">
+                                        <span class="text-xxs text-blue-600 font-mono font-bold">{{ (selectedModalExpression.rotation || 0) }}°</span>
+                                        <div class="flex flex-column gap-0" style="line-height: 0.8;">
+                                            <i
+                                                class="pi pi-chevron-up text-blue-400 hover:text-blue-600 cursor-pointer"
+                                                style="font-size: 8px; padding: 1px;"
+                                                @click="adjustRotation(1)"
+                                                title="1度右回転"
+                                            ></i>
+                                            <i
+                                                class="pi pi-chevron-down text-blue-400 hover:text-blue-600 cursor-pointer"
+                                                style="font-size: 8px; padding: 1px;"
+                                                @click="adjustRotation(-1)"
+                                                title="1度左回転"
+                                            ></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Slider v-model="selectedModalExpression.rotation" :min="-45" :max="45" :step="1" @change="handleLiveUpdate" />
                             </div>
                         </div>
 
@@ -649,12 +685,12 @@ const handleRemoveBackground = async () => {
                                 <div class="text-xs text-slate-500 font-bold select-none" style="width: 60px; min-width: 60px;">手動調整</div>
                                 <div class="text-slate-300 text-xs select-none">|</div>
                                 <div class="flex gap-2 flex-1">
-                                    <Button 
-                                        label="リセット" 
-                                        icon="pi pi-refresh" 
-                                        class="p-button-outlined p-button-secondary p-button-sm" 
-                                        @click="selectedModalExpression.offsetX = 0; selectedModalExpression.offsetY = 0; selectedModalExpression.scale = 1.0; handleLiveUpdate()" 
-                                        title="位置とサイズを初期値に戻します"
+                                    <Button
+                                        label="リセット"
+                                        icon="pi pi-refresh"
+                                        class="p-button-outlined p-button-secondary p-button-sm"
+                                        @click="selectedModalExpression.offsetX = 0; selectedModalExpression.offsetY = 0; selectedModalExpression.scale = 1.0; selectedModalExpression.rotation = 0; handleLiveUpdate()"
+                                        title="位置・サイズ・回転を初期値に戻します"
                                     />
                                     <Button 
                                         v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
