@@ -15,3 +15,9 @@ export {
     type OpenCvLike,
     type OpenCvRegistrationOptions,
 } from './registration-opencv';
+export {
+    detectEyeCenters,
+    crossCheckEyeMidpoint,
+    type FeatureIsland,
+    type EyeCenters,
+} from './feature-island-detector';
