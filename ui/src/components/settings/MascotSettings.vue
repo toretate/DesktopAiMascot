@@ -6,7 +6,8 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import { MascotImageSetBuilder } from '../../mascots/MascotImageSetBuilder';
 import { useConfigStore } from '../../store/config';
-import { alignBatch } from '../../skills/expression-alignment/expression-auto-align';
+import { alignBatch, isValidImageSource } from '../../skills/expression-alignment/expression-auto-align';
+import { autoAlignBatch, CONFIDENCE_THRESHOLD } from '../../skills/expression-alignment/auto-align-v2';
 
 const configStore = useConfigStore();
 
@@ -300,6 +301,85 @@ const syncAndSave = async () => {
         props.mascots.splice(idx, 1, JSON.parse(JSON.stringify(editingMascot.value)));
         configStore.configVersion++;
         emit('live-update');
+    }
+};
+
+// --- AI 一括位置合わせ v2 ---
+const isBatchAligningV2 = ref(false);
+const batchAlignV2Progress = ref('');
+
+/**
+ * 現在のシートの全表情を packages/expression-alignment の solveTransform で一括位置合わせ。
+ * 通常(neutral) 表情で SharedTransform A を確立し、残りの表情に A を再利用する（D4準拠）。
+ */
+const handleBatchAlignV2 = async () => {
+    if (!editingMascot.value) return;
+
+    // ベース画像の解決
+    const currentOutfit = editingMascot.value.assets?.outfits?.find(
+        (o: any) => o.id === editingMascot.value.currentOutfitId
+    ) || editingMascot.value.assets?.outfits?.[0] || null;
+
+    const baseImagePath = (() => {
+        if (currentOutfit && isImage(currentOutfit.path)) return resolveImageUrl(currentOutfit.path);
+        if (editingMascot.value.avatar && isImage(editingMascot.value.avatar)) return resolveImageUrl(editingMascot.value.avatar);
+        return '';
+    })();
+
+    if (!isValidImageSource(baseImagePath)) {
+        console.warn('[MascotSettings] ベース画像が見つからないため一括 AI 位置合わせをスキップします');
+        return;
+    }
+
+    // 対象となる表情スロット（パスがある表情のみ）
+    const expressions = currentOutfit?.expressions || editingMascot.value.assets?.expressions || [];
+    const targets = expressions
+        .filter((e: any) => e.path && isImage(e.path))
+        .map((e: any) => ({
+            id: e.id as string,
+            url: resolveImageUrl(e.path) as string,
+            isNeutral: e.name === '通常',
+        }));
+
+    if (targets.length === 0) {
+        console.warn('[MascotSettings] 位置合わせ対象の表情が見つかりません');
+        return;
+    }
+
+    isBatchAligningV2.value = true;
+    batchAlignV2Progress.value = `処理中 0/${targets.length}`;
+
+    try {
+        const results = await autoAlignBatch(baseImagePath, targets);
+        let applied = 0;
+        let lowConfCount = 0;
+
+        for (const expr of expressions) {
+            const r = results.get(expr.id);
+            if (!r) continue;
+            expr.offsetX = r.params.offsetX;
+            expr.offsetY = r.params.offsetY;
+            expr.scale = r.params.scale;
+            expr.rotation = r.params.rotation;
+            applied++;
+            if (r.confidence < CONFIDENCE_THRESHOLD) lowConfCount++;
+        }
+
+        await syncAndSave();
+
+        if (lowConfCount > 0) {
+            batchAlignV2Progress.value = `完了: ${applied}件適用（${lowConfCount}件低信頼度）`;
+            console.warn(`[MascotSettings] AI 一括位置合わせ完了 (${applied}件, 低信頼度: ${lowConfCount}件)`);
+        } else {
+            batchAlignV2Progress.value = `完了: ${applied}件適用`;
+            console.log(`[MascotSettings] AI 一括位置合わせ完了 (${applied}件)`);
+        }
+    } catch (e) {
+        console.error('[MascotSettings] AI 一括位置合わせに失敗しました:', e);
+        batchAlignV2Progress.value = 'エラーが発生しました';
+    } finally {
+        isBatchAligningV2.value = false;
+        setTimeout(() => { batchAlignV2Progress.value = ''; }, 4000);
     }
 };
 
@@ -898,13 +978,28 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                         class="p-button-sm p-button-outlined p-button-primary"
                         @click="isAiGeneratingModalActive = true"
                     />
-                    <Button 
-                        label="AIスプライトインポート" 
-                        icon="pi pi-sparkles" 
+                    <Button
+                        label="AIスプライトインポート"
+                        icon="pi pi-sparkles"
                         class="p-button-sm p-button-outlined p-button-secondary"
                         :loading="isScanningSprite"
                         @click="isSpriteImportModalActive = true"
                     />
+                </div>
+
+                <!-- 一括 AI 位置合わせ v2 -->
+                <div class="flex align-items-center gap-2">
+                    <Button
+                        label="一括 AI 位置合わせ"
+                        icon="pi pi-magic-wand"
+                        class="p-button-sm p-button-success flex-1"
+                        :loading="isBatchAligningV2"
+                        :disabled="isBatchAligningV2"
+                        @click="handleBatchAlignV2"
+                    />
+                    <span v-if="batchAlignV2Progress" class="text-xs" :class="batchAlignV2Progress.startsWith('エラー') ? 'text-red-500' : batchAlignV2Progress.includes('低信頼度') ? 'text-yellow-600' : 'text-green-600'">
+                        {{ batchAlignV2Progress }}
+                    </span>
                 </div>
 
                 <!-- 4列 x n行 の表情アセットグリッド -->

@@ -4,6 +4,8 @@ import { useConfigStore } from '../../store/config';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
 import { alignSingle, isValidImageSource, autoCropImage, autoCropFaceRegion } from '../../skills/expression-alignment/expression-auto-align';
+import { autoAlignSingle, CONFIDENCE_THRESHOLD, type AutoAlignV2Result } from '../../skills/expression-alignment/auto-align-v2';
+import type { SharedTransform } from '@desktop-ai-mascot/expression-alignment';
 
 const configStore = useConfigStore();
 
@@ -368,6 +370,69 @@ const handleAutoAlign = async () => {
     }
 };
 
+// --- AI 位置合わせ v2 ---
+const isAutoAligningV2 = ref(false);
+const lastAlignV2Confidence = ref<number | null>(null);
+// シート（衣装×ポーズ）単位でキャッシュする SharedTransform（scale/rotation/mask）
+const cachedSharedTransform = ref<SharedTransform | undefined>(undefined);
+
+/**
+ * packages/expression-alignment の solveTransform を使った高精度な自動位置合わせ（v2）。
+ * confidence >= CONFIDENCE_THRESHOLD: 自動適用
+ * confidence <  CONFIDENCE_THRESHOLD: プリセット適用 + 低信頼度表示
+ */
+const handleAutoAlignV2 = async () => {
+    if (!selectedModalExpression.value?.path) return;
+    if (!isImage(selectedModalExpression.value.path)) return;
+
+    const baseImagePath = resolveBaseImagePath();
+    if (!isValidImageSource(baseImagePath)) {
+        console.warn('[ExpressionEditorModal] ベース画像が見つからないため AI 位置合わせをスキップします');
+        return;
+    }
+
+    isAutoAligningV2.value = true;
+    lastAlignV2Confidence.value = null;
+    try {
+        const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
+        const result: AutoAlignV2Result = await autoAlignSingle(
+            baseImagePath,
+            expressionImagePath,
+            cachedSharedTransform.value,
+        );
+
+        // SharedTransform が新たに確立された場合はキャッシュに保存
+        if (result.shared) {
+            cachedSharedTransform.value = result.shared;
+        }
+
+        lastAlignV2Confidence.value = result.confidence;
+
+        // 結果をエディタに反映
+        selectedModalExpression.value.offsetX = result.params.offsetX;
+        selectedModalExpression.value.offsetY = result.params.offsetY;
+        selectedModalExpression.value.scale = result.params.scale;
+        selectedModalExpression.value.rotation = result.params.rotation;
+        handleLiveUpdate();
+
+        if (result.confidence >= CONFIDENCE_THRESHOLD) {
+            console.log(`[ExpressionEditorModal] AI 位置合わせ成功 confidence=${result.confidence.toFixed(2)}`);
+        } else {
+            console.warn(`[ExpressionEditorModal] AI 位置合わせ 低信頼度 confidence=${result.confidence.toFixed(2)} — 手動で確認してください`);
+        }
+    } catch (e) {
+        console.error('[ExpressionEditorModal] AI 位置合わせ v2 に失敗しました:', e);
+    } finally {
+        isAutoAligningV2.value = false;
+    }
+};
+
+// outfit/pose が切り替わったら SharedTransform キャッシュをリセット
+watch(
+    () => [props.activeOutfit?.id, props.activePose?.id],
+    () => { cachedSharedTransform.value = undefined; lastAlignV2Confidence.value = null; },
+);
+
 // --- 背景除去 ---
 const isRemovingBackground = ref(false);
 
@@ -665,15 +730,25 @@ const handleRemoveBackground = async () => {
                                         @click="handleAutoScaling" 
                                         title="ベース画像の顔の大きさに合わせて表情の拡大率を自動調整します"
                                     />
-                                    <Button 
+                                    <Button
                                         v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
-                                        :label="isAutoAligning ? '処理中...' : '自動位置合わせ'" 
-                                        icon="pi pi-bullseye" 
-                                        class="p-button-outlined p-button-info p-button-sm" 
+                                        :label="isAutoAligning ? '処理中...' : '自動位置合わせ'"
+                                        icon="pi pi-bullseye"
+                                        class="p-button-outlined p-button-info p-button-sm"
                                         :loading="isAutoAligning"
-                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground"
-                                        @click="handleAutoAlign" 
+                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground || isAutoAligningV2"
+                                        @click="handleAutoAlign"
                                         title="ベース画像の顔位置に合わせて表情の表示位置(X, Y)を自動調整します"
+                                    />
+                                    <Button
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isAutoAligningV2 ? '処理中...' : 'AI 位置合わせ'"
+                                        :icon="isAutoAligningV2 ? 'pi pi-spin pi-spinner' : (lastAlignV2Confidence !== null && lastAlignV2Confidence < 0.5 ? 'pi pi-exclamation-triangle' : 'pi pi-microchip-ai')"
+                                        :class="['p-button-sm', lastAlignV2Confidence !== null && lastAlignV2Confidence < 0.5 ? 'p-button-outlined p-button-warning' : 'p-button-outlined p-button-success']"
+                                        :loading="isAutoAligningV2"
+                                        :disabled="isAutoCropping || isAutoScaling || isAutoAligning || isRemovingBackground || isAutoAligningV2"
+                                        @click="handleAutoAlignV2"
+                                        :title="lastAlignV2Confidence !== null ? `OpenCV ベース位置合わせ (信頼度: ${(lastAlignV2Confidence * 100).toFixed(0)}%)` : 'OpenCV ベース高精度位置合わせ（scale/rotation/offset 一括）'"
                                     />
                                     <div v-else class="text-xs text-slate-400 font-semibold select-none py-1">
                                         ※画像を登録またはクロップすると各種パラメータの自動調整が行えます。
