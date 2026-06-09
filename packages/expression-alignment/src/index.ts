@@ -22,3 +22,21 @@ export {
     type EyeCenters,
 } from './feature-island-detector';
 export { applyEllipseFeatherMask, estimateFaceMask } from './mask';
+export {
+    detectContentBounds,
+    colorDistance,
+    detectBackgroundColor,
+    type ContentBounds,
+} from './content-bounds-detector';
+export {
+    detectFaceRegion,
+    estimateFaceBox,
+    FACE_HEURISTIC,
+    type FaceDetectionResult,
+} from './face-region-detector';
+export {
+    calculateAlignment,
+    CALC_CONSTANTS,
+    type AlignmentCalcParams,
+    type PreviewSize,
+} from './alignment-calculator';
