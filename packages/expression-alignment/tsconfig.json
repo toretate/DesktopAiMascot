@@ -1,0 +1,29 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "Node",
+        "lib": [
+            "ESNext",
+            "DOM"
+        ],
+        "strict": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "declaration": true,
+        "outDir": "dist",
+        "rootDir": ".",
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "src/**/*.ts",
+        "adapters/**/*.ts"
+    ],
+    "exclude": [
+        "**/__tests__/**",
+        "dist"
+    ]
+}
