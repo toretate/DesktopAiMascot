@@ -50,19 +50,24 @@ export interface EyeCenters {
 export function detectEyeCenters(sprite: RasterImage): EyeCenters | null {
     const { width: W, height: H, data } = sprite;
 
-    // 1. ラベル開始行を検出（下端から 70%+ near-white が続く行）
+    // 1. ラベル開始行を検出（下から上へ走査し、彩度のある顔コンテンツ行が現れたら停止）
+    //
+    // 「彩度あり（saturation>20, 30<max<235）」ピクセルが ≥5% の行 = 顔コンテンツ行。
+    // ラベル背景（近白）・テキスト（近黒）・枠線（近黒）はすべて彩度 0 → スキップ。
     let labelStartY = H;
     for (let y = H - 1; y >= 0; y--) {
-        let nWhite = 0;
+        let nColorful = 0;
         for (let x = 0; x < W; x++) {
             const i4 = (y * W + x) * 4;
-            if (data[i4] > 235 && data[i4 + 1] > 235 && data[i4 + 2] > 235) nWhite++;
+            const r = data[i4], g = data[i4 + 1], b = data[i4 + 2];
+            const maxC = r > g ? (r > b ? r : b) : (g > b ? g : b);
+            const minC = r < g ? (r < b ? r : b) : (g < b ? g : b);
+            if (maxC - minC > 20 && maxC < 235 && maxC > 30) nColorful++;
         }
-        if (nWhite / W >= 0.7) {
-            labelStartY = y;
-        } else {
-            break;
+        if (nColorful / W >= 0.05) {
+            break; // 顔コンテンツ行に到達 → ここで停止
         }
+        labelStartY = y;
     }
 
     const BORDER = 2;

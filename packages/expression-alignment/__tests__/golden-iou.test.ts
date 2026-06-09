@@ -94,19 +94,29 @@ function extractFaceMask(sprite: RasterImage): RasterImage {
     const W = sprite.width;
     const H = sprite.height;
 
-    // 1. ラベル開始行の検出（下端から 70%+ near-white が続く）
+    // 1. ラベル開始行の検出（下から上へ走査し、彩度のある顔コンテンツ行が現れたら停止）
+    //
+    // 旧アルゴリズム（near-white ≥70% + break）の問題:
+    //   - 下枠が near-black → 最初の行で即 break → labelStartY=H（ラベル除外なし）
+    //   - テキスト行（[disgust] 等）が near-white 70% 未満 → 途中で break しラベルが残る
+    //
+    // 新アルゴリズム: 「彩度あり（saturation>20, 30<max<235）」ピクセルが
+    //   ≥5% の行 = 顔コンテンツ行とみなしそこで停止。
+    //   ラベル背景（近白）・テキスト（近黒）・枠線（近黒）はすべて彩度 0 → スキップ。
     let labelStartY = H;
     for (let y = H - 1; y >= 0; y--) {
-        let n = 0;
+        let nColorful = 0;
         for (let x = 0; x < W; x++) {
             const i4 = (y * W + x) * 4;
-            if (sprite.data[i4] > 235 && sprite.data[i4 + 1] > 235 && sprite.data[i4 + 2] > 235) n++;
+            const r = sprite.data[i4], g = sprite.data[i4 + 1], b = sprite.data[i4 + 2];
+            const maxC = r > g ? (r > b ? r : b) : (g > b ? g : b);
+            const minC = r < g ? (r < b ? r : b) : (g < b ? g : b);
+            if (maxC - minC > 20 && maxC < 235 && maxC > 30) nColorful++;
         }
-        if (n / W >= 0.7) {
-            labelStartY = y;
-        } else {
-            break;
+        if (nColorful / W >= 0.05) {
+            break; // 顔コンテンツ行に到達 → ここで停止
         }
+        labelStartY = y;
     }
 
     // 2. BFS: 境界から r,g,b > 245 の非常に明るい白ピクセルを背景としてマーク
