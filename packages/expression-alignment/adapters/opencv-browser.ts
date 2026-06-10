@@ -25,7 +25,16 @@ export function loadOpenCvBrowser(): Promise<OpenCvLike> {
             console.log('[loadOpenCvBrowser] cvModule is a Promise or thenable. Awaiting it...');
             cv.then((resolvedCv: any) => {
                 console.log('[loadOpenCvBrowser] cvModule resolved:', resolvedCv);
-                resolve(resolvedCv as OpenCvLike);
+                if (typeof resolvedCv.Mat === 'function') {
+                    console.log('[loadOpenCvBrowser] resolvedCv is already initialized (cv.Mat exists)');
+                    resolve(resolvedCv as OpenCvLike);
+                } else {
+                    console.log('[loadOpenCvBrowser] resolvedCv is not initialized yet. Waiting for onRuntimeInitialized...');
+                    resolvedCv.onRuntimeInitialized = () => {
+                        console.log('[loadOpenCvBrowser] resolvedCv onRuntimeInitialized fired!');
+                        resolve(resolvedCv as OpenCvLike);
+                    };
+                }
             }).catch((err: any) => {
                 console.error('[loadOpenCvBrowser] cvModule Promise rejected:', err);
             });
