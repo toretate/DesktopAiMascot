@@ -211,8 +211,9 @@ const computedListPreviewExpressionStyle = computed(() => {
     const ox = expr.offsetX ?? 0;
     const oy = expr.offsetY ?? 0;
     const sc = expr.scale ?? 1.0;
+    const rot = expr.rotation ?? 0;
     
-    // 大画面（420px）からリスト内正方形プレビュー（140px）へのスケール比率 (140 / 420 = 1/3)
+    // 大画面（420px）からリスト内プレビュー（140px）へのスケール比率 (140 / 420 = 1/3)
     const scaleFactor = 140 / 420;
     const scaledOx = ox * scaleFactor;
     const scaledOy = oy * scaleFactor;
@@ -226,7 +227,7 @@ const computedListPreviewExpressionStyle = computed(() => {
         height: `${baseWidthHeight}px`,
         objectFit: 'contain' as const,
         pointerEvents: 'none' as const,
-        transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc})`,
+        transform: `translate(${scaledOx}px, ${scaledOy}px) scale(${sc}) rotate(${rot}deg)`,
         zIndex: 10
     };
 });
@@ -877,8 +878,8 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                     title="マスコットを削除"
                 />
                 <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04); position: relative;">
-                    <!-- 大画面プレビュー（420x420）とアスペクト比を完全に一致させるための 140x140 正方形ラッパー -->
-                    <div class="mascot-composite-preview relative flex align-items-center justify-content-center" style="width: 140px; height: 140px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <!-- 大画面プレビュー（420x560）とアスペクト比を完全に一致させるための 140x186.66px ラッパー -->
+                    <div class="mascot-composite-preview relative flex align-items-center justify-content-center" style="width: 140px; height: 186.66px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                         <!-- 1. ベースキャラクターアバターの優先度表示 -->
                         <template v-if="activeMascotId === mascot.id">
                             <!-- ポーズ画像優先 -->

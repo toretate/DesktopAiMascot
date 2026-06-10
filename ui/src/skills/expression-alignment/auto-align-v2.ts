@@ -97,15 +97,21 @@ export async function autoAlignSingle(
     spriteUrl: string,
     sharedTransform?: SharedTransform,
 ): Promise<AutoAlignV2Result> {
+    console.log('[autoAlignSingle] Started. Loading images...');
     const [baseImage, sprite] = await Promise.all([
         loadRasterImage(baseImageUrl),
         loadRasterImage(spriteUrl),
     ]);
+    console.log('[autoAlignSingle] Images loaded. base w/h:', baseImage.width, baseImage.height, 'sprite w/h:', sprite.width, sprite.height);
 
+    console.log('[autoAlignSingle] Loading OpenCV...');
     const cv = await loadOpenCvBrowser();
+    console.log('[autoAlignSingle] OpenCV loaded. Creating registration...');
     const registration = createOpenCvRegistration(cv);
+    console.log('[autoAlignSingle] Registration created. Solving transform...');
 
     const result = await solveTransform({ baseImage, sprite, sharedTransform }, { registration });
+    console.log('[autoAlignSingle] Transform solved. Confidence:', result.confidence);
 
     const baseFitScale = Math.min(PREVIEW_W / baseImage.width, PREVIEW_H / baseImage.height);
     const raw = pixelTransformToEditor(result.transform, {
@@ -115,6 +121,7 @@ export async function autoAlignSingle(
         baseWidth: baseImage.width,
     });
 
+    console.log('[autoAlignSingle] Editor params calculated. Returning result...');
     return {
         params: toEditorParams(raw),
         confidence: result.confidence,
@@ -137,19 +144,36 @@ export async function autoAlignBatch(
     baseImageUrl: string,
     sprites: Array<{ id: string; url: string; isNeutral?: boolean }>,
 ): Promise<Map<string, AutoAlignV2Result>> {
+    console.log('[autoAlignBatch] Started. Sprites count:', sprites.length);
     const results = new Map<string, AutoAlignV2Result>();
-    if (sprites.length === 0) return results;
+    if (sprites.length === 0) {
+        console.log('[autoAlignBatch] Sprites list is empty.');
+        return results;
+    }
 
+    console.log('[autoAlignBatch] Loading base image:', baseImageUrl);
     const baseImage = await loadRasterImage(baseImageUrl);
+    console.log('[autoAlignBatch] Base image loaded. w:', baseImage.width, 'h:', baseImage.height);
+
+    console.log('[autoAlignBatch] Loading OpenCV...');
     const cv = await loadOpenCvBrowser();
+    console.log('[autoAlignBatch] OpenCV loaded successfully');
+
+    console.log('[autoAlignBatch] Creating registration...');
     const registration = createOpenCvRegistration(cv);
+    console.log('[autoAlignBatch] Registration created successfully');
 
     const baseFitScale = Math.min(PREVIEW_W / baseImage.width, PREVIEW_H / baseImage.height);
 
     // 通常(neutral) スプライトで SharedTransform A を確立
     const neutral = sprites.find(s => s.isNeutral) ?? sprites[0];
+    console.log('[autoAlignBatch] Neutral sprite chosen:', neutral.id, 'url:', neutral.url);
     const neutralSprite = await loadRasterImage(neutral.url);
+    console.log('[autoAlignBatch] Neutral sprite loaded. w:', neutralSprite.width, 'h:', neutralSprite.height);
+
+    console.log('[autoAlignBatch] Solving transform for Neutral sprite...');
     const neutralResult = await solveTransform({ baseImage, sprite: neutralSprite }, { registration });
+    console.log('[autoAlignBatch] Neutral sprite transform solved. Confidence:', neutralResult.confidence);
     const sharedA = neutralResult.shared;
 
     const neutralRaw = pixelTransformToEditor(neutralResult.transform, {
@@ -166,14 +190,18 @@ export async function autoAlignBatch(
     });
 
     // 残りの表情: A を固定して B（平行移動）のみ解く
+    console.log('[autoAlignBatch] Aligning remaining sprites...');
     for (const s of sprites) {
         if (s.id === neutral.id) continue;
         try {
+            console.log('[autoAlignBatch] Loading sprite:', s.id, 'url:', s.url);
             const sprite = await loadRasterImage(s.url);
+            console.log('[autoAlignBatch] Sprite loaded. Solving transform with sharedTransform...');
             const r = await solveTransform(
                 { baseImage, sprite, sharedTransform: sharedA },
                 { registration },
             );
+            console.log('[autoAlignBatch] Sprite solved. Confidence:', r.confidence);
             const raw = pixelTransformToEditor(r.transform, {
                 spriteWidth: sprite.width,
                 spriteHeight: sprite.height,
@@ -190,5 +218,6 @@ export async function autoAlignBatch(
         }
     }
 
+    console.log('[autoAlignBatch] All alignment completed. Results size:', results.size);
     return results;
 }

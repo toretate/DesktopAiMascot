@@ -45,18 +45,19 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),
-            // expression-alignment パッケージ（TS ソースを直接参照）
-            '@desktop-ai-mascot/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),
             '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser':
                 path.resolve(pkgRoot, 'adapters/opencv-browser.ts'),
+            '@desktop-ai-mascot/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),
             // @techstark/opencv-js はパッケージの node_modules から解決
             '@techstark/opencv-js': path.resolve(pkgRoot, 'node_modules/@techstark/opencv-js'),
         }
     },
     server: {
         fs: {
-            // パッケージソースを dev server から参照できるよう許可
-            allow: ['../packages'],
+            // ワークスペース全体を dev server から参照できるよう許可
+            allow: [
+                path.resolve(__dirname, '..'),
+            ],
         }
     },
     optimizeDeps: {
