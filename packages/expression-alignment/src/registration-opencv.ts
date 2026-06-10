@@ -114,17 +114,25 @@ export function createOpenCvRegistration(
             sprite: RasterImage,
             faceRegion?: BoundingBox
         ): Promise<RegistrationResult> {
+            console.log('[OpenCvRegistration] register started');
             const grayBase = toGray(cv, baseImage);
+            console.log('[OpenCvRegistration] Base image converted to gray');
             const graySprite = toGray(cv, sprite);
+            console.log('[OpenCvRegistration] Sprite image converted to gray');
+            
             const baseMask = buildFaceMask(cv, baseImage, faceRegion);
+            console.log('[OpenCvRegistration] Face mask built (if region provided)');
             const emptyMask = new cv.Mat();
 
+            console.log('[OpenCvRegistration] Instantiating ORB...');
             const orb = new cv.ORB(opt.maxFeatures);
+            console.log('[OpenCvRegistration] ORB instantiated. Creating keypoint vectors and mats...');
             const kpBase = new cv.KeyPointVector();
             const kpSprite = new cv.KeyPointVector();
             const desBase = new cv.Mat();
             const desSprite = new cv.Mat();
 
+            console.log('[OpenCvRegistration] Instantiating BFMatcher...');
             const bf = new cv.BFMatcher(cv.NORM_HAMMING, false);
             const knn = new cv.DMatchVectorVector();
 
@@ -142,17 +150,26 @@ export function createOpenCvRegistration(
             if (baseMask) cleanup.push(baseMask);
 
             try {
+                console.log('[OpenCvRegistration] Running detectAndCompute on base...');
                 orb.detectAndCompute(grayBase, baseMask || emptyMask, kpBase, desBase);
+                console.log('[OpenCvRegistration] Base features computed. Row count:', desBase.rows);
+                
+                console.log('[OpenCvRegistration] Running detectAndCompute on sprite...');
                 orb.detectAndCompute(graySprite, emptyMask, kpSprite, desSprite);
+                console.log('[OpenCvRegistration] Sprite features computed. Row count:', desSprite.rows);
 
                 if (desSprite.rows === 0 || desBase.rows === 0) {
+                    console.log('[OpenCvRegistration] No features detected on sprite or base.');
                     return { pairs: [], inlierRatio: 0 };
                 }
 
                 // query = sprite, train = base
+                console.log('[OpenCvRegistration] Running knnMatch...');
                 bf.knnMatch(desSprite, desBase, knn, 2);
+                console.log('[OpenCvRegistration] knnMatch completed. Match size:', knn.size());
 
                 // Lowe 比率テスト
+                console.log('[OpenCvRegistration] Running Lowe ratio test...');
                 const goodSrc: number[] = [];
                 const goodDst: number[] = [];
                 const goodPairs: PointPair[] = [];
@@ -171,18 +188,23 @@ export function createOpenCvRegistration(
                 }
 
                 const good = goodPairs.length;
+                console.log('[OpenCvRegistration] Lowe ratio test completed. Good matches:', good);
                 if (good < opt.minMatches) {
+                    console.log('[OpenCvRegistration] Too few good matches for RANSAC. Skipping RANSAC.');
                     // RANSAC には不十分。得られた good マッチをそのまま返す（confidence は低くなる）
                     return { pairs: goodPairs, inlierRatio: good === 0 ? 0 : good / Math.max(1, knn.size()) };
                 }
 
                 // estimateAffine2D の RANSAC でインライアを判定（変換自体は使わない）
+                console.log('[OpenCvRegistration] Setting up mats for estimateAffine2D...');
                 const from = cv.matFromArray(good, 1, cv.CV_32FC2, goodSrc);
                 const to = cv.matFromArray(good, 1, cv.CV_32FC2, goodDst);
                 const inliers = new cv.Mat();
                 cleanup.push(from, to, inliers);
 
+                console.log('[OpenCvRegistration] Running estimateAffine2D (RANSAC)...');
                 const affine = cv.estimateAffine2D(from, to, inliers, cv.RANSAC, opt.ransacThreshold, 2000, 0.99, 10);
+                console.log('[OpenCvRegistration] estimateAffine2D completed.');
                 if (affine && typeof affine.delete === 'function') cleanup.push(affine);
 
                 const inlierPairs: PointPair[] = [];
@@ -190,13 +212,16 @@ export function createOpenCvRegistration(
                 for (let i = 0; i < good; i++) {
                     if (maskData && maskData[i]) inlierPairs.push(goodPairs[i]);
                 }
+                console.log('[OpenCvRegistration] Inliers count:', inlierPairs.length);
 
                 // インライアが取れなければ good をフォールバック
                 const pairs = inlierPairs.length >= 2 ? inlierPairs : goodPairs;
                 const inlierRatio = good > 0 ? inlierPairs.length / good : 0;
 
+                console.log('[OpenCvRegistration] Register completed successfully. Inlier Ratio:', inlierRatio);
                 return { pairs, inlierRatio };
             } finally {
+                console.log('[OpenCvRegistration] Cleaning up OpenCv objects...');
                 orb.delete();
                 bf.delete();
                 for (const m of cleanup) {
@@ -206,6 +231,7 @@ export function createOpenCvRegistration(
                         /* noop */
                     }
                 }
+                console.log('[OpenCvRegistration] Cleanup completed.');
             }
         },
     };
