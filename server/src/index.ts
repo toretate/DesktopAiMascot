@@ -5,6 +5,7 @@ import path from 'path';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import removeBackgroundRoute from './routes/remove-background';
+import detectFaceMaskRoute from './routes/detect-face-mask';
 import configRoute from './routes/config';
 import pingRoute from './routes/ping';
 import authRoute from './routes/auth';
@@ -31,6 +32,7 @@ console.log(`[Server] Hosting mascots directory from: ${MASCOTS_DIR}`);
 
 // APIルートの登録
 app.use('/api', removeBackgroundRoute);
+app.use('/api', detectFaceMaskRoute);
 app.use('/api', configRoute);
 app.use('/api', pingRoute);
 app.use('/api', authRoute);
