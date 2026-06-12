@@ -136,9 +136,9 @@ export async function alignSingle(
     try {
         // Step 1: 顔領域検出（AI検出 or ヒューリスティック）
         let faceDetection: FaceDetectionResult;
-        if (opts.useAIDetection && opts.apiKey) {
-            console.log('[ExpressionAutoAligner] AI 顔検出モードで実行します');
-            faceDetection = await detectFaceRegionWithAI(baseImage, opts.apiKey);
+        if (opts.useAIDetection) {
+            console.log('[ExpressionAutoAligner] ローカル API 顔検出モードで実行します');
+            faceDetection = await detectFaceRegionWithAI(baseImage);
         } else {
             faceDetection = await detectFaceRegion(baseImage);
         }
@@ -230,6 +230,7 @@ export async function alignBatch(
     const opts: Required<AutoAlignOptions> = {
         useAIDetection: options?.useAIDetection ?? false,
         apiKey: options?.apiKey ?? '',
+        overrideScale: options?.overrideScale as any,
     };
 
     // ベース画像のバリデーション
@@ -249,9 +250,9 @@ export async function alignBatch(
     try {
         // 顔検出を1回だけ実行（AI検出 or ヒューリスティック）
         let faceDetection: FaceDetectionResult;
-        if (opts.useAIDetection && opts.apiKey) {
-            console.log('[ExpressionAutoAligner] AI 顔検出モード（バッチ）で実行します');
-            faceDetection = await detectFaceRegionWithAI(baseImage, opts.apiKey);
+        if (opts.useAIDetection) {
+            console.log('[ExpressionAutoAligner] ローカル API 顔検出モード（バッチ）で実行します');
+            faceDetection = await detectFaceRegionWithAI(baseImage);
         } else {
             faceDetection = await detectFaceRegion(baseImage);
         }
