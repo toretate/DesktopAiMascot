@@ -2,7 +2,7 @@
 // window.electronAPI が存在しない（Webブラウザ環境）の場合に、API呼び出しをエミュレートする
 
 import { defaultData } from '../config/config-data';
-import { IrodoriTtsConnector } from '../connector/irodori-tts';
+import { IrodoriTtsConnector } from '../connector/irodori-tts-connector';
 
 if (typeof window !== 'undefined' && !window.electronAPI) {
     console.log('[Polyfill] Running in Web Browser. Initializing browser-polyfill...');

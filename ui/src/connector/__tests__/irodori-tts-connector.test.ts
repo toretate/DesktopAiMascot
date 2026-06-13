@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { IrodoriTtsConnector, IrodoriTtsSpeechInputParam } from '../irodori-tts';
+import { IrodoriTtsConnector, IrodoriTtsSpeechInputParam } from '../irodori-tts-connector';
 
 const USE_REAL_TTS = process.env.USE_REAL_TTS === 'true';
 
