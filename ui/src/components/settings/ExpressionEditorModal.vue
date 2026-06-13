@@ -598,6 +598,8 @@ const handleRemoveBackground = async () => {
                                             objectFit: 'contain',
                                             transform: `translate(${selectedModalExpression.offsetX || 0}px, ${selectedModalExpression.offsetY || 0}px) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
                                         }"
+                                        draggable="false"
+                                        @dragstart.prevent
                                         @mousedown="startDrag"
                                     />
                                     <span
@@ -607,6 +609,7 @@ const handleRemoveBackground = async () => {
                                             transform: `translate(${selectedModalExpression.offsetX || 0}px, ${selectedModalExpression.offsetY || 0}px) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
                                         }"
                                         @mousedown="startDrag"
+                                        @dragstart.prevent
                                     >{{ selectedModalExpression.path }}</span>
                                 </template>
                             </div>
