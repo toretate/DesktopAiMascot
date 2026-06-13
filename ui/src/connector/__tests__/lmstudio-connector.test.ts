@@ -12,7 +12,7 @@ vi.mock('@lmstudio/sdk', async (importOriginal) => {
 
     const mockRespond = vi.fn().mockResolvedValue({
         content: 'こんにちは！テストレスポンスです。'
-    });
+    } as any);
     const mockModel = vi.fn().mockResolvedValue({
         respond: mockRespond
     });
@@ -115,7 +115,7 @@ describe('LmStudioConnector', () => {
         // レスポンスに <think> タグが含まれる場合のモック設定
         vi.mocked(mockModelInstance.respond).mockResolvedValueOnce({
             content: '<think>内部の思考プロセスです。</think>こんにちは！'
-        });
+        } as any);
 
         const result1 = await LmStudioConnector.generateResponse({
             message: 'テスト',
@@ -128,7 +128,7 @@ describe('LmStudioConnector', () => {
         // レスポンスに <thought> タグが含まれる場合のモック設定
         vi.mocked(mockModelInstance.respond).mockResolvedValueOnce({
             content: '<thought>思考中...</thought>お答えします。'
-        });
+        } as any);
 
         const result2 = await LmStudioConnector.generateResponse({
             message: 'テスト',
@@ -141,7 +141,7 @@ describe('LmStudioConnector', () => {
         // レスポンスに Thinking Process: が含まれる場合のモック設定
         vi.mocked(mockModelInstance.respond).mockResolvedValueOnce({
             content: 'Thinking Process: \n1. 解析\n2. 回答生成\n\nこんにちは！'
-        });
+        } as any);
 
         const result3 = await LmStudioConnector.generateResponse({
             message: 'テスト',
