@@ -40,6 +40,9 @@ export interface AppConfig {
     useServer: boolean;
     serverHost: string;
     serverPort: number;
+
+    // TTS設定
+    useTts: boolean;
     
     // ウィンドウモード
     windowMode: 'split' | 'integrated' | 'compact';
@@ -93,6 +96,9 @@ export const useConfigStore = defineStore('config', () => {
     const useServer = ref(false);
     const serverHost = ref('localhost');
     const serverPort = ref(3000);
+
+    // TTS設定
+    const useTts = ref(true);
 
     // ウィンドウモード
     const windowMode = ref<'split' | 'integrated' | 'compact'>('split');
@@ -163,6 +169,8 @@ export const useConfigStore = defineStore('config', () => {
             serverHost.value = configData.serverHost || 'localhost';
             serverPort.value = configData.serverPort !== undefined ? Number(configData.serverPort) : 3000;
             
+            useTts.value = configData.useTts !== undefined ? !!configData.useTts : true;
+            
             windowMode.value = (configData.windowMode as any) || 'split';
             
             mascots.value = configData.mascots || [];
@@ -220,6 +228,8 @@ export const useConfigStore = defineStore('config', () => {
             serverHost.value = localStorage.getItem('serverHost') || 'localhost';
             const savedServerPort = localStorage.getItem('serverPort');
             serverPort.value = savedServerPort ? parseInt(savedServerPort) : 3000;
+            
+            useTts.value = localStorage.getItem('useTts') !== 'false';
 
             windowMode.value = (localStorage.getItem('windowMode') as any) || 'split';
 
@@ -286,6 +296,7 @@ export const useConfigStore = defineStore('config', () => {
             useServer: useServer.value,
             serverHost: serverHost.value,
             serverPort: Number(serverPort.value),
+            useTts: useTts.value,
             windowMode: windowMode.value,
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value
@@ -355,6 +366,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('useServer', useServer.value.toString());
         localStorage.setItem('serverHost', serverHost.value);
         localStorage.setItem('serverPort', serverPort.value.toString());
+        localStorage.setItem('useTts', useTts.value.toString());
         localStorage.setItem('windowMode', windowMode.value);
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
@@ -394,6 +406,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.useServer !== undefined) useServer.value = !!newConfig.useServer;
         if (newConfig.serverHost !== undefined) serverHost.value = newConfig.serverHost;
         if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
+        if (newConfig.useTts !== undefined) useTts.value = !!newConfig.useTts;
         if (newConfig.windowMode !== undefined) windowMode.value = newConfig.windowMode as any;
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
@@ -435,6 +448,7 @@ export const useConfigStore = defineStore('config', () => {
         useServer,
         serverHost,
         serverPort,
+        useTts,
         windowMode,
         mascots,
         activeMascotId,

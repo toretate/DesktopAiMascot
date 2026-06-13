@@ -99,6 +99,7 @@ export function setupWebSocket(wss: WebSocketServer) {
                         engine,
                         lmstudioEndpoint,
                         history,
+                        useTts,
                         attachments
                     } = data;
 
@@ -185,7 +186,7 @@ export function setupWebSocket(wss: WebSocketServer) {
                     }
 
                     // 4. 音声合成 (VOICEVOX または irodori-tts)
-                    if (speechText) {
+                    if (speechText && useTts !== false) {
                         const voiceEngine = selectedVoiceEngine || 'voicevox';
                         const baseUrl = voicevoxEndpoint || 'http://localhost:50021';
                         const speaker = voicevoxSpeakerId !== undefined ? voicevoxSpeakerId : 2;

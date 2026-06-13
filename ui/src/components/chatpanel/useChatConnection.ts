@@ -36,7 +36,8 @@ export function useChatConnection(params: {
         activeMascot,
         useServer,
         serverHost,
-        serverPort
+        serverPort,
+        useTts
     } = storeToRefs(configStore);
 
     const { isLoading: isAiResponding } = storeToRefs(mascotStore);
@@ -100,7 +101,7 @@ export function useChatConnection(params: {
                     scrollToBottom();
                 } else if (wsEvent === 'chat-audio') {
                     const { audio: base64Audio } = data;
-                    if (base64Audio) {
+                    if (base64Audio && useTts.value) {
                         playlist.push(base64Audio);
                     }
                 } else if (wsEvent === 'timer-trigger') {
@@ -170,28 +171,46 @@ export function useChatConnection(params: {
         pendingAttachments.value.splice(index, 1);
     };
 
-    const sendMessage = async () => {
-        if (!inputText.value.trim() && pendingAttachments.value.length === 0) return;
+    const sendMessage = async (isActiveTalk: boolean = false) => {
+        if (!isActiveTalk && !inputText.value.trim() && pendingAttachments.value.length === 0) return;
         if (isAiResponding.value) return;
 
         playlist.stop();
 
-        const userQuery = inputText.value;
-        inputText.value = '';
+        const userQuery = isActiveTalk ? '（ラジオ番組のフリートークとして、新しい話題を切り出してください。リスナーに問いかけたり、最近の出来事や季節の話題など何でも良いです）' : inputText.value;
+        if (!isActiveTalk) {
+            inputText.value = '';
+        }
 
-        const attachments = [...pendingAttachments.value];
-        pendingAttachments.value = [];
+        // ラジオモード of ON/OFF指示検出
+        if (!isActiveTalk) {
+            const query = userQuery.trim().toLowerCase();
+            if (query.includes('ラジオモード') || query.includes('radio mode')) {
+                if (query.includes('オフ') || query.includes('終了') || query.includes('やめて') || query.includes('off') || query.includes('停止') || query.includes('無効') || query.includes('キャンセル')) {
+                    mascotStore.setRadioMode(false);
+                } else if (query.includes('オン') || query.includes('開始') || query.includes('はじめて') || query.includes('起動') || query.includes('on') || query.includes('入') || query.includes('有効') || query.includes('つけて')) {
+                    mascotStore.setRadioMode(true);
+                }
+            }
+        }
 
-        messages.value.push({
-            id: Date.now(),
-            sender: 'user',
-            text: userQuery,
-            attachments: attachments.length > 0 ? attachments : undefined
-        });
+        const attachments = isActiveTalk ? [] : [...pendingAttachments.value];
+        if (!isActiveTalk) {
+            pendingAttachments.value = [];
+        }
 
-        const historyToSend = messages.value
+        if (!isActiveTalk) {
+            messages.value.push({
+                id: Date.now(),
+                sender: 'user',
+                text: userQuery,
+                attachments: attachments.length > 0 ? attachments : undefined
+            });
+        }
+
+        const historyBase = isActiveTalk ? messages.value : messages.value.slice(0, -1);
+        const historyToSend = historyBase
             .filter(m => m.sender === 'user' || (m.sender === 'mascot' && m.text !== '考え中...' && !m.text.startsWith('接続に失敗しました') && !m.text.startsWith('サーバーに接続されていません') && !m.text.startsWith('接続エラー')))
-            .slice(0, -1)
             .slice(-10)
             .map(m => ({ sender: m.sender, text: m.text }));
 
@@ -238,6 +257,14 @@ export function useChatConnection(params: {
         let systemPrompt = '';
         if (mascot && mascot.profile) {
             systemPrompt += `# Mascot Character Profile\n${mascot.profile}\n\n`;
+        }
+
+        if (mascotStore.isRadioMode) {
+            if (isActiveTalk) {
+                systemPrompt += `# Active Radio Talk Instructions\n現在、リスナー（ユーザー）からの発話がない状態（沈黙）です。ラジオパーソナリティとして沈黙を破り、リスナーを退屈させないように能動的にフリートークを開始するか、新しい面白い話題（季節、天気、雑談、リスナーへの問いかけなど）を自発的に切り出して、リスナーに楽しく語りかけてください。余計なメタテキストは出力せず、セリフのみを出力してください。\n\n`;
+            } else {
+                systemPrompt += `# Radio Mode Instructions\nあなたは現在、1人喋りの「ラジオパーソナリティ（MC）」としてラジオ番組を配信しています。目の前のリスナー（マスター）に向けてラジオ風の楽しいトークを展開してください。挨拶（「リスナーのみなさんこんにちは！」「お便りありがとうございます」など）や、ラジオ番組らしい進行の言い回しを効果的に使ってください。\n\n`;
+            }
         }
 
         if (window.electronAPI && window.electronAPI.getMascotPrompts && mascot) {
@@ -320,6 +347,7 @@ export function useChatConnection(params: {
                     engine: engine,
                     lmstudioEndpoint: lmsEndpoint,
                     history: historyToSend,
+                    useTts: useTts.value,
                     attachments: attachments.length > 0 ? attachments : undefined
                 }
             }));
@@ -379,7 +407,7 @@ export function useChatConnection(params: {
             await nextTick();
             scrollToBottom();
 
-            if (window.electronAPI) {
+            if (window.electronAPI && useTts.value) {
                 const api = window.electronAPI;
                 const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
                 

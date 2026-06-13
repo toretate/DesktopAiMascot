@@ -29,7 +29,8 @@ const {
     chatBorderWidth,
     chatBackgroundColor,
     activeMascot,
-    windowMode
+    windowMode,
+    useTts
 } = storeToRefs(configStore);
 
 const getRgbaBackground = computed(() => {
@@ -63,7 +64,8 @@ const getBorderStyle = computed(() => {
 });
 
 const {
-    isLoading: isAiResponding
+    isLoading: isAiResponding,
+    isRadioMode
 } = storeToRefs(mascotStore);
 
 const scrollToBottom = () => {
@@ -141,6 +143,53 @@ const formatFileSize = (bytes?: number) => {
     return mb.toFixed(1) + ' MB';
 };
 
+// ---- 能動的発話（アクティブトーク）タイマー ----
+const ACTIVE_TALK_INTERVAL = 30000; // 30秒
+let activeTalkTimer: any = null;
+
+const startActiveTalkTimer = () => {
+    stopActiveTalkTimer();
+    if (!isRadioMode.value || isAiResponding.value || mascotStore.isSpeaking || inputText.value.trim() !== '') {
+        return;
+    }
+    activeTalkTimer = setTimeout(async () => {
+        if (isRadioMode.value && !isAiResponding.value && !mascotStore.isSpeaking && inputText.value.trim() === '') {
+            await sendMessage(true);
+        }
+    }, ACTIVE_TALK_INTERVAL);
+};
+
+const stopActiveTalkTimer = () => {
+    if (activeTalkTimer) {
+        clearTimeout(activeTalkTimer);
+        activeTalkTimer = null;
+    }
+};
+
+watch(() => isRadioMode.value, (newVal) => {
+    if (newVal) {
+        startActiveTalkTimer();
+    } else {
+        stopActiveTalkTimer();
+    }
+});
+
+watch(() => inputText.value, (newVal) => {
+    if (newVal.trim() !== '') {
+        stopActiveTalkTimer();
+    } else {
+        startActiveTalkTimer();
+    }
+});
+
+watch([() => isAiResponding.value, () => mascotStore.isSpeaking], ([responding, speaking]) => {
+    if (responding || speaking) {
+        stopActiveTalkTimer();
+    } else {
+        startActiveTalkTimer();
+    }
+});
+
 let unsubscribeConfig: (() => void) | null = null;
 
 onMounted(async () => {
@@ -161,6 +210,11 @@ onMounted(async () => {
 
     // WebSocketの接続
     connectWebSocket();
+
+    // 初期化時にラジオモードがONならタイマー起動
+    if (isRadioMode.value) {
+        startActiveTalkTimer();
+    }
 });
 
 onUnmounted(() => {
@@ -168,6 +222,7 @@ onUnmounted(() => {
     if (unsubscribeConfig) {
         unsubscribeConfig();
     }
+    stopActiveTalkTimer();
 });
 
 const openSettings = () => {
@@ -183,6 +238,10 @@ const openSettings = () => {
         <header class="chat-header drag-area">
             <span class="chat-title">{{ activeMascot ? `${activeMascot.name} Chat` : 'Mascot Chat' }}</span>
             <div class="header-actions no-drag">
+                <button class="icon-btn" @click="configStore.updateConfig({ useTts: !useTts }); configStore.saveConfig()" :class="{ 'active-btn': useTts }" title="音声読み上げ (TTS) ON/OFF">
+                    <i :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
+                </button>
+                <button class="icon-btn" @click="mascotStore.setRadioMode(!isRadioMode)" :class="{ 'active-radio-btn': isRadioMode }" title="ラジオモード ON/OFF"><i class="pi pi-microphone"></i></button>
                 <button class="icon-btn" @click="clearHistory" title="新規話題"><i class="pi pi-plus"></i></button>
                 <button class="icon-btn" @click="toggleHistoryList" :class="{ 'active-btn': showHistoryList }" title="履歴一覧"><i class="pi pi-history"></i></button>
                 <button class="icon-btn" @click="openSettings" title="設定"><i class="pi pi-cog"></i></button>
@@ -252,7 +311,7 @@ const openSettings = () => {
                     </button>
                 </div>
             </div>
-            <form @submit.prevent="sendMessage" class="input-form">
+            <form @submit.prevent="sendMessage()" class="input-form">
                 <!-- ファイル選択用の隠しinput -->
                 <input 
                     type="file" 
@@ -467,6 +526,25 @@ const openSettings = () => {
 .active-btn {
     color: #a855f7 !important;
     background: rgba(168, 85, 247, 0.1) !important;
+}
+
+.active-radio-btn {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
 /* 添付ファイル・画像一覧スタイル */
