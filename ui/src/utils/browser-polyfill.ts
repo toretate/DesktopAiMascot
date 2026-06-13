@@ -349,7 +349,15 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             }
         },
         synthesizeIrodori: async (text: string, endpoint: string, model: string, voice: string, emotion?: string) => {
-            return IrodoriTtsConnector.synthesize(text, endpoint, model, voice, emotion);
+            return IrodoriTtsConnector.synthesize(
+                {
+                    input: text,
+                    model: model,
+                    voice: voice
+                },
+                emotion,
+                endpoint
+            );
         },
         getVoicevoxSpeakers: async (endpoint: string) => {
             const controller = new AbortController();
