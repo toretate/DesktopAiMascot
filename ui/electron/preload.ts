@@ -69,6 +69,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => 
         ipcRenderer.invoke('synthesize-voicevox', text, speakerId, endpoint),
+
+    // irodori-ttsによる音声合成を呼び出す (Base64文字列で結果が返る)
+    synthesizeIrodori: (text: string, endpoint: string, model: string, voice: string, emotion?: string) =>
+        ipcRenderer.invoke('synthesize-irodori', text, endpoint, model, voice, emotion),
         
     // VOICEVOX (ローカル)疎通確認および話者（スタイル）一覧取得を呼び出す
     getVoicevoxSpeakers: (endpoint: string) =>

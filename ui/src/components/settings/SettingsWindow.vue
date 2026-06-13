@@ -31,6 +31,9 @@ const {
     anthropicModel,
     voicevoxEndpoint,
     voicevoxSpeaker,
+    irodoriEndpoint,
+    irodoriModel,
+    irodoriVoice,
     temperature,
     chatOpacity,
     chatAlwaysOnTop,
@@ -124,6 +127,7 @@ const geminiConnectionText = computed(() => {
 // 音声AIエンジン
 const voiceEngines = ref([
     { name: 'VOICEVOX (ローカル)', value: 'voicevox' },
+    { name: 'irodori-tts v3 (ローカル)', value: 'irodori' },
     { name: 'Google Cloud Text-to-Speech', value: 'gtts' }
 ]);
 
@@ -744,6 +748,51 @@ const menuItems = ref([
     { name: '動画AI', value: 'video', icon: 'pi pi-video' },
     { name: 'APIキー', value: 'apikey', icon: 'pi pi-key' }
 ]);
+
+// --- 音声テスト用 ---
+const testMessage = ref('こんにちは！音声合成のテストです。');
+const isTestingVoice = ref(false);
+
+const testPlayVoice = async () => {
+    if (!testMessage.value.trim()) return;
+    isTestingVoice.value = true;
+    try {
+        let base64Audio: string | null = null;
+        const engine = selectedVoiceEngine.value;
+        
+        if (engine === 'voicevox') {
+            if (window.electronAPI) {
+                base64Audio = await window.electronAPI.synthesizeVoicevox(
+                    testMessage.value,
+                    voicevoxSpeaker.value,
+                    voicevoxEndpoint.value
+                );
+            }
+        } else if (engine === 'irodori') {
+            if (window.electronAPI) {
+                base64Audio = await window.electronAPI.synthesizeIrodori(
+                    testMessage.value,
+                    irodoriEndpoint.value,
+                    irodoriModel.value,
+                    irodoriVoice.value,
+                    'neutral'
+                );
+            }
+        }
+        
+        if (base64Audio) {
+            const mimeType = engine === 'irodori' ? 'audio/mp3' : 'audio/wav';
+            const audio = new Audio(`data:${mimeType};base64,${base64Audio}`);
+            await audio.play();
+        } else {
+            console.error('[Settings] 音声合成に失敗しました。');
+        }
+    } catch (err) {
+        console.error('[Settings] 音声テスト再生エラー:', err);
+    } finally {
+        isTestingVoice.value = false;
+    }
+};
 </script>
 
 <template>
@@ -1387,6 +1436,49 @@ const menuItems = ref([
                                                 type="number"
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                                <div v-if="selectedVoiceEngine === 'irodori'" class="flex flex-column gap-3 mt-3">
+                                    <div class="form-field">
+                                        <label class="font-medium">irodori-tts エンドポイント</label>
+                                        <InputText 
+                                            v-model="irodoriEndpoint" 
+                                            placeholder="http://127.0.0.1:8088" 
+                                            class="w-full"
+                                        />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="font-medium">使用モデル (model)</label>
+                                        <InputText 
+                                            v-model="irodoriModel" 
+                                            placeholder="irodori-tts" 
+                                            class="w-full"
+                                        />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="font-medium">使用ボイス/話者 (voice)</label>
+                                        <InputText 
+                                            v-model="irodoriVoice" 
+                                            placeholder="default" 
+                                            class="w-full"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="form-field mt-3 border-top pt-3">
+                                    <label class="font-medium">音声テスト</label>
+                                    <div class="flex gap-2 mt-2">
+                                        <InputText 
+                                            v-model="testMessage" 
+                                            placeholder="テストするテキストを入力..." 
+                                            class="flex-1"
+                                        />
+                                        <Button 
+                                            label="テスト再生" 
+                                            icon="pi pi-volume-up" 
+                                            class="p-button-secondary" 
+                                            :loading="isTestingVoice"
+                                            @click="testPlayVoice" 
+                                        />
                                     </div>
                                 </div>
                                 <div class="flex justify-content-end mt-4">

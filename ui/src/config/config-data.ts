@@ -17,6 +17,9 @@ export interface ConfigData {
     selectedVoiceEngine: string;
     voicevoxEndpoint: string;
     voicevoxSpeaker: number;
+    irodoriEndpoint: string;
+    irodoriModel: string;
+    irodoriVoice: string;
     selectedImageEngine: string;
     selectedVideoEngine: string;
     chatOpacity: number;
@@ -71,6 +74,9 @@ export const defaultData: ConfigData = {
     selectedVoiceEngine: 'voicevox',
     voicevoxEndpoint: 'http://localhost:50021',
     voicevoxSpeaker: 2,
+    irodoriEndpoint: 'http://127.0.0.1:8088',
+    irodoriModel: 'irodori-tts',
+    irodoriVoice: 'default',
     selectedImageEngine: 'dalle3',
     selectedVideoEngine: 'runway',
     chatOpacity: 1.0,

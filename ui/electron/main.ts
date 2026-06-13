@@ -5,6 +5,7 @@ import { AiExpressionService } from '../src/skills/expression-service/expression
 import { registerSelectLocalImageHandler } from './ipc-handlers/select-local-image-handler';
 import { registerLmStudioHandlers } from './ipc-handlers/lmstudio-handler';
 import { registerVoicevoxHandlers } from './ipc-handlers/voicevox-handler';
+import { registerIrodoriHandlers } from './ipc-handlers/irodori-handler';
 import { registerGoogleHandlers } from './ipc-handlers/google-handler';
 import { registerHeartbeatHandlers } from './ipc-handlers/heartbeat-handler';
 import { registerHistoryHandlers } from './ipc-handlers/history-handler';
@@ -101,6 +102,7 @@ app.whenReady().then(() => {
     registerSelectLocalImageHandler();
     registerLmStudioHandlers();
     registerVoicevoxHandlers();
+    registerIrodoriHandlers();
     registerGoogleHandlers();
     registerHeartbeatHandlers();
     registerHistoryHandlers();

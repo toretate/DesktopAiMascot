@@ -17,6 +17,9 @@ export interface AppConfig {
     anthropicModel: string;
     voicevoxEndpoint: string;
     voicevoxSpeaker: number;
+    irodoriEndpoint: string;
+    irodoriModel: string;
+    irodoriVoice: string;
     temperature: number;
     
     // チャットウィンドウ設定
@@ -67,6 +70,9 @@ export const useConfigStore = defineStore('config', () => {
     
     const voicevoxEndpoint = ref('http://localhost:50021');
     const voicevoxSpeaker = ref(2); // デフォルト話者ID: 2 (四国めたんノーマル)
+    const irodoriEndpoint = ref('http://127.0.0.1:8088');
+    const irodoriModel = ref('irodori-tts');
+    const irodoriVoice = ref('default');
     const temperature = ref(0.7);
 
     // チャットウィンドウ設定
@@ -130,6 +136,9 @@ export const useConfigStore = defineStore('config', () => {
             
             voicevoxEndpoint.value = configData.voicevoxEndpoint || 'http://localhost:50021';
             voicevoxSpeaker.value = configData.voicevoxSpeaker !== undefined ? Number(configData.voicevoxSpeaker) : 2;
+            irodoriEndpoint.value = configData.irodoriEndpoint || 'http://127.0.0.1:8088';
+            irodoriModel.value = configData.irodoriModel || 'irodori-tts';
+            irodoriVoice.value = configData.irodoriVoice || 'default';
             temperature.value = configData.temperature !== undefined ? Number(configData.temperature) : 0.7;
             
             chatOpacity.value = configData.chatOpacity !== undefined ? Number(configData.chatOpacity) : 1.0;
@@ -178,6 +187,9 @@ export const useConfigStore = defineStore('config', () => {
             voicevoxEndpoint.value = localStorage.getItem('voicevoxEndpoint') || 'http://localhost:50021';
             const savedSpeaker = localStorage.getItem('voicevoxSpeaker');
             voicevoxSpeaker.value = savedSpeaker ? parseInt(savedSpeaker) : 2;
+            irodoriEndpoint.value = localStorage.getItem('irodoriEndpoint') || 'http://127.0.0.1:8088';
+            irodoriModel.value = localStorage.getItem('irodoriModel') || 'irodori-tts';
+            irodoriVoice.value = localStorage.getItem('irodoriVoice') || 'default';
             
             const temp = localStorage.getItem('temperature');
             temperature.value = temp ? parseFloat(temp) : 0.7;
@@ -257,6 +269,9 @@ export const useConfigStore = defineStore('config', () => {
             anthropicModel: anthropicModel.value,
             voicevoxEndpoint: voicevoxEndpoint.value,
             voicevoxSpeaker: Number(voicevoxSpeaker.value),
+            irodoriEndpoint: irodoriEndpoint.value,
+            irodoriModel: irodoriModel.value,
+            irodoriVoice: irodoriVoice.value,
             temperature: Number(temperature.value),
             chatOpacity: Number(chatOpacity.value),
             chatAlwaysOnTop: chatAlwaysOnTop.value,
@@ -323,6 +338,9 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('anthropicModel', anthropicModel.value);
         localStorage.setItem('voicevoxEndpoint', voicevoxEndpoint.value);
         localStorage.setItem('voicevoxSpeaker', voicevoxSpeaker.value.toString());
+        localStorage.setItem('irodoriEndpoint', irodoriEndpoint.value);
+        localStorage.setItem('irodoriModel', irodoriModel.value);
+        localStorage.setItem('irodoriVoice', irodoriVoice.value);
         localStorage.setItem('temperature', temperature.value.toString());
         localStorage.setItem('chatOpacity', chatOpacity.value.toString());
         localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
@@ -358,6 +376,9 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.anthropicModel !== undefined) anthropicModel.value = newConfig.anthropicModel;
         if (newConfig.voicevoxEndpoint !== undefined) voicevoxEndpoint.value = newConfig.voicevoxEndpoint;
         if (newConfig.voicevoxSpeaker !== undefined) voicevoxSpeaker.value = Number(newConfig.voicevoxSpeaker);
+        if (newConfig.irodoriEndpoint !== undefined) irodoriEndpoint.value = newConfig.irodoriEndpoint;
+        if (newConfig.irodoriModel !== undefined) irodoriModel.value = newConfig.irodoriModel;
+        if (newConfig.irodoriVoice !== undefined) irodoriVoice.value = newConfig.irodoriVoice;
         if (newConfig.temperature !== undefined) temperature.value = Number(newConfig.temperature);
         
         if (newConfig.chatOpacity !== undefined) chatOpacity.value = Number(newConfig.chatOpacity);
@@ -397,6 +418,9 @@ export const useConfigStore = defineStore('config', () => {
         anthropicModel,
         voicevoxEndpoint,
         voicevoxSpeaker,
+        irodoriEndpoint,
+        irodoriModel,
+        irodoriVoice,
         temperature,
         chatOpacity,
         chatAlwaysOnTop,

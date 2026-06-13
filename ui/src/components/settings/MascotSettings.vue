@@ -585,7 +585,7 @@ const handleClearExpression = (slot: MascotAsset) => {
 const handleCropCurrent = (slot: MascotAsset) => {
     if (slot.path) {
         selectedCropExpression.value = slot;
-        cropImageSrc.value = slot.originalPath || slot.path;
+        cropImageSrc.value = slot.path;
         isCropModalActive.value = true;
     }
 };

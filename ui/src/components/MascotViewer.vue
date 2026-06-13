@@ -17,7 +17,13 @@ const {
     mascots,
     activeMascotId,
     mascotScale,
-    windowMode
+    windowMode,
+    selectedVoiceEngine,
+    voicevoxSpeaker,
+    voicevoxEndpoint,
+    irodoriEndpoint,
+    irodoriModel,
+    irodoriVoice
 } = storeToRefs(configStore);
 
 const {
@@ -521,15 +527,24 @@ onMounted(async () => {
                 balloonVisible.value = false;
             }, 8000);
 
-            // VOICEVOXによる音声合成と再生
+            // VOICEVOX/IrodoriTTSによる音声合成と再生
+            const voiceEngine = selectedVoiceEngine.value || activeMascot.value?.aiConfig?.voice?.engine || 'voicevox';
             const speakerId = activeMascot.value?.aiConfig?.voice?.speaker_id !== undefined 
                 ? activeMascot.value.aiConfig.voice.speaker_id 
-                : (configStore.voicevoxSpeaker !== undefined ? configStore.voicevoxSpeaker : 2);
-            const voicevoxEndpointUrl = configStore.voicevoxEndpoint || 'http://localhost:50021';
+                : (voicevoxSpeaker.value !== undefined ? voicevoxSpeaker.value : 2);
+            const voicevoxEndpointUrl = voicevoxEndpoint.value || 'http://localhost:50021';
+            const irodoriEndpointUrl = irodoriEndpoint.value || 'http://localhost:7861';
+            const irodoriModelName = irodoriModel.value || 'irodori-tts-500m-v3';
+            const irodoriVoiceName = irodoriVoice.value || 'default';
 
             if (window.electronAPI) {
                 try {
-                    const base64Audio = await window.electronAPI.synthesizeVoicevox(memo, speakerId, voicevoxEndpointUrl);
+                    let base64Audio: string | null = null;
+                    if (voiceEngine === 'irodori') {
+                        base64Audio = await window.electronAPI.synthesizeIrodori(memo, irodoriEndpointUrl, irodoriModelName, irodoriVoiceName, 'surprised');
+                    } else {
+                        base64Audio = await window.electronAPI.synthesizeVoicevox(memo, speakerId, voicevoxEndpointUrl);
+                    }
                     if (base64Audio) {
                         playlist.stop();
                         playlist.push(base64Audio);

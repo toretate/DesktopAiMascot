@@ -2,6 +2,7 @@
 // window.electronAPI が存在しない（Webブラウザ環境）の場合に、API呼び出しをエミュレートする
 
 import { defaultData } from '../config/config-data';
+import { IrodoriTtsConnector } from '../connector/irodori-tts';
 
 if (typeof window !== 'undefined' && !window.electronAPI) {
     console.log('[Polyfill] Running in Web Browser. Initializing browser-polyfill...');
@@ -347,6 +348,9 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 return null;
             }
         },
+        synthesizeIrodori: async (text: string, endpoint: string, model: string, voice: string, emotion?: string) => {
+            return IrodoriTtsConnector.synthesize(text, endpoint, model, voice, emotion);
+        },
         getVoicevoxSpeakers: async (endpoint: string) => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -425,6 +429,13 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 };
                 input.click();
             });
+        },
+        saveMascotImage: async (mascotId: string, filename: string, base64Data: string) => {
+            console.log(`[Polyfill] saveMascotImage called for mascot: ${mascotId}, file: ${filename}`);
+            return {
+                success: true,
+                path: base64Data
+            };
         },
         previewMascotState: (previewState: any) => {
             callbacks.applyPreviewState.forEach(cb => cb(previewState));

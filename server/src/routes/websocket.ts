@@ -92,6 +92,10 @@ export function setupWebSocket(wss: WebSocketServer) {
                         model,
                         voicevoxSpeakerId,
                         voicevoxEndpoint,
+                        selectedVoiceEngine,
+                        irodoriEndpoint,
+                        irodoriModel,
+                        irodoriVoice,
                         engine,
                         lmstudioEndpoint,
                         history,
@@ -180,10 +184,14 @@ export function setupWebSocket(wss: WebSocketServer) {
                         }, durationMs);
                     }
 
-                    // 4. VOICEVOXによる音声合成
+                    // 4. 音声合成 (VOICEVOX または irodori-tts)
                     if (speechText) {
+                        const voiceEngine = selectedVoiceEngine || 'voicevox';
                         const baseUrl = voicevoxEndpoint || 'http://localhost:50021';
                         const speaker = voicevoxSpeakerId !== undefined ? voicevoxSpeakerId : 2;
+                        const irodoriUrl = irodoriEndpoint || 'http://localhost:7861';
+                        const irodoriModelName = irodoriModel || 'irodori-tts-500m-v3';
+                        const irodoriVoiceName = irodoriVoice || 'default';
 
                         // 文節ごとに分割
                         const sentences = speechText
@@ -192,9 +200,13 @@ export function setupWebSocket(wss: WebSocketServer) {
                             .filter(s => s.length > 0);
 
                         // 並行して音声合成リクエストを開始
-                        const synthPromises = sentences.map(sentence =>
-                            VoiceAiService.synthesize(sentence, speaker, baseUrl)
-                        );
+                        const synthPromises = sentences.map(sentence => {
+                            if (voiceEngine === 'irodori') {
+                                return VoiceAiService.synthesizeIrodori(sentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion);
+                            } else {
+                                return VoiceAiService.synthesize(sentence, speaker, baseUrl);
+                            }
+                        });
 
                         // 完了順（テキスト内の登場順）にクライアントにプッシュ送信
                         (async () => {
