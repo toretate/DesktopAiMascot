@@ -189,16 +189,19 @@ export class LmStudioConnector {
         try {
             console.log(`[LmStudio] SDK 疎通確認・モデル一覧取得開始: ${sdkEndpoint}`);
             const client = new LMStudioClient({ baseUrl: sdkEndpoint });
-            const loaded = await client.llm.listLoaded();
+            const downloaded = await client.system.listDownloadedModels();
 
-            const models = loaded.map((m: any) => ({
-                id: m.id || m.key || m.path || '',
-                capabilities: {
-                    vision: m.capabilities?.vision ?? false,
-                    trained_for_tool_use: m.capabilities?.trainedForToolUse ?? false,
-                    reasoning: m.capabilities?.reasoning ?? false
-                }
-            }));
+            // LLMモデルのみを抽出し、対応フォーマットに変換
+            const models = downloaded
+                .filter((m: any) => m.type === 'llm')
+                .map((m: any) => ({
+                    id: m.modelKey || m.path || m.displayName || '',
+                    capabilities: {
+                        vision: m.vision ?? false,
+                        trained_for_tool_use: m.trainedForToolUse ?? false,
+                        reasoning: m.reasoning ?? false
+                    }
+                }));
             
             console.log(`[LmStudio] 疎通成功。取得モデル数: ${models.length}`);
             return { success: true, models };

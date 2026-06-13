@@ -1,9 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
 import { fileURLToPath, URL } from 'node:url';
 import path from 'node:path';
+
+// テスト実行時などに .env / .env.local を process.env にロードする
+const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
+Object.assign(process.env, env);
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');

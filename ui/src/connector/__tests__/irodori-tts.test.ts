@@ -1,8 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { IrodoriTtsConnector, IrodoriTtsSpeechInputParam } from '../irodori-tts';
 
-let USE_REAL_TTS = process.env.USE_REAL_TTS === 'true';
-USE_REAL_TTS = true; // 統合テスト実行用に強制的にtrueに設定
+const USE_REAL_TTS = process.env.USE_REAL_TTS === 'true';
 
 describe('IrodoriTtsConnector', () => {
     beforeEach(() => {
@@ -123,7 +122,7 @@ describe('IrodoriTtsConnector', () => {
 
         const testVoice = process.env.TEST_TTS_VOICE || 'miyako';
         console.log(`[IrodoriTTS Integration Test] 実際のTTSサーバーに接続してテストします... (Voice: ${testVoice})`);
-        
+
         const params: IrodoriTtsSpeechInputParam = {
             input: 'テスト音声合成です。',
             model: 'irodori-tts',
@@ -331,7 +330,7 @@ describe('IrodoriTtsConnector', () => {
         ]);
         const dummyFile = new Blob([wavHeader], { type: 'audio/wav' });
         const voiceId = `test_integration_voice_${Date.now()}`;
-        
+
         const uploadResult = await IrodoriTtsConnector.uploadVoice('http://127.0.0.1:8088', dummyFile, voiceId);
         expect(uploadResult).not.toBeNull();
         expect(uploadResult!.id).toBe(voiceId);
