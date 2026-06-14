@@ -529,7 +529,7 @@ const handleRemoveBackground = async () => {
                     />
                     <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
                         <i class="pi pi-sliders-h text-purple-500 text-sm header-icon"></i>
-                        <span>表情エディタ & 位置調整 (SillyTavern 28感情互換)</span>
+                        <span>表情エディタ & 位置調整</span>
                     </h2>
                 </div>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />

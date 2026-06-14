@@ -46,19 +46,6 @@ const goBack = () => {
         @mouseenter="handleMouseEnter"
         @mouseleave="handleMouseLeave"
     >
-        <div class="brand no-drag flex justify-content-between align-items-center">
-            <div class="brand-info flex align-items-center gap-2" v-if="!isSidebarCollapsed">
-                <span class="logo">🤖</span>
-                <div class="brand-text">
-                    <h2>Mascot App</h2>
-                    <p>環境設定</p>
-                </div>
-            </div>
-            <div class="brand-info flex align-items-center justify-content-center w-full" v-else>
-                <span class="logo" style="font-size: 24px;">🤖</span>
-            </div>
-        </div>
-
         <!-- ナビゲーションメニュー -->
         <nav class="menu no-drag">
             <button 
@@ -96,3 +83,10 @@ const goBack = () => {
         </div>
     </aside>
 </template>
+
+<style scoped>
+/* ブランドロゴは削除したので margin-top不要 */
+.menu {
+    margin-top: 0px;
+}
+</style>
