@@ -115,7 +115,6 @@ const {
     display: flex;
     flex-direction: column;
     padding: 1.5rem 1rem;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
     box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
 }
@@ -219,10 +218,11 @@ const {
     padding: 2rem;
     margin-left: 72px; /* 折りたたみ時のサイドバー幅分の固定余白を確保してオーバーレイ化 */
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-y: auto;
 }
 .main-content.mascot-active {
     padding: 24px 48px 24px 24px !important; /* 閉じるボタンと重ならない適度な余白に最適化 */
+    overflow: hidden; /* マスコット設定時のみ個別内部スクロールにするため全体スクロールは非表示 */
 }
 
 .content-container {

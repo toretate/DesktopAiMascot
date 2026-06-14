@@ -61,7 +61,7 @@ const emit = defineEmits<{
     (e: 'import-sprite', data: { imagePath: string; importId: string }): void;
 }>();
 
-// 28感情のSillyTavern/プロジェクト対応表
+// 28感情の対応表
 const EMOTIONS_MAP: Record<string, string> = {
     '通常': 'neutral', '喜び': 'joy', '面白がり': 'amusement', '怒り': 'anger', '苛立ち': 'annoyance',
     '悲しみ': 'sadness', '深い悲しみ': 'grief', '驚き': 'surprise', '当惑': 'embarrassment', '興奮': 'excitement',

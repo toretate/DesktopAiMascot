@@ -657,7 +657,7 @@ const registeredExpressions = computed(() => {
     }
 
     /* 通常は一覧を表示し、詳細を非表示に */
-    .mascot-settings-container .mascot-list {
+    .mascot-settings-container .mascot-list-container {
         display: flex !important;
         width: 100% !important;
         min-width: 100% !important;
@@ -670,7 +670,7 @@ const registeredExpressions = computed(() => {
     }
 
     /* show-detail-mobile が true の時は一覧を非表示、詳細を表示 */
-    .mascot-settings-container.show-detail-mobile .mascot-list {
+    .mascot-settings-container.show-detail-mobile .mascot-list-container {
         display: none !important;
     }
     
