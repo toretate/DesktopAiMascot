@@ -8,6 +8,7 @@ import { useChatHistory } from './chatpanel/useChatHistory';
 import { useChatConnection } from './chatpanel/useChatConnection';
 import HistoryPanel from './chatpanel/HistoryPanel.vue';
 import MascotViewer from './MascotViewer.vue';
+import radioIcon from '../assets/radio_icon.svg';
 
 const inputText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
@@ -241,7 +242,9 @@ const openSettings = () => {
                 <button class="icon-btn" @click="configStore.updateConfig({ useTts: !useTts }); configStore.saveConfig()" :class="{ 'active-btn': useTts }" title="音声読み上げ (TTS) ON/OFF">
                     <i :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
                 </button>
-                <button class="icon-btn" @click="mascotStore.setRadioMode(!isRadioMode)" :class="{ 'active-radio-btn': isRadioMode }" title="ラジオモード ON/OFF"><i class="pi pi-microphone"></i></button>
+                <button class="icon-btn" @click="mascotStore.setRadioMode(!isRadioMode)" :class="{ 'active-radio-btn': isRadioMode }" title="ラジオモード ON/OFF">
+                    <img :src="radioIcon" class="radio-svg-icon" alt="ラジオ" />
+                </button>
                 <button class="icon-btn" @click="clearHistory" title="新規話題"><i class="pi pi-plus"></i></button>
                 <button class="icon-btn" @click="toggleHistoryList" :class="{ 'active-btn': showHistoryList }" title="履歴一覧"><i class="pi pi-history"></i></button>
                 <button class="icon-btn" @click="openSettings" title="設定"><i class="pi pi-cog"></i></button>
@@ -533,6 +536,24 @@ const openSettings = () => {
     background: rgba(239, 68, 68, 0.15) !important;
     box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
     animation: pulse 2s infinite;
+}
+
+.radio-svg-icon {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    object-fit: contain;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.icon-btn:hover .radio-svg-icon {
+    opacity: 1;
+}
+
+.active-radio-btn .radio-svg-icon {
+    opacity: 1;
+    filter: invert(36%) sepia(84%) saturate(4782%) hue-rotate(345deg) brightness(99%) contrast(93%);
 }
 
 @keyframes pulse {
