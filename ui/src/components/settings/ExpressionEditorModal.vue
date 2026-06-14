@@ -149,8 +149,11 @@ watch(
     }
 );
 
+const isSidebarOpen = ref(false);
+
 const selectExpression = (slot: MascotAsset) => {
     selectedModalExpression.value = slot;
+    isSidebarOpen.value = false;
 };
 
 const handleLiveUpdate = () => {
@@ -516,16 +519,36 @@ const handleRemoveBackground = async () => {
         <div class="custom-modal-card expression-edit-modal-card">
             <!-- スリム化されたヘッダー (縦幅約半分) -->
             <div class="modal-header flex justify-content-between align-items-center pb-2 pt-0 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-sliders-h text-purple-500 text-sm"></i>
-                    <span>表情エディタ & 位置調整 (SillyTavern 28感情互換)</span>
-                </h2>
+                <div class="flex align-items-center gap-2">
+                    <Button 
+                        icon="pi pi-bars" 
+                        class="p-button-rounded p-button-text p-button-secondary sidebar-toggle-btn" 
+                        style="width: 28px; height: 28px; padding: 0; display: none;" 
+                        @click="isSidebarOpen = !isSidebarOpen"
+                        title="表情一覧を開く"
+                    />
+                    <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                        <i class="pi pi-sliders-h text-purple-500 text-sm header-icon"></i>
+                        <span>表情エディタ & 位置調整 (SillyTavern 28感情互換)</span>
+                    </h2>
+                </div>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
             </div>
 
-            <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1" style="min-height: 0;">
-                <!-- 左カラム: 表情スロット縦スリムリスト (幅240px、ラベルなし) -->
-                <div class="flex flex-column" style="width: 240px; min-width: 240px; height: 570px; overflow: hidden !important;">
+            <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1 relative" style="min-height: 0;">
+                <!-- モバイル用サイドバー背景オーバーレイ -->
+                <div 
+                    v-if="isSidebarOpen" 
+                    class="sidebar-overlay" 
+                    @click="isSidebarOpen = false"
+                ></div>
+
+                <!-- 左カラム: 表情スロット縦スリムリスト -->
+                <div 
+                    class="flex flex-column expression-sidebar-panel" 
+                    :class="{ 'open': isSidebarOpen }"
+                    style="height: 570px; overflow: hidden !important;"
+                >
                     <div class="pr-1 expression-vertical-list">
                         <div 
                             v-for="slot in currentExpressions" 
@@ -542,7 +565,7 @@ const handleRemoveBackground = async () => {
                                 <img v-if="slot.path && isImage(slot.path)" :src="resolveImageUrl(slot.path)" class="thumbnail-img" />
                                 <i v-else class="pi pi-image text-slate-400 text-xs"></i>
                             </div>
-                            <div class="flex flex-column flex-1 overflow-hidden">
+                            <div class="flex flex-column flex-1 overflow-hidden expression-slot-info">
                                 <span class="text-xs font-bold text-slate-700 text-ellipsis overflow-hidden">{{ slot.name }}</span>
                                 <span class="text-xxs text-slate-400 font-medium select-none">
                                     {{ slot.path ? '画像登録済み' : '未登録 (D&D可)' }}
@@ -556,11 +579,11 @@ const handleRemoveBackground = async () => {
                 </div>
 
                 <!-- 右カラム: 大型マスコットプレビュー & 位置調整コントロール (ラベルなし) -->
-                <div v-if="selectedModalExpression" class="flex-1 flex flex-column gap-2 overflow-hidden">
+                <div v-if="selectedModalExpression" class="flex-1 flex flex-column gap-2 overflow-hidden expression-main-panel">
                     <!-- プレビューと縦スライダーのコンテナ -->
-                    <div class="flex-1 flex gap-3 align-items-center justify-content-center overflow-hidden">
+                    <div class="flex-1 gap-3 overflow-hidden preview-slider-wrapper">
                         <!-- プレビューカード (白飛びを防ぐための高級感のある市松模様背景) -->
-                        <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="height: 570px;">
+                        <div class="border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden preview-container" style="height: 570px;">
                             <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 560px;">
                                 <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
                                 <template v-if="activePose && isImage(activePose.path)">
@@ -593,6 +616,8 @@ const handleRemoveBackground = async () => {
                                         :src="resolveImageUrl(selectedModalExpression.path)"
                                         class="preview-layer-img expression absolute"
                                         :style="{
+                                            top: '210px',
+                                            left: '140px',
                                             width: '140px',
                                             height: '140px',
                                             objectFit: 'contain',
@@ -606,7 +631,9 @@ const handleRemoveBackground = async () => {
                                         v-else
                                         class="preview-layer expression absolute font-bold text-4xl"
                                         :style="{
-                                            transform: `translate(${selectedModalExpression.offsetX || 0}px, ${selectedModalExpression.offsetY || 0}px) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
+                                            top: '50%',
+                                            left: '50%',
+                                            transform: `translate(calc(-50% + ${selectedModalExpression.offsetX || 0}px), calc(-50% + ${selectedModalExpression.offsetY || 0}px)) scale(${selectedModalExpression.scale || 1.0}) rotate(${selectedModalExpression.rotation || 0}deg)`
                                         }"
                                         @mousedown="startDrag"
                                         @dragstart.prevent
@@ -616,7 +643,7 @@ const handleRemoveBackground = async () => {
                         </div>
 
                         <!-- 縦スライダー (Y方向オフセット) -->
-                        <div class="flex flex-column align-items-center gap-2" style="width: 40px;">
+                        <div class="flex flex-column align-items-center gap-2 vertical-slider-container" style="width: 40px;">
                             <span class="text-xxs text-slate-500 select-none font-bold">上 (Y-)</span>
                             <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 450px;">
                                 <Slider 
@@ -930,6 +957,13 @@ const handleRemoveBackground = async () => {
 .vertical-slider {
     height: 100% !important;
 }
+.preview-slider-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
 
 .mascot-composite-preview {
     position: relative;
@@ -968,5 +1002,211 @@ const handleRemoveBackground = async () => {
     pointer-events: auto;
     cursor: move;
     z-index: 10;
+}
+
+/* 左カラムの幅をレスポンシブにするための定義 */
+.expression-sidebar-panel {
+    width: 200px;
+    min-width: 200px;
+    flex-shrink: 0;
+    transition: all 0.2s ease-in-out;
+}
+
+.expression-slot-info {
+    transition: all 0.2s ease-in-out;
+}
+
+.preview-container {
+    min-width: 420px;
+    flex: 1;
+}
+
+@media (max-width: 1024px) {
+    .expression-sidebar-panel {
+        width: 150px;
+        min-width: 150px;
+    }
+}
+
+/* 769px〜850pxの幅のときだけ、PCレイアウトのままサイドバーをコンパクトにする */
+@media (min-width: 769px) and (max-width: 850px) {
+    .expression-sidebar-panel {
+        width: 68px; /* サムネイル画像（38px）＋パディングが綺麗に収まる最小限のサイズ */
+        min-width: 68px;
+    }
+    
+    /* テキスト情報を非表示にしてアイコン一覧にする */
+    .expression-slot-info {
+        display: none !important;
+    }
+    
+    .expression-vertical-item {
+        justify-content: center !important;
+        padding: 6px !important;
+    }
+    
+    /* デフォルトバッジの位置を調整 */
+    .default-badge {
+        top: 2px;
+        right: 2px;
+    }
+}
+
+@media (max-width: 768px) {
+    .expression-edit-modal-overlay {
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        display: block !important;
+        overflow-y: auto !important;
+    }
+
+    .expression-edit-modal-card {
+        width: 100vw !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 8px 12px 24px 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* モバイル時のヘッダー調整 */
+    .sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+    
+    .header-icon {
+        display: none !important;
+    }
+
+    /* ボディコンテナのスクロール設定を解除し、親モーダル全体のスクロールに委ねる */
+    .modal-body-container {
+        position: relative !important;
+        overflow: visible !important;
+        flex: none !important;
+        height: auto !important;
+    }
+
+    .expression-main-panel {
+        overflow: visible !important;
+        flex: none !important;
+        height: auto !important;
+        padding-bottom: 24px;
+    }
+
+    /* モバイル時のサイドパネル設定 (常に画面の左側に固定表示) */
+    .expression-sidebar-panel {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100vh !important;
+        width: 240px !important;
+        min-width: 240px !important;
+        background: #ffffff !important;
+        z-index: 2100 !important; /* モーダル(2000)より上 */
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.15) !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        border-right: 1px solid #e2e8f0 !important;
+        padding: 12px !important;
+    }
+    
+    .expression-sidebar-panel.open {
+        transform: translateX(0) !important;
+    }
+
+    .expression-vertical-list {
+        height: calc(100vh - 24px) !important;
+        max-height: calc(100vh - 24px) !important;
+    }
+
+    /* モバイル用サイドバー背景オーバーレイ (常に画面全体に固定) */
+    .sidebar-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background: rgba(15, 23, 42, 0.4) !important;
+        backdrop-filter: blur(4px) !important;
+        z-index: 2050 !important;
+    }
+
+    /* プレビューカードのサイズをスマホ向けに自動縮小 */
+    .preview-container {
+        min-width: 0 !important;
+        width: 210px !important;
+        height: 280px !important;
+        position: relative !important;
+        flex: none !important;
+        margin: 0 !important;
+    }
+
+    .vertical-slider-container {
+        flex: none !important;
+        width: 40px !important;
+    }
+
+    .preview-slider-wrapper {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        flex: none !important;
+    }
+    
+    .mascot-composite-preview {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(0.5) !important;
+        transform-origin: center center !important;
+    }
+
+    /* 縦スライダーの高さ調整 */
+    .vertical-slider-wrapper {
+        height: 240px !important;
+    }
+
+    /* 下部コントロールのスライダー群を縦並びにして幅を確保 */
+    .grid.flex {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px !important;
+    }
+
+    .grid.flex > div {
+        width: 100% !important;
+    }
+
+    /* ボタン類をレスポンシブに折り返す */
+    .flex.align-items-center.gap-3 {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+    }
+    
+    .flex.align-items-center.gap-3 > .text-slate-300 {
+        display: none !important; /* 区切り線を非表示 */
+    }
+
+    .flex.gap-2.flex-1 {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+    }
+    
+    .flex.gap-2.flex-1 button {
+        flex: 1 1 calc(50% - 4px) !important;
+        min-width: 110px !important;
+        justify-content: center !important;
+    }
 }
 </style>
