@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import './utils/browser-polyfill';
 import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
