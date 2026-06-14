@@ -302,9 +302,6 @@ export function useChatConnection(params: {
             systemPrompt += "\n# Timer Instructions\nユーザーから「〇分後に教えて」「後でお知らせして」「カップラーメンにお湯を入れた」など、特定の時間経過後のお知らせやリマインドを求められた場合は、会話 of 応答テキストの末尾（感情タグの直前）に、必ず次のフォーマットでタイマー起動タグを付与してください。\n[TIMER:秒数,お知らせ内容]\n※秒数は半角数字で指定してください。お知らせ内容には具体的なリマインド内容を記述してください。例:「了解、3分測るね。[TIMER:180,カップラーメンができました！] [happy]」";
         }
 
-        // 思考プロセスの非表示・出力防止指示をシステムプロンプトに追加
-        systemPrompt += "\n# Output Restrictions\n出力の際、<think>タグや思考プロセス、推論ログ(Reasoning/Thinking)は一切出力しないでください。ユーザーへの回答文(セリフ)のみを直接出力してください。";
-
         const currentSession = sessions.value.find(s => s.id === activeSessionId.value);
         if (currentSession && currentSession.summary) {
             systemPrompt += `\n\n# Previous Conversation Summary\n以下はこれまでのマスターとの会話履歴の要約です。この文脈を考慮して返答してください。\n${currentSession.summary}\n`;

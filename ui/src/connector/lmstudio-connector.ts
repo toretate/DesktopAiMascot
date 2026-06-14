@@ -1,4 +1,5 @@
-import { LMStudioClient } from '@lmstudio/sdk';
+import { LMStudioClient, Chat } from '@lmstudio/sdk';
+import { lmStudioTools } from '../skills/tool-use';
 
 // HTTPエンドポイントをLM Studio SDK用のWebSocket/TCP形式に変換するヘルパー
 export function getSdkEndpoint(httpEndpoint: string): string {
@@ -48,9 +49,6 @@ export class LmStudioConnector {
 
         // 履歴のマッピング
         const messagesPayload: any[] = [];
-        if (systemPrompt && systemPrompt.trim()) {
-            messagesPayload.push({ role: 'system', content: systemPrompt });
-        }
 
         if (history && history.length > 0) {
             let firstUserFound = false;
@@ -142,11 +140,70 @@ export class LmStudioConnector {
         });
 
         console.log("[LmStudioConnector] Final messagesPayload sent to LM Studio SDK:", JSON.stringify(messagesPayload, null, 2));
-        const response = await llm.respond(messagesPayload);
-        const rawContent = response.content || '';
+        const chatInstance = Chat.from(messagesPayload);
+        let finalSystemPrompt = systemPrompt || '';
+        finalSystemPrompt = finalSystemPrompt.trim();
+        const toolUseGuideline = `\n\n# Tool Use Guidelines\n- You have access to tools for current time, weather, volume, app launching, web search, and location.\n- Always call tools to get accurate information instead of guessing.\n- Do NOT output any thought process, self-instructions, or meta-comments like "I got the time..." or "Now I will reply..." in the final response.\n- Answer in Japanese, speaking directly to the user as a friendly mascot character. Output ONLY the natural dialogue/reply.`;
+        
+        if (finalSystemPrompt) {
+            chatInstance.replaceSystemPrompt(`${finalSystemPrompt}${toolUseGuideline}`);
+        } else {
+            chatInstance.replaceSystemPrompt(toolUseGuideline.trim());
+        }
+        await llm.act(chatInstance, lmStudioTools, {
+            onMessage: (msg) => {
+                chatInstance.append(msg);
+            }
+        });
+        const allMessages = chatInstance.getMessagesArray();
+        console.log("[LmStudioConnector] Messages after llm.act:", allMessages.map(m => ({
+            role: m.getRole(),
+            text: m.getText(),
+            toolCalls: m.getToolCallRequests ? m.getToolCallRequests().map(tc => tc.name) : []
+        })));
+
+        const assistantMessages = allMessages.filter(m => m.getRole() === 'assistant');
+        let rawContent = '';
+        // Find the last assistant message that contains a non-empty text content
+        for (let i = assistantMessages.length - 1; i >= 0; i--) {
+            const text = assistantMessages[i].getText();
+            if (text && text.trim().length > 0) {
+                rawContent = text;
+                break;
+            }
+        }
+
+        // If all assistant messages are empty but we have tool results, check if we can fall back to the last tool execution output
+        if (!rawContent.trim()) {
+            const toolMessages = allMessages.filter(m => m.getRole() === 'tool');
+            if (toolMessages.length > 0) {
+                const lastToolMsg = toolMessages[toolMessages.length - 1];
+                const toolResults = lastToolMsg.getToolCallResults ? lastToolMsg.getToolCallResults() : [];
+                console.warn("[LmStudioConnector] All assistant messages are empty. Falling back to tool results:", toolResults);
+                if (toolResults.length > 0) {
+                    const firstResult = toolResults[0];
+                    // Find if the tool output is simple text or stringified JSON
+                    rawContent = firstResult.content || '';
+                }
+            }
+        }
 
         // 思考プロセス（Thinking Process や <think>, <thought> タグ、思考ステップ分析）の徹底的なクレンジング
-        let cleanedContent = rawContent
+        let cleanedContent = rawContent;
+
+        // 閉じタグが存在する場合は、閉じタグより後のコンテンツ（実際のセリフ）のみを抽出する
+        if (cleanedContent.includes('</think>')) {
+            cleanedContent = cleanedContent.split(/<\/think>/i).pop() || '';
+        }
+        if (cleanedContent.includes('</thought>')) {
+            cleanedContent = cleanedContent.split(/<\/thought>/i).pop() || '';
+        }
+        if (cleanedContent.includes('channel|>')) {
+            cleanedContent = cleanedContent.split(/channel\|>/gi).pop() || '';
+        }
+
+        // 開始タグのみが残った場合の末尾カット、および個別パターンの除去
+        cleanedContent = cleanedContent
             .replace(/<think>[\s\S]*?<\/think>/gi, '')
             .replace(/<think>[\s\S]*/gi, '')
             .replace(/<\/think>[\s\S]*/gi, '')
