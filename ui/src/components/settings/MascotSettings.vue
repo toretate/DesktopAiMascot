@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import mascotEmotionIcon from '../../assets/mascot_emotion_icon.png';
+import mascotOutfitIcon from '../../assets/mascot_outfilt_icon.png';
+import mascotProfileIcon from '../../assets/mascot_profile_icon.png';
 import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
@@ -101,6 +104,7 @@ const emit = defineEmits<{
 }>();
 
 const activeMascotSubTab = ref<'profile' | 'outfit' | 'expression'>('expression');
+const showDetailOnMobile = ref(false);
 
 // プロンプトファイル（OpenClaw）の保持用状態
 const mascotPrompts = ref({ identity: '', soul: '', user: '', agents: '', memory: '' });
@@ -277,6 +281,9 @@ const selectMascot = (mascot: MascotData) => {
 
     // アクティブなマスコットの変更を即座に保存・反映する
     emit('save-settings');
+
+    // モバイルの時は詳細を表示
+    showDetailOnMobile.value = true;
 };
 
 
@@ -322,9 +329,18 @@ initEditingMascot();
 // activeMascotId や configStore.mascots が非同期でロードされたり変更されたりした場合に初期化
 watch(
     [() => props.activeMascotId, () => configStore.mascots],
-    () => {
+    (newValues, oldValues) => {
         if (!editingMascot.value || !editingMascot.value.id || editingMascot.value.id !== props.activeMascotId) {
             initEditingMascot();
+        }
+
+        // マスコット削除時 (マスコットの数が減少した場合) は一覧に戻す
+        const newMascots = newValues[1];
+        const oldMascots = oldValues ? oldValues[1] : undefined;
+        const newCount = newMascots ? newMascots.length : 0;
+        const oldCount = oldMascots ? oldMascots.length : 0;
+        if (oldCount > 0 && newCount < oldCount) {
+            showDetailOnMobile.value = false;
         }
     },
     { deep: true }
@@ -335,6 +351,33 @@ watch(
     () => editingMascot.value?.id,
     () => {
         loadMascotPrompts();
+    }
+);
+
+// 外部（新規マスコット追加等）から activeMascotId が変更されたとき、自動で詳細を開く
+watch(
+    () => props.activeMascotId,
+    (newId, oldId) => {
+        if (newId && newId !== oldId) {
+            showDetailOnMobile.value = true;
+        }
+    }
+);
+
+const scrollToActiveOutfit = () => {
+    const activeEl = document.querySelector('.outfit-grid-cell.is-active-outfit');
+    if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+};
+
+watch(
+    [() => activeMascotSubTab.value, () => editingMascot.value?.currentOutfitId],
+    async ([newTab, newOutfitId]) => {
+        if (newTab === 'outfit' && newOutfitId) {
+            await nextTick();
+            scrollToActiveOutfit();
+        }
     }
 );
 
@@ -860,7 +903,7 @@ const getMascotCoverImage = (mascot: MascotData): string => {
 </script>
 
 <template>
-    <div class="mascot-settings-container">
+    <div class="mascot-settings-container" :class="{ 'show-detail-mobile': showDetailOnMobile }">
         <!-- 左側: マスコットリスト -->
         <div class="mascot-list">
             <div 
@@ -929,6 +972,15 @@ const getMascotCoverImage = (mascot: MascotData): string => {
 
         <!-- 右側: マスコットアセット・詳細調整 (白基調) -->
         <div class="mascot-detail-panel">
+            <!-- モバイル用戻るボタン -->
+            <div class="mobile-back-header">
+                <Button 
+                    label="マスコット一覧に戻る" 
+                    icon="pi pi-arrow-left" 
+                    class="p-button-outlined p-button-secondary p-button-sm mb-3 w-full"
+                    @click="showDetailOnMobile = false"
+                />
+            </div>
             <div class="flex justify-content-between align-items-center">
                 <h3 class="m-0 text-gray-800 font-bold flex align-items-center gap-2">
                     <i class="pi pi-cog text-purple-400"></i>
@@ -939,37 +991,45 @@ const getMascotCoverImage = (mascot: MascotData): string => {
             <!-- サブタブ -->
             <div class="flex border-bottom border-gray-200 pb-2 gap-2">
                 <Button 
-                    label="表情アセット" 
-                    icon="pi pi-sliders-h" 
-                    class="p-button-sm"
+                    class="p-button-sm flex align-items-center justify-content-center"
                     :class="activeMascotSubTab === 'expression' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
                     @click="activeMascotSubTab = 'expression'"
-                />
+                    title="表情"
+                >
+                    <img :src="mascotEmotionIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <span class="subtab-label">表情</span>
+                </Button>
                 <Button 
-                    label="立ち絵（全身像）" 
-                    icon="pi pi-image" 
-                    class="p-button-sm"
+                    class="p-button-sm flex align-items-center justify-content-center"
                     :class="activeMascotSubTab === 'outfit' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
                     @click="activeMascotSubTab = 'outfit'"
-                />
+                    title="立ち絵"
+                >
+                    <img :src="mascotOutfitIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <span class="subtab-label">立ち絵</span>
+                </Button>
                 <Button 
-                    label="プロフィール" 
-                    icon="pi pi-user" 
-                    class="p-button-sm"
+                    class="p-button-sm flex align-items-center justify-content-center"
                     :class="activeMascotSubTab === 'profile' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
                     @click="activeMascotSubTab = 'profile'"
-                />
+                    title="プロフィール"
+                >
+                    <img :src="mascotProfileIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <span class="subtab-label">プロフィール</span>
+                </Button>
             </div>
 
             <!-- サブタブ中身: 表情アセット -->
             <div v-if="activeMascotSubTab === 'expression'" class="flex flex-column gap-3">
                 <div class="flex gap-2">
                     <Button 
-                        label="表情を編集・位置調整 (大画面エディタ)" 
                         icon="pi pi-sliders-h" 
                         class="p-button-primary p-button-sm flex-1"
                         @click="openExpressionEditModal"
-                    />
+                    >
+                        <span class="desktop-text">表情編集</span>
+                        <span class="mobile-text">表情編集</span>
+                    </Button>
                     <Button 
                         v-if="scannedSprites.length > 0"
                         label="感情割り当て画面を開く" 
@@ -978,13 +1038,13 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                         @click="isAssigningEmotionsModal = true"
                     />
                     <Button 
-                        label="AI表情生成" 
+                        label="表情生成" 
                         icon="pi pi-sparkles" 
                         class="p-button-sm p-button-outlined p-button-primary"
                         @click="isAiGeneratingModalActive = true"
                     />
                     <Button
-                        label="AIスプライトインポート"
+                        label="スプライトインポート"
                         icon="pi pi-sparkles"
                         class="p-button-sm p-button-outlined p-button-secondary"
                         :loading="isScanningSprite"
@@ -1089,11 +1149,12 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                         <span>登録済みの立ち絵 (全身像)</span>
                     </label>
 
-                    <div v-if="editingMascot.assets.outfits && editingMascot.assets.outfits.length > 0" class="outfit-grid-container pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 300px; overflow-y: auto; width: 100%;">
+                    <div v-if="editingMascot.assets.outfits && editingMascot.assets.outfits.length > 0" class="outfit-grid-container pt-1">
                         <div 
                             v-for="outfit in editingMascot.assets.outfits" 
                             :key="outfit.id"
                             class="outfit-grid-cell relative flex flex-column align-items-center justify-content-center border-round border-1 border-gray-200 bg-white p-2"
+                            :class="{ 'is-active-outfit': editingMascot.currentOutfitId === outfit.id }"
                             style="height: 160px; min-width: 0;"
                         >
                             <div v-if="editingMascot.currentOutfitId === outfit.id" class="absolute" style="top: 6px; right: 6px; z-index: 2;" title="現在使用中">
@@ -1458,5 +1519,99 @@ const getMascotCoverImage = (mascot: MascotData): string => {
     border-color: #cbd5e1;
     transform: translateY(-2px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.outfit-grid-cell.is-active-outfit {
+    border: 2px solid #a855f7 !important;
+    background-color: #f5f3ff !important;
+    box-shadow: 0 0 0 1px #a855f7, 0 4px 6px -1px rgba(168, 85, 247, 0.1) !important;
+}
+
+.outfit-grid-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+}
+
+.subtab-icon {
+    width: 48px !important;
+    height: 48px !important;
+}
+
+.mobile-text {
+    display: none;
+}
+
+/* モバイル表示用の戻るボタンはデフォルト非表示 */
+.mobile-back-header {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mascot-settings-container {
+        display: block !important;
+    }
+
+    /* 通常は一覧を表示し、詳細を非表示に */
+    .mascot-settings-container .mascot-list {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-height: none !important;
+        margin-bottom: 24px;
+    }
+    
+    .mascot-settings-container .mascot-detail-panel {
+        display: none !important;
+    }
+
+    /* show-detail-mobile が true の時は一覧を非表示、詳細を表示 */
+    .mascot-settings-container.show-detail-mobile .mascot-list {
+        display: none !important;
+    }
+    
+    .mascot-settings-container.show-detail-mobile .mascot-detail-panel {
+        display: flex !important;
+        width: 100% !important;
+    }
+
+    /* モバイル時のみ戻るボタンを表示 */
+    .mobile-back-header {
+        display: block !important;
+    }
+
+    /* 立ち絵全身像グリッドを縦一列にする */
+    .outfit-grid-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* サブタブのラベルを非表示にしてアイコンのみにする */
+    .subtab-label {
+        display: none !important;
+    }
+    .subtab-icon {
+        width: 48px !important;
+        height: 48px !important;
+    }
+    .mascot-detail-panel .pb-2 button svg,
+    .mascot-detail-panel .pb-2 button img {
+        margin-right: 0 !important;
+    }
+
+    .mascot-detail-panel .pb-2 button.p-button-sm {
+        padding: 0px !important;     /* パディング */
+        width: 48px !important;      /* ボタン自体の横幅 */
+        height: 48px !important;     /* ボタン自体の高さ */
+        justify-content: center !important; /* 中央寄せ */
+    }
+
+    .desktop-text {
+        display: none !important;
+    }
+    .mobile-text {
+        display: inline !important;
+    }
 }
 </style>
