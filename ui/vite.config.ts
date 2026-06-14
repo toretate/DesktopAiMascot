@@ -12,39 +12,43 @@ Object.assign(process.env, env);
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');
 
+const isTest = !!process.env.VITEST;
+
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
         vue(),
-        electron([
-            {
-                // メインプロセスのエントリーポイント
-                entry: 'electron/main.ts',
-                onstart(options) {
-                    if (process.env.VSCODE_DEBUG) {
-                        console.log('VS Code Debug mode: Skip auto startup');
-                    } else {
-                        options.startup();
-                    }
-                },
-                vite: {
-                    build: {
-                        rollupOptions: {
-                            // ws のオプション依存（ネイティブモジュール）をバンドル対象から除外
-                            external: ['bufferutil', 'utf-8-validate'],
+        ...(isTest ? [] : [
+            electron([
+                {
+                    // メインプロセスのエントリーポイント
+                    entry: 'electron/main.ts',
+                    onstart(options) {
+                        if (process.env.VSCODE_DEBUG) {
+                            console.log('VS Code Debug mode: Skip auto startup');
+                        } else {
+                            options.startup();
+                        }
+                    },
+                    vite: {
+                        build: {
+                            rollupOptions: {
+                                // ws のオプション依存（ネイティブモジュール）をバンドル対象から除外
+                                external: ['bufferutil', 'utf-8-validate'],
+                            },
                         },
                     },
                 },
-            },
-            {
-                // プリロードスクリプトのエントリーポイント
-                entry: 'electron/preload.ts',
-                onstart(options) {
-                    options.reload();
+                {
+                    // プリロードスクリプトのエントリーポイント
+                    entry: 'electron/preload.ts',
+                    onstart(options) {
+                        options.reload();
+                    },
                 },
-            },
-        ]),
-        renderer(),
+            ]),
+            renderer(),
+        ])
     ],
     resolve: {
         alias: {
