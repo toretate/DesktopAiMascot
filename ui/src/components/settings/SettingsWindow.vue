@@ -793,10 +793,23 @@ const testPlayVoice = async () => {
         isTestingVoice.value = false;
     }
 };
+
+const goBack = () => {
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.hash = '#integrated';
+    }
+};
 </script>
 
 <template>
     <div class="settings-layout">
+        <!-- 閉じるフローティングボタン -->
+        <button class="close-floating-btn" @click="goBack" title="設定を閉じる">
+            <i class="pi pi-times"></i>
+        </button>
+
         <!-- 1. 左サイドバー -->
         <aside 
             class="sidebar drag-area" 
@@ -819,6 +832,16 @@ const testPlayVoice = async () => {
 
             <!-- ナビゲーションメニュー -->
             <nav class="menu no-drag">
+                <button 
+                    class="menu-item back-menu-item"
+                    :class="{ 'collapsed': isSidebarCollapsed }"
+                    @click="goBack"
+                    title="設定を閉じる"
+                >
+                    <i class="pi pi-arrow-left"></i>
+                    <span v-if="!isSidebarCollapsed">設定を閉じる</span>
+                </button>
+                <div class="menu-divider" style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 0.5rem 0;"></div>
                 <button 
                     v-for="item in menuItems"
                     :key="item.value"
@@ -1798,5 +1821,37 @@ const testPlayVoice = async () => {
     background: #f8fafc;
     color: #64748b;
     border: 1px solid #e2e8f0;
+}
+
+/* 閉じるフローティングボタン */
+.close-floating-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1010;
+    transition: all 0.2s ease-in-out;
+}
+
+.close-floating-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.close-floating-btn i {
+    font-size: 16px;
+    font-weight: bold;
 }
 </style>

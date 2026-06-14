@@ -6,7 +6,7 @@ import { useConfigStore } from '../../store/config';
 import { storeToRefs } from 'pinia';
 
 const configStore = useConfigStore();
-const { chatBackgroundColor } = storeToRefs(configStore);
+const { chatBackgroundColor, windowMode } = storeToRefs(configStore);
 
 // 将来的な背景画像設定のためのプレースホルダー（将来的に configStore などに backgroundImageUrl を追加する想定）
 const backgroundImageStyle = computed(() => {
@@ -26,11 +26,11 @@ const containerStyle = computed(() => {
 <template>
     <div class="integrated-container" :style="containerStyle">
         <!-- マスコット表示エリア -->
-        <div class="mascot-section">
+        <div v-if="windowMode !== 'compact'" class="mascot-section">
             <MascotViewer />
         </div>
         <!-- チャット表示エリア -->
-        <div class="chat-section">
+        <div class="chat-section" :class="{ 'is-compact': windowMode === 'compact' }">
             <ChatPanel />
         </div>
     </div>
@@ -65,6 +65,11 @@ const containerStyle = computed(() => {
     overflow: hidden;
     padding: 16px;
     box-sizing: border-box;
+}
+
+.chat-section.is-compact {
+    flex: 1;
+    padding: 0;
 }
 
 /* 子コンポーネントの調整：MascotViewer が画面いっぱいに広がるようにする */
