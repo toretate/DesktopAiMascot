@@ -158,5 +158,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => {
             ipcRenderer.off('timer-trigger', listener);
         };
-    }
+    },
+
+    // ラジオモード用プロンプトの取得
+    getRadioPrompts: () => ipcRenderer.invoke('get-radio-prompts'),
+
+    // ラジオモード用プロンプトの保存
+    saveRadioPrompts: (prompts: { radioMode: string; activeTalk: string }) => ipcRenderer.invoke('save-radio-prompts', prompts)
 });

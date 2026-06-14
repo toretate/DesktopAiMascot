@@ -200,11 +200,13 @@ const getModelCapabilities = (engine: string, modelName: string): ModelCapabilit
     if (engine === 'lmstudio') {
         const found = lmstudioModels.value.find(m => m && typeof m === 'object' && m.id === modelName);
         if (found && found.capabilities) {
-            if (found.capabilities.vision !== undefined) {
-                caps.isVision = !!found.capabilities.vision;
-            }
+            caps.isVision = !!found.capabilities.vision;
+            caps.isToolUse = !!found.capabilities.trained_for_tool_use;
+            caps.isThought = !!found.capabilities.reasoning;
         }
+        return caps;
     }
+
     if (name.includes('audio') || name.includes('voice') || name.includes('gemini-2.0-flash')) {
         caps.isAudio = true;
     }

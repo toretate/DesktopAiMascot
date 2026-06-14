@@ -193,4 +193,49 @@ export function registerConfigHandlers(config: AppConfig) {
             return { success: false, error: error.message };
         }
     });
+
+    // ラジオモード用のプロンプト（通常・能動フリートーク）の読み込みハンドラー
+    ipcMain.handle('get-radio-prompts', async () => {
+        const currentCwd = process.cwd();
+        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
+        const radioDir = path.join(baseCwd, 'prompts', 'radio');
+
+        const result = {
+            radioMode: '',
+            activeTalk: ''
+        };
+
+        if (fs.existsSync(radioDir)) {
+            const radioModePath = path.join(radioDir, 'radio_mode_instructions.md');
+            const activeTalkPath = path.join(radioDir, 'active_radio_talk_instructions.md');
+
+            if (fs.existsSync(radioModePath)) {
+                result.radioMode = fs.readFileSync(radioModePath, 'utf8');
+            }
+            if (fs.existsSync(activeTalkPath)) {
+                result.activeTalk = fs.readFileSync(activeTalkPath, 'utf8');
+            }
+        }
+        return result;
+    });
+
+    // ラジオモード用のプロンプト（通常・能動フリートーク）の保存ハンドラー
+    ipcMain.handle('save-radio-prompts', async (event, prompts: { radioMode: string; activeTalk: string }) => {
+        const currentCwd = process.cwd();
+        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
+        const radioDir = path.join(baseCwd, 'prompts', 'radio');
+
+        try {
+            if (!fs.existsSync(radioDir)) {
+                fs.mkdirSync(radioDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(radioDir, 'radio_mode_instructions.md'), prompts.radioMode || '', 'utf8');
+            fs.writeFileSync(path.join(radioDir, 'active_radio_talk_instructions.md'), prompts.activeTalk || '', 'utf8');
+            console.log(`[Config] Radio prompts saved successfully`);
+            return { success: true };
+        } catch (error: any) {
+            console.error('[Config] Failed to save radio prompts:', error);
+            return { success: false, error: error.message };
+        }
+    });
 }

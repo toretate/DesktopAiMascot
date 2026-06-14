@@ -46,6 +46,8 @@ export interface IElectronAPI {
     startTimer: (seconds: number, memo: string) => void;
     triggerTimerNotification: (memo: string) => void;
     onTimerTrigger: (callback: (memo: string) => void) => () => void;
+    getRadioPrompts: () => Promise<{ radioMode: string; activeTalk: string }>;
+    saveRadioPrompts: (prompts: { radioMode: string; activeTalk: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

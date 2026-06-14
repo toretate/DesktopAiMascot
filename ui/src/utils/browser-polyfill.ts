@@ -300,6 +300,26 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 return { success: false, error: e.message };
             }
         },
+        getRadioPrompts: async () => {
+            try {
+                const radioMode = localStorage.getItem('desktop_ai_mascot_radio_mode_prompt') || '';
+                const activeTalk = localStorage.getItem('desktop_ai_mascot_active_talk_prompt') || '';
+                return { radioMode, activeTalk };
+            } catch (e) {
+                console.error('[Polyfill] Failed to get radio prompts:', e);
+                return { radioMode: '', activeTalk: '' };
+            }
+        },
+        saveRadioPrompts: async (prompts: any) => {
+            try {
+                localStorage.setItem('desktop_ai_mascot_radio_mode_prompt', prompts.radioMode || '');
+                localStorage.setItem('desktop_ai_mascot_active_talk_prompt', prompts.activeTalk || '');
+                return { success: true };
+            } catch (e: any) {
+                console.error('[Polyfill] Failed to save radio prompts:', e);
+                return { success: false, error: e.message };
+            }
+        },
         getLmStudioModels: async (endpoint: string) => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
