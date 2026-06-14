@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppConfig, ConfigData } from '../app-config';
@@ -7,6 +7,32 @@ import { getMascotWindow } from '../window/mascot-window';
 import { getSettingsWindow } from '../window/settings-window';
 import { getIntegratedWindow } from '../window/integrated-window';
 import { getCompactWindow } from '../window/compact-window';
+
+/**
+ * プロジェクトの prompts/radio ディレクトリの絶対パスを探索して取得する
+ */
+function resolveRadioDir(): string {
+    const currentCwd = process.cwd();
+    const appPath = app.getAppPath();
+    
+    const candidates = [
+        path.join(currentCwd, 'prompts', 'radio'),
+        path.join(currentCwd, '..', 'prompts', 'radio'),
+        path.join(appPath, 'prompts', 'radio'),
+        path.join(appPath, '..', 'prompts', 'radio'),
+        path.join(appPath, '..', '..', 'prompts', 'radio')
+    ];
+
+    for (const dir of candidates) {
+        if (fs.existsSync(dir) && fs.existsSync(path.join(dir, 'radio_mode_instructions.md'))) {
+            return dir;
+        }
+    }
+    
+    // 見つからない場合のデフォルトフォールバック
+    const fallbackBase = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
+    return path.join(fallbackBase, 'prompts', 'radio');
+}
 
 /**
  * Config 関連の IPC ハンドラーを登録する
@@ -196,34 +222,43 @@ export function registerConfigHandlers(config: AppConfig) {
 
     // ラジオモード用のプロンプト（通常・能動フリートーク）の読み込みハンドラー
     ipcMain.handle('get-radio-prompts', async () => {
-        const currentCwd = process.cwd();
-        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
-        const radioDir = path.join(baseCwd, 'prompts', 'radio');
+        const radioDir = resolveRadioDir();
+        console.log(`[Config] Reading radio prompts from: ${radioDir} (cwd: ${process.cwd()})`);
 
         const result = {
             radioMode: '',
             activeTalk: ''
         };
 
-        if (fs.existsSync(radioDir)) {
-            const radioModePath = path.join(radioDir, 'radio_mode_instructions.md');
-            const activeTalkPath = path.join(radioDir, 'active_radio_talk_instructions.md');
+        try {
+            if (fs.existsSync(radioDir)) {
+                const radioModePath = path.join(radioDir, 'radio_mode_instructions.md');
+                const activeTalkPath = path.join(radioDir, 'active_radio_talk_instructions.md');
 
-            if (fs.existsSync(radioModePath)) {
-                result.radioMode = fs.readFileSync(radioModePath, 'utf8');
+                if (fs.existsSync(radioModePath)) {
+                    result.radioMode = fs.readFileSync(radioModePath, 'utf8');
+                    console.log(`[Config] Successfully loaded radio_mode_instructions.md (${result.radioMode.length} chars)`);
+                } else {
+                    console.warn(`[Config] radio_mode_instructions.md not found at ${radioModePath}`);
+                }
+                if (fs.existsSync(activeTalkPath)) {
+                    result.activeTalk = fs.readFileSync(activeTalkPath, 'utf8');
+                    console.log(`[Config] Successfully loaded active_radio_talk_instructions.md (${result.activeTalk.length} chars)`);
+                } else {
+                    console.warn(`[Config] active_radio_talk_instructions.md not found at ${activeTalkPath}`);
+                }
+            } else {
+                console.warn(`[Config] Radio directory not found: ${radioDir}`);
             }
-            if (fs.existsSync(activeTalkPath)) {
-                result.activeTalk = fs.readFileSync(activeTalkPath, 'utf8');
-            }
+        } catch (e: any) {
+            console.error('[Config] Error reading radio prompts:', e);
         }
         return result;
     });
 
     // ラジオモード用のプロンプト（通常・能動フリートーク）の保存ハンドラー
     ipcMain.handle('save-radio-prompts', async (event, prompts: { radioMode: string; activeTalk: string }) => {
-        const currentCwd = process.cwd();
-        const baseCwd = path.basename(currentCwd) === 'ui' ? path.dirname(currentCwd) : currentCwd;
-        const radioDir = path.join(baseCwd, 'prompts', 'radio');
+        const radioDir = resolveRadioDir();
 
         try {
             if (!fs.existsSync(radioDir)) {
@@ -231,7 +266,7 @@ export function registerConfigHandlers(config: AppConfig) {
             }
             fs.writeFileSync(path.join(radioDir, 'radio_mode_instructions.md'), prompts.radioMode || '', 'utf8');
             fs.writeFileSync(path.join(radioDir, 'active_radio_talk_instructions.md'), prompts.activeTalk || '', 'utf8');
-            console.log(`[Config] Radio prompts saved successfully`);
+            console.log(`[Config] Radio prompts saved successfully to: ${radioDir}`);
             return { success: true };
         } catch (error: any) {
             console.error('[Config] Failed to save radio prompts:', error);

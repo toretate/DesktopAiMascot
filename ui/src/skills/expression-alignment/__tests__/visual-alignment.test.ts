@@ -9,12 +9,12 @@ const path = eval("require('path')");
 // and throws "TypeError: Image or Canvas expected" when drawn onto JSDOM's simulated canvas.
 if (typeof document !== 'undefined') {
     const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
-    const originalCreateElement = document.createElement;
+    const originalCreateElement = document.createElement.bind(document);
     document.createElement = function(tagName: string, options?: any) {
         if (tagName.toLowerCase() === 'canvas') {
             return createCanvas(1, 1);
         }
-        return originalCreateElement.apply(this, arguments as any);
+        return originalCreateElement(tagName, options);
     } as any;
 }
 

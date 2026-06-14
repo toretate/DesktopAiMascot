@@ -230,6 +230,7 @@ export async function alignBatch(
     const opts: Required<AutoAlignOptions> = {
         useAIDetection: options?.useAIDetection ?? false,
         apiKey: options?.apiKey ?? '',
+        overrideScale: options?.overrideScale ?? undefined as any
     };
 
     // ベース画像のバリデーション

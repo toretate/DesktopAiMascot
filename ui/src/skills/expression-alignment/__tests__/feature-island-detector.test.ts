@@ -5,12 +5,12 @@ import { detectFaceFeatures, FeatureIsland } from '../feature-island-detector';
 // document.createElement('canvas') をモックしてテスト実行時に JSDOM 環境下で canvas 動作するようにする
 if (typeof document !== 'undefined') {
     const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
-    const originalCreateElement = document.createElement;
+    const originalCreateElement = document.createElement.bind(document);
     document.createElement = function(tagName: string, options?: any) {
         if (tagName.toLowerCase() === 'canvas') {
             return createCanvas(1, 1);
         }
-        return originalCreateElement.apply(this, arguments as any);
+        return originalCreateElement(tagName, options);
     } as any;
 }
 
