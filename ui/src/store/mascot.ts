@@ -9,6 +9,8 @@ export const useMascotStore = defineStore('mascot', () => {
     const isSpeaking = ref(false);
     // アプリケーションローディング（応答生成中など）フラグ
     const isLoading = ref(false);
+    // ラジオモード中フラグ
+    const isRadioMode = ref(false);
 
     // ---- Actions ----
     const setEmotion = (emotion: string) => {
@@ -23,12 +25,18 @@ export const useMascotStore = defineStore('mascot', () => {
         isLoading.value = loading;
     };
 
+    const setRadioMode = (radioMode: boolean) => {
+        isRadioMode.value = radioMode;
+    };
+
     return {
         currentEmotion,
         isSpeaking,
         isLoading,
+        isRadioMode,
         setEmotion,
         setSpeaking,
-        setLoading
+        setLoading,
+        setRadioMode
     };
 });
