@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Button from 'primevue/button';
-import { useConfigStore } from '../../store/config';
+import { useConfigStore } from '../../../store/config';
 
 const configStore = useConfigStore();
 

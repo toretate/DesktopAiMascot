@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import Button from 'primevue/button';
-import { useConfigStore } from '../../store/config';
-import { detectFaceFeatures } from '../../skills/expression-alignment/feature-island-detector';
-import { detectContentBounds, loadImage } from '../../skills/expression-alignment/content-bounds-detector';
+import { useConfigStore } from '../../../store/config';
+import { detectFaceFeatures } from '../../../skills/expression-alignment/feature-island-detector';
+import { detectContentBounds, loadImage } from '../../../skills/expression-alignment/content-bounds-detector';
 
 const props = defineProps<{
     visible: boolean;

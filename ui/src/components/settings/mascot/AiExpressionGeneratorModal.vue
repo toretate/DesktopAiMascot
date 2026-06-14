@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { useConfigStore } from '../../store/config';
+import { useConfigStore } from '@/store/config';
 import Button from 'primevue/button';
 
 const configStore = useConfigStore();
@@ -58,7 +58,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'close'): void;
-    (e: 'import-sprite', base64Image: string): void;
+    (e: 'import-sprite', data: { imagePath: string; importId: string }): void;
 }>();
 
 // 28感情のSillyTavern/プロジェクト対応表
