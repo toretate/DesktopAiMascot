@@ -40,6 +40,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
     };
 
     window.electronAPI = {
+        isWeb: true,
         loginWithGoogle: () => {
             alert('GoogleログインはWeb版では現在サポートされていません。設定画面で直接APIキーをご登録ください。');
         },

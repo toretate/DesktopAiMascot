@@ -192,7 +192,7 @@ export function useSettingsWindow() {
     ]);
 
     const goBack = () => {
-        if (window.location.hash.includes('settings')) {
+        if (window.electronAPI && !window.electronAPI.isWeb && window.location.hash.includes('settings')) {
             window.close();
         } else if (window.history.length > 1) {
             window.history.back();

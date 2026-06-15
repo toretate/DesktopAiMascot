@@ -8,6 +8,7 @@ interface MascotAsset {
 }
 
 export interface IElectronAPI {
+    isWeb?: boolean;
     loginWithGoogle: () => void;
     toggleChat: () => void;
     openSettings: () => void;

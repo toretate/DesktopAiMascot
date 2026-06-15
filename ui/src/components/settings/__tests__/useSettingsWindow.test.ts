@@ -153,4 +153,60 @@ describe('useSettingsWindow', () => {
 
         app.unmount();
     });
+
+    describe('goBack', () => {
+        beforeEach(() => {
+            vi.stubGlobal('close', vi.fn());
+            vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        });
+
+        it('goBack - Electron環境で設定画面にいる場合、window.closeが呼び出されること', () => {
+            (window as any).electronAPI = {
+                ...window.electronAPI,
+                isWeb: false
+            };
+            window.location.hash = '#settings';
+
+            const [setupResult, app] = withSetup(() => useSettingsWindow());
+            setupResult.goBack();
+
+            expect(window.close).toHaveBeenCalled();
+            app.unmount();
+        });
+
+        it('goBack - Web環境で履歴がある場合、history.backが呼び出されること', () => {
+            (window as any).electronAPI = {
+                ...window.electronAPI,
+                isWeb: true
+            };
+            window.location.hash = '#settings';
+
+            vi.spyOn(window.history, 'length', 'get').mockReturnValue(2);
+
+            const [setupResult, app] = withSetup(() => useSettingsWindow());
+            setupResult.goBack();
+
+            expect(window.history.back).toHaveBeenCalled();
+            expect(window.close).not.toHaveBeenCalled();
+            app.unmount();
+        });
+
+        it('goBack - Web環境で履歴がない場合、ハッシュが #integrated になること', () => {
+            (window as any).electronAPI = {
+                ...window.electronAPI,
+                isWeb: true
+            };
+            window.location.hash = '#settings';
+
+            vi.spyOn(window.history, 'length', 'get').mockReturnValue(1);
+
+            const [setupResult, app] = withSetup(() => useSettingsWindow());
+            setupResult.goBack();
+
+            expect(window.location.hash).toBe('#integrated');
+            expect(window.history.back).not.toHaveBeenCalled();
+            expect(window.close).not.toHaveBeenCalled();
+            app.unmount();
+        });
+    });
 });
