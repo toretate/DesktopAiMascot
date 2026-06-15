@@ -26,8 +26,8 @@ export const webSearchTool = tool({
             let count = 0;
             for (let i = 1; i < resultBlocks.length && count < 3; i++) {
                 const block = resultBlocks[i];
-                const titleMatch = block.match(/<a class="result__a" href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
-                const snippetMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
+                const titleMatch = block.match(/<a\s+[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+                const snippetMatch = block.match(/<a\s+[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
                 
                 if (titleMatch) {
                     const link = titleMatch[1];
