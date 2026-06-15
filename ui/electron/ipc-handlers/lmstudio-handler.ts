@@ -3,7 +3,7 @@ import { LmStudioConnector } from '../../src/connector/lmstudio-connector';
 
 export function registerLmStudioHandlers() {
     // 7. LM Studio (ローカル) による対話処理のハンドラー
-    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[], attachments?: any[]) => {
+    ipcMain.handle('ask-lmstudio', async (event, message: string, systemPrompt: string, modelName: string, endpoint: string, history?: any[], attachments?: any[], tools?: any) => {
         try {
             return await LmStudioConnector.generateResponse({
                 message,
@@ -11,7 +11,8 @@ export function registerLmStudioHandlers() {
                 model: modelName,
                 endpoint,
                 history,
-                attachments
+                attachments,
+                tools
             });
         } catch (error: any) {
             console.error('[LmStudio] SDK接続・対話エラー:', error);

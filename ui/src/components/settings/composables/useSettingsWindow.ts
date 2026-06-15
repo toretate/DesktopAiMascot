@@ -188,6 +188,7 @@ export function useSettingsWindow() {
         { name: '音声AI', value: 'voice', icon: 'pi pi-volume-up' },
         { name: '画像AI', value: 'image', icon: 'pi pi-image' },
         { name: '動画AI', value: 'video', icon: 'pi pi-video' },
+        { name: 'ツール設定', value: 'tool', icon: 'pi pi-wrench' },
         { name: 'APIキー', value: 'apikey', icon: 'pi pi-key' }
     ]);
 

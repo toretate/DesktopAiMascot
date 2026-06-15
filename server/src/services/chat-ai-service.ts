@@ -14,8 +14,9 @@ export class ChatAiService {
         lmstudioEndpoint: string;
         history?: any[];
         attachments?: any[];
+        tools?: any;
     }): Promise<string> {
-        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, history, attachments } = params;
+        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, history, attachments, tools } = params;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -28,7 +29,8 @@ export class ChatAiService {
                     model,
                     endpoint: lmstudioEndpoint,
                     history,
-                    attachments
+                    attachments,
+                    tools
                 });
             } else {
                 const targetModel = model || 'gemini-1.5-flash';

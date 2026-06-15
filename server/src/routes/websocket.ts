@@ -100,7 +100,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                         lmstudioEndpoint,
                         history,
                         useTts,
-                        attachments
+                        attachments,
+                        tools
                     } = data;
 
                     console.log(`=========================================`);
@@ -130,7 +131,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                             engine,
                             lmstudioEndpoint,
                             history,
-                            attachments
+                            attachments,
+                            tools
                         });
                     } catch (aiError: any) {
                         console.error('[WS] AI Engine Error:', aiError.message);

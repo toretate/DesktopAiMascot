@@ -50,6 +50,14 @@ export interface AppConfig {
     // マスコットデータ
     mascots: any[];
     activeMascotId: string;
+
+    // ツール使用設定 (ToolUse)
+    toolsCurrentTime: boolean;
+    toolsGpsLocation: boolean;
+    toolsWeather: boolean;
+    toolsVolume: boolean;
+    toolsAppLauncher: boolean;
+    toolsWebSearch: boolean;
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -106,6 +114,14 @@ export const useConfigStore = defineStore('config', () => {
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
     const activeMascotId = ref('');
+
+    // ツール使用設定 (ToolUse)
+    const toolsCurrentTime = ref(true);
+    const toolsGpsLocation = ref(true);
+    const toolsWeather = ref(true);
+    const toolsVolume = ref(true);
+    const toolsAppLauncher = ref(true);
+    const toolsWebSearch = ref(true);
     const configVersion = ref(0);
 
     // ---- Getters ----
@@ -175,6 +191,13 @@ export const useConfigStore = defineStore('config', () => {
             
             mascots.value = configData.mascots || [];
             activeMascotId.value = configData.activeMascotId || '';
+
+            toolsCurrentTime.value = configData.toolsCurrentTime !== undefined ? !!configData.toolsCurrentTime : true;
+            toolsGpsLocation.value = configData.toolsGpsLocation !== undefined ? !!configData.toolsGpsLocation : true;
+            toolsWeather.value = configData.toolsWeather !== undefined ? !!configData.toolsWeather : true;
+            toolsVolume.value = configData.toolsVolume !== undefined ? !!configData.toolsVolume : true;
+            toolsAppLauncher.value = configData.toolsAppLauncher !== undefined ? !!configData.toolsAppLauncher : true;
+            toolsWebSearch.value = configData.toolsWebSearch !== undefined ? !!configData.toolsWebSearch : true;
         } else {
             // Webブラウザ実行時の localStorage フォールバック
             googleAiStudioApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -236,6 +259,13 @@ export const useConfigStore = defineStore('config', () => {
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
             activeMascotId.value = localStorage.getItem('activeMascotId') || '';
+
+            toolsCurrentTime.value = localStorage.getItem('toolsCurrentTime') !== 'false';
+            toolsGpsLocation.value = localStorage.getItem('toolsGpsLocation') !== 'false';
+            toolsWeather.value = localStorage.getItem('toolsWeather') !== 'false';
+            toolsVolume.value = localStorage.getItem('toolsVolume') !== 'false';
+            toolsAppLauncher.value = localStorage.getItem('toolsAppLauncher') !== 'false';
+            toolsWebSearch.value = localStorage.getItem('toolsWebSearch') !== 'false';
         }
 
         // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
@@ -299,7 +329,13 @@ export const useConfigStore = defineStore('config', () => {
             useTts: useTts.value,
             windowMode: windowMode.value,
             mascots: JSON.parse(JSON.stringify(mascots.value)),
-            activeMascotId: activeMascotId.value
+            activeMascotId: activeMascotId.value,
+            toolsCurrentTime: toolsCurrentTime.value,
+            toolsGpsLocation: toolsGpsLocation.value,
+            toolsWeather: toolsWeather.value,
+            toolsVolume: toolsVolume.value,
+            toolsAppLauncher: toolsAppLauncher.value,
+            toolsWebSearch: toolsWebSearch.value
         };
 
         // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
@@ -370,6 +406,13 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('windowMode', windowMode.value);
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
+
+        localStorage.setItem('toolsCurrentTime', toolsCurrentTime.value.toString());
+        localStorage.setItem('toolsGpsLocation', toolsGpsLocation.value.toString());
+        localStorage.setItem('toolsWeather', toolsWeather.value.toString());
+        localStorage.setItem('toolsVolume', toolsVolume.value.toString());
+        localStorage.setItem('toolsAppLauncher', toolsAppLauncher.value.toString());
+        localStorage.setItem('toolsWebSearch', toolsWebSearch.value.toString());
     };
 
     // 一部の設定を一括で更新する
@@ -411,6 +454,13 @@ export const useConfigStore = defineStore('config', () => {
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
+
+        if (newConfig.toolsCurrentTime !== undefined) toolsCurrentTime.value = !!newConfig.toolsCurrentTime;
+        if (newConfig.toolsGpsLocation !== undefined) toolsGpsLocation.value = !!newConfig.toolsGpsLocation;
+        if (newConfig.toolsWeather !== undefined) toolsWeather.value = !!newConfig.toolsWeather;
+        if (newConfig.toolsVolume !== undefined) toolsVolume.value = !!newConfig.toolsVolume;
+        if (newConfig.toolsAppLauncher !== undefined) toolsAppLauncher.value = !!newConfig.toolsAppLauncher;
+        if (newConfig.toolsWebSearch !== undefined) toolsWebSearch.value = !!newConfig.toolsWebSearch;
         
         configVersion.value++;
     };
@@ -453,6 +503,12 @@ export const useConfigStore = defineStore('config', () => {
         mascots,
         activeMascotId,
         activeMascot,
+        toolsCurrentTime,
+        toolsGpsLocation,
+        toolsWeather,
+        toolsVolume,
+        toolsAppLauncher,
+        toolsWebSearch,
         configVersion,
         loadConfig,
         saveConfig,

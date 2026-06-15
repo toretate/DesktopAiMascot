@@ -30,8 +30,9 @@ export class LmStudioConnector {
         endpoint: string;
         history?: any[];
         attachments?: any[];
+        tools?: any;
     }): Promise<string> {
-        const { message, systemPrompt, model, endpoint, history, attachments } = params;
+        const { message, systemPrompt, model, endpoint, history, attachments, tools } = params;
         const sdkEndpoint = getSdkEndpoint(endpoint);
         const targetModel = model || 'unspecified';
 
@@ -135,14 +136,51 @@ export class LmStudioConnector {
         const chatInstance = Chat.from(messagesPayload);
         let finalSystemPrompt = systemPrompt || '';
         finalSystemPrompt = finalSystemPrompt.trim();
-        const toolUseGuideline = `\n\n# Tool Use Guidelines\n- You have access to tools for current time, weather, volume, app launching, web search, and location.\n- Always call tools to get accurate information instead of guessing.\n- Do NOT output any thought process, self-instructions, or meta-comments like "I got the time..." or "Now I will reply..." in the final response.\n- Answer in Japanese, speaking directly to the user as a friendly mascot character. Output ONLY the natural dialogue/reply.`;
+
+        // ツール有効・無効に基づくフィルタリング
+        const filteredTools = lmStudioTools.filter(tool => {
+            if (!tools) return true; // 設定がない場合はすべて有効
+
+            switch (tool.name) {
+                case 'launchApp':
+                    return tools.toolsAppLauncher !== false;
+                case 'getCurrentTime':
+                    return tools.toolsCurrentTime !== false;
+                case 'getGPSLocation':
+                    return tools.toolsGpsLocation !== false;
+                case 'adjustVolume':
+                    return tools.toolsVolume !== false;
+                case 'getWeather':
+                    return tools.toolsWeather !== false;
+                case 'searchWeb':
+                    return tools.toolsWebSearch !== false;
+                default:
+                    return true;
+            }
+        });
+
+        // システムプロンプト内のツール使用ガイドラインを動的に構成
+        const activeToolDescriptions: string[] = [];
+        if (tools ? tools.toolsCurrentTime !== false : true) activeToolDescriptions.push('current time');
+        if (tools ? tools.toolsWeather !== false : true) activeToolDescriptions.push('weather');
+        if (tools ? tools.toolsVolume !== false : true) activeToolDescriptions.push('volume');
+        if (tools ? tools.toolsAppLauncher !== false : true) activeToolDescriptions.push('app launching');
+        if (tools ? tools.toolsWebSearch !== false : true) activeToolDescriptions.push('web search');
+        if (tools ? tools.toolsGpsLocation !== false : true) activeToolDescriptions.push('location');
+
+        const toolListStr = activeToolDescriptions.join(', ');
+        const toolUseSection = activeToolDescriptions.length > 0
+            ? `- You have access to tools for ${toolListStr}.\n- Always call tools to get accurate information instead of guessing.`
+            : `- Do NOT call any tools.`;
+
+        const toolUseGuideline = `\n\n# Tool Use Guidelines\n${toolUseSection}\n- Do NOT output any thought process, self-instructions, or meta-comments like "I got the time..." or "Now I will reply..." in the final response.\n- Answer in Japanese, speaking directly to the user as a friendly mascot character. Output ONLY the natural dialogue/reply.`;
         
         if (finalSystemPrompt) {
             chatInstance.replaceSystemPrompt(`${finalSystemPrompt}${toolUseGuideline}`);
         } else {
             chatInstance.replaceSystemPrompt(toolUseGuideline.trim());
         }
-        await llm.act(chatInstance, lmStudioTools, {
+        await llm.act(chatInstance, filteredTools, {
             onMessage: (msg) => {
                 chatInstance.append(msg);
             }

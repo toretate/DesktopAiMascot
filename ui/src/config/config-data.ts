@@ -56,6 +56,14 @@ export interface ConfigData {
     compactHeight?: number;
     compactX?: number;
     compactY?: number;
+
+    // ツール使用設定 (ToolUse)
+    toolsCurrentTime: boolean;
+    toolsGpsLocation: boolean;
+    toolsWeather: boolean;
+    toolsVolume: boolean;
+    toolsAppLauncher: boolean;
+    toolsWebSearch: boolean;
 }
 
 export const defaultData: ConfigData = {
@@ -107,5 +115,11 @@ export const defaultData: ConfigData = {
     compactWidth: 420,
     compactHeight: 800,
     compactX: -1,
-    compactY: -1
+    compactY: -1,
+    toolsCurrentTime: true,
+    toolsGpsLocation: true,
+    toolsWeather: true,
+    toolsVolume: true,
+    toolsAppLauncher: true,
+    toolsWebSearch: true
 };

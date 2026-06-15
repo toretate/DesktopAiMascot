@@ -37,7 +37,13 @@ export function useChatConnection(params: {
         useServer,
         serverHost,
         serverPort,
-        useTts
+        useTts,
+        toolsCurrentTime,
+        toolsGpsLocation,
+        toolsWeather,
+        toolsVolume,
+        toolsAppLauncher,
+        toolsWebSearch
     } = storeToRefs(configStore);
 
     const { isLoading: isAiResponding } = storeToRefs(mascotStore);
@@ -273,14 +279,16 @@ export function useChatConnection(params: {
                 }
             }
 
+            // ラジオモード共通の基本指示を適用
+            systemPrompt += radioModePrompt.trim()
+                ? `${radioModePrompt.trim()}\n\n`
+                : `# Radio Mode Instructions\nあなたは現在、1人喋りの「ラジオパーソナリティ（MC）」としてラジオ番組を配信しています。目の前のリスナー（マスター）に向けてラジオ風の楽しいトークを展開してください。挨拶（「リスナーのみなさんこんにちは！」「お便りありがとうございます」など）や、ラジオ番組らしい進行の言い回しを効果的に使ってください。\n\n`;
+
+            // 能動的トーク（沈黙時の自発的発話）の場合のみ、追加指示を上乗せする
             if (isActiveTalk) {
                 systemPrompt += activeTalkPrompt.trim()
                     ? `${activeTalkPrompt.trim()}\n\n`
                     : `# Active Radio Talk Instructions\n現在、リスナー（ユーザー）からの発話がない状態（沈黙）です。ラジオパーソナリティとして沈黙を破り、リスナーを退屈させないように能動的にフリートークを開始するか、新しい面白い話題（季節、天気、雑談、リスナーへの問いかけなど）を自発的に切り出して、リスナーに楽しく語りかけてください。余計なメタテキストは出力せず、セリフのみを出力してください。\n\n`;
-            } else {
-                systemPrompt += radioModePrompt.trim()
-                    ? `${radioModePrompt.trim()}\n\n`
-                    : `# Radio Mode Instructions\nあなたは現在、1人喋りの「ラジオパーソナリティ（MC）」としてラジオ番組を配信しています。目の前のリスナー（マスター）に向けてラジオ風の楽しいトークを展開してください。挨拶（「リスナーのみなさんこんにちは！」「お便りありがとうございます」など）や、ラジオ番組らしい進行の言い回しを効果的に使ってください。\n\n`;
             }
         }
 
@@ -362,7 +370,15 @@ export function useChatConnection(params: {
                     lmstudioEndpoint: lmsEndpoint,
                     history: historyToSend,
                     useTts: useTts.value,
-                    attachments: attachments.length > 0 ? attachments : undefined
+                    attachments: attachments.length > 0 ? attachments : undefined,
+                    tools: {
+                        toolsCurrentTime: toolsCurrentTime.value,
+                        toolsGpsLocation: toolsGpsLocation.value,
+                        toolsWeather: toolsWeather.value,
+                        toolsVolume: toolsVolume.value,
+                        toolsAppLauncher: toolsAppLauncher.value,
+                        toolsWebSearch: toolsWebSearch.value
+                    }
                 }
             }));
             await saveHistory();
@@ -375,7 +391,15 @@ export function useChatConnection(params: {
                 const rawHistory = JSON.parse(JSON.stringify(historyToSend));
                 const rawAttachments = attachments.length > 0 ? JSON.parse(JSON.stringify(attachments)) : undefined;
                 if (engine === 'lmstudio') {
-                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, rawHistory, rawAttachments);
+                    const toolsConfig = {
+                        toolsCurrentTime: toolsCurrentTime.value,
+                        toolsGpsLocation: toolsGpsLocation.value,
+                        toolsWeather: toolsWeather.value,
+                        toolsVolume: toolsVolume.value,
+                        toolsAppLauncher: toolsAppLauncher.value,
+                        toolsWebSearch: toolsWebSearch.value
+                    };
+                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, rawHistory, rawAttachments, toolsConfig);
                 } else {
                     if (!apiKey) {
                         throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);

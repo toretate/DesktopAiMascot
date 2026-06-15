@@ -7,6 +7,7 @@ import MascotSettings from './MascotSettings.vue';
 import VoiceGenSettingsPanel from './VoiceGenSettingsPanel.vue';
 import ImageGenSettingsPanel from './ImageGenSettingsPanel.vue';
 import MovieGenSettingsPanel from './MovieGenSettingsPanel.vue';
+import ToolPanel from './ToolPanel.vue';
 import ApiKeySettingsPanel from './ApiKeySettingsPanel.vue';
 import ChatGenSettingsPanel from './ChatGenSettingsPanel.vue';
 import WindowSettingsPanel from './WindowSettingsPanel.vue';
@@ -81,6 +82,11 @@ const {
                 <!-- パネル5: 動画AI -->
                 <div v-else-if="activeMenu === 'video'" class="panel-section">
                     <MovieGenSettingsPanel />
+                </div>
+
+                <!-- パネル5.5: ツール設定 -->
+                <div v-else-if="activeMenu === 'tool'" class="panel-section">
+                    <ToolPanel />
                 </div>
 
                 <!-- パネル6: APIキー -->
