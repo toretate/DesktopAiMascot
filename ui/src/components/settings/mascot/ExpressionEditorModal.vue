@@ -136,14 +136,23 @@ watch(
     { immediate: true }
 );
 
-// editingMascot 自体が外部から切り替えられた場合もリアクティブに表情の選択を解決する
+// editingMascot や activeOutfit が変更されて表情リストが更新された場合も、選択状態を維持しつつ参照を更新する
 watch(
-    () => props.editingMascot,
-    (newMascot) => {
+    () => currentExpressions.value,
+    (newExpressions) => {
         if (props.visible) {
-            const expressions = currentExpressions.value;
-            if (expressions && expressions.length > 0) {
-                selectedModalExpression.value = expressions.find((e: any) => e.name === '通常') || expressions[0] || null;
+            if (newExpressions && newExpressions.length > 0) {
+                // すでに選択されている表情がある場合は、そのIDに一致するものを新しいリストから探して参照を更新する
+                const currentId = selectedModalExpression.value?.id;
+                const found = currentId ? newExpressions.find((e: any) => e.id === currentId) : null;
+                if (found) {
+                    selectedModalExpression.value = found;
+                } else {
+                    // なければ「通常」表情または先頭の表情を選択
+                    selectedModalExpression.value = newExpressions.find((e: any) => e.name === '通常') || newExpressions[0] || null;
+                }
+            } else {
+                selectedModalExpression.value = null;
             }
         }
     }
