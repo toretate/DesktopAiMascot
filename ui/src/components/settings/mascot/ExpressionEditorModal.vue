@@ -274,7 +274,43 @@ const handleAutoCrop = async () => {
     isAutoCropping.value = true;
     try {
         const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
-        const cropped = await autoCropFaceRegion(expressionImagePath);
+
+        // サーバー API で精度の高いクロップを試みる
+        let cropped: string;
+        try {
+            let imagePath: string | null = null;
+            let apiOrigin = '';
+            if (expressionImagePath.startsWith('http://') || expressionImagePath.startsWith('https://')) {
+                const u = new URL(expressionImagePath);
+                if (u.pathname.startsWith('/mascots/')) {
+                    imagePath = u.pathname;
+                    apiOrigin = u.origin;
+                }
+            } else if (expressionImagePath.startsWith('/mascots/')) {
+                imagePath = expressionImagePath;
+            }
+
+            if (imagePath) {
+                const response = await fetch(`${apiOrigin}/api/crop-expression`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagePath }),
+                });
+                const data = await response.json();
+                if (data.success && data.croppedBase64) {
+                    cropped = `data:image/png;base64,${data.croppedBase64}`;
+                    console.log(`[ExpressionEditorModal] サーバー自動切り抜き成功 (${data.method}): box=${JSON.stringify(data.box)}`);
+                } else {
+                    throw new Error(data.error ?? 'crop-expression failed');
+                }
+            } else {
+                // Data URL など: ブラウザ側フォールバック
+                cropped = await autoCropFaceRegion(expressionImagePath);
+            }
+        } catch (serverErr) {
+            console.warn('[ExpressionEditorModal] サーバー自動切り抜きに失敗。ブラウザ処理にフォールバックします:', serverErr);
+            cropped = await autoCropFaceRegion(expressionImagePath);
+        }
         
         let finalPath = cropped;
         // Electron環境であればクロップ後の画像をファイルとして保存する
@@ -329,7 +365,7 @@ const handleAutoScaling = async () => {
     try {
         const expressionImagePath = resolveImageUrl(selectedModalExpression.value.path);
         const result = await alignSingle(baseImagePath, expressionImagePath, {
-            useAIDetection: false,
+            useAIDetection: true,
         });
         selectedModalExpression.value.scale = result.params.scale;
         handleLiveUpdate();

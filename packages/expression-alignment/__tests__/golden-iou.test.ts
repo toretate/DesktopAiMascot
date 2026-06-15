@@ -5,8 +5,9 @@
  *   1. expr_*.png で registration → 拡大率・位置推定
  *   2. expr_*.png からフレーム/ラベルを BFS で除去 → 顔マスク生成
  *   3. マスク精度を _trimmed.png（正解）と比較（recall=1.0 を確認）
- *   4. outfit + 顔マスクスプライト で合成 PNG 出力
- *   5. 合成結果を expr_*_OK.png（人手正解）と IoU 比較
+ *   4. BFS 顔マスクに楕円フェザーマスクを適用（髪・首を除いた顔面のみ残す）
+ *   5. outfit + 楕円マスク済みスプライト で合成 PNG 出力
+ *   6. 合成結果を expr_*_OK.png（人手正解）と IoU 比較
  *
  * 対象: outfit_1, outfit_2
  * 出力: __tests__/result/{outfit_1,outfit_2}/
@@ -25,6 +26,7 @@ import {
 } from '../src/index';
 import { loadOpenCvNode } from '../adapters/opencv-node';
 import { NodeCanvasImageLoader, savePng } from '../adapters/canvas-node';
+import { estimateFaceMask, applyEllipseFeatherMask } from '../src/mask';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
@@ -332,9 +334,12 @@ for (const outfit of OUTFIT_CONFIGS) {
                     previewWidth: PREVIEW_W,
                 });
 
-                // 2. 顔マスク生成 + 合成
+                // 2. 顔マスク生成 → 楕円マスク適用 → 合成
                 const faceMask = extractFaceMask(spriteRaster);
-                const synthesized = synthesizeComposite(baseRaster, faceMask, editorParams, baseFitScale);
+                const ellipseParams = estimateFaceMask(spriteRaster);
+                const ellipseMasked = applyEllipseFeatherMask(faceMask, ellipseParams);
+                savePng(ellipseMasked, resolve(resultDir, `expr_${emotion}_ellipse_mask.png`));
+                const synthesized = synthesizeComposite(baseRaster, ellipseMasked, editorParams, baseFitScale);
                 savePng(synthesized, resolve(resultDir, `expr_${emotion}_synthesized.png`));
 
                 // 3. OK と比較

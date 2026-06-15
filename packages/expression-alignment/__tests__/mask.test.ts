@@ -92,7 +92,7 @@ describe('applyEllipseFeatherMask', () => {
 // ゴールデンテスト: estimateFaceMask + 楕円マスク IoU vs _trimmed.png
 // ---------------------------------------------------------------------------
 
-const CASES = [
+const CASES_OUTFIT1 = [
     { em: '喜び', trimmed: 'expr_喜び_trimmed.png' },
     { em: '嫌悪', trimmed: 'expr_嫌悪_trimmed.png' },
     { em: '好奇心', trimmed: 'expr_好奇心_trimmed.png' },
@@ -100,15 +100,30 @@ const CASES = [
     { em: '混乱', trimmed: 'expr_混乱_trimmed.png' },
 ] as const;
 
+// outfit_2 の「好奇心」はファイル名が _trimed.png（1文字欠け）
+const CASES_OUTFIT2 = [
+    { em: '喜び', trimmed: 'expr_喜び_trimmed.png' },
+    { em: '嫌悪', trimmed: 'expr_嫌悪_trimmed.png' },
+    { em: '好奇心', trimmed: 'expr_好奇心_trimed.png' },
+    { em: '怒り', trimmed: 'expr_怒り_trimmed.png' },
+    { em: '混乱', trimmed: 'expr_混乱_trimmed.png' },
+] as const;
+
 let loader: NodeCanvasImageLoader;
-const sprites: Record<string, RasterImage> = {};
-const trimmedImages: Record<string, RasterImage> = {};
+const sprites1: Record<string, RasterImage> = {};
+const trimmed1: Record<string, RasterImage> = {};
+const sprites2: Record<string, RasterImage> = {};
+const trimmed2: Record<string, RasterImage> = {};
 
 beforeAll(async () => {
     loader = new NodeCanvasImageLoader();
-    for (const c of CASES) {
-        sprites[c.em] = await loader.load(resolve(assetsDir, `outfit_1/expr_${c.em}.png`));
-        trimmedImages[c.em] = await loader.load(resolve(assetsDir, `outfit_1/${c.trimmed}`));
+    for (const c of CASES_OUTFIT1) {
+        sprites1[c.em] = await loader.load(resolve(assetsDir, `outfit_1/expr_${c.em}.png`));
+        trimmed1[c.em] = await loader.load(resolve(assetsDir, `outfit_1/${c.trimmed}`));
+    }
+    for (const c of CASES_OUTFIT2) {
+        sprites2[c.em] = await loader.load(resolve(assetsDir, `outfit_2/expr_${c.em}.png`));
+        trimmed2[c.em] = await loader.load(resolve(assetsDir, `outfit_2/${c.trimmed}`));
     }
 });
 
@@ -127,30 +142,47 @@ function maskIoU(img1: RasterImage, img2: RasterImage): number {
 }
 
 describe('estimateFaceMask + 楕円マスク IoU（outfit_1）', () => {
-    const ious: number[] = [];
-
-    for (const c of CASES) {
+    for (const c of CASES_OUTFIT1) {
         it(`${c.em}: 楕円マスク IoU vs _trimmed.png > 0.60`, async () => {
-            const sprite = sprites[c.em];
-            const trimmed = trimmedImages[c.em];
+            const sprite = sprites1[c.em];
+            const trimmedImg = trimmed1[c.em];
 
-            // 1. 顔マスク推定
             const faceMask = estimateFaceMask(sprite);
             console.log(
-                `[${c.em}] cx=${faceMask.centerX.toFixed(1)} cy=${faceMask.centerY.toFixed(1)} rx=${faceMask.radiusX.toFixed(1)} ry=${faceMask.radiusY.toFixed(1)}`
+                `[outfit_1/${c.em}] cx=${faceMask.centerX.toFixed(1)} cy=${faceMask.centerY.toFixed(1)} rx=${faceMask.radiusX.toFixed(1)} ry=${faceMask.radiusY.toFixed(1)}`
             );
 
-            // 2. スプライト全体に楕円マスクを適用（face_bfs の代わりにスプライトを入力）
             const ellipseMasked = applyEllipseFeatherMask(sprite, faceMask);
 
-            // 3. 結果 PNG 出力
             const resultDir = resolve(here, 'result/outfit_1');
             savePng(ellipseMasked, resolve(resultDir, `expr_${c.em}_ellipse_mask.png`));
 
-            // 4. IoU vs _trimmed.png
-            const iou = maskIoU(ellipseMasked, trimmed);
-            ious.push(iou);
-            console.log(`[${c.em}] ellipse maskIoU=${iou.toFixed(3)}`);
+            const iou = maskIoU(ellipseMasked, trimmedImg);
+            console.log(`[outfit_1/${c.em}] ellipse maskIoU=${iou.toFixed(3)}`);
+
+            expect(iou).toBeGreaterThan(0.60);
+        });
+    }
+});
+
+describe('estimateFaceMask + 楕円マスク IoU（outfit_2）', () => {
+    for (const c of CASES_OUTFIT2) {
+        it(`${c.em}: 楕円マスク IoU vs _trimmed.png > 0.60`, async () => {
+            const sprite = sprites2[c.em];
+            const trimmedImg = trimmed2[c.em];
+
+            const faceMask = estimateFaceMask(sprite);
+            console.log(
+                `[outfit_2/${c.em}] cx=${faceMask.centerX.toFixed(1)} cy=${faceMask.centerY.toFixed(1)} rx=${faceMask.radiusX.toFixed(1)} ry=${faceMask.radiusY.toFixed(1)}`
+            );
+
+            const ellipseMasked = applyEllipseFeatherMask(sprite, faceMask);
+
+            const resultDir = resolve(here, 'result/outfit_2');
+            savePng(ellipseMasked, resolve(resultDir, `expr_${c.em}_ellipse_mask.png`));
+
+            const iou = maskIoU(ellipseMasked, trimmedImg);
+            console.log(`[outfit_2/${c.em}] ellipse maskIoU=${iou.toFixed(3)}`);
 
             expect(iou).toBeGreaterThan(0.60);
         });

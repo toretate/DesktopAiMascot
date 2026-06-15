@@ -136,9 +136,9 @@ export async function alignSingle(
     try {
         // Step 1: 顔領域検出（AI検出 or ヒューリスティック）
         let faceDetection: FaceDetectionResult;
-        if (opts.useAIDetection && opts.apiKey) {
-            console.log('[ExpressionAutoAligner] AI 顔検出モードで実行します');
-            faceDetection = await detectFaceRegionWithAI(baseImage, opts.apiKey);
+        if (opts.useAIDetection) {
+            console.log('[ExpressionAutoAligner] ローカル API 顔検出モードで実行します');
+            faceDetection = await detectFaceRegionWithAI(baseImage);
         } else {
             faceDetection = await detectFaceRegion(baseImage);
         }
@@ -187,11 +187,11 @@ export async function alignSingle(
 
         // Step 5: パラメータ算出
         const params = calculateAlignment(
-            faceDetection, 
-            finalContentBounds, 
-            baseImageSize, 
-            undefined, 
-            undefined, 
+            faceDetection,
+            finalContentBounds,
+            baseImageSize,
+            undefined,
+            undefined,
             faceFeatures,
             opts.overrideScale
         );
@@ -230,7 +230,7 @@ export async function alignBatch(
     const opts: Required<AutoAlignOptions> = {
         useAIDetection: options?.useAIDetection ?? false,
         apiKey: options?.apiKey ?? '',
-        overrideScale: options?.overrideScale ?? undefined as any
+        overrideScale: options?.overrideScale as any,
     };
 
     // ベース画像のバリデーション
@@ -250,9 +250,9 @@ export async function alignBatch(
     try {
         // 顔検出を1回だけ実行（AI検出 or ヒューリスティック）
         let faceDetection: FaceDetectionResult;
-        if (opts.useAIDetection && opts.apiKey) {
-            console.log('[ExpressionAutoAligner] AI 顔検出モード（バッチ）で実行します');
-            faceDetection = await detectFaceRegionWithAI(baseImage, opts.apiKey);
+        if (opts.useAIDetection) {
+            console.log('[ExpressionAutoAligner] ローカル API 顔検出モード（バッチ）で実行します');
+            faceDetection = await detectFaceRegionWithAI(baseImage);
         } else {
             faceDetection = await detectFaceRegion(baseImage);
         }
@@ -307,11 +307,11 @@ export async function alignBatch(
                 }
 
                 const params = calculateAlignment(
-                    faceDetection, 
-                    finalContentBounds, 
-                    baseImageSize, 
-                    undefined, 
-                    undefined, 
+                    faceDetection,
+                    finalContentBounds,
+                    baseImageSize,
+                    undefined,
+                    undefined,
                     faceFeatures
                 );
 
@@ -374,7 +374,7 @@ export async function autoCropFaceRegion(expressionImage: string): Promise<strin
     try {
         // 目・口などの特徴島を検出
         const features = await detectFaceFeatures(expressionImage);
-        
+
         const img = await loadImage(expressionImage);
         const imgWidth = img.naturalWidth || img.width;
         const imgHeight = img.naturalHeight || img.height;
@@ -385,7 +385,7 @@ export async function autoCropFaceRegion(expressionImage: string): Promise<strin
             const leftEyeX = features.leftEye.centerX;
             const rightEyeX = features.rightEye.centerX;
             const eyeY = (features.leftEye.centerY + features.rightEye.centerY) / 2;
-            
+
             // 左右の目の距離
             const eyeDist = rightEyeX - leftEyeX;
 

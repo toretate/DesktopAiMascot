@@ -31,52 +31,8 @@ export const FACE_HEURISTIC = {
     FACE_WIDTH_RATIO: 0.50,
 } as const;
 
-/** Gemini Vision API で使用するモデル名 */
-const GEMINI_VISION_MODEL = 'gemini-2.5-flash';
-
-/**
- * 画像ソースから Gemini API 送信用の Base64 データと MimeType を抽出する
- *
- * @param imageSource Data URL 形式の画像（例: "data:image/png;base64,..."）
- *                    またはファイルパス（Node.js テスト環境用）
- * @returns { rawBase64, mimeType } の組
- */
-function extractBase64AndMimeType(imageSource: string): { rawBase64: string; mimeType: string } {
-    // Data URL 形式の場合
-    const dataUrlMatch = imageSource.match(/^data:([^;]+);base64,(.+)$/);
-    if (dataUrlMatch) {
-        return {
-            mimeType: dataUrlMatch[1],
-            rawBase64: dataUrlMatch[2],
-        };
-    }
-
-    // Node.js テスト環境：ファイルパスから直接読み込む
-    if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
-        try {
-            const fs = eval("require('fs')");
-            const buffer = fs.readFileSync(imageSource);
-            const base64 = buffer.toString('base64');
-            // 拡張子から MimeType を推定
-            const ext = imageSource.toLowerCase().split('.').pop() || 'png';
-            const mimeMap: Record<string, string> = {
-                'png': 'image/png',
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'webp': 'image/webp',
-                'gif': 'image/gif',
-            };
-            return {
-                mimeType: mimeMap[ext] || 'image/png',
-                rawBase64: base64,
-            };
-        } catch {
-            // ファイル読み込み失敗時はフォールバック
-        }
-    }
-
-    throw new Error(`[FaceRegionDetector] 画像ソースから Base64 データを抽出できません: ${imageSource.substring(0, 60)}...`);
-}
+/** ローカル顔検出 API エンドポイント（サーバーサイドで MediaPipe/OpenCV を使用） */
+const LOCAL_FACE_MASK_API = '/api/detect-face-mask';
 
 /**
  * キャラクター全体の非透明領域バウンディングボックスを Canvas から検出する
@@ -284,97 +240,67 @@ export function estimateFaceBox(characterBox: BoundingBox): BoundingBox {
 }
 
 /**
- * Gemini Vision API を使った高精度な顔領域検出
+ * ローカル API（/api/detect-face-mask）を使った高精度な顔領域検出。
+ * MediaPipe FaceLandmarker → OpenCV Haarcascade → BFS の順にフォールバック。
+ * 失敗時はヒューリスティックにフォールバックする。
  *
- * Gemini の構造化出力（response_schema）を使用し、ベース画像中のキャラクターの
- * 頭部/顔領域の境界ボックスを正規化座標（0-1000）で取得する。
- * 取得した座標に画像のピクセルサイズを乗算してピクセル座標に変換する。
- *
- * @param imageSource 画像パスまたは Base64 Data URL
- * @param apiKey Gemini API キー
+ * @param imageSource 画像の URL（/mascots/... 形式）または http(s):// URL
+ * @param _apiKey 互換性のため残存（未使用）
  * @returns 顔のバウンディングボックスを含む検出結果
  */
 export async function detectFaceRegionWithAI(
     imageSource: string,
-    apiKey: string
+    _apiKey?: string
 ): Promise<FaceDetectionResult> {
-    if (!apiKey) {
-        throw new Error('[FaceRegionDetector] AI 検出には API キーが必要です');
-    }
-
-    // キャラクター全体のバウンディングボックスを Canvas で検出（ヒューリスティックと共通）
-    const { characterBox, width, height } = await extractCharacterBox(imageSource);
-
-    // 画像データを Base64 形式に変換
-    const { rawBase64, mimeType } = extractBase64AndMimeType(imageSource);
-
-    // Gemini Vision API に送信するプロンプト
-    const prompt = 'この画像にはアニメ/イラスト風のキャラクターが描かれています。' +
-        'キャラクターの「顔」（頭部）の領域を特定し、その境界ボックスを返してください。' +
-        '顔には髪の毛、額、目、鼻、口、顎を含みます。' +
-        '座標は画像全体に対する 0 から 1000 の正規化値で返してください。';
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_VISION_MODEL}:generateContent?key=${apiKey}`;
-
-    console.log(`[FaceRegionDetector] Gemini Vision API を呼び出します (model=${GEMINI_VISION_MODEL}, 画像サイズ=${width}x${height})`);
+    // キャラクター全体の BB は Canvas で取得（ヒューリスティックと共通処理）
+    const { characterBox } = await extractCharacterBox(imageSource);
 
     try {
-        const response = await fetch(url, {
+        // URL から /mascots/... パスを抽出
+        let imagePath: string;
+        if (imageSource.startsWith('http://') || imageSource.startsWith('https://')) {
+            imagePath = new URL(imageSource).pathname;
+        } else {
+            imagePath = imageSource;
+        }
+
+        if (!imagePath.startsWith('/mascots/')) {
+            throw new Error(`ローカル API は /mascots/ パスのみサポートしています: ${imagePath}`);
+        }
+
+        // サーバーの origin を URL から取得（フォールバック: window.location.origin）
+        let apiBase = '';
+        if (imageSource.startsWith('http://') || imageSource.startsWith('https://')) {
+            const u = new URL(imageSource);
+            apiBase = u.origin;
+        }
+
+        console.log(`[FaceRegionDetector] ローカル API を呼び出します: imagePath=${imagePath}`);
+
+        const response = await fetch(`${apiBase}${LOCAL_FACE_MASK_API}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inline_data: { mime_type: mimeType, data: rawBase64 } }
-                    ]
-                }],
-                generationConfig: {
-                    response_mime_type: 'application/json',
-                    response_schema: {
-                        type: 'OBJECT',
-                        properties: {
-                            box_2d: {
-                                type: 'ARRAY',
-                                description: '[ymin, xmin, ymax, xmax] 座標（0-1000 の正規化値）',
-                                items: { type: 'INTEGER' }
-                            }
-                        },
-                        required: ['box_2d']
-                    }
-                }
-            })
+            body: JSON.stringify({ imagePath }),
         });
 
         if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Gemini Vision API エラー: HTTP ${response.status} - ${errText.substring(0, 200)}`);
+            throw new Error(`ローカル API エラー: HTTP ${response.status}`);
         }
 
-        const data: any = await response.json();
-        const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!resultText) {
-            throw new Error('Gemini Vision API からの応答にテキストが含まれていません');
+        const data = await response.json();
+        if (!data.success || !data.mask) {
+            throw new Error(`ローカル API 応答が不正: ${JSON.stringify(data)}`);
         }
 
-        const parsed = JSON.parse(resultText);
-        const box2d = parsed.box_2d;
-
-        if (!Array.isArray(box2d) || box2d.length < 4) {
-            throw new Error(`box_2d の形式が不正です: ${JSON.stringify(box2d)}`);
-        }
-
-        // 正規化座標 (0-1000) からピクセル座標に変換
-        const [ymin, xmin, ymax, xmax] = box2d;
+        const { centerX, centerY, radiusX, radiusY } = data.mask;
         const faceBox: BoundingBox = {
-            top: Math.round((ymin / 1000) * height),
-            left: Math.round((xmin / 1000) * width),
-            bottom: Math.round((ymax / 1000) * height),
-            right: Math.round((xmax / 1000) * width),
+            top: Math.round(centerY - radiusY),
+            bottom: Math.round(centerY + radiusY),
+            left: Math.round(centerX - radiusX),
+            right: Math.round(centerX + radiusX),
         };
 
-        console.log(`[FaceRegionDetector] AI 検出成功: box_2d=[${box2d}] → faceBox=`, faceBox);
+        console.log(`[FaceRegionDetector] ローカル API 検出成功 (method=${data.method}): faceBox=`, faceBox);
 
         return {
             faceBox,
@@ -383,14 +309,8 @@ export async function detectFaceRegionWithAI(
             characterBox,
         };
     } catch (error: any) {
-        // 外部通信エラーハンドリング
-        if (error instanceof TypeError && error.message.includes('fetch')) {
-            console.warn('[FaceRegionDetector] Gemini Vision API との接続エラーが発生しました。ヒューリスティックにフォールバックします。');
-        } else {
-            console.warn(`[FaceRegionDetector] AI 検出に失敗しました: ${error.message}。ヒューリスティックにフォールバックします。`);
-        }
+        console.warn(`[FaceRegionDetector] ローカル API 検出に失敗しました: ${error.message}。ヒューリスティックにフォールバックします。`);
 
-        // AI 検出失敗時はヒューリスティック方式にフォールバック
         const faceBox = estimateFaceBox(characterBox);
         return {
             faceBox,

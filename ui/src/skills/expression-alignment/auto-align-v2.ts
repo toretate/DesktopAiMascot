@@ -19,8 +19,46 @@ import {
     type SharedTransform,
     type AlignmentMethod,
     type RasterImage,
+    type BoundingBox,
 } from '@desktop-ai-mascot/expression-alignment';
 import { loadOpenCvBrowser } from '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser';
+
+// ---------------------------------------------------------------------------
+// ローカル顔検出 API
+// ---------------------------------------------------------------------------
+
+/**
+ * /api/detect-face-mask を呼び出し、ベース画像の顔領域 BoundingBox を返す。
+ * URL から origin + /mascots/... パスを抽出してサーバに渡す。
+ * 失敗時は null（solveTransform が内部推定にフォールバック）。
+ */
+async function detectFaceRegionFromServer(baseImageUrl: string): Promise<BoundingBox | null> {
+    try {
+        const url = new URL(baseImageUrl);
+        const imagePath = url.pathname;
+        if (!imagePath.startsWith('/mascots/')) return null;
+
+        const response = await fetch(`${url.origin}/api/detect-face-mask`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagePath }),
+        });
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!data.success || !data.mask) return null;
+
+        const { centerX, centerY, radiusX, radiusY } = data.mask;
+        return {
+            top: Math.round(centerY - radiusY),
+            bottom: Math.round(centerY + radiusY),
+            left: Math.round(centerX - radiusX),
+            right: Math.round(centerX + radiusX),
+        };
+    } catch {
+        return null;
+    }
+}
 
 /** 確信度がこの値以上なら自動適用、未満なら手動確認を促す */
 export const CONFIDENCE_THRESHOLD = 0.5;
@@ -98,19 +136,23 @@ export async function autoAlignSingle(
     sharedTransform?: SharedTransform,
 ): Promise<AutoAlignV2Result> {
     console.log('[autoAlignSingle] Started. Loading images...');
-    const [baseImage, sprite] = await Promise.all([
+    const [baseImage, sprite, faceRegion] = await Promise.all([
         loadRasterImage(baseImageUrl),
         loadRasterImage(spriteUrl),
+        detectFaceRegionFromServer(baseImageUrl),
     ]);
     console.log('[autoAlignSingle] Images loaded. base w/h:', baseImage.width, baseImage.height, 'sprite w/h:', sprite.width, sprite.height);
 
-    console.log('[autoAlignSingle] Loading OpenCV...');
+    if (faceRegion) {
+        console.log('[auto-align-v2] サーバー顔検出成功:', faceRegion);
+    }
+
     const cv = await loadOpenCvBrowser();
     console.log('[autoAlignSingle] OpenCV loaded. Creating registration...');
     const registration = createOpenCvRegistration(cv);
     console.log('[autoAlignSingle] Registration created. Solving transform...');
 
-    const result = await solveTransform({ baseImage, sprite, sharedTransform }, { registration });
+    const result = await solveTransform({ baseImage, sprite, sharedTransform, faceRegion: faceRegion ?? undefined }, { registration });
     console.log('[autoAlignSingle] Transform solved. Confidence:', result.confidence);
 
     const baseFitScale = Math.min(PREVIEW_W / baseImage.width, PREVIEW_H / baseImage.height);
@@ -151,11 +193,14 @@ export async function autoAlignBatch(
         return results;
     }
 
-    console.log('[autoAlignBatch] Loading base image:', baseImageUrl);
-    const baseImage = await loadRasterImage(baseImageUrl);
-    console.log('[autoAlignBatch] Base image loaded. w:', baseImage.width, 'h:', baseImage.height);
+    const [baseImage, faceRegion] = await Promise.all([
+        loadRasterImage(baseImageUrl),
+        detectFaceRegionFromServer(baseImageUrl),
+    ]);
+    if (faceRegion) {
+        console.log('[auto-align-v2] バッチ: サーバー顔検出成功:', faceRegion);
+    }
 
-    console.log('[autoAlignBatch] Loading OpenCV...');
     const cv = await loadOpenCvBrowser();
     console.log('[autoAlignBatch] OpenCV loaded successfully');
 
@@ -172,7 +217,10 @@ export async function autoAlignBatch(
     console.log('[autoAlignBatch] Neutral sprite loaded. w:', neutralSprite.width, 'h:', neutralSprite.height);
 
     console.log('[autoAlignBatch] Solving transform for Neutral sprite...');
-    const neutralResult = await solveTransform({ baseImage, sprite: neutralSprite }, { registration });
+    const neutralResult = await solveTransform(
+        { baseImage, sprite: neutralSprite, faceRegion: faceRegion ?? undefined },
+        { registration },
+    );
     console.log('[autoAlignBatch] Neutral sprite transform solved. Confidence:', neutralResult.confidence);
     const sharedA = neutralResult.shared;
 
