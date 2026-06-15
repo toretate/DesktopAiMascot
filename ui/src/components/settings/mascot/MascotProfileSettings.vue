@@ -69,15 +69,7 @@ const emit = defineEmits<{
                 @change="emit('change')"
             />
         </div>
-        <div class="form-field flex flex-column gap-1">
-            <label class="text-xs font-semibold text-gray-700">アバター (絵文字または画像URL)</label>
-            <InputText 
-                v-model="props.editingMascot.avatar" 
-                placeholder="例: 🤖" 
-                class="w-full p-inputtext-sm" 
-                @change="emit('change')"
-            />
-        </div>
+
 
         <!-- 詳細プロンプト表示エリア (readonly) -->
         <div class="border-top border-gray-200 pt-3 mt-1 flex flex-column gap-2">
