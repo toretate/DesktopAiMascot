@@ -30,6 +30,9 @@ export interface ConfigData {
     chatBorderColor: string;
     chatBorderWidth: number;
     chatBackgroundColor: string;
+    chatBackgroundImage: string;
+    chatBackgroundImageOpacity: number;
+    chatBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
     openaiApiKey: string;
     anthropicApiKey: string;
     mascots: MascotData[];
@@ -39,6 +42,16 @@ export interface ConfigData {
     settingsX: number;
     settingsY: number;
     mascotScale: number;
+    mascotBackgroundColor: string;
+    mascotBackgroundOpacity: number;
+    mascotBackgroundImage: string;
+    mascotBackgroundImageOpacity: number;
+    mascotBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
+    integratedBackgroundColor: string;
+    integratedBackgroundOpacity: number;
+    integratedBackgroundImage: string;
+    integratedBackgroundImageOpacity: number;
+    integratedBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
 
     // サーバー接続設定
     useServer: boolean;
@@ -95,6 +108,9 @@ export const defaultData: ConfigData = {
     chatBorderColor: '#a855f7',
     chatBorderWidth: 1,
     chatBackgroundColor: '#ffffff',
+    chatBackgroundImage: '',
+    chatBackgroundImageOpacity: 1.0,
+    chatBackgroundImageFit: 'cover',
     openaiApiKey: '',
     anthropicApiKey: '',
     mascots: [defaultMascotJson as MascotData],
@@ -104,6 +120,16 @@ export const defaultData: ConfigData = {
     settingsX: -1,
     settingsY: -1,
     mascotScale: 1.0,
+    mascotBackgroundColor: '#ffffff',
+    mascotBackgroundOpacity: 0.0,
+    mascotBackgroundImage: '',
+    mascotBackgroundImageOpacity: 1.0,
+    mascotBackgroundImageFit: 'cover',
+    integratedBackgroundColor: '#1e1e2e',
+    integratedBackgroundOpacity: 1.0,
+    integratedBackgroundImage: '',
+    integratedBackgroundImageOpacity: 1.0,
+    integratedBackgroundImageFit: 'cover',
     useServer: false,
     serverHost: 'localhost',
     serverPort: 3000,

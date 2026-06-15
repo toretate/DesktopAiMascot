@@ -23,7 +23,12 @@ const {
     voicevoxEndpoint,
     irodoriEndpoint,
     irodoriModel,
-    irodoriVoice
+    irodoriVoice,
+    mascotBackgroundColor,
+    mascotBackgroundOpacity,
+    mascotBackgroundImage,
+    mascotBackgroundImageOpacity,
+    mascotBackgroundImageFit
 } = storeToRefs(configStore);
 
 const {
@@ -54,6 +59,63 @@ let balloonTimeoutId: NodeJS.Timeout | null = null;
 import { AudioPlaylist } from '../utils/AudioPlaylist';
 const playlist = new AudioPlaylist((speaking) => {
     mascotStore.setSpeaking(speaking);
+});
+
+const getMascotRgbaBackground = computed(() => {
+    const hex = mascotBackgroundColor.value || '#ffffff';
+    const opacity = mascotBackgroundOpacity.value !== undefined ? mascotBackgroundOpacity.value : 0.0;
+    
+    let r = 255, g = 255, b = 255;
+    const match = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (match) {
+        r = parseInt(match[1], 16);
+        g = parseInt(match[2], 16);
+        b = parseInt(match[3], 16);
+    } else {
+        const shortMatch = hex.match(/^#?([a-f\d])([a-f\d])([a-f\d])$/i);
+        if (shortMatch) {
+            r = parseInt(shortMatch[1] + shortMatch[1], 16);
+            g = parseInt(shortMatch[2] + shortMatch[2], 16);
+            b = parseInt(shortMatch[3] + shortMatch[3], 16);
+        }
+    }
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+});
+
+const mascotBackgroundStyle = computed(() => {
+    const styles: Record<string, any> = {
+        backgroundColor: getMascotRgbaBackground.value,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        zIndex: -1
+    };
+    if (mascotBackgroundImage.value) {
+        styles.backgroundImage = `url(${resolveImageUrl(mascotBackgroundImage.value)})`;
+        styles.opacity = mascotBackgroundImageOpacity.value;
+        
+        if (mascotBackgroundImageFit.value === 'cover') {
+            styles.backgroundSize = 'cover';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (mascotBackgroundImageFit.value === 'contain') {
+            styles.backgroundSize = 'contain';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (mascotBackgroundImageFit.value === 'fill') {
+            styles.backgroundSize = '100% 100%';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (mascotBackgroundImageFit.value === 'tile') {
+            styles.backgroundSize = 'auto';
+            styles.backgroundPosition = 'top left';
+            styles.backgroundRepeat = 'repeat';
+        }
+    }
+    return styles;
 });
 
 const activeMascotImageSet = computed(() => {
@@ -138,7 +200,7 @@ const activeExpression = computed(() => {
         if (emotionFull && emotionFull.path) return emotionFull;
     }
 
-    // SillyTavernの英語名と日本語名アセットのマッピング対応表
+    // 表情の英語名と日本語名アセットのマッピング対応表
     const emotionTranslationMap: Record<string, string[]> = {
         admiration: ['賞賛', 'admiration'],
         amusement: ['面白がり', 'amusement'],
@@ -604,6 +666,8 @@ onUnmounted(() => {
 
 <template>
     <div class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact' }">
+        <!-- 背景レイヤー -->
+        <div class="mascot-background" :style="mascotBackgroundStyle"></div>
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
         <div 
             class="mascot-character" 
@@ -714,6 +778,16 @@ onUnmounted(() => {
 .fade-enter-from, .fade-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(0px);
+}
+
+.mascot-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    pointer-events: none;
 }
 
 .mascot-wrapper {

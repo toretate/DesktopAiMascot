@@ -6,25 +6,99 @@ import { useConfigStore } from '../../store/config';
 import { storeToRefs } from 'pinia';
 
 const configStore = useConfigStore();
-const { chatBackgroundColor, windowMode } = storeToRefs(configStore);
+const { 
+    windowMode,
+    integratedBackgroundColor,
+    integratedBackgroundOpacity,
+    integratedBackgroundImage,
+    integratedBackgroundImageOpacity,
+    integratedBackgroundImageFit,
+    useServer,
+    serverHost,
+    serverPort,
+    configVersion
+} = storeToRefs(configStore);
 
-// 将来的な背景画像設定のためのプレースホルダー（将来的に configStore などに backgroundImageUrl を追加する想定）
-const backgroundImageStyle = computed(() => {
-    // 例: return { backgroundImage: `url(${backgroundImageUrl.value})`, backgroundSize: 'cover' };
-    return {};
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) {
+        return path;
+    }
+    let resolved = path;
+    if (path.startsWith('/mascots/') && useServer.value) {
+        resolved = `http://${serverHost.value}:${serverPort.value}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configVersion.value}`;
+};
+
+const getRgbaBackground = computed(() => {
+    const hex = integratedBackgroundColor.value || '#1e1e2e';
+    const opacity = integratedBackgroundOpacity.value !== undefined ? integratedBackgroundOpacity.value : 1.0;
+    
+    let r = 30, g = 30, b = 46;
+    const match = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (match) {
+        r = parseInt(match[1], 16);
+        g = parseInt(match[2], 16);
+        b = parseInt(match[3], 16);
+    } else {
+        const shortMatch = hex.match(/^#?([a-f\d])([a-f\d])([a-f\d])$/i);
+        if (shortMatch) {
+            r = parseInt(shortMatch[1] + shortMatch[1], 16);
+            g = parseInt(shortMatch[2] + shortMatch[2], 16);
+            b = parseInt(shortMatch[3] + shortMatch[3], 16);
+        }
+    }
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 });
 
-// チャットの背景色を設定値から適用
-const containerStyle = computed(() => {
-    return {
-        backgroundColor: chatBackgroundColor.value || '#1e1e2e',
-        ...backgroundImageStyle.value
+const integratedBackgroundStyle = computed(() => {
+    const styles: Record<string, any> = {
+        backgroundColor: getRgbaBackground.value,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        zIndex: 0
     };
+    if (integratedBackgroundImage.value) {
+        styles.backgroundImage = `url(${resolveImageUrl(integratedBackgroundImage.value)})`;
+        styles.opacity = integratedBackgroundImageOpacity.value;
+        
+        if (integratedBackgroundImageFit.value === 'cover') {
+            styles.backgroundSize = 'cover';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (integratedBackgroundImageFit.value === 'contain') {
+            styles.backgroundSize = 'contain';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (integratedBackgroundImageFit.value === 'fill') {
+            styles.backgroundSize = '100% 100%';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (integratedBackgroundImageFit.value === 'tile') {
+            styles.backgroundSize = 'auto';
+            styles.backgroundPosition = 'top left';
+            styles.backgroundRepeat = 'repeat';
+        }
+    }
+    return styles;
 });
 </script>
 
 <template>
-    <div class="integrated-container" :style="containerStyle">
+    <div class="integrated-container">
+        <!-- 背景レイヤー -->
+        <div class="integrated-background" :style="integratedBackgroundStyle"></div>
+        
         <!-- マスコット表示エリア -->
         <div v-if="windowMode !== 'compact'" class="mascot-section">
             <MascotViewer />
@@ -43,8 +117,16 @@ const containerStyle = computed(() => {
     height: 100vh;
     overflow: hidden;
     position: relative;
-    background-position: center;
-    background-repeat: no-repeat;
+}
+
+.integrated-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    pointer-events: none;
 }
 
 .mascot-section {
@@ -56,6 +138,7 @@ const containerStyle = computed(() => {
     align-items: flex-end;
     overflow: hidden;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1;
 }
 
 .chat-section {
@@ -65,6 +148,7 @@ const containerStyle = computed(() => {
     overflow: hidden;
     padding: 16px;
     box-sizing: border-box;
+    z-index: 1;
 }
 
 .chat-section.is-compact {

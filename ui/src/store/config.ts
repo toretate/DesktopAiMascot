@@ -31,10 +31,23 @@ export interface AppConfig {
     chatBorderColor: string;
     chatBorderWidth: number;
     chatBackgroundColor: string;
+    chatBackgroundImage: string;
+    chatBackgroundImageOpacity: number;
+    chatBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
     
     // マスコット設定
     mascotScale: number;
     alwaysOnTop: boolean;
+    mascotBackgroundColor: string;
+    mascotBackgroundOpacity: number;
+    mascotBackgroundImage: string;
+    mascotBackgroundImageOpacity: number;
+    mascotBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
+    integratedBackgroundColor: string;
+    integratedBackgroundOpacity: number;
+    integratedBackgroundImage: string;
+    integratedBackgroundImageOpacity: number;
+    integratedBackgroundImageFit: 'cover' | 'contain' | 'fill' | 'tile';
     
     // サーバー接続設定
     useServer: boolean;
@@ -58,6 +71,7 @@ export interface AppConfig {
     toolsVolume: boolean;
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
+    useExRadio: boolean;
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -95,10 +109,25 @@ export const useConfigStore = defineStore('config', () => {
     const chatBorderColor = ref('#a855f7');
     const chatBorderWidth = ref(1);
     const chatBackgroundColor = ref('#ffffff');
+    const chatBackgroundImage = ref('');
+    const chatBackgroundImageOpacity = ref(1.0);
+    const chatBackgroundImageFit = ref<'cover' | 'contain' | 'fill' | 'tile'>('cover');
     
     // マスコット設定
     const mascotScale = ref(1.0);
     const alwaysOnTop = ref(true);
+    const mascotBackgroundColor = ref('#ffffff');
+    const mascotBackgroundOpacity = ref(0.0);
+    const mascotBackgroundImage = ref('');
+    const mascotBackgroundImageOpacity = ref(1.0);
+    const mascotBackgroundImageFit = ref<'cover' | 'contain' | 'fill' | 'tile'>('cover');
+    
+    // 統合ウィンドウ背景設定
+    const integratedBackgroundColor = ref('#1e1e2e');
+    const integratedBackgroundOpacity = ref(1.0);
+    const integratedBackgroundImage = ref('');
+    const integratedBackgroundImageOpacity = ref(1.0);
+    const integratedBackgroundImageFit = ref<'cover' | 'contain' | 'fill' | 'tile'>('cover');
 
     // サーバー接続設定
     const useServer = ref(false);
@@ -122,6 +151,7 @@ export const useConfigStore = defineStore('config', () => {
     const toolsVolume = ref(true);
     const toolsAppLauncher = ref(true);
     const toolsWebSearch = ref(true);
+    const useExRadio = ref(false);
     const configVersion = ref(0);
 
     // ---- Getters ----
@@ -177,9 +207,23 @@ export const useConfigStore = defineStore('config', () => {
             chatBorderColor.value = configData.chatBorderColor || '#a855f7';
             chatBorderWidth.value = configData.chatBorderWidth !== undefined ? Number(configData.chatBorderWidth) : 1;
             chatBackgroundColor.value = configData.chatBackgroundColor || '#ffffff';
+            chatBackgroundImage.value = configData.chatBackgroundImage || '';
+            chatBackgroundImageOpacity.value = configData.chatBackgroundImageOpacity !== undefined ? Number(configData.chatBackgroundImageOpacity) : 1.0;
+            chatBackgroundImageFit.value = configData.chatBackgroundImageFit || 'cover';
             
             mascotScale.value = configData.mascotScale !== undefined ? Number(configData.mascotScale) : 1.0;
             alwaysOnTop.value = configData.alwaysOnTop !== undefined ? !!configData.alwaysOnTop : true;
+            mascotBackgroundColor.value = configData.mascotBackgroundColor || '#ffffff';
+            mascotBackgroundOpacity.value = configData.mascotBackgroundOpacity !== undefined ? Number(configData.mascotBackgroundOpacity) : 0.0;
+            mascotBackgroundImage.value = configData.mascotBackgroundImage || '';
+            mascotBackgroundImageOpacity.value = configData.mascotBackgroundImageOpacity !== undefined ? Number(configData.mascotBackgroundImageOpacity) : 1.0;
+            mascotBackgroundImageFit.value = configData.mascotBackgroundImageFit || 'cover';
+            
+            integratedBackgroundColor.value = configData.integratedBackgroundColor || '#1e1e2e';
+            integratedBackgroundOpacity.value = configData.integratedBackgroundOpacity !== undefined ? Number(configData.integratedBackgroundOpacity) : 1.0;
+            integratedBackgroundImage.value = configData.integratedBackgroundImage || '';
+            integratedBackgroundImageOpacity.value = configData.integratedBackgroundImageOpacity !== undefined ? Number(configData.integratedBackgroundImageOpacity) : 1.0;
+            integratedBackgroundImageFit.value = configData.integratedBackgroundImageFit || 'cover';
             
             useServer.value = configData.useServer !== undefined ? !!configData.useServer : false;
             serverHost.value = configData.serverHost || 'localhost';
@@ -198,6 +242,7 @@ export const useConfigStore = defineStore('config', () => {
             toolsVolume.value = configData.toolsVolume !== undefined ? !!configData.toolsVolume : true;
             toolsAppLauncher.value = configData.toolsAppLauncher !== undefined ? !!configData.toolsAppLauncher : true;
             toolsWebSearch.value = configData.toolsWebSearch !== undefined ? !!configData.toolsWebSearch : true;
+            useExRadio.value = configData.useExRadio !== undefined ? !!configData.useExRadio : false;
         } else {
             // Webブラウザ実行時の localStorage フォールバック
             googleAiStudioApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -242,10 +287,29 @@ export const useConfigStore = defineStore('config', () => {
             const savedBorderWidth = localStorage.getItem('chatBorderWidth');
             chatBorderWidth.value = savedBorderWidth ? parseInt(savedBorderWidth) : 1;
             chatBackgroundColor.value = localStorage.getItem('chatBackgroundColor') || '#ffffff';
+            chatBackgroundImage.value = localStorage.getItem('chatBackgroundImage') || '';
+            const bgOpacity = localStorage.getItem('chatBackgroundImageOpacity');
+            chatBackgroundImageOpacity.value = bgOpacity ? parseFloat(bgOpacity) : 1.0;
+            chatBackgroundImageFit.value = (localStorage.getItem('chatBackgroundImageFit') as any) || 'cover';
 
             const scale = localStorage.getItem('mascotScale');
             mascotScale.value = scale ? parseFloat(scale) : 1.0;
             alwaysOnTop.value = localStorage.getItem('alwaysOnTop') !== 'false';
+            mascotBackgroundColor.value = localStorage.getItem('mascotBackgroundColor') || '#ffffff';
+            const mBgOpacity = localStorage.getItem('mascotBackgroundOpacity');
+            mascotBackgroundOpacity.value = mBgOpacity ? parseFloat(mBgOpacity) : 0.0;
+            mascotBackgroundImage.value = localStorage.getItem('mascotBackgroundImage') || '';
+            const mBgImgOpacity = localStorage.getItem('mascotBackgroundImageOpacity');
+            mascotBackgroundImageOpacity.value = mBgImgOpacity ? parseFloat(mBgImgOpacity) : 1.0;
+            mascotBackgroundImageFit.value = (localStorage.getItem('mascotBackgroundImageFit') as any) || 'cover';
+            
+            integratedBackgroundColor.value = localStorage.getItem('integratedBackgroundColor') || '#1e1e2e';
+            const iBgOpacity = localStorage.getItem('integratedBackgroundOpacity');
+            integratedBackgroundOpacity.value = iBgOpacity ? parseFloat(iBgOpacity) : 1.0;
+            integratedBackgroundImage.value = localStorage.getItem('integratedBackgroundImage') || '';
+            const iBgImgOpacity = localStorage.getItem('integratedBackgroundImageOpacity');
+            integratedBackgroundImageOpacity.value = iBgImgOpacity ? parseFloat(iBgImgOpacity) : 1.0;
+            integratedBackgroundImageFit.value = (localStorage.getItem('integratedBackgroundImageFit') as any) || 'cover';
             
             useServer.value = localStorage.getItem('useServer') === 'true';
             serverHost.value = localStorage.getItem('serverHost') || 'localhost';
@@ -266,6 +330,7 @@ export const useConfigStore = defineStore('config', () => {
             toolsVolume.value = localStorage.getItem('toolsVolume') !== 'false';
             toolsAppLauncher.value = localStorage.getItem('toolsAppLauncher') !== 'false';
             toolsWebSearch.value = localStorage.getItem('toolsWebSearch') !== 'false';
+            useExRadio.value = localStorage.getItem('useExRadio') === 'true';
         }
 
         // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
@@ -321,8 +386,21 @@ export const useConfigStore = defineStore('config', () => {
             chatBorderColor: chatBorderColor.value,
             chatBorderWidth: Number(chatBorderWidth.value),
             chatBackgroundColor: chatBackgroundColor.value,
+            chatBackgroundImage: chatBackgroundImage.value,
+            chatBackgroundImageOpacity: Number(chatBackgroundImageOpacity.value),
+            chatBackgroundImageFit: chatBackgroundImageFit.value,
             mascotScale: Number(mascotScale.value),
             alwaysOnTop: alwaysOnTop.value,
+            mascotBackgroundColor: mascotBackgroundColor.value,
+            mascotBackgroundOpacity: Number(mascotBackgroundOpacity.value),
+            mascotBackgroundImage: mascotBackgroundImage.value,
+            mascotBackgroundImageOpacity: Number(mascotBackgroundImageOpacity.value),
+            mascotBackgroundImageFit: mascotBackgroundImageFit.value,
+            integratedBackgroundColor: integratedBackgroundColor.value,
+            integratedBackgroundOpacity: Number(integratedBackgroundOpacity.value),
+            integratedBackgroundImage: integratedBackgroundImage.value,
+            integratedBackgroundImageOpacity: Number(integratedBackgroundImageOpacity.value),
+            integratedBackgroundImageFit: integratedBackgroundImageFit.value,
             useServer: useServer.value,
             serverHost: serverHost.value,
             serverPort: Number(serverPort.value),
@@ -335,7 +413,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsWeather: toolsWeather.value,
             toolsVolume: toolsVolume.value,
             toolsAppLauncher: toolsAppLauncher.value,
-            toolsWebSearch: toolsWebSearch.value
+            toolsWebSearch: toolsWebSearch.value,
+            useExRadio: useExRadio.value
         };
 
         // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
@@ -397,8 +476,21 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('chatBorderColor', chatBorderColor.value);
         localStorage.setItem('chatBorderWidth', chatBorderWidth.value.toString());
         localStorage.setItem('chatBackgroundColor', chatBackgroundColor.value);
+        localStorage.setItem('chatBackgroundImage', chatBackgroundImage.value);
+        localStorage.setItem('chatBackgroundImageOpacity', chatBackgroundImageOpacity.value.toString());
+        localStorage.setItem('chatBackgroundImageFit', chatBackgroundImageFit.value);
         localStorage.setItem('mascotScale', mascotScale.value.toString());
         localStorage.setItem('alwaysOnTop', alwaysOnTop.value.toString());
+        localStorage.setItem('mascotBackgroundColor', mascotBackgroundColor.value);
+        localStorage.setItem('mascotBackgroundOpacity', mascotBackgroundOpacity.value.toString());
+        localStorage.setItem('mascotBackgroundImage', mascotBackgroundImage.value);
+        localStorage.setItem('mascotBackgroundImageOpacity', mascotBackgroundImageOpacity.value.toString());
+        localStorage.setItem('mascotBackgroundImageFit', mascotBackgroundImageFit.value);
+        localStorage.setItem('integratedBackgroundColor', integratedBackgroundColor.value);
+        localStorage.setItem('integratedBackgroundOpacity', integratedBackgroundOpacity.value.toString());
+        localStorage.setItem('integratedBackgroundImage', integratedBackgroundImage.value);
+        localStorage.setItem('integratedBackgroundImageOpacity', integratedBackgroundImageOpacity.value.toString());
+        localStorage.setItem('integratedBackgroundImageFit', integratedBackgroundImageFit.value);
         localStorage.setItem('useServer', useServer.value.toString());
         localStorage.setItem('serverHost', serverHost.value);
         localStorage.setItem('serverPort', serverPort.value.toString());
@@ -413,6 +505,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('toolsVolume', toolsVolume.value.toString());
         localStorage.setItem('toolsAppLauncher', toolsAppLauncher.value.toString());
         localStorage.setItem('toolsWebSearch', toolsWebSearch.value.toString());
+        localStorage.setItem('useExRadio', useExRadio.value.toString());
     };
 
     // 一部の設定を一括で更新する
@@ -444,8 +537,21 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.chatBorderColor !== undefined) chatBorderColor.value = newConfig.chatBorderColor;
         if (newConfig.chatBorderWidth !== undefined) chatBorderWidth.value = Number(newConfig.chatBorderWidth);
         if (newConfig.chatBackgroundColor !== undefined) chatBackgroundColor.value = newConfig.chatBackgroundColor;
+        if (newConfig.chatBackgroundImage !== undefined) chatBackgroundImage.value = newConfig.chatBackgroundImage;
+        if (newConfig.chatBackgroundImageOpacity !== undefined) chatBackgroundImageOpacity.value = Number(newConfig.chatBackgroundImageOpacity);
+        if (newConfig.chatBackgroundImageFit !== undefined) chatBackgroundImageFit.value = newConfig.chatBackgroundImageFit as any;
         if (newConfig.mascotScale !== undefined) mascotScale.value = Number(newConfig.mascotScale);
         if (newConfig.alwaysOnTop !== undefined) alwaysOnTop.value = !!newConfig.alwaysOnTop;
+        if (newConfig.mascotBackgroundColor !== undefined) mascotBackgroundColor.value = newConfig.mascotBackgroundColor;
+        if (newConfig.mascotBackgroundOpacity !== undefined) mascotBackgroundOpacity.value = Number(newConfig.mascotBackgroundOpacity);
+        if (newConfig.mascotBackgroundImage !== undefined) mascotBackgroundImage.value = newConfig.mascotBackgroundImage;
+        if (newConfig.mascotBackgroundImageOpacity !== undefined) mascotBackgroundImageOpacity.value = Number(newConfig.mascotBackgroundImageOpacity);
+        if (newConfig.mascotBackgroundImageFit !== undefined) mascotBackgroundImageFit.value = newConfig.mascotBackgroundImageFit as any;
+        if (newConfig.integratedBackgroundColor !== undefined) integratedBackgroundColor.value = newConfig.integratedBackgroundColor;
+        if (newConfig.integratedBackgroundOpacity !== undefined) integratedBackgroundOpacity.value = Number(newConfig.integratedBackgroundOpacity);
+        if (newConfig.integratedBackgroundImage !== undefined) integratedBackgroundImage.value = newConfig.integratedBackgroundImage;
+        if (newConfig.integratedBackgroundImageOpacity !== undefined) integratedBackgroundImageOpacity.value = Number(newConfig.integratedBackgroundImageOpacity);
+        if (newConfig.integratedBackgroundImageFit !== undefined) integratedBackgroundImageFit.value = newConfig.integratedBackgroundImageFit as any;
         if (newConfig.useServer !== undefined) useServer.value = !!newConfig.useServer;
         if (newConfig.serverHost !== undefined) serverHost.value = newConfig.serverHost;
         if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
@@ -461,6 +567,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.toolsVolume !== undefined) toolsVolume.value = !!newConfig.toolsVolume;
         if (newConfig.toolsAppLauncher !== undefined) toolsAppLauncher.value = !!newConfig.toolsAppLauncher;
         if (newConfig.toolsWebSearch !== undefined) toolsWebSearch.value = !!newConfig.toolsWebSearch;
+        if (newConfig.useExRadio !== undefined) useExRadio.value = !!newConfig.useExRadio;
         
         configVersion.value++;
     };
@@ -493,8 +600,21 @@ export const useConfigStore = defineStore('config', () => {
         chatBorderColor,
         chatBorderWidth,
         chatBackgroundColor,
+        chatBackgroundImage,
+        chatBackgroundImageOpacity,
+        chatBackgroundImageFit,
         mascotScale,
         alwaysOnTop,
+        mascotBackgroundColor,
+        mascotBackgroundOpacity,
+        mascotBackgroundImage,
+        mascotBackgroundImageOpacity,
+        mascotBackgroundImageFit,
+        integratedBackgroundColor,
+        integratedBackgroundOpacity,
+        integratedBackgroundImage,
+        integratedBackgroundImageOpacity,
+        integratedBackgroundImageFit,
         useServer,
         serverHost,
         serverPort,
@@ -509,6 +629,7 @@ export const useConfigStore = defineStore('config', () => {
         toolsVolume,
         toolsAppLauncher,
         toolsWebSearch,
+        useExRadio,
         configVersion,
         loadConfig,
         saveConfig,
