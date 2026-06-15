@@ -5,8 +5,10 @@ import Select from 'primevue/select';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Slider from 'primevue/slider';
+import Textarea from 'primevue/textarea';
 import { useConfigStore } from '@/store/config';
 import { storeToRefs } from 'pinia';
+import radioIcon from '../../assets/radio_icon.svg';
 
 const configStore = useConfigStore();
 const {
@@ -17,7 +19,8 @@ const {
     openaiModel,
     anthropicModel,
     temperature,
-    googleAiStudioApiKey: geminiApiKey
+    googleAiStudioApiKey: geminiApiKey,
+    useExRadio
 } = storeToRefs(configStore);
 
 // --- AIエンジンのデータ定義 ---
@@ -325,11 +328,86 @@ const connectionText = computed(() => {
     return 'エンドポイントを入力して接続テストを行ってください。';
 });
 
+const activeTab = ref('engine');
+const radioModePrompt = ref('');
+const activeTalkPrompt = ref('');
+const exRadioModePrompt = ref('');
+const exActiveTalkPrompt = ref('');
+
+const DEFAULT_RADIO_MODE_PROMPT = `# Radio Mode Instructions\nあなたは現在、1人喋りの「ラジオパーソナリティ（MC）」としてラジオ番組を配信しています。目の前のリスナー（マスター）に向けてラジオ風の楽しいトークを展開してください。挨拶（「リスナーのみなさんこんにちは！」「お便りありがとうございます」など）や、ラジオ番組らしい進行の言い回しを効果的に使ってください。`;
+
+const DEFAULT_ACTIVE_TALK_PROMPT = `# Active Radio Talk Instructions\n現在、リスナー（ユーザー）からの発話がない状態（沈黙）です。ラジオパーソナリティとして沈黙を破り、リスナーを退屈させないように能動的にフリートークを開始するか、新しい面白い話題（季節、天気、雑談、リスナーへの問いかけなど）を自発的に切り出して、リスナーに楽しく語りかけてください。余計なメタテキストは出力せず、セリフのみを出力してください。`;
+
+const DEFAULT_EX_RADIO_MODE_PROMPT = `# Ex Radio Mode Instructions\nあなたは現在、特別番組「Exラジオ」を配信しています。より専門的で、リスナー（マスター）を驚かせるような先進的な話題（最新AI、科学技術、SFなど）をユーモラスに語ってください。`;
+
+const DEFAULT_EX_ACTIVE_TALK_PROMPT = `# Ex Active Radio Talk Instructions\n現在、リスナーからの反応がありません。「Exラジオ」の進行役として、リスナーが思わず反応したくなるようなSF的仮説や難解なクイズ、面白い豆知識を能動的にフリートークで語りかけてください。`;
+
+const resetRadioPrompts = () => {
+    radioModePrompt.value = DEFAULT_RADIO_MODE_PROMPT;
+    activeTalkPrompt.value = DEFAULT_ACTIVE_TALK_PROMPT;
+};
+
+const resetExRadioPrompts = () => {
+    exRadioModePrompt.value = DEFAULT_EX_RADIO_MODE_PROMPT;
+    exActiveTalkPrompt.value = DEFAULT_EX_ACTIVE_TALK_PROMPT;
+};
+
+const loadFromFile = (target: 'radio' | 'active' | 'exradio' | 'exactive') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md';
+    input.onchange = (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt: any) => {
+            if (target === 'radio') {
+                radioModePrompt.value = evt.target.result as string;
+            } else if (target === 'active') {
+                activeTalkPrompt.value = evt.target.result as string;
+            } else if (target === 'exradio') {
+                exRadioModePrompt.value = evt.target.result as string;
+            } else if (target === 'exactive') {
+                exActiveTalkPrompt.value = evt.target.result as string;
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+};
+
+const saveToFile = (target: 'radio' | 'active' | 'exradio' | 'exactive') => {
+    const text = target === 'radio' ? radioModePrompt.value 
+               : target === 'active' ? activeTalkPrompt.value
+               : target === 'exradio' ? exRadioModePrompt.value
+               : exActiveTalkPrompt.value;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const filename = target === 'radio' ? 'radio_mode_instructions.md'
+                   : target === 'active' ? 'active_radio_talk_instructions.md'
+                   : target === 'exradio' ? 'ex_radio_mode_instructions.md'
+                   : 'ex_active_radio_talk_instructions.md';
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 const saveSettings = async () => {
     isSaving.value = true;
     saveStatus.value = '保存中...';
     try {
         await configStore.saveConfig();
+        if (window.electronAPI && window.electronAPI.saveRadioPrompts) {
+            await window.electronAPI.saveRadioPrompts({
+                radioMode: radioModePrompt.value,
+                activeTalk: activeTalkPrompt.value,
+                exRadioMode: exRadioModePrompt.value,
+                exActiveTalk: exActiveTalkPrompt.value
+            });
+        }
         setTimeout(() => {
             saveStatus.value = '保存完了！';
             isSaving.value = false;
@@ -343,7 +421,7 @@ const saveSettings = async () => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     // Geminiのキャッシュロード
     const cachedModels = localStorage.getItem('geminiModelsCache');
     const cachedKey = localStorage.getItem('geminiApiKeyForCache');
@@ -361,6 +439,19 @@ onMounted(() => {
     if (selectedEngine.value === 'lmstudio') {
         testLmStudioConnection();
     }
+
+    // ラジオプロンプトのロード
+    if (window.electronAPI && window.electronAPI.getRadioPrompts) {
+        try {
+            const prompts = await window.electronAPI.getRadioPrompts();
+            radioModePrompt.value = prompts.radioMode || (window.electronAPI.isWeb ? DEFAULT_RADIO_MODE_PROMPT : '');
+            activeTalkPrompt.value = prompts.activeTalk || (window.electronAPI.isWeb ? DEFAULT_ACTIVE_TALK_PROMPT : '');
+            exRadioModePrompt.value = prompts.exRadioMode || (window.electronAPI.isWeb ? DEFAULT_EX_RADIO_MODE_PROMPT : '');
+            exActiveTalkPrompt.value = prompts.exActiveTalk || (window.electronAPI.isWeb ? DEFAULT_EX_ACTIVE_TALK_PROMPT : '');
+        } catch (e) {
+            console.error('Failed to load radio prompts', e);
+        }
+    }
 });
 </script>
 
@@ -368,7 +459,37 @@ onMounted(() => {
     <Card class="premium-card">
         <template #title>チャットAIエンジン設定</template>
         <template #content>
-            <div class="flex flex-column gap-4">
+            <!-- タブヘッダー -->
+            <div class="tabs-container">
+                <button 
+                    class="tab-btn" 
+                    :class="{ 'active': activeTab === 'engine' }" 
+                    @click="activeTab = 'engine'"
+                    type="button"
+                >
+                    <i class="pi pi-cog mr-2"></i>エンジン設定
+                </button>
+                <button 
+                    class="tab-btn" 
+                    :class="{ 'active': activeTab === 'radio' }" 
+                    @click="activeTab = 'radio'"
+                    type="button"
+                >
+                    <img :src="radioIcon" class="tab-radio-icon mr-2" />ラジオ設定
+                </button>
+                <button 
+                    v-if="selectedEngine === 'lmstudio'"
+                    class="tab-btn" 
+                    :class="{ 'active': activeTab === 'exradio' }" 
+                    @click="activeTab = 'exradio'"
+                    type="button"
+                >
+                    <i class="pi pi-sliders-h mr-2"></i>Exラジオ設定
+                </button>
+            </div>
+
+            <!-- エンジン設定タブ -->
+            <div v-if="activeTab === 'engine'" class="flex flex-column gap-4">
                 <div class="form-field">
                     <label class="font-medium">使用AIエンジン</label>
                     <Select 
@@ -629,16 +750,250 @@ onMounted(() => {
                     </label>
                     <Slider v-model="temperature" :min="0" :max="1" :step="0.1" class="mt-2" />
                 </div>
-                <div class="flex justify-content-end mt-4">
+            </div>
+
+            <!-- ラジオ設定タブ -->
+            <div v-else-if="activeTab === 'radio'" class="flex flex-column gap-4">
+                <div class="form-field">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <label class="font-medium">ラジオパーソナリティ・システムプロンプト</label>
+                        <div class="flex gap-2">
+                            <Button 
+                                icon="pi pi-file-import" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルからロード" 
+                                @click="loadFromFile('radio')" 
+                                title="ローカルのテキストファイルまたはMarkdownファイルから読み込みます"
+                            />
+                            <Button 
+                                icon="pi pi-file-export" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルに保存" 
+                                @click="saveToFile('radio')" 
+                                title="現在のプロンプトをテキストファイルとしてダウンロードします"
+                            />
+                        </div>
+                    </div>
+                    <Textarea 
+                        v-model="radioModePrompt" 
+                        rows="6" 
+                        class="w-full" 
+                        autoResize 
+                        placeholder="ラジオモード時の振る舞いについてプロンプトを入力..."
+                    />
+                    <small class="text-xs text-gray-500 mt-1">
+                        ※ ラジオモード（自動でお喋りするモード）における基本的なキャラクター設定やラジオの進行ルールを記述します。
+                    </small>
+                </div>
+
+                <div class="form-field mt-3">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <label class="font-medium">能動フリートーク（アクティブトーク）・システムプロンプト</label>
+                        <div class="flex gap-2">
+                            <Button 
+                                icon="pi pi-file-import" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルからロード" 
+                                @click="loadFromFile('active')" 
+                                title="ローカルのテキストファイルまたはMarkdownファイルから読み込みます"
+                            />
+                            <Button 
+                                icon="pi pi-file-export" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルに保存" 
+                                @click="saveToFile('active')" 
+                                title="現在のプロンプトをテキストファイルとしてダウンロードします"
+                            />
+                        </div>
+                    </div>
+                    <Textarea 
+                        v-model="activeTalkPrompt" 
+                        rows="6" 
+                        class="w-full" 
+                        autoResize 
+                        placeholder="沈黙時のフリートークに関するプロンプトを入力..."
+                    />
+                    <small class="text-xs text-gray-500 mt-1">
+                        ※ ユーザーからの発話がない状態（沈黙）から能動的に話題を切り出す際の指示を記述します。
+                    </small>
+                </div>
+
+                <div class="reset-btn-container mt-2">
                     <Button 
-                        :label="saveStatus" 
-                        :icon="saveStatus === '保存完了！' ? 'pi pi-check-circle' : 'pi pi-check'" 
-                        class="p-button-primary" 
-                        :disabled="isSaving"
-                        @click="saveSettings" 
+                        label="プロンプトをデフォルトに戻す" 
+                        icon="pi pi-refresh" 
+                        class="p-button-outlined p-button-secondary p-button-sm" 
+                        @click="resetRadioPrompts"
                     />
                 </div>
+            </div>
+
+            <!-- Exラジオ設定タブ -->
+            <div v-else-if="activeTab === 'exradio' && selectedEngine === 'lmstudio'" class="flex flex-column gap-4">
+                <div class="form-field">
+                    <label class="font-medium">Exラジオ機能の有効化</label>
+                    <div class="flex align-items-center gap-3">
+                        <Button 
+                            :label="useExRadio ? '有効' : '無効'" 
+                            :icon="useExRadio ? 'pi pi-check-circle' : 'pi pi-times-circle'" 
+                            :class="useExRadio ? 'p-button-success' : 'p-button-secondary'" 
+                            @click="useExRadio = !useExRadio"
+                            style="width: 100px;"
+                        />
+                        <span class="text-xs text-gray-600">
+                            LM Studio使用時に、Exラジオプロンプト（拡張用プロンプト）を優先して使用します。
+                        </span>
+                    </div>
+                </div>
+
+                <div class="form-field mt-3">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <label class="font-medium">Exラジオパーソナリティ・システムプロンプト</label>
+                        <div class="flex gap-2">
+                            <Button 
+                                icon="pi pi-file-import" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルからロード" 
+                                @click="loadFromFile('exradio')" 
+                                title="ローカルのテキストファイルまたはMarkdownファイルから読み込みます"
+                            />
+                            <Button 
+                                icon="pi pi-file-export" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルに保存" 
+                                @click="saveToFile('exradio')" 
+                                title="現在のプロンプトをテキストファイルとしてダウンロードします"
+                            />
+                        </div>
+                    </div>
+                    <Textarea 
+                        v-model="exRadioModePrompt" 
+                        rows="6" 
+                        class="w-full" 
+                        autoResize 
+                        placeholder="Exラジオモード時の振る舞いについてプロンプトを入力..."
+                    />
+                    <small class="text-xs text-gray-500 mt-1">
+                        ※ Exラジオモードにおける基本的なキャラクター設定やラジオの進行ルールを記述します。
+                    </small>
+                </div>
+
+                <div class="form-field mt-3">
+                    <div class="flex justify-content-between align-items-center mb-1">
+                        <label class="font-medium">Ex能動フリートーク（アクティブトーク）・システムプロンプト</label>
+                        <div class="flex gap-2">
+                            <Button 
+                                icon="pi pi-file-import" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルからロード" 
+                                @click="loadFromFile('exactive')" 
+                                title="ローカルのテキストファイルまたはMarkdownファイルから読み込みます"
+                            />
+                            <Button 
+                                icon="pi pi-file-export" 
+                                class="p-button-text p-button-sm p-button-secondary py-1" 
+                                label="ファイルに保存" 
+                                @click="saveToFile('exactive')" 
+                                title="現在のプロンプトをテキストファイルとしてダウンロードします"
+                            />
+                        </div>
+                    </div>
+                    <Textarea 
+                        v-model="exActiveTalkPrompt" 
+                        rows="6" 
+                        class="w-full" 
+                        autoResize 
+                        placeholder="Exラジオの沈黙時のフリートークに関するプロンプトを入力..."
+                    />
+                    <small class="text-xs text-gray-500 mt-1">
+                        ※ ユーザーからの発話がない状態（沈黙）から能動的に話題を切り出す際の指示を記述します。
+                    </small>
+                </div>
+
+                <div class="reset-btn-container mt-2">
+                    <Button 
+                        label="Exプロンプトをデフォルトに戻す" 
+                        icon="pi pi-refresh" 
+                        class="p-button-outlined p-button-secondary p-button-sm" 
+                        @click="resetExRadioPrompts"
+                    />
+                </div>
+            </div>
+
+            <!-- 保存ボタン（共通） -->
+            <div class="flex justify-content-end mt-4">
+                <Button 
+                    :label="saveStatus" 
+                    :icon="saveStatus === '保存完了！' ? 'pi pi-check-circle' : 'pi pi-check'" 
+                    class="p-button-primary" 
+                    :disabled="isSaving"
+                    @click="saveSettings" 
+                />
             </div>
         </template>
     </Card>
 </template>
+
+<style scoped>
+.tabs-container {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+    gap: 1.5rem;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 0.5rem;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+    color: #a855f7;
+}
+
+.tab-btn.active {
+    color: #a855f7;
+    border-bottom-color: #a855f7;
+}
+
+.tab-radio-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.tab-btn:hover .tab-radio-icon,
+.tab-btn.active .tab-radio-icon {
+    opacity: 1;
+    filter: invert(39%) sepia(51%) saturate(1514%) hue-rotate(235deg) brightness(101%) contrast(98%);
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.reset-btn-container {
+    display: flex;
+    justify-content: flex-start;
+}
+</style>

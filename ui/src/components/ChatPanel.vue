@@ -29,6 +29,9 @@ const {
     chatBorderColor,
     chatBorderWidth,
     chatBackgroundColor,
+    chatBackgroundImage,
+    chatBackgroundImageOpacity,
+    chatBackgroundImageFit,
     activeMascot,
     windowMode,
     useTts
@@ -62,6 +65,42 @@ const getBorderStyle = computed(() => {
     const width = chatBorderWidth.value !== undefined ? chatBorderWidth.value : 1;
     const color = chatBorderColor.value || '#a855f7';
     return `${width}px solid ${color}`;
+});
+
+const chatBackgroundStyle = computed(() => {
+    const styles: Record<string, any> = {
+        backgroundColor: getRgbaBackground.value,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        zIndex: -1
+    };
+    if (chatBackgroundImage.value) {
+        styles.backgroundImage = `url(${chatBackgroundImage.value})`;
+        styles.opacity = chatBackgroundImageOpacity.value;
+        
+        if (chatBackgroundImageFit.value === 'cover') {
+            styles.backgroundSize = 'cover';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (chatBackgroundImageFit.value === 'contain') {
+            styles.backgroundSize = 'contain';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (chatBackgroundImageFit.value === 'fill') {
+            styles.backgroundSize = '100% 100%';
+            styles.backgroundPosition = 'center';
+            styles.backgroundRepeat = 'no-repeat';
+        } else if (chatBackgroundImageFit.value === 'tile') {
+            styles.backgroundSize = 'auto';
+            styles.backgroundPosition = 'top left';
+            styles.backgroundRepeat = 'repeat';
+        }
+    }
+    return styles;
 });
 
 const {
@@ -234,7 +273,9 @@ const openSettings = () => {
 </script>
 
 <template>
-    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, backgroundColor: getRgbaBackground, border: getBorderStyle }">
+    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, border: getBorderStyle }">
+        <!-- 背景レイヤー -->
+        <div class="chat-background" :style="chatBackgroundStyle"></div>
         <!-- グラスモーフィズム調のヘッダー -->
         <header class="chat-header drag-area">
             <span class="chat-title">{{ activeMascot ? `${activeMascot.name} Chat` : 'Mascot Chat' }}</span>
@@ -350,17 +391,30 @@ const openSettings = () => {
 
 <style scoped>
 .chat-wrapper {
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.65);
+    background: transparent;
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     box-sizing: border-box;
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.chat-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 15px;
 }
 
 .chat-header {

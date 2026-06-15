@@ -289,7 +289,14 @@ const registeredExpressions = computed(() => {
     return expressions.filter((e: any) => e.path) || [];
 });
 
-
+// 設定画面読み込み時およびアクティブマスコット変更時に初期化を行う
+initEditingMascot();
+watch(() => props.activeMascotId, () => {
+    initEditingMascot();
+});
+watch(() => props.mascots, () => {
+    initEditingMascot();
+}, { deep: true });
 </script>
 
 <template>

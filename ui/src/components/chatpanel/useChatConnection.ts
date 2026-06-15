@@ -272,8 +272,9 @@ export function useChatConnection(params: {
             if (window.electronAPI && window.electronAPI.getRadioPrompts) {
                 try {
                     const radioPrompts = await window.electronAPI.getRadioPrompts();
-                    radioModePrompt = radioPrompts.radioMode;
-                    activeTalkPrompt = radioPrompts.activeTalk;
+                    const isEx = configStore.selectedEngine === 'lmstudio' && configStore.useExRadio;
+                    radioModePrompt = isEx ? (radioPrompts.exRadioMode || '') : radioPrompts.radioMode;
+                    activeTalkPrompt = isEx ? (radioPrompts.exActiveTalk || '') : radioPrompts.activeTalk;
                 } catch (e) {
                     console.error('Failed to load radio prompts:', e);
                 }

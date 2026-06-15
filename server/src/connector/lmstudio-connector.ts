@@ -22,6 +22,53 @@ function getSdkEndpoint(httpEndpoint: string): string {
     return wsEndpoint;
 }
 
+// 生成テキストのループ崩壊（リピート問題）を検知してカットするヘルパー
+function removeRepetitiveLoops(text: string): string {
+    if (!text) return text;
+
+    // 文（。や！や？、改行などで区切られた単位）で分割して、連続して出現する同一の文を除去する
+    const sentences = text.split(/([。！？\n]+)/);
+    const cleanedSentences: string[] = [];
+    
+    for (let i = 0; i < sentences.length; i++) {
+        const current = sentences[i].trim();
+        if (!current) {
+            cleanedSentences.push(sentences[i]);
+            continue;
+        }
+
+        let isRepeat = false;
+        if (cleanedSentences.length > 0) {
+            for (let j = cleanedSentences.length - 1; j >= 0; j--) {
+                const prev = cleanedSentences[j].trim();
+                if (prev) {
+                    if (prev === current) {
+                        isRepeat = true;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (!isRepeat) {
+            cleanedSentences.push(sentences[i]);
+        } else {
+            // 10文字以上の長い文の重複を検知した時点で、それ以降をカットする（ループ崩壊防止）
+            if (current.length > 10) {
+                break;
+            }
+        }
+    }
+
+    let result = cleanedSentences.join('');
+
+    // 12文字以上のパターンが連続して2回以上繰り返されたら、1回だけ残してカットする
+    const repeatRegex = /(.{12,300}?)\1+/g;
+    result = result.replace(repeatRegex, '$1');
+
+    return result.trim();
+}
+
 export class LmStudioConnector {
     public static async generateResponse(params: {
         message: string;
@@ -181,6 +228,8 @@ export class LmStudioConnector {
             chatInstance.replaceSystemPrompt(toolUseGuideline.trim());
         }
         await llm.act(chatInstance, filteredTools, {
+            temperature: 0.7,
+            repeatPenalty: 1.15,
             onMessage: (msg) => {
                 chatInstance.append(msg);
             }
@@ -263,6 +312,6 @@ export class LmStudioConnector {
         // 単体で残った `cw </think>` や `</think>` 等のゴミを除去
         cleanedContent = cleanedContent.replace(/^[\s\S]*?<\/think>\s*/gi, '');
 
-        return cleanedContent.trim();
+        return removeRepetitiveLoops(cleanedContent);
     }
 }

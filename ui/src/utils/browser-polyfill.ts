@@ -305,16 +305,20 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             try {
                 const radioMode = localStorage.getItem('desktop_ai_mascot_radio_mode_prompt') || '';
                 const activeTalk = localStorage.getItem('desktop_ai_mascot_active_talk_prompt') || '';
-                return { radioMode, activeTalk };
+                const exRadioMode = localStorage.getItem('desktop_ai_mascot_ex_radio_mode_prompt') || '';
+                const exActiveTalk = localStorage.getItem('desktop_ai_mascot_ex_active_talk_prompt') || '';
+                return { radioMode, activeTalk, exRadioMode, exActiveTalk };
             } catch (e) {
                 console.error('[Polyfill] Failed to get radio prompts:', e);
-                return { radioMode: '', activeTalk: '' };
+                return { radioMode: '', activeTalk: '', exRadioMode: '', exActiveTalk: '' };
             }
         },
         saveRadioPrompts: async (prompts: any) => {
             try {
                 localStorage.setItem('desktop_ai_mascot_radio_mode_prompt', prompts.radioMode || '');
                 localStorage.setItem('desktop_ai_mascot_active_talk_prompt', prompts.activeTalk || '');
+                localStorage.setItem('desktop_ai_mascot_ex_radio_mode_prompt', prompts.exRadioMode || '');
+                localStorage.setItem('desktop_ai_mascot_ex_active_talk_prompt', prompts.exActiveTalk || '');
                 return { success: true };
             } catch (e: any) {
                 console.error('[Polyfill] Failed to save radio prompts:', e);

@@ -220,32 +220,40 @@ export function registerConfigHandlers(config: AppConfig) {
         }
     });
 
-    // ラジオモード用のプロンプト（通常・能動フリートーク）の読み込みハンドラー
+    // ラジオモード用のプロンプト（通常・能動フリートーク・Ex）の読み込みハンドラー
     ipcMain.handle('get-radio-prompts', async () => {
         const radioDir = resolveRadioDir();
         console.log(`[Config] Reading radio prompts from: ${radioDir} (cwd: ${process.cwd()})`);
 
         const result = {
             radioMode: '',
-            activeTalk: ''
+            activeTalk: '',
+            exRadioMode: '',
+            exActiveTalk: ''
         };
 
         try {
             if (fs.existsSync(radioDir)) {
                 const radioModePath = path.join(radioDir, 'radio_mode_instructions.md');
                 const activeTalkPath = path.join(radioDir, 'active_radio_talk_instructions.md');
+                const exRadioModePath = path.join(radioDir, 'ex_radio_mode_instructions.md');
+                const exActiveTalkPath = path.join(radioDir, 'ex_active_radio_talk_instructions.md');
 
                 if (fs.existsSync(radioModePath)) {
                     result.radioMode = fs.readFileSync(radioModePath, 'utf8');
                     console.log(`[Config] Successfully loaded radio_mode_instructions.md (${result.radioMode.length} chars)`);
-                } else {
-                    console.warn(`[Config] radio_mode_instructions.md not found at ${radioModePath}`);
                 }
                 if (fs.existsSync(activeTalkPath)) {
                     result.activeTalk = fs.readFileSync(activeTalkPath, 'utf8');
                     console.log(`[Config] Successfully loaded active_radio_talk_instructions.md (${result.activeTalk.length} chars)`);
-                } else {
-                    console.warn(`[Config] active_radio_talk_instructions.md not found at ${activeTalkPath}`);
+                }
+                if (fs.existsSync(exRadioModePath)) {
+                    result.exRadioMode = fs.readFileSync(exRadioModePath, 'utf8');
+                    console.log(`[Config] Successfully loaded ex_radio_mode_instructions.md (${result.exRadioMode.length} chars)`);
+                }
+                if (fs.existsSync(exActiveTalkPath)) {
+                    result.exActiveTalk = fs.readFileSync(exActiveTalkPath, 'utf8');
+                    console.log(`[Config] Successfully loaded ex_active_radio_talk_instructions.md (${result.exActiveTalk.length} chars)`);
                 }
             } else {
                 console.warn(`[Config] Radio directory not found: ${radioDir}`);
@@ -256,8 +264,8 @@ export function registerConfigHandlers(config: AppConfig) {
         return result;
     });
 
-    // ラジオモード用のプロンプト（通常・能動フリートーク）の保存ハンドラー
-    ipcMain.handle('save-radio-prompts', async (event, prompts: { radioMode: string; activeTalk: string }) => {
+    // ラジオモード用のプロンプト（通常・能動フリートーク・Ex）の保存ハンドラー
+    ipcMain.handle('save-radio-prompts', async (event, prompts: { radioMode: string; activeTalk: string; exRadioMode?: string; exActiveTalk?: string }) => {
         const radioDir = resolveRadioDir();
 
         try {
@@ -266,6 +274,12 @@ export function registerConfigHandlers(config: AppConfig) {
             }
             fs.writeFileSync(path.join(radioDir, 'radio_mode_instructions.md'), prompts.radioMode || '', 'utf8');
             fs.writeFileSync(path.join(radioDir, 'active_radio_talk_instructions.md'), prompts.activeTalk || '', 'utf8');
+            if (prompts.exRadioMode !== undefined) {
+                fs.writeFileSync(path.join(radioDir, 'ex_radio_mode_instructions.md'), prompts.exRadioMode || '', 'utf8');
+            }
+            if (prompts.exActiveTalk !== undefined) {
+                fs.writeFileSync(path.join(radioDir, 'ex_active_radio_talk_instructions.md'), prompts.exActiveTalk || '', 'utf8');
+            }
             console.log(`[Config] Radio prompts saved successfully to: ${radioDir}`);
             return { success: true };
         } catch (error: any) {
