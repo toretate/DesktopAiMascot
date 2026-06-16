@@ -1,19 +1,21 @@
 /**
- * vision.cpp の vision-cli を呼び出して BiRefNet-ToonOut で背景除去するサービス。
+ * vision.cpp の vision-cli を呼び出して BiRefNet 系 GGUF モデルで背景除去するサービス。
  *
- * ToonOut は BiRefNet をアニメ画像向けにファインチューニングしたモデル
- * (https://huggingface.co/Acly/BiRefNet-toonout-GGUF)。
+ * 対応バリアント（いずれも https://huggingface.co/Acly の GGUF）:
+ *   - toonout         : アニメ画像向けファインチューニング (BiRefNet-ToonOut-F16)
+ *   - birefnet-general: 汎用・高精度 (BiRefNet-F16)
+ *   - birefnet-lite   : 軽量・高速 (BiRefNet-lite-F16, 88MB)
  * GGUF + vision.cpp で torch 非依存・ローカル実行できる。
  *
  * 事前準備:
  *   macOS/Linux: cd server/vision && ./setup.sh
  *   Windows    : cd server\vision && powershell -ExecutionPolicy Bypass -File .\setup.ps1
- *   （いずれも vision-cli の取得/ビルド + ToonOut モデルDL を行う）
+ *   （vision-cli の取得/ビルド + 各 GGUF モデルDL を行う）
  *
  * バックエンド:
- *   既定は CPU。Apple Silicon の Metal は ggml の既知バグ
+ *   既定は CPU。Apple Silicon の Metal は ggml-metal の f16 二項演算アサート
  *   (GGML_ASSERT src[1]->type == F32) でクラッシュするため使用しない。
- *   Linux + Vulkan を使う場合は VISION_BACKEND=gpu を指定。
+ *   Vulkan が使える環境では VISION_BACKEND=gpu を指定。
  */
 
 import { execFile } from 'node:child_process';
@@ -25,12 +27,32 @@ import os from 'node:os';
 const execFileAsync = promisify(execFile);
 
 const VISION_DIR = path.join(__dirname, '../../vision');
-
-const MODEL_PATH =
-    process.env.TOONOUT_MODEL ??
-    path.join(VISION_DIR, 'models/BiRefNet-ToonOut-F16.gguf');
+const MODELS_DIR = process.env.VISION_MODELS_DIR ?? path.join(VISION_DIR, 'models');
 
 const BACKEND = process.env.VISION_BACKEND ?? 'cpu';
+
+export type BiRefNetVariant = 'toonout' | 'birefnet-general' | 'birefnet-lite';
+
+/** バリアント → GGUF ファイル名 */
+const MODEL_FILES: Record<BiRefNetVariant, string> = {
+    'toonout': 'BiRefNet-ToonOut-F16.gguf',
+    'birefnet-general': 'BiRefNet-F16.gguf',
+    'birefnet-lite': 'BiRefNet-lite-F16.gguf',
+};
+
+export function isBiRefNetVariant(v: string): v is BiRefNetVariant {
+    return v in MODEL_FILES;
+}
+
+function modelPath(variant: BiRefNetVariant): string {
+    return path.join(MODELS_DIR, MODEL_FILES[variant]);
+}
+
+function setupHint(): string {
+    return process.platform === 'win32'
+        ? 'cd server\\vision && powershell -ExecutionPolicy Bypass -File .\\setup.ps1'
+        : 'cd server/vision && ./setup.sh';
+}
 
 /** OS によって配置・拡張子が異なる vision-cli を解決する。 */
 function resolveVisionCli(): string {
@@ -43,44 +65,42 @@ function resolveVisionCli(): string {
     for (const c of candidates) {
         if (fs.existsSync(c)) return c;
     }
-    const setup = process.platform === 'win32'
-        ? 'cd server\\vision && powershell -ExecutionPolicy Bypass -File .\\setup.ps1'
-        : 'cd server/vision && ./setup.sh';
-    throw new Error(`vision-cli not found. Run: ${setup}`);
+    throw new Error(`vision-cli not found. Run: ${setupHint()}`);
 }
 
 /**
- * ToonOut が実行可能か（vision-cli とモデルが揃っているか）を返す。
+ * 指定バリアントが実行可能か（vision-cli とモデルが揃っているか）を返す。
  * セットアップ未済の環境でテストをスキップする等の判定に使う。
  */
-export function checkToonOutAvailable(): { available: boolean; reason?: string } {
-    let binary: string;
+export function checkBiRefNetAvailable(variant: BiRefNetVariant = 'toonout'): { available: boolean; reason?: string } {
     try {
-        binary = resolveVisionCli();
+        resolveVisionCli();
     } catch (e: any) {
         return { available: false, reason: e.message };
     }
-    if (!fs.existsSync(MODEL_PATH)) {
-        return { available: false, reason: `model not found: ${MODEL_PATH}` };
+    const m = modelPath(variant);
+    if (!fs.existsSync(m)) {
+        return { available: false, reason: `model not found: ${m}` };
     }
     return { available: true };
 }
 
 /**
- * 画像 Buffer の背景を ToonOut で除去し、透過 PNG の Buffer を返す。
+ * 画像 Buffer の背景を BiRefNet 系モデルで除去し、透過 PNG の Buffer を返す。
  */
-export async function removeBackgroundToonOut(imageBuffer: Buffer): Promise<Buffer> {
+export async function removeBackgroundBiRefNet(
+    imageBuffer: Buffer,
+    variant: BiRefNetVariant = 'toonout',
+): Promise<Buffer> {
     const bin = resolveVisionCli();
+    const model = modelPath(variant);
 
-    if (!fs.existsSync(MODEL_PATH)) {
-        const setup = process.platform === 'win32'
-            ? 'cd server\\vision && powershell -ExecutionPolicy Bypass -File .\\setup.ps1'
-            : 'cd server/vision && ./setup.sh';
-        throw new Error(`ToonOut model not found: ${MODEL_PATH}. Run: ${setup}`);
+    if (!fs.existsSync(model)) {
+        throw new Error(`BiRefNet model not found: ${model}. Run: ${setupHint()}`);
     }
 
     // vision-cli はファイル入出力なので一時ディレクトリを使う
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'toonout-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'birefnet-'));
     const inPath = path.join(tmpDir, 'in.png');
     const maskPath = path.join(tmpDir, 'mask.png');
     const cutoutPath = path.join(tmpDir, 'cutout.png'); // --composite 出力（透過切り抜き）
@@ -93,7 +113,7 @@ export async function removeBackgroundToonOut(imageBuffer: Buffer): Promise<Buff
             [
                 'birefnet',
                 '-b', BACKEND,
-                '-m', MODEL_PATH,
+                '-m', model,
                 '-i', inPath,
                 '-o', maskPath,
                 '--composite', cutoutPath,
@@ -102,7 +122,7 @@ export async function removeBackgroundToonOut(imageBuffer: Buffer): Promise<Buff
         );
 
         if (stderr) {
-            console.debug('[ToonOutService]', stderr.trim().split('\n').at(-1));
+            console.debug(`[BiRefNetService:${variant}]`, stderr.trim().split('\n').at(-1));
         }
 
         if (!fs.existsSync(cutoutPath)) {
