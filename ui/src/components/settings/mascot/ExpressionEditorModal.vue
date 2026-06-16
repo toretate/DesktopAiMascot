@@ -3,6 +3,7 @@ import { ref, watch, computed, onUnmounted } from 'vue';
 import { useConfigStore } from '../../../store/config';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
+import Select from 'primevue/select';
 import { alignSingle, isValidImageSource, autoCropImage, autoCropFaceRegion } from '../../../skills/expression-alignment/expression-auto-align';
 import { autoAlignSingle, CONFIDENCE_THRESHOLD, type AutoAlignV2Result } from '../../../skills/expression-alignment/auto-align-v2';
 import type { SharedTransform } from '@desktop-ai-mascot/expression-alignment';
@@ -484,6 +485,14 @@ watch(
 // --- 背景除去 ---
 const isRemovingBackground = ref(false);
 
+// 背景除去エンジン選択（既定はサーバ node.js）
+const bgRemovalEngines = ref([
+    { label: 'サーバ (node.js)', value: 'node' },
+    { label: 'ToonOut (アニメ向け)', value: 'toonout' },
+    { label: 'Comfy UI', value: 'comfy' },
+]);
+const bgRemovalEngine = ref('node');
+
 const handleRemoveBackground = async () => {
     if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
     if (!isImage(selectedModalExpression.value.path)) return;
@@ -501,7 +510,7 @@ const handleRemoveBackground = async () => {
             body: JSON.stringify({
                 imagePath: expressionImagePath,
                 mascotId: props.editingMascot.id,
-                engine: 'node'
+                engine: bgRemovalEngine.value
             })
         });
 
@@ -785,14 +794,24 @@ const handleRemoveBackground = async () => {
                                         @click="handleAutoCrop" 
                                         title="表情画像の余白を自動的に検出して切り抜きます"
                                     />
-                                    <Button 
+                                    <Select
                                         v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
-                                        :label="isRemovingBackground ? '処理中...' : '背景削除'" 
-                                        icon="pi pi-eraser" 
-                                        class="p-button-outlined p-button-secondary p-button-sm" 
+                                        v-model="bgRemovalEngine"
+                                        :options="bgRemovalEngines"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        class="p-inputtext-sm"
+                                        :disabled="isRemovingBackground || isAutoCropping || isAutoScaling || isAutoAligning"
+                                        title="背景除去エンジンを選択します"
+                                    />
+                                    <Button
+                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
+                                        :label="isRemovingBackground ? '処理中...' : '背景削除'"
+                                        icon="pi pi-eraser"
+                                        class="p-button-outlined p-button-secondary p-button-sm"
                                         :loading="isRemovingBackground"
                                         :disabled="isRemovingBackground || isAutoCropping || isAutoScaling || isAutoAligning"
-                                        @click="handleRemoveBackground" 
+                                        @click="handleRemoveBackground"
                                         title="表情スプライト画像の背景を除去します"
                                     />
                                     <Button 

@@ -1,5 +1,6 @@
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal-node';
 import { uploadImage, runWorkflow } from '../connector/comfy-connector';
+import { removeBackgroundToonOut } from './toonout-service';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -32,6 +33,9 @@ async function removeBackgroundWithComfyUI(imageBuffer: Buffer, mimeType: string
 export async function removeBackground(imageBuffer: Buffer, mimeType: string, engine: string): Promise<Buffer> {
     if (engine === 'comfy') {
         return await removeBackgroundWithComfyUI(imageBuffer, mimeType);
+    } else if (engine === 'toonout') {
+        // BiRefNet-ToonOut (GGUF + vision.cpp) — アニメ画像向け、torch非依存ローカル実行
+        return await removeBackgroundToonOut(imageBuffer);
     } else {
         // デフォルトは Node.js 内の @imgly/background-removal-node
         const inputBlob = new Blob([imageBuffer], { type: mimeType });

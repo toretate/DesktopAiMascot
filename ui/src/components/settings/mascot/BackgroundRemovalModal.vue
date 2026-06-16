@@ -16,6 +16,7 @@ const emit = defineEmits<{
 
 const engines = ref([
     { label: 'サーバ (node.js)', value: 'node' },
+    { label: 'ToonOut (アニメ向け/BiRefNet)', value: 'toonout' },
     { label: 'Comfy UI', value: 'comfy' }
 ]);
 
@@ -46,8 +47,8 @@ const resolveImageUrl = (url: string) => {
 };
 
 const handleRemoveBackground = async () => {
-    if (selectedEngine.value !== 'node' && selectedEngine.value !== 'comfy') {
-        alert('現在、サーバ (node.js) または Comfy UI のみが選択可能です。');
+    if (!['node', 'toonout', 'comfy'].includes(selectedEngine.value)) {
+        alert('現在、サーバ (node.js) / ToonOut / Comfy UI のみが選択可能です。');
         return;
     }
 
