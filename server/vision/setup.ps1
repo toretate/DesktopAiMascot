@@ -18,8 +18,13 @@ $VisionDir   = $PSScriptRoot
 $VispVersion = '0.3.0'
 $Pkg         = "visioncpp-windows-x64-$VispVersion.zip"
 $PkgUrl      = "https://github.com/Acly/vision.cpp/releases/download/v$VispVersion/$Pkg"
-$ModelUrl    = 'https://huggingface.co/Acly/BiRefNet-toonout-GGUF/resolve/main/BiRefNet-ToonOut-F16.gguf?download=true'
-$ModelPath   = Join-Path $VisionDir 'models\BiRefNet-ToonOut-F16.gguf'
+
+# DL する GGUF モデル（ファイル名 -> URL）
+$Models = @(
+    @{ File = 'BiRefNet-ToonOut-F16.gguf'; Url = 'https://huggingface.co/Acly/BiRefNet-toonout-GGUF/resolve/main/BiRefNet-ToonOut-F16.gguf?download=true' },
+    @{ File = 'BiRefNet-F16.gguf';         Url = 'https://huggingface.co/Acly/BiRefNet-GGUF/resolve/main/BiRefNet-F16.gguf?download=true' },
+    @{ File = 'BiRefNet-lite-F16.gguf';    Url = 'https://huggingface.co/Acly/BiRefNet-GGUF/resolve/main/BiRefNet-lite-F16.gguf?download=true' }
+)
 
 Write-Host "[setup] OS=Windows ARCH=$env:PROCESSOR_ARCHITECTURE"
 
@@ -46,17 +51,20 @@ Remove-Item $DlDir -Recurse -Force
 Write-Host "[setup] 展開完了: $BinDir\vision-cli.exe"
 
 # ---------------------------------------------------------------------------
-# 2. ToonOut GGUF モデルのダウンロード
+# 2. BiRefNet GGUF モデルのダウンロード（toonout / general / lite）
 # ---------------------------------------------------------------------------
 $ModelsDir = Join-Path $VisionDir 'models'
 if (-not (Test-Path $ModelsDir)) { New-Item -ItemType Directory -Path $ModelsDir | Out-Null }
 
-if (Test-Path $ModelPath) {
-    Write-Host "[setup] モデル取得済み: $ModelPath"
-} else {
-    Write-Host '[setup] モデルをダウンロード (約420MB)...'
-    Invoke-WebRequest -Uri $ModelUrl -OutFile $ModelPath
-    Write-Host "[setup] モデル保存: $ModelPath"
+foreach ($m in $Models) {
+    $dest = Join-Path $ModelsDir $m.File
+    if (Test-Path $dest) {
+        Write-Host "[setup] モデル取得済み: $($m.File)"
+    } else {
+        Write-Host "[setup] モデルをダウンロード: $($m.File) ..."
+        Invoke-WebRequest -Uri $m.Url -OutFile $dest
+    }
 }
 
 Write-Host '[setup] 完了。'
+Write-Host '[setup] ※ isnet-anime (rembg) を使う場合は別途: cd server\python; uv sync'

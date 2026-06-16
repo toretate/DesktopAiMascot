@@ -35,7 +35,7 @@ torch 非依存で、GGUF モデル + [vision.cpp](https://github.com/Acly/visio
 | **Windows x64**（メイン開発） | プレビルト zip | `bin\`（exe + DLL） | `cd server\vision; .\setup.ps1` |
 | **Linux x64**（本番想定） | プレビルト tar.gz | `bin/` + `lib/` | `cd server/vision && ./setup.sh` |
 | **macOS**（検証環境） | **ソースビルド**（プレビルト無し） | `vision.cpp/build/bin/vision-cli` | `brew install cmake && ./setup.sh` |
-| 全OS共通 | — | `models/BiRefNet-ToonOut-F16.gguf` | 上記 setup に含む |
+| 全OS共通 | — | `models/*.gguf`（toonout / general / lite の3つ） | 上記 setup に含む |
 
 > Windows で実行ポリシーに弾かれる場合:
 > `powershell -ExecutionPolicy Bypass -File .\setup.ps1`
@@ -44,6 +44,24 @@ torch 非依存で、GGUF モデル + [vision.cpp](https://github.com/Acly/visio
 > ソース（CMake + C++20）からビルドする。検証環境（Apple M3 Pro）でビルド・動作確認済み。
 
 クライアント（Android / iOS / Web）には不要 — サーバ API（`/api/remove-background`）を叩くだけ。
+
+---
+
+## 選択できるエンジン（engine 値）
+
+`POST /api/remove-background` の `engine` で切替。UI（背景除去モーダル / 表情エディタ）からも選択可。
+
+| engine | バックエンド | モデル | 特徴 |
+|---|---|---|---|
+| `node` | @imgly (Node) | 内蔵 | 既定。汎用・追加DL不要 |
+| `toonout` | vision.cpp | BiRefNet-ToonOut-F16 | **アニメ特化** |
+| `birefnet-general` | vision.cpp | BiRefNet-F16 | 汎用・高精度 |
+| `birefnet-lite` | vision.cpp | BiRefNet-lite-F16 (88MB) | 軽量・高速 |
+| `isnet-anime` | **rembg (Python/ONNX)** | isnet-anime | アニメ特化（別系統）。`cd server/python && uv sync` が必要、モデルは初回 ~/.u2net へ自動DL |
+| `comfy` | ComfyUI | ワークフロー依存 | 既存 |
+
+vision.cpp 系（toonout/general/lite）は GGUF を `-m` で差し替えるだけなので、`server/vision/models/`
+に GGUF を追加すれば容易に増やせる（[Acly/BiRefNet-GGUF](https://huggingface.co/Acly/BiRefNet-GGUF)）。
 
 ---
 
@@ -106,23 +124,29 @@ ggml-metal の二項演算カーネル (`ggml_metal_op_bin`) で「src[1] が F3
 
 ## サーバ統合
 
-- `server/src/services/toonout-service.ts`
-  - `removeBackgroundToonOut(buffer)`: 一時ファイル経由で `vision-cli birefnet` を実行し、
-    透過 PNG の Buffer を返す（`crop-expression-service.ts` と同じ `execFile` パターン）。
-  - `checkToonOutAvailable()`: vision-cli + モデルの有無を判定（テストのスキップ用）。
-  - 環境変数: `VISION_CLI`（バイナリパス上書き）/ `TOONOUT_MODEL`（モデルパス）/
+- `server/src/services/birefnet-service.ts`（vision.cpp 系: toonout / general / lite）
+  - `removeBackgroundBiRefNet(buffer, variant)`: 一時ファイル経由で `vision-cli birefnet` を
+    実行し透過 PNG を返す（`crop-expression-service.ts` と同じ `execFile` パターン）。
+  - `checkBiRefNetAvailable(variant)`: vision-cli + モデル有無を判定（テストのスキップ用）。
+  - `isBiRefNetVariant(s)`: engine 文字列がバリアントか判定。
+  - 環境変数: `VISION_CLI`（バイナリパス）/ `VISION_MODELS_DIR`（モデル置場）/
     `VISION_BACKEND`（`cpu`(既定) | `gpu`）。
-- `server/src/services/remove-bg-service.ts`: `engine === 'toonout'` 分岐を追加。
-  既存の `node`(@imgly) / `comfy` はそのまま。
-- UI: `BackgroundRemovalModal.vue` と `ExpressionEditorModal.vue` の背景除去エンジン選択に
-  「ToonOut」を追加（既定は `node`）。
+- `server/src/services/rembg-service.ts`（rembg 系: isnet-anime）
+  - `removeBackgroundRembg(buffer, model)`: Python サイドカー `python/remove_bg.py` を
+    `execFile` で呼ぶ。`checkRembgAvailable()` で venv/スクリプト有無を判定。
+  - 環境変数: `REMBG_PYTHON`（python 実行パス上書き）。
+- `server/src/services/remove-bg-service.ts`: `engine` でディスパッチ
+  （`toonout`/`birefnet-general`/`birefnet-lite` → BiRefNet、`isnet-anime` → rembg、
+  既存 `node`(@imgly) / `comfy` はそのまま）。
+- UI: `BackgroundRemovalModal.vue` / `ExpressionEditorModal.vue` のエンジン選択に
+  上記 engine を追加（既定は `node`）。
 
 ---
 
 ## テスト
 
-- `server/src/test/toonout.test.ts`（`node:test`、`cd server && npm test` で実行）
-  - サンプル画像（`mascots/default_mascot_sample/guide_01.png`, `guide_02.png`）を変換し、
-    出力が RGBA(透過) PNG・入力と同寸法であることを検証。
-  - **未セットアップ環境では自動スキップ**（CI / Windows で setup 未済でも落ちない）。
-  - 実行結果は `server/vision/test_results/*_toonout.png` に保存。
+- `server/src/test/background-removal.test.ts`（`node:test`、`cd server && npm test` で実行）
+  - サンプル画像（`guide_01.png`, `guide_02.png`）を **4エンジン**（toonout / birefnet-general /
+    birefnet-lite / isnet-anime）に通し、出力が RGBA(透過) PNG であることを検証。
+  - **各エンジンは未セットアップなら自動スキップ**（CI / Windows で setup 未済でも落ちない）。
+  - 実行結果は `server/vision/test_results/<image>_<engine>.png` に保存（目視比較用）。

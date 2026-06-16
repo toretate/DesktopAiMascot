@@ -489,6 +489,9 @@ const isRemovingBackground = ref(false);
 const bgRemovalEngines = ref([
     { label: 'サーバ (node.js)', value: 'node' },
     { label: 'ToonOut (アニメ向け)', value: 'toonout' },
+    { label: 'BiRefNet general (汎用)', value: 'birefnet-general' },
+    { label: 'BiRefNet lite (軽量/高速)', value: 'birefnet-lite' },
+    { label: 'ISNet-anime (rembg)', value: 'isnet-anime' },
     { label: 'Comfy UI', value: 'comfy' },
 ]);
 const bgRemovalEngine = ref('node');

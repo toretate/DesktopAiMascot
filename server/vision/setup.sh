@@ -12,8 +12,13 @@ set -euo pipefail
 
 VISION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VISP_VERSION="0.3.0"
-MODEL_URL="https://huggingface.co/Acly/BiRefNet-toonout-GGUF/resolve/main/BiRefNet-ToonOut-F16.gguf?download=true"
-MODEL_PATH="${VISION_DIR}/models/BiRefNet-ToonOut-F16.gguf"
+
+# DL する GGUF モデル: "ファイル名|URL"
+MODELS=(
+  "BiRefNet-ToonOut-F16.gguf|https://huggingface.co/Acly/BiRefNet-toonout-GGUF/resolve/main/BiRefNet-ToonOut-F16.gguf?download=true"
+  "BiRefNet-F16.gguf|https://huggingface.co/Acly/BiRefNet-GGUF/resolve/main/BiRefNet-F16.gguf?download=true"
+  "BiRefNet-lite-F16.gguf|https://huggingface.co/Acly/BiRefNet-GGUF/resolve/main/BiRefNet-lite-F16.gguf?download=true"
+)
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -65,15 +70,20 @@ case "${OS}" in
 esac
 
 # ---------------------------------------------------------------------------
-# 2. ToonOut GGUF モデルのダウンロード
+# 2. BiRefNet GGUF モデルのダウンロード（toonout / general / lite）
 # ---------------------------------------------------------------------------
 mkdir -p "${VISION_DIR}/models"
-if [ -f "${MODEL_PATH}" ]; then
-  echo "[setup] モデル取得済み: ${MODEL_PATH}"
-else
-  echo "[setup] モデルをダウンロード (約420MB)..."
-  curl -L -# -o "${MODEL_PATH}" "${MODEL_URL}"
-  echo "[setup] モデル保存: ${MODEL_PATH}"
-fi
+for entry in "${MODELS[@]}"; do
+  fname="${entry%%|*}"
+  url="${entry#*|}"
+  dest="${VISION_DIR}/models/${fname}"
+  if [ -f "${dest}" ]; then
+    echo "[setup] モデル取得済み: ${fname}"
+  else
+    echo "[setup] モデルをダウンロード: ${fname} ..."
+    curl -L -# -o "${dest}" "${url}"
+  fi
+done
 
 echo "[setup] 完了。"
+echo "[setup] ※ isnet-anime (rembg) を使う場合は別途: cd server/python && uv sync"
