@@ -150,3 +150,44 @@ ggml-metal の二項演算カーネル (`ggml_metal_op_bin`) で「src[1] が F3
     birefnet-lite / isnet-anime）に通し、出力が RGBA(透過) PNG であることを検証。
   - **各エンジンは未セットアップなら自動スキップ**（CI / Windows で setup 未済でも落ちない）。
   - 実行結果は `server/vision/test_results/<image>_<engine>.png` に保存（目視比較用）。
+
+---
+
+## 比較メモ / 作業記録
+
+検証環境: Apple M3 Pro / CPU バックエンド / 入力 1536×1920 PNG（`guide_01`, `guide_02`）。
+
+| engine | 速度(目安) | 出力傾向 | 備考 |
+|---|---|---|---|
+| toonout | 約16s/枚 | 半透明（羽）・細部の保持が最良 | アニメ用途の本命 |
+| birefnet-general | 約16s/枚 | 高精度・汎用 | 実写混在時の選択肢 |
+| birefnet-lite | より高速 | general よりやや粗い | 速度優先 |
+| isnet-anime | 速い | エッジがシャープ・出力が軽量 | 別ランタイム(rembg) |
+
+全エンジンとも隅 4 点のアルファ ≈ 0 で透過を確認済み（`PIL` でピクセル検証）。
+
+経緯の要点:
+- ComfyUI-RMBG は独自実装ではなく HF チェックポイントのラッパー → ローカル再現可能。
+- `rembg` は ToonOut 非対応（`.pth` のみ・ONNX/レジストリ未登録）→ ToonOut は GGUF+vision.cpp 採用。
+- mac は vision.cpp プレビルト無し → ソースビルド。Metal は f16 二項演算アサートでクラッシュ →
+  CPU 固定（[ggml #9902](https://github.com/ggml-org/llama.cpp/issues/9902) に同種・未解決）。
+
+---
+
+## 今後の発展 / TODO
+
+- **既定エンジンの見直し**: 表情スプライト（アニメ）では既定を `toonout` にする案。
+  現状は後方互換のため `node` のまま。
+- **モデル追加**: vision.cpp 系は GGUF を `models/` に置くだけで増設可
+  （[Acly/BiRefNet-GGUF](https://huggingface.co/Acly/BiRefNet-GGUF) の portrait / matting 等）。
+  rembg 系も `isnet-general-use` / `u2net_human_seg` 等を `remove_bg.py --model` で追加容易。
+- **GPU 高速化**: Linux/Windows は Vulkan(`VISION_BACKEND=gpu`)で高速化余地（未検証）。
+  mac は ggml-metal の f16 二項演算が upstream で改善されたら Metal 再試行。
+- **CPU レイテンシ対策**: 16s/枚は同期 API では重い。ジョブ化（非同期 + 進捗通知）や
+  入力リサイズ（1024px 前処理）で短縮検討。
+- **モデル別キャッシュ/プリロード**: 連続実行時に vision-cli プロセス起動コストが乗るため、
+  常駐プロセス化（vision.cpp の C API / サーバ常駐）も選択肢。
+- **配布**: 本番 Linux は `setup.sh` がプレビルト取得。GGUF（合計約1GB）の配置・容量方針は要検討
+  （オンデマンド DL 済みだが、コンテナイメージに含めるか等）。
+- **品質評価の自動化**: 現状テストは「透過PNGが出る」ことの確認のみ。マスク IoU 等の
+  定量比較（`detect_face_mask.py` の IoU 手法を流用）を入れると回帰検知に有用。
