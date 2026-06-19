@@ -3,6 +3,8 @@ import { IncomingMessage } from 'http';
 import * as url from 'url';
 import { ChatAiService } from '../services/chat-ai-service';
 import { VoiceAiService } from '../services/voice-ai-service';
+import { splitSentences } from '../utils/sentence-splitter';
+import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
 import { authenticateUserToken, parseCookies } from '../middlewares/auth-middleware';
 
 // ユーザーごとのWebSocket接続を管理するマップ（認証なしの場合は 'anonymous' を使用）
@@ -196,16 +198,13 @@ export function setupWebSocket(wss: WebSocketServer) {
                         const irodoriModelName = irodoriModel || 'irodori-tts-500m-v3';
                         const irodoriVoiceName = irodoriVoice || 'default';
 
-                        // 文節ごとに分割
-                        const sentences = speechText
-                            .split(/(?<=[。！？\n])/)
-                            .map(s => s.trim())
-                            .filter(s => s.length > 0);
+                        const processedSentences = splitSentences(speechText);
 
                         // 並行して音声合成リクエストを開始
-                        const synthPromises = sentences.map(sentence => {
+                        const synthPromises = processedSentences.map(sentence => {
                             if (voiceEngine === 'irodori') {
-                                return VoiceAiService.synthesizeIrodori(sentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion);
+                                const cleanSentence = sanitizeForIrodoriTTS(sentence);
+                                return VoiceAiService.synthesizeIrodori(cleanSentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion);
                             } else {
                                 return VoiceAiService.synthesize(sentence, speaker, baseUrl);
                             }

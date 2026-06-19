@@ -225,6 +225,13 @@ export class IrodoriTtsConnector {
                 irodoriParams.speed = params.speed;
             }
 
+            // ミヤコ用設定
+            if (!params.irodori) {
+                params.irodori = {
+                    lora_adapter: "models/adapters/miyako",
+                }
+            }
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
