@@ -11,7 +11,7 @@ export class VoiceAiService {
         const speaker = speakerId !== undefined ? speakerId : 2;
 
         console.log(`[VoiceAiService] VOICEVOX synthesize start for: "${text}"`);
-        
+
         const voiceController = new AbortController();
         const voiceTimeoutId = setTimeout(() => voiceController.abort(), 60000);
 
@@ -37,7 +37,7 @@ export class VoiceAiService {
             const synthesisUrl = baseUrl.endsWith('/')
                 ? `${baseUrl}synthesis?speaker=${speaker}`
                 : `${baseUrl}/synthesis?speaker=${speaker}`;
-            
+
             const synthResponse = await fetch(synthesisUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -87,9 +87,9 @@ export class VoiceAiService {
         const targetVoice = voice || 'default';
 
         let textWithEmotion = text;
-        if (emotion) {
-            textWithEmotion += VoiceAiService.getIrodoriEmoji(emotion);
-        }
+        // if (emotion) {
+        //     textWithEmotion += VoiceAiService.getIrodoriEmoji(emotion);
+        // }
 
         console.log(`[VoiceAiService] irodori-tts synthesize start for: "${textWithEmotion}"`);
 

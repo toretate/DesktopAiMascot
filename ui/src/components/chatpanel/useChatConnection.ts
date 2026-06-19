@@ -6,6 +6,8 @@ import { AudioPlaylist } from '../../utils/AudioPlaylist';
 import { Message, ChatSession, MessageAttachment } from './useChatHistory';
 import useRadioMode from './use-radiomode-prompt';
 import useIrodoriEmotion from './use-irodori-emotion';
+import { splitSentences } from '../../utils/sentence-splitter';
+import { sanitizeForIrodoriTTS } from '../../utils/irodori-sanitizer';
 
 export function useChatConnection(params: {
     messages: Ref<Message[]>;
@@ -437,14 +439,12 @@ export function useChatConnection(params: {
                 const api = window.electronAPI;
                 const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
 
-                const sentences = speechText
-                    .split(/(?<=[。！？\n])/)
-                    .map(s => s.trim())
-                    .filter(s => s.length > 0);
+                const processedSentences = splitSentences(speechText);
 
-                const synthPromises = sentences.map(sentence => {
+                const synthPromises = processedSentences.map(sentence => {
                     if (voiceEngine === 'irodori') {
-                        return api.synthesizeIrodori(sentence, irodoriEndpointUrl, irodoriModel, irodoriVoice, detectedEmotion);
+                        const cleanSentence = sanitizeForIrodoriTTS(sentence);
+                        return api.synthesizeIrodori(cleanSentence, irodoriEndpointUrl, irodoriModel, irodoriVoice, detectedEmotion);
                     } else {
                         return api.synthesizeVoicevox(sentence, voicevoxSpeakerId, voicevoxEndpointUrl);
                     }
