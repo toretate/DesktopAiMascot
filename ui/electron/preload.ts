@@ -5,8 +5,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Googleログインの開始
     loginWithGoogle: () => ipcRenderer.send('auth:login'),
 
-    // チャットパネルの表示・非表示のトグルを送信
+    // チャットウィンドウの表示・非表示のトグルを送信
     toggleChat: () => ipcRenderer.send('toggle-chat'),
+    
+    // チャットウィンドウのサイズ変更を送信
+    resizeChatWindow: (size: { width: number; height: number }) => ipcRenderer.send('resize-chat-window', size),
     
     // 設定画面を開くリクエストを送信
     openSettings: () => ipcRenderer.send('open-settings'),
@@ -18,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', ignore),
     
     // ウィンドウのドラッグ移動シグナルの送信 (HTML要素でドラッグを擬似実装する)
-    dragWindow: (offset: { dx: number; dy: number }) => ipcRenderer.send('drag-window', offset),
+    dragWindow: (offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => ipcRenderer.send('drag-window', offset),
     
     // キャラクター画像の描画境界をメインプロセスに通知
     updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => 

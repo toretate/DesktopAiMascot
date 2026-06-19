@@ -466,28 +466,147 @@ const updateCharacterBoundsFromUrl = (url: string) => {
     img.src = url;
 };
 
-// 表情テクスチャのロードと適用
-const updateExpressionSprite = async (path: string) => {
+const isBlinking = ref(false);
+const isMouthOpen = ref(false);
+
+let expressionNormalTexture: Texture | null = null;
+let expressionCloseTexture: Texture | null = null;
+let expressionTalkTexture: Texture | null = null;
+
+// 表情関連テクスチャのロードとアニメーション準備
+const loadExpressionTextures = async (basePath: string) => {
+    expressionNormalTexture = null;
+    expressionCloseTexture = null;
+    expressionTalkTexture = null;
+
     if (!expressionSprite) return;
-    if (!path) {
+    if (!basePath) {
         expressionSprite.texture = Texture.EMPTY;
         return;
     }
+
     try {
-        const texture = await Assets.load(path);
-        if (!expressionSprite) return;
-        expressionSprite.texture = texture;
+        // 通常の表情テクスチャのロード
+        expressionNormalTexture = await Assets.load(basePath);
         
-        // 基準サイズ171pxに設定
-        expressionSprite.width = 171;
-        expressionSprite.height = 171;
-        expressionSprite.anchor.set(0.5);
+        // 閉じ目のパス解決 (_close)
+        const closePath = getSuffixPath(basePath, '_close');
+        try {
+            expressionCloseTexture = await Assets.load(closePath);
+            console.log('[MascotViewer] Loaded blink close-eye texture:', closePath);
+        } catch (e) {
+            expressionCloseTexture = null;
+        }
+
+        // 口開きのパス解決 (_talk)
+        const talkPath = getSuffixPath(basePath, '_talk');
+        try {
+            expressionTalkTexture = await Assets.load(talkPath);
+            console.log('[MascotViewer] Loaded talk mouth texture:', talkPath);
+        } catch (e) {
+            expressionTalkTexture = null;
+        }
+
+        // 初期テクスチャ反映
+        refreshExpressionTexture();
         
-        // トランスフォームの適用
-        applyExpressionTransform();
+        // まばたきループを開始
+        if (expressionCloseTexture) {
+            startBlinkLoop();
+        } else {
+            stopBlinkLoop();
+        }
     } catch (err) {
-        console.error('[MascotViewer] Failed to load expression texture:', path, err);
+        console.error('[MascotViewer] Failed to load expression textures:', basePath, err);
+        expressionSprite.texture = Texture.EMPTY;
     }
+};
+
+// クエリパラメータを壊さずに _close や _talk を拡張子の直前に入れるユーティリティ
+const getSuffixPath = (path: string, suffix: string): string => {
+    const parts = path.split('?');
+    const basePath = parts[0];
+    const query = parts[1] ? `?${parts[1]}` : '';
+    const lastDot = basePath.lastIndexOf('.');
+    if (lastDot !== -1) {
+        return basePath.slice(0, lastDot) + suffix + basePath.slice(lastDot) + query;
+    }
+    return basePath + suffix + query;
+};
+
+// スプライトのテクスチャを状態に応じて更新
+const refreshExpressionTexture = () => {
+    if (!expressionSprite) return;
+
+    let targetTexture = expressionNormalTexture || Texture.EMPTY;
+
+    // 優先度：まばたき中 > 口パク中
+    if (isBlinking.value && expressionCloseTexture) {
+        targetTexture = expressionCloseTexture;
+    } else if (isSpeaking.value && isMouthOpen.value && expressionTalkTexture) {
+        targetTexture = expressionTalkTexture;
+    }
+
+    expressionSprite.texture = targetTexture;
+
+    // 基準サイズ171pxに設定
+    expressionSprite.width = 171;
+    expressionSprite.height = 171;
+    expressionSprite.anchor.set(0.5);
+
+    // トランスフォームの適用
+    applyExpressionTransform();
+};
+
+// まばたきループの制御
+let blinkTimeoutId: NodeJS.Timeout | null = null;
+const startBlinkLoop = () => {
+    stopBlinkLoop();
+    if (!expressionCloseTexture) return;
+
+    const nextBlinkDelay = 3000 + Math.random() * 4000; // 3〜7秒のランダム
+    blinkTimeoutId = setTimeout(async () => {
+        if (expressionCloseTexture) {
+            isBlinking.value = true;
+            refreshExpressionTexture();
+            
+            // 150ms 目を閉じる
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
+            isBlinking.value = false;
+            refreshExpressionTexture();
+        }
+        startBlinkLoop();
+    }, nextBlinkDelay);
+};
+
+const stopBlinkLoop = () => {
+    if (blinkTimeoutId) {
+        clearTimeout(blinkTimeoutId);
+        blinkTimeoutId = null;
+    }
+    isBlinking.value = false;
+};
+
+// 口パク（リップシンク）ループの制御
+let talkIntervalId: NodeJS.Timeout | null = null;
+const startTalkLoop = () => {
+    stopTalkLoop();
+    if (!expressionTalkTexture) return;
+
+    talkIntervalId = setInterval(() => {
+        isMouthOpen.value = !isMouthOpen.value;
+        refreshExpressionTexture();
+    }, 150); // 150ms 周期で口を開閉
+};
+
+const stopTalkLoop = () => {
+    if (talkIntervalId) {
+        clearInterval(talkIntervalId);
+        talkIntervalId = null;
+    }
+    isMouthOpen.value = false;
+    refreshExpressionTexture();
 };
 
 // 表情の位置合わせ（Transform）の適用
@@ -529,8 +648,22 @@ watch(currentBodyPath, (newVal) => {
 }, { immediate: true });
 
 watch(currentExpressionPath, (newVal) => {
-    updateExpressionSprite(newVal);
+    loadExpressionTextures(newVal);
 }, { immediate: true });
+
+// isSpeaking（音声再生状態）を監視して口パクの開始・停止
+watch(isSpeaking, (speaking) => {
+    if (speaking) {
+        startTalkLoop();
+    } else {
+        stopTalkLoop();
+    }
+});
+
+// アニメーション状態フラグの監視による表示更新
+watch([isBlinking, isMouthOpen], () => {
+    refreshExpressionTexture();
+});
 
 // 表情の位置・スケール等の設定変更を監視
 watch([
@@ -623,6 +756,10 @@ const onMouseDown = (e: MouseEvent) => {
         startMouseY = e.screenY;
         hasMoved = false;
 
+        if (window.electronAPI && window.electronAPI.dragWindow) {
+            window.electronAPI.dragWindow({ dx: 0, dy: 0, isStart: true });
+        }
+
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
     }
@@ -655,6 +792,10 @@ const onMouseUp = () => {
 
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);
+
+    if (window.electronAPI && window.electronAPI.dragWindow) {
+        window.electronAPI.dragWindow({ dx: 0, dy: 0, isEnd: true });
+    }
 
     if (!hasMoved) {
         toggleChat();
@@ -822,6 +963,15 @@ onMounted(async () => {
             }
         });
     }
+
+    // PixiJS のスプライト作成完了後、初期画像パスの読み込みを明示的に実行する
+    // （setup時のimmediate watchがスプライト生成前に走って無視されてしまうのを防ぐため）
+    if (currentBodyPath.value) {
+        await updateBodySprite(currentBodyPath.value);
+    }
+    if (currentExpressionPath.value) {
+        await loadExpressionTextures(currentExpressionPath.value);
+    }
 });
 
 
@@ -861,7 +1011,10 @@ onUnmounted(() => {
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
         <div 
             class="mascot-character" 
-            :style="{ transform: `scale(${totalMascotScale})` }"
+            :style="{ 
+                transform: `scale(${totalMascotScale})`,
+                transformOrigin: windowMode === 'compact' ? 'bottom center' : 'center center'
+            }"
             @mousedown="onMouseDown" 
             @contextmenu.prevent="openSettings" 
             @dragstart.prevent 
@@ -1014,6 +1167,16 @@ onUnmounted(() => {
 
 .is-compact .mascot-visual {
     margin-bottom: -60px; /* 下部の透明余白分を相殺して底面に密着させる */
+}
+
+.mascot-wrapper.is-compact {
+    width: 100% !important;
+    height: 100% !important;
+    justify-content: flex-end !important;
+}
+
+.is-compact .mascot-character {
+    transform-origin: bottom center !important;
 }
 
 .preview-base-avatar {

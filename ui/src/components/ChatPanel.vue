@@ -270,6 +270,54 @@ const openSettings = () => {
         window.electronAPI.openSettings();
     }
 };
+
+// ---- カスタムリサイズ処理 ----
+let isResizing = false;
+let resizeDirection = '';
+let startWidth = 0;
+let startHeight = 0;
+let startMouseX = 0;
+let startMouseY = 0;
+
+const initResize = (e: MouseEvent, direction: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizing = true;
+    resizeDirection = direction;
+    startWidth = window.innerWidth;
+    startHeight = window.innerHeight;
+    startMouseX = e.clientX;
+    startMouseY = e.clientY;
+
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', stopResize);
+};
+
+const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const dx = e.clientX - startMouseX;
+    const dy = e.clientY - startMouseY;
+
+    let newWidth = startWidth;
+    let newHeight = startHeight;
+
+    if (resizeDirection === 'right' || resizeDirection === 'corner') {
+        newWidth = Math.max(300, startWidth + dx); // 最小幅 300
+    }
+    if (resizeDirection === 'bottom' || resizeDirection === 'corner') {
+        newHeight = Math.max(300, startHeight + dy); // 最小高 300
+    }
+
+    if (window.electronAPI && window.electronAPI.resizeChatWindow) {
+        window.electronAPI.resizeChatWindow({ width: newWidth, height: newHeight });
+    }
+};
+
+const stopResize = () => {
+    isResizing = false;
+    document.removeEventListener('mousemove', handleResizeMove);
+    document.removeEventListener('mouseup', stopResize);
+};
 </script>
 
 <template>
@@ -386,6 +434,11 @@ const openSettings = () => {
                 <img :src="activeImageUrl" class="full-image" />
             </div>
         </div>
+
+        <!-- リサイズ用ハンドル -->
+        <div class="resize-handle right" @mousedown="initResize($event, 'right')"></div>
+        <div class="resize-handle bottom" @mousedown="initResize($event, 'bottom')"></div>
+        <div class="resize-handle corner" @mousedown="initResize($event, 'corner')"></div>
     </div>
 </template>
 
@@ -849,5 +902,36 @@ const openSettings = () => {
 
 :deep(.compact-mascot-container .mascot-character) {
     transform-origin: bottom center;
+}
+
+/* リサイズハンドル */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 9999;
+}
+.resize-handle.right {
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: calc(100% - 10px);
+    cursor: e-resize;
+    -webkit-app-region: no-drag;
+}
+.resize-handle.bottom {
+    bottom: 0;
+    left: 0;
+    width: calc(100% - 10px);
+    height: 6px;
+    cursor: s-resize;
+    -webkit-app-region: no-drag;
+}
+.resize-handle.corner {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
+    -webkit-app-region: no-drag;
 }
 </style>

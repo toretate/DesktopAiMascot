@@ -47,6 +47,9 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         toggleChat: () => {
             console.log('[Polyfill] toggleChat triggered');
         },
+        resizeChatWindow: (size: { width: number; height: number }) => {
+            console.log(`[Polyfill] resizeChatWindow: ${size.width}x${size.height}`);
+        },
         openSettings: () => {
             // Web版では、ハッシュを #settings に切り替えることで設定画面を表示する
             window.location.hash = '#settings';
@@ -60,7 +63,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         setIgnoreMouseEvents: (ignore: boolean) => {
             // ブラウザでは何もしない
         },
-        dragWindow: (offset: { dx: number; dy: number }) => {
+        dragWindow: (offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => {
             // ブラウザでは何もしない
         },
         updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => {

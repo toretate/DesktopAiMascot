@@ -11,10 +11,11 @@ export interface IElectronAPI {
     isWeb?: boolean;
     loginWithGoogle: () => void;
     toggleChat: () => void;
+    resizeChatWindow: (size: { width: number; height: number }) => void;
     openSettings: () => void;
     setMascotScale: (scale: number) => void;
     setIgnoreMouseEvents: (ignore: boolean) => void;
-    dragWindow: (offset: { dx: number; dy: number }) => void;
+    dragWindow: (offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => void;
     updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => void;
     quitApp: () => void;
     relaunchApp: () => void;

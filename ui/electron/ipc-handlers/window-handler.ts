@@ -63,14 +63,45 @@ export function registerWindowHandlers(config: AppConfig) {
         }
     });
 
+    let dragStartSize: { width: number; height: number } | null = null;
+
     // 4. アプリ内ドラッグ移動の実装 (HTML要素をドラッグ可能にする場合のサポート)
-    ipcMain.on('drag-window', (event, offset: { dx: number; dy: number }) => {
+    ipcMain.on('drag-window', (event, offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => {
         const webContents = event.sender;
         const win = BrowserWindow.fromWebContents(webContents);
         if (win) {
-            const [x, y] = win.getPosition();
-            win.setPosition(x + offset.dx, y + offset.dy);
-            debouncedSaveMascotPosition();
+            if (offset.isEnd) {
+                dragStartSize = null;
+                return;
+            }
+
+            if (offset.isStart || !dragStartSize) {
+                const size = win.getSize();
+                dragStartSize = { width: size[0], height: size[1] };
+                if (offset.isStart) {
+                    return;
+                }
+            }
+
+            const bounds = win.getBounds();
+            const mascotWin = getMascotWindow();
+
+            const targetW = dragStartSize.width;
+            const targetH = dragStartSize.height;
+
+            // setPositionの代わりにsetBoundsを使用し、DPIスケーリングによるサイズ肥大化バグを防ぐ
+            // 統合ウィンドウやコンパクトウィンドウなどの通常窓も含め、ドラッグ開始時の正確なサイズを強制維持する
+            const newBounds: any = {
+                x: Math.round(bounds.x + offset.dx),
+                y: Math.round(bounds.y + offset.dy),
+                width: targetW,
+                height: targetH
+            };
+            win.setBounds(newBounds);
+
+            if (win === mascotWin) {
+                debouncedSaveMascotPosition();
+            }
         }
     });
 }
