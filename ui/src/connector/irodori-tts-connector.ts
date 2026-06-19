@@ -38,16 +38,16 @@ export type IrodoriTtsUploadVoiceResult = {
 }
 
 type IrodoriSpecificOptions = {
-    num_steps: number,          // Number of diffusion steps. Higher can improve quality but takes longer.
-    seed: number,               // Fixed random seed for reproducible output.
-    cfg_scale_text: number,     // Strength of text guidance.
-    cfg_scale_speaker: number,  // Strength of speaker/reference-voice guidance.
-    lora_adapter: string,       // PEFT LoRA adapter directory to load dynamically for this request. The adapter is not merged into the base checkpoint.
-    t_schedule_mode: string,    // Sampling schedule, usually linear or sway.
-    sway_coeff: number,         // Sway schedule coefficient when using t_schedule_mode: "sway".
-    chunking_enabled: boolean,  // Enable chunking inference.
-    chunk_min_chars: number,    // Minimum non-space characters before a chunk split point is used.
-    first_sentence_chunk_min_chars: number, // Optional minimum non-space characters used only for splitting the first sentence.
+    num_steps?: number,          // Number of diffusion steps. Higher can improve quality but takes longer.
+    seed?: number,               // Fixed random seed for reproducible output.
+    cfg_scale_text?: number,     // Strength of text guidance.
+    cfg_scale_speaker?: number,  // Strength of speaker/reference-voice guidance.
+    lora_adapter?: string,       // PEFT LoRA adapter directory to load dynamically for this request. The adapter is not merged into the base checkpoint.
+    t_schedule_mode?: string,    // Sampling schedule, usually linear or sway.
+    sway_coeff?: number,         // Sway schedule coefficient when using t_schedule_mode: "sway".
+    chunking_enabled?: boolean,  // Enable chunking inference.
+    chunk_min_chars?: number,    // Minimum non-space characters before a chunk split point is used.
+    first_sentence_chunk_min_chars?: number, // Optional minimum non-space characters used only for splitting the first sentence.
 }
 
 /**
@@ -80,10 +80,7 @@ export class IrodoriTtsConnector {
             ? `${endpoint}health`
             : `${endpoint}/health`;
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method: 'GET'
         });
         return response.ok;
     }
@@ -100,10 +97,7 @@ export class IrodoriTtsConnector {
             ? `${endpoint}v1/models`
             : `${endpoint}/v1/models`;
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method: 'GET'
         });
         if (!response.ok) {
             return null;
@@ -124,10 +118,7 @@ export class IrodoriTtsConnector {
             : `${endpoint}/v1/audio/voices`;
         try {
             const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                method: 'GET'
             });
             if (!response.ok) {
                 return null;
@@ -147,7 +138,7 @@ export class IrodoriTtsConnector {
         const url = endpoint.endsWith('/')
             ? `${endpoint}v1/audio/voices`
             : `${endpoint}/v1/audio/voices`;
-        
+
         let filename = 'voice.wav';
         if (file instanceof File) {
             filename = file.name;
@@ -184,8 +175,8 @@ export class IrodoriTtsConnector {
                 body: formData
             });
             if (!response.ok) {
-                const errorText = typeof response.text === 'function' 
-                    ? await response.text().catch(() => '') 
+                const errorText = typeof response.text === 'function'
+                    ? await response.text().catch(() => '')
                     : '';
                 console.error(`[IrodoriTtsConnector] ボイスアップロードエラー (Status: ${response.status}):`, errorText);
                 return null;
@@ -215,16 +206,7 @@ export class IrodoriTtsConnector {
         // 感情表現用絵文字付与
         let textWithEmotion = params.input;
         if (emotion) {
-            const lowerEmotion = emotion.toLowerCase();
-            if (lowerEmotion === 'happy' || lowerEmotion === '喜び' || lowerEmotion === '嬉') {
-                textWithEmotion += ' 😊';
-            } else if (lowerEmotion === 'sad' || lowerEmotion === '悲しみ' || lowerEmotion === '哀') {
-                textWithEmotion += ' 😢';
-            } else if (lowerEmotion === 'angry' || lowerEmotion === '怒り' || lowerEmotion === '怒') {
-                textWithEmotion += ' 💢';
-            } else if (lowerEmotion === 'surprised' || lowerEmotion === '驚き' || lowerEmotion === '驚') {
-                textWithEmotion += ' 😲';
-            }
+            textWithEmotion += IrodoriTtsConnector.getIrodoriEmoji(emotion);
         }
 
         try {
@@ -241,6 +223,13 @@ export class IrodoriTtsConnector {
 
             if (params.speed) {
                 irodoriParams.speed = params.speed;
+            }
+
+            // ミヤコ用設定
+            if (!params.irodori) {
+                params.irodori = {
+                    lora_adapter: "models/adapters/miyako",
+                }
             }
 
             const response = await fetch(url, {
@@ -269,5 +258,106 @@ export class IrodoriTtsConnector {
             console.error('[IrodoriTtsConnector] 音声合成エラー:', e);
             return null;
         }
+    }
+
+    /**
+     * 感情名に対応する Irodori-TTS の感情表現用絵文字を取得します。
+     * @param emotion 感情名
+     * @returns 感情表現用絵文字（先頭にスペースを含む）
+     */
+    public static getIrodoriEmoji(emotion?: string): string {
+        if (!emotion) return '';
+        const lower = emotion.toLowerCase().trim();
+
+        // 28種類の感情表現 (SillyTavern互換)
+        switch (lower) {
+            case 'admiration':
+                return ' 🫶';
+            case 'amusement':
+                return ' 🤭';
+            case 'anger':
+                return ' 😠';
+            case 'annoyance':
+                return ' 😒';
+            case 'approval':
+                return ' 👌';
+            case 'caring':
+                return ' 🫶';
+            case 'confusion':
+                return ' 🤔';
+            case 'curiosity':
+                return ' 🤔';
+            case 'desire':
+                return ' 😏';
+            case 'disappointment':
+                return ' 😮‍💨';
+            case 'disapproval':
+                return ' 🙄';
+            case 'disgust':
+                return ' 😒';
+            case 'embarrassment':
+                return ' 🫣';
+            case 'excitement':
+                return ' 😆';
+            case 'fear':
+                return ' 😱';
+            case 'gratitude':
+                return ' 🙏';
+            case 'grief':
+                return ' 😭';
+            case 'joy':
+                return ' 😆';
+            case 'love':
+                return ' 🫶';
+            case 'nervousness':
+                return ' 🥺';
+            case 'optimism':
+                return ' 😊';
+            case 'pride':
+                return ' 😏';
+            case 'realization':
+                return ' 😲';
+            case 'relief':
+                return ' 😌';
+            case 'remorse':
+                return ' 😭';
+            case 'sadness':
+                return ' 😭';
+            case 'surprise':
+                return ' 😲';
+            case 'neutral':
+                return '';
+        }
+
+        // 既存のショートカットおよび日本語の感情判定
+        if (lower === 'happy' || lower === '嬉' || lower === '楽') {
+            return ' 😊';
+        }
+        if (lower === '喜び' || lower === 'joy') {
+            return ' 😆';
+        }
+        if (lower === 'sad' || lower === '悲しみ' || lower === '哀' || lower === '悲') {
+            return ' 😭';
+        }
+        if (lower === 'angry' || lower === '怒り' || lower === '怒') {
+            return ' 😠';
+        }
+        if (lower === 'surprised' || lower === '驚き' || lower === '驚') {
+            return ' 😲';
+        }
+        if (lower === 'nervous' || lower === '不安') {
+            return ' 🥺';
+        }
+        if (lower === 'scared' || lower === '恐れ' || lower === '恐怖') {
+            return ' 😱';
+        }
+        if (lower === '安堵' || lower === 'ホッ') {
+            return ' 😌';
+        }
+        if (lower === '照れ' || lower === '恥ずかしい') {
+            return ' 🫣';
+        }
+
+        return '';
     }
 }

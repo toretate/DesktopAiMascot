@@ -85,25 +85,49 @@ const fetchIrodoriVoices = async () => {
     irodoriConnectionErrorMsg.value = '';
     
     try {
-        const result = await IrodoriTtsConnector.listVoices(irodoriEndpoint.value);
-        if (result && result.data) {
-            irodoriConnectionState.value = 'success';
-            irodoriVoices.value = result.data.map(v => ({
-                name: v.id,
-                value: v.id
-            }));
-            
-            // 現在選択されているボイスが一覧に含まれていない場合、最初のボイスをデフォルトに
-            if (irodoriVoices.value.length > 0) {
-                const hasVoice = irodoriVoices.value.some(v => v.value === irodoriVoice.value);
-                if (!hasVoice) {
-                    irodoriVoice.value = irodoriVoices.value[0].value;
+        if (window.electronAPI) {
+            const result = await window.electronAPI.getIrodoriVoices(irodoriEndpoint.value);
+            if (result.success) {
+                irodoriConnectionState.value = 'success';
+                irodoriVoices.value = result.voices.map(v => ({
+                    name: v.id,
+                    value: v.id
+                }));
+                
+                // 現在選択されているボイスが一覧に含まれていない場合、最初のボイスをデフォルトに
+                if (irodoriVoices.value.length > 0) {
+                    const hasVoice = irodoriVoices.value.some(v => v.value === irodoriVoice.value);
+                    if (!hasVoice) {
+                        irodoriVoice.value = irodoriVoices.value[0].value;
+                    }
                 }
+            } else {
+                irodoriConnectionState.value = 'failed';
+                irodoriConnectionErrorMsg.value = result.error || 'ボイス一覧の取得に失敗しました。';
+                irodoriVoices.value = [];
             }
         } else {
-            irodoriConnectionState.value = 'failed';
-            irodoriConnectionErrorMsg.value = 'ボイス一覧の取得に失敗しました。';
-            irodoriVoices.value = [];
+            // ブラウザ開発環境用フォールバック
+            const result = await IrodoriTtsConnector.listVoices(irodoriEndpoint.value);
+            if (result && result.data) {
+                irodoriConnectionState.value = 'success';
+                irodoriVoices.value = result.data.map(v => ({
+                    name: v.id,
+                    value: v.id
+                }));
+                
+                // 現在選択されているボイスが一覧に含まれていない場合、最初のボイスをデフォルトに
+                if (irodoriVoices.value.length > 0) {
+                    const hasVoice = irodoriVoices.value.some(v => v.value === irodoriVoice.value);
+                    if (!hasVoice) {
+                        irodoriVoice.value = irodoriVoices.value[0].value;
+                    }
+                }
+            } else {
+                irodoriConnectionState.value = 'failed';
+                irodoriConnectionErrorMsg.value = 'ボイス一覧の取得に失敗しました。';
+                irodoriVoices.value = [];
+            }
         }
     } catch (e: any) {
         irodoriConnectionState.value = 'failed';

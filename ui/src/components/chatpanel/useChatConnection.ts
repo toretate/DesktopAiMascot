@@ -4,6 +4,10 @@ import { useMascotStore } from '../../store/mascot';
 import { storeToRefs } from 'pinia';
 import { AudioPlaylist } from '../../utils/AudioPlaylist';
 import { Message, ChatSession, MessageAttachment } from './useChatHistory';
+import useRadioMode from './use-radiomode-prompt';
+import useIrodoriEmotion from './use-irodori-emotion';
+import { splitSentences } from '../../utils/sentence-splitter';
+import { sanitizeForIrodoriTTS } from '../../utils/irodori-sanitizer';
 
 export function useChatConnection(params: {
     messages: Ref<Message[]>;
@@ -91,12 +95,12 @@ export function useChatConnection(params: {
                     }
                 } else if (wsEvent === 'chat-response') {
                     const { text, emotion } = data;
-                    
+
                     updateLastMascotMessage(text);
                     const mascotId = activeMascot.value?.id || 'default';
                     await runCompaction(mascotId, activeSessionId.value!);
                     await saveHistory();
-                    
+
                     mascotStore.setEmotion(emotion);
                     if (window.electronAPI) {
                         window.electronAPI.changeEmotion(emotion);
@@ -154,7 +158,7 @@ export function useChatConnection(params: {
     const attachFiles = (event: Event) => {
         const input = event.target as HTMLInputElement;
         if (!input.files) return;
-        
+
         for (let i = 0; i < input.files.length; i++) {
             const file = input.files[i];
             const reader = new FileReader();
@@ -227,7 +231,7 @@ export function useChatConnection(params: {
 
         const mascot = activeMascot.value;
         const engine = configStore.selectedEngine || mascot?.aiConfig?.chat?.engine || 'gemini';
-        
+
         let apiKey = '';
         if (engine === 'gemini') {
             apiKey = configStore.googleAiStudioApiKey || '';
@@ -251,8 +255,8 @@ export function useChatConnection(params: {
             model = configStore.anthropicModel || mascot?.aiConfig?.chat?.model || 'claude-3-5-sonnet-latest';
         }
 
-        const voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined 
-            ? mascot.aiConfig.voice.speaker_id 
+        const voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined
+            ? mascot.aiConfig.voice.speaker_id
             : (configStore.voicevoxSpeaker !== undefined ? configStore.voicevoxSpeaker : 2);
 
         const voiceEngine = configStore.selectedVoiceEngine || mascot?.aiConfig?.voice?.engine || 'voicevox';
@@ -261,38 +265,18 @@ export function useChatConnection(params: {
         const irodoriVoice = configStore.irodoriVoice || 'default';
 
         let systemPrompt = '';
+
+        // マスコットの基礎情報
         if (mascot && mascot.profile) {
             systemPrompt += `# Mascot Character Profile\n${mascot.profile}\n\n`;
         }
 
+        // ラジオモードプロンプト
         if (mascotStore.isRadioMode) {
-            let radioModePrompt = '';
-            let activeTalkPrompt = '';
-
-            if (window.electronAPI && window.electronAPI.getRadioPrompts) {
-                try {
-                    const radioPrompts = await window.electronAPI.getRadioPrompts();
-                    const isEx = configStore.selectedEngine === 'lmstudio' && configStore.useExRadio;
-                    radioModePrompt = isEx ? (radioPrompts.exRadioMode || '') : radioPrompts.radioMode;
-                    activeTalkPrompt = isEx ? (radioPrompts.exActiveTalk || '') : radioPrompts.activeTalk;
-                } catch (e) {
-                    console.error('Failed to load radio prompts:', e);
-                }
-            }
-
-            // ラジオモード共通の基本指示を適用
-            systemPrompt += radioModePrompt.trim()
-                ? `${radioModePrompt.trim()}\n\n`
-                : `# Radio Mode Instructions\nあなたは現在、1人喋りの「ラジオパーソナリティ（MC）」としてラジオ番組を配信しています。目の前のリスナー（マスター）に向けてラジオ風の楽しいトークを展開してください。挨拶（「リスナーのみなさんこんにちは！」「お便りありがとうございます」など）や、ラジオ番組らしい進行の言い回しを効果的に使ってください。\n\n`;
-
-            // 能動的トーク（沈黙時の自発的発話）の場合のみ、追加指示を上乗せする
-            if (isActiveTalk) {
-                systemPrompt += activeTalkPrompt.trim()
-                    ? `${activeTalkPrompt.trim()}\n\n`
-                    : `# Active Radio Talk Instructions\n現在、リスナー（ユーザー）からの発話がない状態（沈黙）です。ラジオパーソナリティとして沈黙を破り、リスナーを退屈させないように能動的にフリートークを開始するか、新しい面白い話題（季節、天気、雑談、リスナーへの問いかけなど）を自発的に切り出して、リスナーに楽しく語りかけてください。余計なメタテキストは出力せず、セリフのみを出力してください。\n\n`;
-            }
+            systemPrompt += await useRadioMode(isActiveTalk, configStore);
         }
 
+        // マスコット固有のプロンプト
         if (window.electronAPI && window.electronAPI.getMascotPrompts && mascot) {
             try {
                 const mascotPrompts = await window.electronAPI.getMascotPrompts(mascot.id);
@@ -316,14 +300,19 @@ export function useChatConnection(params: {
             }
         }
 
+        // システムプロンプトが空の場合、デフォルトのシステムプロンプトを設定する
         if (!systemPrompt.trim()) {
             systemPrompt = `あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。`;
         }
 
-        if (!systemPrompt.includes('[happy]') && !systemPrompt.includes('感情タグ')) {
-            systemPrompt += "\n# System Instructions\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
+        // 感情表現ブロック(Irodori-TTSのみ)
+        if (voiceEngine === 'irodori') {
+            systemPrompt += useIrodoriEmotion();
         }
+        // 感情タグブロック(マスコットの表情向け)
+        systemPrompt += "\n# System Instructions\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
 
+        // タイマー指定ブロック
         if (!systemPrompt.includes('[TIMER:')) {
             systemPrompt += "\n# Timer Instructions\nユーザーから「〇分後に教えて」「後でお知らせして」「カップラーメンにお湯を入れた」など、特定の時間経過後のお知らせやリマインドを求められた場合は、会話 of 応答テキストの末尾（感情タグの直前）に、必ず次のフォーマットでタイマー起動タグを付与してください。\n[TIMER:秒数,お知らせ内容]\n※秒数は半角数字で指定してください。お知らせ内容には具体的なリマインド内容を記述してください。例:「了解、3分測るね。[TIMER:180,カップラーメンができました！] [happy]」";
         }
@@ -339,7 +328,7 @@ export function useChatConnection(params: {
             sender: 'mascot',
             text: '考え中...'
         });
-        
+
         await nextTick();
         scrollToBottom();
 
@@ -449,15 +438,13 @@ export function useChatConnection(params: {
             if (window.electronAPI && useTts.value) {
                 const api = window.electronAPI;
                 const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
-                
-                const sentences = speechText
-                    .split(/(?<=[。！？\n])/)
-                    .map(s => s.trim())
-                    .filter(s => s.length > 0);
 
-                const synthPromises = sentences.map(sentence => {
+                const processedSentences = splitSentences(speechText);
+
+                const synthPromises = processedSentences.map(sentence => {
                     if (voiceEngine === 'irodori') {
-                        return api.synthesizeIrodori(sentence, irodoriEndpointUrl, irodoriModel, irodoriVoice, detectedEmotion);
+                        const cleanSentence = sanitizeForIrodoriTTS(sentence);
+                        return api.synthesizeIrodori(cleanSentence, irodoriEndpointUrl, irodoriModel, irodoriVoice, detectedEmotion);
                     } else {
                         return api.synthesizeVoicevox(sentence, voicevoxSpeakerId, voicevoxEndpointUrl);
                     }

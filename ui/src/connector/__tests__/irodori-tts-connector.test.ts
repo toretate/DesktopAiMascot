@@ -70,6 +70,52 @@ describe('IrodoriTtsConnector', () => {
         expect(body.input).toBe('こんにちは 😊');
     });
 
+    test('synthesize - 感情パラメータ（sadness）がある場合に 😭 が付与されること', async () => {
+        const dummyAudioData = new Uint8Array([0]);
+        const mockResponse = {
+            ok: true,
+            arrayBuffer: async () => dummyAudioData.buffer
+        };
+
+        const fetchMock = vi.fn().mockResolvedValue(mockResponse);
+        vi.stubGlobal('fetch', fetchMock);
+
+        const params: IrodoriTtsSpeechInputParam = {
+            input: '悲しいです',
+            model: 'irodori-tts',
+            voice: 'none'
+        };
+
+        await IrodoriTtsConnector.synthesize(params, 'sadness', 'http://127.0.0.1:8088');
+
+        const callArgs = fetchMock.mock.calls[0];
+        const body = JSON.parse(callArgs[1].body);
+        expect(body.input).toBe('悲しいです 😭');
+    });
+
+    test('synthesize - 感情パラメータ（embarrassment）がある場合に 🫣 が付与されること', async () => {
+        const dummyAudioData = new Uint8Array([0]);
+        const mockResponse = {
+            ok: true,
+            arrayBuffer: async () => dummyAudioData.buffer
+        };
+
+        const fetchMock = vi.fn().mockResolvedValue(mockResponse);
+        vi.stubGlobal('fetch', fetchMock);
+
+        const params: IrodoriTtsSpeechInputParam = {
+            input: '恥ずかしいです',
+            model: 'irodori-tts',
+            voice: 'none'
+        };
+
+        await IrodoriTtsConnector.synthesize(params, 'embarrassment', 'http://127.0.0.1:8088');
+
+        const callArgs = fetchMock.mock.calls[0];
+        const body = JSON.parse(callArgs[1].body);
+        expect(body.input).toBe('恥ずかしいです 🫣');
+    });
+
     test('synthesize - モデル名が irodori-tts-500m-v3 の場合に irodori-tts に自動変換されること', async () => {
         const dummyAudioData = new Uint8Array([0]);
         const mockResponse = {
@@ -147,10 +193,7 @@ describe('IrodoriTtsConnector', () => {
         const result = await IrodoriTtsConnector.health('http://127.0.0.1:8088');
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8088/health', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method: 'GET'
         });
         expect(result).toBe(true);
     });
@@ -188,10 +231,7 @@ describe('IrodoriTtsConnector', () => {
         const result = await IrodoriTtsConnector.models('http://127.0.0.1:8088');
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8088/v1/models', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method: 'GET'
         });
         expect(result).toEqual(dummyModelsData);
     });
@@ -242,10 +282,7 @@ describe('IrodoriTtsConnector', () => {
         const result = await IrodoriTtsConnector.listVoices('http://127.0.0.1:8088');
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8088/v1/audio/voices', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            method: 'GET'
         });
         expect(result).toEqual(dummyVoicesData);
     });
