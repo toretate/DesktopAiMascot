@@ -32,6 +32,7 @@ export interface IElectronAPI {
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => Promise<string | null>;
     synthesizeIrodori: (text: string, endpoint: string, model: string, voice: string, emotion?: string) => Promise<string | null>;
     getVoicevoxSpeakers: (endpoint: string) => Promise<{ success: boolean; speakers: { name: string; value: number }[]; error?: string }>;
+    getIrodoriVoices: (endpoint: string) => Promise<{ success: boolean; voices: any[]; error?: string }>;
     generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string; label: string }[], userPromptTemplate: string, engine?: string, model?: string, history?: any[]) => Promise<{ success: boolean; imageBytes?: string; error?: string; history?: any }>;
     getImagenModels: (apiKey: string) => Promise<string[]>;
     getGeminiModels: (apiKey: string) => Promise<{ success: boolean; models: string[]; error?: string }>;

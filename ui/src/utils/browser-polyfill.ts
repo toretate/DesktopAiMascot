@@ -405,6 +405,17 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 return { success: false, speakers: [], error: e.message || '接続に失敗しました' };
             }
         },
+        getIrodoriVoices: async (endpoint: string) => {
+            try {
+                const result = await IrodoriTtsConnector.listVoices(endpoint);
+                if (result && result.data) {
+                    return { success: true, voices: result.data };
+                }
+                return { success: false, voices: [], error: 'ボイス一覧の取得に失敗しました。' };
+            } catch (e: any) {
+                return { success: false, voices: [], error: e.message || '接続に失敗しました' };
+            }
+        },
         generateMascotExpressions: async () => {
             return { success: false, error: 'AI表情自動生成機能はWeb版ではサポートされていません。' };
         },
