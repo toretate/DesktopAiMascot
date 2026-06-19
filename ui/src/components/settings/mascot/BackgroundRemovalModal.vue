@@ -16,6 +16,10 @@ const emit = defineEmits<{
 
 const engines = ref([
     { label: 'サーバ (node.js)', value: 'node' },
+    { label: 'ToonOut (アニメ向け/BiRefNet)', value: 'toonout' },
+    { label: 'BiRefNet general (汎用)', value: 'birefnet-general' },
+    { label: 'BiRefNet lite (軽量/高速)', value: 'birefnet-lite' },
+    { label: 'ISNet-anime (アニメ/rembg)', value: 'isnet-anime' },
     { label: 'Comfy UI', value: 'comfy' }
 ]);
 
@@ -46,8 +50,9 @@ const resolveImageUrl = (url: string) => {
 };
 
 const handleRemoveBackground = async () => {
-    if (selectedEngine.value !== 'node' && selectedEngine.value !== 'comfy') {
-        alert('現在、サーバ (node.js) または Comfy UI のみが選択可能です。');
+    const allowed = ['node', 'toonout', 'birefnet-general', 'birefnet-lite', 'isnet-anime', 'comfy'];
+    if (!allowed.includes(selectedEngine.value)) {
+        alert('対応していないエンジンが選択されています。');
         return;
     }
 

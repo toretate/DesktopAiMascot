@@ -1,5 +1,7 @@
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal-node';
 import { uploadImage, runWorkflow } from '../connector/comfy-connector';
+import { removeBackgroundBiRefNet, isBiRefNetVariant } from './birefnet-service';
+import { removeBackgroundRembg } from './rembg-service';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -32,6 +34,12 @@ async function removeBackgroundWithComfyUI(imageBuffer: Buffer, mimeType: string
 export async function removeBackground(imageBuffer: Buffer, mimeType: string, engine: string): Promise<Buffer> {
     if (engine === 'comfy') {
         return await removeBackgroundWithComfyUI(imageBuffer, mimeType);
+    } else if (isBiRefNetVariant(engine)) {
+        // BiRefNet 系 (GGUF + vision.cpp): toonout / birefnet-general / birefnet-lite
+        return await removeBackgroundBiRefNet(imageBuffer, engine);
+    } else if (engine === 'isnet-anime') {
+        // rembg (ONNX, Python サイドカー) — アニメ特化モデル
+        return await removeBackgroundRembg(imageBuffer, 'isnet-anime');
     } else {
         // デフォルトは Node.js 内の @imgly/background-removal-node
         const inputBlob = new Blob([imageBuffer], { type: mimeType });
