@@ -25,6 +25,35 @@ export function initChatWindow(config: any, isDev: boolean) {
         characterBounds = bounds;
         console.log(`[IPC] Character bounds updated:`, characterBounds);
     });
+
+    // チャットウィンドウのサイズ変更を受け取るハンドラー（HTML/JSのカスタムリサイズ対応）
+    ipcMain.on('resize-chat-window', (event, size: { width: number; height: number }) => {
+        if (!chatWindow || chatWindow.isDestroyed()) return;
+        const mascotWinRef = getMascotWindow();
+        if (!mascotWinRef || mascotWinRef.isDestroyed()) return;
+
+        const mascotBounds = mascotWinRef.getBounds();
+        const chatBounds = chatWindow.getBounds();
+
+        const w = Math.round(size.width);
+        const h = Math.round(size.height);
+
+        isSyncingChatPosition = true;
+        chatWindow.setBounds({
+            x: chatBounds.x,
+            y: chatBounds.y,
+            width: w,
+            height: h
+        });
+        
+        chatOffsetX = chatBounds.x - mascotBounds.x;
+        chatOffsetY = chatBounds.y - mascotBounds.y;
+        appConfig.update({ chatWidth: w, chatHeight: h });
+        
+        // 設定更新イベントをUIに送信してPiniaストアを同期
+        chatWindow.webContents.send('config-updated', appConfig.get());
+        isSyncingChatPosition = false;
+    });
 }
 
 export function getChatWindow(): BrowserWindow | null {
@@ -57,31 +86,19 @@ export function adjustChatWindowPosition() {
     const mascotWin = getMascotWindow();
     if (!mascotWin || mascotWin.isDestroyed() || !chatWindow || chatWindow.isDestroyed()) return;
 
+    const configData = appConfig.get();
+    const chatW = configData.chatWidth ?? 350;
+    const chatH = configData.chatHeight ?? 400;
+
     const mascotBounds = mascotWin.getBounds();
-    const chatBounds = chatWindow.getBounds();
     
     // キャラクターが現在いる物理ディスプレイを取得
     const targetDisplay = screen.getDisplayMatching(mascotBounds);
     const displayBounds = targetDisplay.workArea;
     
-    const chatW = chatBounds.width;
-    const chatH = chatBounds.height;
-    
-    // characterBoundsの各値が有効な数値か検証し、不正な場合はフォールバック
-    const boundsTop = Number.isFinite(characterBounds.top) ? characterBounds.top : 0;
-    const boundsBottom = Number.isFinite(characterBounds.bottom) ? characterBounds.bottom : mascotBounds.height;
-    const boundsLeft = Number.isFinite(characterBounds.left) ? characterBounds.left : 0;
-    const boundsRight = Number.isFinite(characterBounds.right) ? characterBounds.right : mascotBounds.width;
-    
-    // キャラクター画像のグローバル座標系での境界を算出
-    const globalCharTop = mascotBounds.y + boundsTop;
-    const globalCharBottom = mascotBounds.y + boundsBottom;
-    const globalCharLeft = mascotBounds.x + boundsLeft;
-    const globalCharRight = mascotBounds.x + boundsRight;
-    
-    // 基本位置：キャラクター画像の右側、ウィンドウの下をキャラクター画像の下に合わせる
-    let targetX = globalCharRight;
-    let targetY = globalCharBottom - chatH;
+    // 基本位置：マスコットウィンドウの右隣、下端をマスコットウィンドウの下端に合わせる
+    let targetX = mascotBounds.x + mascotBounds.width;
+    let targetY = mascotBounds.y + mascotBounds.height - chatH;
     
     // 上下方向のはみ出し補正
     if (targetY + chatH > displayBounds.y + displayBounds.height) {
@@ -91,11 +108,10 @@ export function adjustChatWindowPosition() {
         targetY = displayBounds.y;
     }
     
-    // キャラクター画像の右端に表示した場合に、メッセージウィンドウが画面外にはみ出すとき
+    // 右端にはみ出す場合、マスコットウィンドウの左隣に表示
     if (targetX + chatW > displayBounds.x + displayBounds.width) {
-        // キャラクター画像の左側に表示
-        targetX = globalCharLeft - chatW;
-        targetY = globalCharBottom - chatH;
+        targetX = mascotBounds.x - chatW;
+        targetY = mascotBounds.y + mascotBounds.height - chatH;
         
         // 上下方向のはみ出し補正
         if (targetY + chatH > displayBounds.y + displayBounds.height) {
@@ -111,7 +127,13 @@ export function adjustChatWindowPosition() {
     targetY = Math.round(targetY);
     
     isSyncingChatPosition = true;
-    chatWindow.setPosition(targetX, targetY);
+    // setPositionの代わりにsetBoundsを使用し、DPIスケーリングによるサイズ肥大化バグを防ぐ
+    chatWindow.setBounds({
+        x: targetX,
+        y: targetY,
+        width: chatW,
+        height: chatH
+    });
     chatOffsetX = targetX - mascotBounds.x;
     chatOffsetY = targetY - mascotBounds.y;
     isSyncingChatPosition = false;
@@ -122,9 +144,19 @@ export function syncChatWindowPosition() {
     const mascotWin = getMascotWindow();
     if (!mascotWin || !chatWindow || !chatWindow.isVisible()) return;
 
+    const configData = appConfig.get();
+    const chatW = configData.chatWidth ?? 350;
+    const chatH = configData.chatHeight ?? 400;
+
     isSyncingChatPosition = true;
     const [mascotX, mascotY] = mascotWin.getPosition();
-    chatWindow.setPosition(mascotX + chatOffsetX, mascotY + chatOffsetY);
+    // setPositionの代わりにsetBoundsを使用し、サイズを強制維持
+    chatWindow.setBounds({
+        x: Math.round(mascotX + chatOffsetX),
+        y: Math.round(mascotY + chatOffsetY),
+        width: chatW,
+        height: chatH
+    });
     isSyncingChatPosition = false;
 }
 
@@ -134,8 +166,8 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
     }
 
     const configData = appConfig.get();
-    const chatW = 350;
-    const chatH = 400;
+    const chatW = configData.chatWidth ?? 350;
+    const chatH = configData.chatHeight ?? 400;
     const initialChatAlwaysOnTop = getEffectiveChatAlwaysOnTop(configData);
     
     chatWindow = new BrowserWindow({
