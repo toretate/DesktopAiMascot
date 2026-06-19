@@ -88,16 +88,7 @@ export class VoiceAiService {
 
         let textWithEmotion = text;
         if (emotion) {
-            const lowerEmotion = emotion.toLowerCase();
-            if (lowerEmotion === 'happy' || lowerEmotion === '喜び' || lowerEmotion === '嬉') {
-                textWithEmotion += ' 😊';
-            } else if (lowerEmotion === 'sad' || lowerEmotion === '悲しみ' || lowerEmotion === '哀') {
-                textWithEmotion += ' 😢';
-            } else if (lowerEmotion === 'angry' || lowerEmotion === '怒り' || lowerEmotion === '怒') {
-                textWithEmotion += ' 💢';
-            } else if (lowerEmotion === 'surprised' || lowerEmotion === '驚き' || lowerEmotion === '驚') {
-                textWithEmotion += ' 😲';
-            }
+            textWithEmotion += VoiceAiService.getIrodoriEmoji(emotion);
         }
 
         console.log(`[VoiceAiService] irodori-tts synthesize start for: "${textWithEmotion}"`);
@@ -143,5 +134,106 @@ export class VoiceAiService {
             }
             return null;
         }
+    }
+
+    /**
+     * 感情名に対応する Irodori-TTS の感情表現用絵文字を取得します。
+     * @param emotion 感情名
+     * @returns 感情表現用絵文字（先頭にスペースを含む）
+     */
+    public static getIrodoriEmoji(emotion?: string): string {
+        if (!emotion) return '';
+        const lower = emotion.toLowerCase().trim();
+
+        // 28種類の感情表現 (SillyTavern互換)
+        switch (lower) {
+            case 'admiration':
+                return ' 🫶';
+            case 'amusement':
+                return ' 🤭';
+            case 'anger':
+                return ' 😠';
+            case 'annoyance':
+                return ' 😒';
+            case 'approval':
+                return ' 👌';
+            case 'caring':
+                return ' 🫶';
+            case 'confusion':
+                return ' 🤔';
+            case 'curiosity':
+                return ' 🤔';
+            case 'desire':
+                return ' 😏';
+            case 'disappointment':
+                return ' 😮‍💨';
+            case 'disapproval':
+                return ' 🙄';
+            case 'disgust':
+                return ' 😒';
+            case 'embarrassment':
+                return ' 🫣';
+            case 'excitement':
+                return ' 😆';
+            case 'fear':
+                return ' 😱';
+            case 'gratitude':
+                return ' 🙏';
+            case 'grief':
+                return ' 😭';
+            case 'joy':
+                return ' 😆';
+            case 'love':
+                return ' 🫶';
+            case 'nervousness':
+                return ' 🥺';
+            case 'optimism':
+                return ' 😊';
+            case 'pride':
+                return ' 😏';
+            case 'realization':
+                return ' 😲';
+            case 'relief':
+                return ' 😌';
+            case 'remorse':
+                return ' 😭';
+            case 'sadness':
+                return ' 😭';
+            case 'surprise':
+                return ' 😲';
+            case 'neutral':
+                return '';
+        }
+
+        // 既存のショートカットおよび日本語の感情判定
+        if (lower === 'happy' || lower === '嬉' || lower === '楽') {
+            return ' 😊';
+        }
+        if (lower === '喜び' || lower === 'joy') {
+            return ' 😆';
+        }
+        if (lower === 'sad' || lower === '悲しみ' || lower === '哀' || lower === '悲') {
+            return ' 😭';
+        }
+        if (lower === 'angry' || lower === '怒り' || lower === '怒') {
+            return ' 😠';
+        }
+        if (lower === 'surprised' || lower === '驚き' || lower === '驚') {
+            return ' 😲';
+        }
+        if (lower === 'nervous' || lower === '不安') {
+            return ' 🥺';
+        }
+        if (lower === 'scared' || lower === '恐れ' || lower === '恐怖') {
+            return ' 😱';
+        }
+        if (lower === '安堵' || lower === 'ホッ') {
+            return ' 😌';
+        }
+        if (lower === '照れ' || lower === '恥ずかしい') {
+            return ' 🫣';
+        }
+
+        return '';
     }
 }

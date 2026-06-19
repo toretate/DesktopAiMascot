@@ -77,6 +77,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // VOICEVOX (ローカル)疎通確認および話者（スタイル）一覧取得を呼び出す
     getVoicevoxSpeakers: (endpoint: string) =>
         ipcRenderer.invoke('get-voicevox-speakers', endpoint),
+
+    // irodori-tts (ローカル)疎通確認およびボイス一覧取得を呼び出す
+    getIrodoriVoices: (endpoint: string) =>
+        ipcRenderer.invoke('get-irodori-voices', endpoint),
     
     // AIによる表情スプライト生成
     generateMascotExpressions: (base64Image: string, apiKey: string, emotions: { name: string, label: string }[], userPromptTemplate: string, engine?: string, model?: string, history?: any[]) =>
