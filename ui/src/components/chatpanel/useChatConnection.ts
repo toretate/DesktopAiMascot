@@ -47,7 +47,9 @@ export function useChatConnection(params: {
         toolsWeather,
         toolsVolume,
         toolsAppLauncher,
-        toolsWebSearch
+        toolsWebSearch,
+        saveVoice,
+        showVoiceLog
     } = storeToRefs(configStore);
 
     const { isLoading: isAiResponding } = storeToRefs(mascotStore);
@@ -360,6 +362,9 @@ export function useChatConnection(params: {
                     lmstudioEndpoint: lmsEndpoint,
                     history: historyToSend,
                     useTts: useTts.value,
+                    saveVoice: saveVoice.value,
+                    showVoiceLog: showVoiceLog.value,
+                    activeMascotId: activeMascot.value?.id || 'default',
                     attachments: attachments.length > 0 ? attachments : undefined,
                     tools: {
                         toolsCurrentTime: toolsCurrentTime.value,
@@ -456,9 +461,18 @@ export function useChatConnection(params: {
                             const base64Audio = await promise;
                             if (base64Audio) {
                                 playlist.push(base64Audio);
+                                
+                                // 音声の保存処理
+                                if (saveVoice.value) {
+                                    const mascotId = activeMascot.value?.id || 'default';
+                                    const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
+                                    api.saveMascotVoice(mascotId, base64Audio, extension).catch((err) => {
+                                        console.error('[Chat] 音声保存エラー:', err);
+                                    });
+                                }
                             }
                         } catch (err) {
-                            console.error('[ChatPanel] VOICEVOX並行合成エラー:', err);
+                            console.error('[Chat] 音声合成エラー:', err);
                         }
                     }
                 })();

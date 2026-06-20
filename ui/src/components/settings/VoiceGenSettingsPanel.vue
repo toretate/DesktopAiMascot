@@ -4,6 +4,7 @@ import Card from 'primevue/card';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
+import Checkbox from 'primevue/checkbox';
 import { useConfigStore } from '@/store/config';
 import { storeToRefs } from 'pinia';
 import { IrodoriTtsConnector } from '@/connector/irodori-tts-connector';
@@ -15,7 +16,8 @@ const {
     voicevoxSpeaker,
     irodoriEndpoint,
     irodoriModel,
-    irodoriVoice
+    irodoriVoice,
+    activeMascot
 } = storeToRefs(configStore);
 
 const voiceEngines = ref([
@@ -215,6 +217,17 @@ const testPlayVoice = async () => {
             const mimeType = engine === 'irodori' ? 'audio/mp3' : 'audio/wav';
             const audio = new Audio(`data:${mimeType};base64,${base64Audio}`);
             await audio.play();
+
+            // 音声テスト実行時も保存がONであればローカルに保存する
+            if (configStore.saveVoice) {
+                const mascotId = configStore.activeMascot?.id || 'default';
+                const extension = engine === 'irodori' ? 'mp3' : 'wav';
+                if (window.electronAPI) {
+                    window.electronAPI.saveMascotVoice(mascotId, base64Audio, extension).catch((err) => {
+                        console.error('[Settings] 音声テスト保存エラー:', err);
+                    });
+                }
+            }
         } else {
             console.error('[Settings] 音声合成に失敗しました。');
         }
@@ -222,6 +235,29 @@ const testPlayVoice = async () => {
         console.error('[Settings] 音声テスト再生エラー:', err);
     } finally {
         isTestingVoice.value = false;
+    }
+};
+
+// 音声ファイル保存用のパス計算およびフォルダオープン処理
+const todayDirName = computed(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+});
+
+const savePathDisplay = computed(() => {
+    const mascotId = configStore.activeMascot?.id || 'default';
+    return `mascots/${mascotId}/voices/${todayDirName.value}`;
+});
+
+const openVoiceFolder = () => {
+    const relativePath = savePathDisplay.value;
+    if (window.electronAPI) {
+        window.electronAPI.openFolder(relativePath);
+    } else {
+        alert('デスクトップ版（Electron）のみ対応している機能です。');
     }
 };
 
@@ -258,6 +294,31 @@ onMounted(() => {
         <template #title>音声生成AI設定</template>
         <template #content>
             <div class="flex flex-column gap-4">
+                <!-- 音声の保存設定 -->
+                <div class="form-field border-bottom pb-3 flex flex-column gap-3">
+                    <div>
+                        <div class="flex align-items-center gap-2 mb-2">
+                            <Checkbox v-model="configStore.saveVoice" :binary="true" inputId="save-voice" />
+                            <label for="save-voice" class="font-medium cursor-pointer">音声の生成結果をローカルファイルに保存する</label>
+                        </div>
+                        <div v-if="configStore.saveVoice" class="flex align-items-center gap-2 text-sm text-gray-500 bg-gray-100 dark:bg-gray-800 p-2 border-round">
+                            <i class="pi pi-folder"></i>
+                            <span>保存先: {{ savePathDisplay }}</span>
+                            <Button 
+                                icon="pi pi-folder-open" 
+                                class="p-button-text p-button-sm p-0 ml-auto" 
+                                title="フォルダを開く" 
+                                @click="openVoiceFolder"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="flex align-items-center gap-2">
+                        <Checkbox v-model="configStore.showVoiceLog" :binary="true" inputId="show-voice-log" />
+                        <label for="show-voice-log" class="font-medium cursor-pointer">TTS送信時のデバッグログを出力する</label>
+                    </div>
+                </div>
+
                 <div class="form-field">
                     <label class="font-medium">音声エンジン</label>
                     <Select 

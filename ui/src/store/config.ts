@@ -64,6 +64,17 @@ export interface AppConfig {
     mascots: any[];
     activeMascotId: string;
 
+    integratedWidth?: number;
+    integratedHeight?: number;
+    integratedX?: number;
+    integratedY?: number;
+    compactWidth?: number;
+    compactHeight?: number;
+    compactX?: number;
+    compactY?: number;
+    chatWidth?: number;
+    chatHeight?: number;
+
     // ツール使用設定 (ToolUse)
     toolsCurrentTime: boolean;
     toolsGpsLocation: boolean;
@@ -72,6 +83,8 @@ export interface AppConfig {
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
     useExRadio: boolean;
+    saveVoice?: boolean;
+    showVoiceLog?: boolean;
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -140,6 +153,18 @@ export const useConfigStore = defineStore('config', () => {
     // ウィンドウモード
     const windowMode = ref<'split' | 'integrated' | 'compact'>('split');
 
+    // 統合・コンパクトウィンドウのサイズと位置
+    const integratedWidth = ref(1100);
+    const integratedHeight = ref(800);
+    const integratedX = ref(-1);
+    const integratedY = ref(-1);
+    const compactWidth = ref(420);
+    const compactHeight = ref(800);
+    const compactX = ref(-1);
+    const compactY = ref(-1);
+    const chatWidth = ref(350);
+    const chatHeight = ref(400);
+
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
     const activeMascotId = ref('');
@@ -152,6 +177,8 @@ export const useConfigStore = defineStore('config', () => {
     const toolsAppLauncher = ref(true);
     const toolsWebSearch = ref(true);
     const useExRadio = ref(false);
+    const saveVoice = ref(false);
+    const showVoiceLog = ref(true);
     const configVersion = ref(0);
 
     // ---- Getters ----
@@ -233,6 +260,17 @@ export const useConfigStore = defineStore('config', () => {
             
             windowMode.value = (configData.windowMode as any) || 'split';
             
+            integratedWidth.value = configData.integratedWidth !== undefined ? Number(configData.integratedWidth) : 1100;
+            integratedHeight.value = configData.integratedHeight !== undefined ? Number(configData.integratedHeight) : 800;
+            integratedX.value = configData.integratedX !== undefined ? Number(configData.integratedX) : -1;
+            integratedY.value = configData.integratedY !== undefined ? Number(configData.integratedY) : -1;
+            compactWidth.value = configData.compactWidth !== undefined ? Number(configData.compactWidth) : 420;
+            compactHeight.value = configData.compactHeight !== undefined ? Number(configData.compactHeight) : 800;
+            compactX.value = configData.compactX !== undefined ? Number(configData.compactX) : -1;
+            compactY.value = configData.compactY !== undefined ? Number(configData.compactY) : -1;
+            chatWidth.value = configData.chatWidth !== undefined ? Number(configData.chatWidth) : 350;
+            chatHeight.value = configData.chatHeight !== undefined ? Number(configData.chatHeight) : 400;
+
             mascots.value = configData.mascots || [];
             activeMascotId.value = configData.activeMascotId || '';
 
@@ -243,6 +281,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = configData.toolsAppLauncher !== undefined ? !!configData.toolsAppLauncher : true;
             toolsWebSearch.value = configData.toolsWebSearch !== undefined ? !!configData.toolsWebSearch : true;
             useExRadio.value = configData.useExRadio !== undefined ? !!configData.useExRadio : false;
+            saveVoice.value = configData.saveVoice !== undefined ? !!configData.saveVoice : false;
+            showVoiceLog.value = configData.showVoiceLog !== undefined ? !!configData.showVoiceLog : true;
         } else {
             // Webブラウザ実行時の localStorage フォールバック
             googleAiStudioApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -320,6 +360,17 @@ export const useConfigStore = defineStore('config', () => {
 
             windowMode.value = (localStorage.getItem('windowMode') as any) || 'split';
 
+            integratedWidth.value = Number(localStorage.getItem('integratedWidth') || '1100');
+            integratedHeight.value = Number(localStorage.getItem('integratedHeight') || '800');
+            integratedX.value = Number(localStorage.getItem('integratedX') || '-1');
+            integratedY.value = Number(localStorage.getItem('integratedY') || '-1');
+            compactWidth.value = Number(localStorage.getItem('compactWidth') || '420');
+            compactHeight.value = Number(localStorage.getItem('compactHeight') || '800');
+            compactX.value = Number(localStorage.getItem('compactX') || '-1');
+            compactY.value = Number(localStorage.getItem('compactY') || '-1');
+            chatWidth.value = Number(localStorage.getItem('chatWidth') || '350');
+            chatHeight.value = Number(localStorage.getItem('chatHeight') || '400');
+
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
             activeMascotId.value = localStorage.getItem('activeMascotId') || '';
@@ -331,6 +382,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = localStorage.getItem('toolsAppLauncher') !== 'false';
             toolsWebSearch.value = localStorage.getItem('toolsWebSearch') !== 'false';
             useExRadio.value = localStorage.getItem('useExRadio') === 'true';
+            saveVoice.value = localStorage.getItem('saveVoice') === 'true';
+            showVoiceLog.value = localStorage.getItem('showVoiceLog') !== 'false';
         }
 
         // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
@@ -406,6 +459,16 @@ export const useConfigStore = defineStore('config', () => {
             serverPort: Number(serverPort.value),
             useTts: useTts.value,
             windowMode: windowMode.value,
+            integratedWidth: Number(integratedWidth.value),
+            integratedHeight: Number(integratedHeight.value),
+            integratedX: Number(integratedX.value),
+            integratedY: Number(integratedY.value),
+            compactWidth: Number(compactWidth.value),
+            compactHeight: Number(compactHeight.value),
+            compactX: Number(compactX.value),
+            compactY: Number(compactY.value),
+            chatWidth: Number(chatWidth.value),
+            chatHeight: Number(chatHeight.value),
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value,
             toolsCurrentTime: toolsCurrentTime.value,
@@ -414,7 +477,9 @@ export const useConfigStore = defineStore('config', () => {
             toolsVolume: toolsVolume.value,
             toolsAppLauncher: toolsAppLauncher.value,
             toolsWebSearch: toolsWebSearch.value,
-            useExRadio: useExRadio.value
+            useExRadio: useExRadio.value,
+            saveVoice: saveVoice.value,
+            showVoiceLog: showVoiceLog.value
         };
 
         // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
@@ -496,6 +561,16 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('serverPort', serverPort.value.toString());
         localStorage.setItem('useTts', useTts.value.toString());
         localStorage.setItem('windowMode', windowMode.value);
+        localStorage.setItem('integratedWidth', integratedWidth.value.toString());
+        localStorage.setItem('integratedHeight', integratedHeight.value.toString());
+        localStorage.setItem('integratedX', integratedX.value.toString());
+        localStorage.setItem('integratedY', integratedY.value.toString());
+        localStorage.setItem('compactWidth', compactWidth.value.toString());
+        localStorage.setItem('compactHeight', compactHeight.value.toString());
+        localStorage.setItem('compactX', compactX.value.toString());
+        localStorage.setItem('compactY', compactY.value.toString());
+        localStorage.setItem('chatWidth', chatWidth.value.toString());
+        localStorage.setItem('chatHeight', chatHeight.value.toString());
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
 
@@ -506,6 +581,8 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('toolsAppLauncher', toolsAppLauncher.value.toString());
         localStorage.setItem('toolsWebSearch', toolsWebSearch.value.toString());
         localStorage.setItem('useExRadio', useExRadio.value.toString());
+        localStorage.setItem('saveVoice', saveVoice.value.toString());
+        localStorage.setItem('showVoiceLog', showVoiceLog.value.toString());
     };
 
     // 一部の設定を一括で更新する
@@ -557,6 +634,16 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
         if (newConfig.useTts !== undefined) useTts.value = !!newConfig.useTts;
         if (newConfig.windowMode !== undefined) windowMode.value = newConfig.windowMode as any;
+        if (newConfig.integratedWidth !== undefined) integratedWidth.value = Number(newConfig.integratedWidth);
+        if (newConfig.integratedHeight !== undefined) integratedHeight.value = Number(newConfig.integratedHeight);
+        if (newConfig.integratedX !== undefined) integratedX.value = Number(newConfig.integratedX);
+        if (newConfig.integratedY !== undefined) integratedY.value = Number(newConfig.integratedY);
+        if (newConfig.compactWidth !== undefined) compactWidth.value = Number(newConfig.compactWidth);
+        if (newConfig.compactHeight !== undefined) compactHeight.value = Number(newConfig.compactHeight);
+        if (newConfig.compactX !== undefined) compactX.value = Number(newConfig.compactX);
+        if (newConfig.compactY !== undefined) compactY.value = Number(newConfig.compactY);
+        if (newConfig.chatWidth !== undefined) chatWidth.value = Number(newConfig.chatWidth);
+        if (newConfig.chatHeight !== undefined) chatHeight.value = Number(newConfig.chatHeight);
         
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
@@ -568,6 +655,8 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.toolsAppLauncher !== undefined) toolsAppLauncher.value = !!newConfig.toolsAppLauncher;
         if (newConfig.toolsWebSearch !== undefined) toolsWebSearch.value = !!newConfig.toolsWebSearch;
         if (newConfig.useExRadio !== undefined) useExRadio.value = !!newConfig.useExRadio;
+        if (newConfig.saveVoice !== undefined) saveVoice.value = !!newConfig.saveVoice;
+        if (newConfig.showVoiceLog !== undefined) showVoiceLog.value = !!newConfig.showVoiceLog;
         
         configVersion.value++;
     };
@@ -620,6 +709,16 @@ export const useConfigStore = defineStore('config', () => {
         serverPort,
         useTts,
         windowMode,
+        integratedWidth,
+        integratedHeight,
+        integratedX,
+        integratedY,
+        compactWidth,
+        compactHeight,
+        compactX,
+        compactY,
+        chatWidth,
+        chatHeight,
         mascots,
         activeMascotId,
         activeMascot,
@@ -630,6 +729,8 @@ export const useConfigStore = defineStore('config', () => {
         toolsAppLauncher,
         toolsWebSearch,
         useExRadio,
+        saveVoice,
+        showVoiceLog,
         configVersion,
         loadConfig,
         saveConfig,

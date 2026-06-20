@@ -45,8 +45,10 @@ export function createCompactWindow(): BrowserWindow {
 
     const defaultW = 420;
     const defaultH = 800;
-    const savedW = configData.compactWidth || defaultW;
-    const savedH = configData.compactHeight || defaultH;
+    const minW = 350;
+    const minH = 500;
+    const savedW = Math.max(configData.compactWidth || defaultW, minW);
+    const savedH = Math.max(configData.compactHeight || defaultH, minH);
 
     let initialX = configData.compactX;
     let initialY = configData.compactY;
@@ -61,8 +63,9 @@ export function createCompactWindow(): BrowserWindow {
         height: savedH,
         x: initialX,
         y: initialY,
-        minWidth: 350,
-        minHeight: 500,
+        minWidth: minW,
+        minHeight: minH,
+        show: false, // 起動時の一瞬のチラつき（自動サイズ拡張）を隠すために最初は非表示にする
         transparent: false,
         frame: true,
         alwaysOnTop: configData.alwaysOnTop,
@@ -72,6 +75,13 @@ export function createCompactWindow(): BrowserWindow {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false
+        }
+    });
+
+    compactWindow.once('ready-to-show', () => {
+        if (compactWindow) {
+            compactWindow.setSize(savedW, savedH);
+            compactWindow.show();
         }
     });
 

@@ -1,236 +1,162 @@
 # Desktop AI Mascot
 
-デスクトップ上に常駐するAIマスコットアプリケーションです。C#とGodotで構築されており、ローカルLLM（LM Studio）や音声合成サービス（Style-Bert-VITS2）と連携して、キャラクターとの対話を楽しむことができます。
+デスクトップ上に常駐するAIマスコットアプリケーションです。WebGL (Pixi.js) を用いたアニメーション描画、背景透過や半透明チャットウィンドウを備えています。
+Electronによるデスクトップアプリ版に加え、Webブラウザでの動作にも対応しています。
+ローカルLLM（LM Studioなど）や音声合成サービス（Style-Bert-VITS2、VOICEVOX、Irodori TTSなど）、画像生成（ComfyUIなど）と連携して、キャラクターとのリアルタイムな対話やインタラクションを楽しむことができます。
 
 ## 主な機能
 
-- **デスクトップマスコット表示**: デスクトップ上にアニメーション可能なマスコットを表示
-- **AI対話機能**: LM Studioと連携したチャット機能（LINE風の吹き出し表示）
-- **音声合成**: Style-Bert-VITS2との連携による音声出力
-- **マスコット管理**: 複数のマスコット画像の管理とアニメーション再生
-- **ドラッグ移動**: マスコットをドラッグして自由に配置可能
-- **位置記憶**: 前回の位置を記憶し、次回起動時に同じ位置に表示
-- **システムトレイ常駐**: システムトレイから表示/非表示や終了が可能
-- **設定画面**: API設定やマスコット設定をGUIで変更可能
-
-## 動作要件
-
-- **OS**: Windows 11
-- **.NET**: .NET 8.0以降
-- **外部サービス**（任意）:
-  - チャット
-	  - LM Studio
-	  - Foundry Local
-  - Text-To-Speach(TTS)（音声合成）
-	  - Style-Bert-VITS2（音声合成を使用する場合）
-
-## インストールと実行
-
-### 前提条件
-
-1. [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) をインストール
-2. （任意）LLMの用意
-	- [LM Studio](https://lmstudio.ai/) をインストールしてローカルでLLMを実行
-	- [Foundry Local](https://learn.microsoft.com/ja-jp/azure/ai-foundry/foundry-local/get-started?view=foundry-classic) をインストールし、サービス開始
-		- [10分あればFoundry LocalをインストールしてローカルLLMで遊べるようになります](https://qiita.com/yoshiwatanabe/items/0b016c75541483fd7f17)
-		- [Foundry Localをさわってみた](https://zenn.dev/headwaters/articles/546f40c1adbd15)
-3. （任意）TTSの用意
-	- [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) をインストールして音声合成サーバーを実行
-
-＊画像生成、動画生成などは未実装です。今後のバージョンで対応予定です。
-＊キャラクター追加用のコンフィグや画像生成は今後のバージョンで対応予定です。
-
-
-## 使い方
-
-### 初回起動
-
-1. アプリケーションを起動すると、デスクトップにマスコットが表示されます
-2. システムトレイにアイコンが表示されます
-3. マスコットをクリックすると対話パネルが開きます
-
-### マスコットの操作
-
-- **ドラッグ**: マスコットをドラッグして移動
-- **クリック**: 対話パネルの表示/非表示を切り替え
-- **システムトレイアイコン右クリック**: 
-  - 表示/非表示の切り替え
-  - 設定画面を開く
-  - アプリケーションの終了
-
-### チャット機能の使用
-
-1. LM Studioを起動し、モデルをロード
-2. LM Studioのローカルサーバーを起動（デフォルト: http://127.0.0.1:1234）
-3. マスコットをクリックして対話パネルを開く
-4. テキスト入力欄にメッセージを入力
-5. `Shift + Enter` で送信（またはEnterキー）
-
-### 設定画面
-
-システムトレイアイコンから「設定」を選択すると、以下の設定が可能です：
-
-#### APIキー設定
-- 各種AIサービスのAPIキーを設定
-- **セキュリティ**: APIキーはWindows Data Protection API (DPAPI)により暗号化されて保存されます
-  - ユーザーアカウント固有の暗号化により、他のユーザーや別のPCでは復号化できません
-  - 設定ファイルには暗号化されたBase64文字列として保存されます
-
-#### チャットAI設定
-- **エンドポイント**: LM StudioのAPIエンドポイント（デフォルト: http://127.0.0.1:1234）
-- **モデル選択**: 利用可能なモデルの一覧から選択
-- **最大履歴数**: 会話履歴の保持数
-- **システムプロンプト**: AIの振る舞いを定義
-
-#### 画像AI設定
-- 画像生成AIサービスの設定
-
-#### マスコット設定
-- マスコット画像の追加/削除
-- アニメーション設定
-- サイズや表示設定
-
-### マスコット画像のカスタマイズ
-
-1. PNG または WebP 形式の画像を用意（透過背景推奨）
-2. 推奨サイズ: 1024x768 ピクセル
-3. 設定画面の「マスコット設定」から画像を追加
-4. アニメーションの設定を行う（任意）
-
-### ビルドと実行方法
-
-#### Visual Studioを使用する場合
-
-1. `DesktopAiMascot.sln` をVisual Studio 2026で開く
-2. NuGetパッケージの復元（自動で実行されます）
-3. F5キーまたは実行ボタンでデバッグ実行
-
-#### VS Codeを使用する場合
-
-1. VS Codeでプロジェクトフォルダを開く
-2. C# Dev Kit拡張機能をインストール
-3. F5キーでデバッグ実行
-
-#### コマンドラインから実行する場合
-
-```bash
-# プロジェクトのビルド
-dotnet build
-
-# 実行
-dotnet run
-
-# リリースビルド
-dotnet build -c Release
-
-# 実行ファイルの生成
-dotnet publish -c Release -r win-x64 --self-contained
-```
-
-
-## 配布フォルダ構成
-
-アプリケーションの配布時（またはビルド後）のフォルダ構成：
-
-```
-DesktopAiMascot/
-├── DesktopAiMascot.exe           # 実行ファイル
-├── mascots/                       # マスコット設定（ユーザー編集可能）
-│   ├── default/
-│   │   ├── config.yaml           # マスコット設定ファイル
-│   │   └── mascot1.png           # マスコット画像
-│   └── ...
-├── system_config.yaml             # システム設定ファイル
-└── (その他のDLLファイルなど)
-```
-
-### フォルダの役割
-
-- **`mascots/`**: ユーザーがマスコットを追加・編集できるフォルダ
-  - 新しいマスコットを追加する場合は、このフォルダ内に新しいサブフォルダを作成してください
-- **`system_config.yaml`**: アプリケーションの設定ファイル
-  - APIキー（暗号化）、ウィンドウ位置などのユーザー設定が保存されます
-  - APIキーはDPAPIにより暗号化されているため、同じユーザーアカウント以外では復号化できません
-
-### アンインストール
-
-フォルダごと削除するだけでアンインストールが完了します。レジストリなどには何も書き込まれません。
+- **デスクトップマスコット表示**: WebGL (Pixi.js) を活用し、アニメーション可能なマスコットを滑らかに描画。
+- **AI対話機能**: LM StudioなどのローカルLLMと連携したチャット機能（背景透過/半透明のチャットウィンドウ）。
+- **音声合成 (TTS)**: Style-Bert-VITS2、VOICEVOX、Irodori TTSと連携したリアルタイム音声出力。
+- **マスコット管理**: 複数マスコットの追加・切り替え、プロフィールや服装、表情、ポーズのカスタマイズ。
+- **表情スプライト自動位置合わせ**: 決定論的アルゴリズムやGemini Visionを用いて、表情スプライトの位置やスケールを自動アライメント。
+- **インタラクティブ操作**: ドラッグ移動、ウィンドウの追従、ダブルクリックや右クリックメニューによる切り替え。
+- **環境設定**: API接続設定（LLM、TTS、画像生成）、マスコットパラメータ調整をGUIから容易に実行。
+- **クロスプラットフォーム対応**: Electronによるデスクトップ版（透過対応）と、Webブラウザで動作するWeb版を提供。
 
 ## プロジェクト構成
 
+本プロジェクトは、フロントエンドUI、バックエンドサーバー、および共有ライブラリで構成されています。
+
 ```
 DesktopAiMascot/
-├── MascotWindow.xaml(.cs)        # メインウィンドウ
-├── controls/                      # カスタムコントロール
-│   ├── MascotControl.xaml(.cs)   # マスコット表示コントロール
-│   ├── MessageListPanel.xaml(.cs) # メッセージ一覧パネル
-│   └── ChatMessage.cs            # チャットメッセージクラス
-├── wpf/
-│   └── InteractionPanel.xaml(.cs) # 対話パネル
-├── views/                         # 設定画面
-│   ├── SettingsDialog.xaml(.cs)  # 設定ダイアログ
-│   ├── SettingsForm.xaml(.cs)    # 設定フォーム
-│   ├── ApiKeyPropertyPage.xaml   # APIキー設定
-│   ├── ChatAiPropertyPage.xaml   # チャットAI設定
-│   ├── ImageAiPropertyPage.xaml  # 画像AI設定
-│   └── MascotPropertyPage.xaml   # マスコット設定
-├── aiservice/                     # AIサービス
-│   ├── ChatAiService.cs          # チャットサービスインターフェース
-│   ├── LmStudioChatService.cs    # LM Studio実装
-│   └── voice/
-│       ├── AiVoiceService.cs     # 音声サービスインターフェース
-│       └── StyleBertVits2Service.cs # Style-Bert-VITS2実装
-├── mascots/                       # マスコット関連
-│   ├── Mascot.cs                 # マスコットクラス
-│   ├── MascotAnimationManager.cs # アニメーション管理
-│   └── MascotConfigIO.cs         # 設定の読み書き
-└── assets/                        # リソースファイル
-	└── icons/                     # アイコン画像
+├── ui/                         # フロントエンド (Electron + Vue 3)
+│   ├── electron/               # Electron メインプロセス (ウィンドウ管理、IPCハンドラー)
+│   ├── src/                    # Vue 3 レンダラープロセス (共通アプリケーション層)
+│   │   ├── components/         # MascotViewer, ChatPanel などのUIコンポーネント
+│   │   ├── store/              # Piniaによる状態管理 (config, mascot)
+│   │   ├── connector/          # サーバー/API通信コネクタ
+│   │   ├── skills/             # アプリケーション固有のスキル・ツール定義
+│   │   └── mascots/            # マスコット設定・アセットビルダー
+│   └── web/                    # Web版クライアント向けアセット・設定
+│
+├── server/                     # バックエンドサーバー (Express + WebSocket)
+│   ├── src/                    # サーバーソースコード
+│   │   ├── index.ts            # エントリーポイント
+│   │   ├── connector/          # 外部AI・音声合成APIとの接続コネクタ
+│   │   ├── routes/             # APIエンドポイントの定義
+│   │   ├── services/           # ビジネスロジック層
+│   │   ├── skills/             # LLM向けツール定義 (Tool Use)
+│   │   └── utils/              # ユーティリティ
+│   ├── vision/                 # 画像処理・スプライト境界検出など
+│   └── python/                 # Python 連携スクリプト
+│
+├── packages/                   # 独立したサブパッケージ・ライブラリ
+│   └── expression-alignment/   # 表情スプライト自動位置合わせライブラリ (Node/Browser対応)
+│
+├── aiservice/                  # AI生成用のリソース管理
+│   └── image/comfy_workflows   # ComfyUIのワークフロー定義 (.json)
+│
+├── mascots/                    # マスコットキャラクターの定義、画像アセット
+│   ├── default_mascot_sample/  # サンプルマスコットの画像・構成ファイル
+│   └── EmotionDefinitions.md   # 感情と表情スプライトの対応定義
+│
+└── docs/                       # 設計書、仕様書、各種機能の実装まとめ
 ```
+
+## 動作要件
+
+- **OS**: Windows 11 (Electronまたはブラウザが動作する環境)
+- **Node.js**: 18.0 以降
+- **外部AIサービス**（任意）:
+    - **対話 (LLM)**: [LM Studio](https://lmstudio.ai/) などのローカルLLMサーバー
+    - **音声合成 (TTS)**: [VOICEVOX](https://voicevox.hiroshiba.jp/)、[Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2)、Irodori TTS
+    - **画像生成**: [ComfyUI](https://github.com/comfyanonymous/ComfyUI) など
+
+---
+
+## 開発と実行方法
+
+### 1. 依存関係のインストール
+
+プロジェクト全体のセットアップを行います。
+
+```bash
+# フロントエンド (ui)
+cd ui
+npm install
+
+# バックエンド (server)
+cd ../server
+npm install
+
+# 表情アライメントライブラリ
+cd ../packages/expression-alignment
+npm install
+npm run build
+```
+
+### 2. 開発モードでの実行
+
+#### バックエンドサーバーの起動
+
+```bash
+cd server
+npm run dev
+```
+または、`ui` ディレクトリからバックエンドサーバーを同時に起動することも可能です：
+```bash
+cd ui
+npm run server:dev
+```
+
+#### クライアントの起動
+
+- **Electronデスクトップ版（背景透過・ネイティブ機能対応）**:
+  ```bash
+  cd ui
+  npm run dev
+  ```
+
+- **Webブラウザ版**:
+  ```bash
+  cd ui
+  npm run dev:web
+  ```
+
+### 3. テストの実行
+
+各モジュールでテストが用意されています。
+
+```bash
+# フロントエンドのテスト
+cd ui
+npm run test
+
+# サーバーのテスト
+cd server
+npm run test
+
+# 表情アライメントライブラリのテスト
+cd packages/expression-alignment
+npm run test
+```
+
+### 4. ビルド
+
+```bash
+# UIのビルド
+cd ui
+npm run build       # Electron版のビルド (dist-electron / dist)
+npm run build:web   # Webブラウザ用静的ファイルのビルド
+
+# サーバーのビルド
+cd server
+npm run build       # dist ディレクトリに出力
+```
+
+---
 
 ## 技術仕様
 
-- **フレームワーク**: .NET 8.0 (WPF)
-- **UI**: XAML
-- **設定保存**: YAML形式（実行ファイルと同じディレクトリ）
-- **APIキー保存**: Windows DPAPI暗号化
-- **画像形式**: PNG（透過対応）
+- **クライアントシェル**: Electron (Desktop版のみ)
+- **フロントエンド**: Vue 3, Vite, Tailwind CSS, Pixi.js (WebGL 描画), Pinia, TypeScript
+- **バックエンド**: Node.js, Express, WebSocket (`ws`), `tsx`
+- **画像・アライメント処理**: Canvas, OpenCV (WebAssembly), `@imgly/background-removal-node`
 
-## トラブルシューティング
-
-### チャット機能が動作しない
-
-- LM Studioが起動しているか確認
-- LM Studioでモデルがロードされているか確認
-- エンドポイント設定が正しいか確認（デフォルト: http://127.0.0.1:1234）
-
-### マスコットが表示されない
-
-- 画像ファイルが正しく配置されているか確認
-- 設定画面でマスコットが登録されているか確認
-- ウィンドウが画面外に移動していないか確認（設定ファイルの削除で初期位置に戻ります）
-
-### 設定ファイルの場所
-
-設定ファイルは以下の場所に保存されます：
-```
-%APPDATA%\DesktopAiMascot\
-```
+---
 
 ## ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は [LICENSE](LICENSE) ファイルを参照してください。
-
-### サードパーティライブラリ
-
-このプロジェクトは以下のサードパーティライブラリを使用しています：
-
-- **Google.GenAI** (Apache License 2.0)
-- **Google.Protobuf** (BSD 3-Clause)
-- **Magick.NET** (Apache License 2.0)
-- **Microsoft.Extensions.AI** (MIT License)
-- **Newtonsoft.Json** (MIT License)
-- **OpenAI** (MIT License)
-- **YamlDotNet** (MIT License)
-
-詳細なライセンス情報は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+このプロジェクトはMITライセンスの下で公開されています。主要な外部依存ライブラリのライセンスに関しては [THIRD_PARTY_NOTICES.md](file:///C:/workspace/workspace-win/DesktopAiMascot/THIRD_PARTY_NOTICES.md) を参照してください。

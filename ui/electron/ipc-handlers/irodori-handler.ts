@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 
-export function registerIrodoriHandlers() {
+export function registerIrodoriHandlers(config: any) {
     // irodori-tts v3 (OpenAI 互換) による音声合成のハンドラー
     ipcMain.handle('synthesize-irodori', async (event, text: string, endpoint: string, model: string, voice: string, emotion?: string) => {
         const defaultEndpoint = 'http://127.0.0.1:8088';
@@ -10,6 +10,7 @@ export function registerIrodoriHandlers() {
             targetModel = 'irodori-tts';
         }
         const targetVoice = voice || 'default';
+        const showVoiceLog = config.get().showVoiceLog !== false;
 
         // 感情表現機能：irodori-tts v3 ではテキストに特定の絵文字を含めることで感情制御ができるため、
         // 感情フラグがある場合はテキストの末尾に絵文字を付与する。
@@ -22,7 +23,9 @@ export function registerIrodoriHandlers() {
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
 
         try {
-            console.log(`[IrodoriTTS] 音声合成開始: "${textWithEmotion}" (Model: ${targetModel}, Voice: ${targetVoice})`);
+            if (showVoiceLog) {
+                console.log(`[IrodoriTTS] 音声合成開始: "${textWithEmotion}" (Model: ${targetModel}, Voice: ${targetVoice})`);
+            }
             const url = baseUrl.endsWith('/')
                 ? `${baseUrl}v1/audio/speech`
                 : `${baseUrl}/v1/audio/speech`;
@@ -52,7 +55,9 @@ export function registerIrodoriHandlers() {
             const buffer = Buffer.from(arrayBuffer);
             const base64 = buffer.toString('base64');
 
-            console.log(`[IrodoriTTS] 音声合成成功: ${buffer.length} bytes`);
+            if (showVoiceLog) {
+                console.log(`[IrodoriTTS] 音声合成成功: ${buffer.length} bytes`);
+            }
             return base64;
 
         } catch (error: any) {

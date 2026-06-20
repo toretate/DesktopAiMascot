@@ -41,7 +41,13 @@ export class AppConfig {
     }
 
     public update(newData: Partial<ConfigData>) {
-        this.data = { ...this.data, ...newData };
+        const mergedData = { ...this.data };
+        for (const key of Object.keys(newData) as Array<keyof ConfigData>) {
+            if (newData[key] !== undefined) {
+                (mergedData as any)[key] = newData[key];
+            }
+        }
+        this.data = mergedData;
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.data, null, 4), 'utf8');
         } catch (error) {

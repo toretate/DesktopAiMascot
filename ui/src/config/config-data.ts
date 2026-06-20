@@ -69,6 +69,8 @@ export interface ConfigData {
     compactHeight?: number;
     compactX?: number;
     compactY?: number;
+    chatWidth?: number;
+    chatHeight?: number;
 
     // ツール使用設定 (ToolUse)
     toolsCurrentTime: boolean;
@@ -77,6 +79,10 @@ export interface ConfigData {
     toolsVolume: boolean;
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
+
+    // 音声保存設定
+    saveVoice: boolean;
+    showVoiceLog: boolean;
 }
 
 export const defaultData: ConfigData = {
@@ -142,10 +148,14 @@ export const defaultData: ConfigData = {
     compactHeight: 800,
     compactX: -1,
     compactY: -1,
+    chatWidth: 350,
+    chatHeight: 400,
     toolsCurrentTime: true,
     toolsGpsLocation: true,
     toolsWeather: true,
     toolsVolume: true,
     toolsAppLauncher: true,
-    toolsWebSearch: true
+    toolsWebSearch: true,
+    saveVoice: false,
+    showVoiceLog: true
 };

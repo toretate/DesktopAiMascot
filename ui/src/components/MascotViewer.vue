@@ -4,6 +4,41 @@ import { MascotImageSetBuilder } from '../mascots/MascotImageSetBuilder';
 import { useConfigStore } from '../store/config';
 import { useMascotStore } from '../store/mascot';
 import { storeToRefs } from 'pinia';
+import { Application, Container, Sprite, Assets, Texture } from 'pixi.js';
+
+const pixiCanvas = ref<HTMLCanvasElement | null>(null);
+let pixiApp: Application | null = null;
+let mascotContainer: Container | null = null;
+let bodySprite: Sprite | null = null;
+let expressionSprite: Sprite | null = null;
+
+// 画像かどうかの判定
+const isImage = (path: string | undefined | null): boolean => {
+    if (!path) return false;
+    return path.startsWith('data:image/') || 
+           path.startsWith('/mascots/') || 
+           path.startsWith('http://') || 
+           path.startsWith('https://') ||
+           /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
+};
+
+// アセットURLの解決
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) {
+        return path;
+    }
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    if (/^[a-zA-Z]:\\/.test(resolved)) {
+        return resolved;
+    }
+    const separator = resolved.includes('?') ? '&' : '?';
+    return `${resolved}${separator}v=${configStore.configVersion}`;
+};
+
 
 const isChatVisible = ref(false);
 const emotionClass = ref('');
@@ -313,6 +348,334 @@ const activeExpressionStyle = computed(() => {
     return {};
 });
 
+// 描画されるべき体の画像パスの解決
+const currentBodyPath = computed(() => {
+    if (activePose.value && isImage(activePose.value.path)) {
+        return resolveImageUrl(activePose.value.path);
+    }
+    if (activeOutfit.value && isImage(activeOutfit.value.path)) {
+        return resolveImageUrl(activeOutfit.value.path);
+    }
+    if (activeMascot.value) {
+        if (defaultFrontAvatar.value && isImage(defaultFrontAvatar.value.path)) {
+            return resolveImageUrl(defaultFrontAvatar.value.path);
+        }
+        if (isImage(activeMascot.value.avatar)) {
+            return resolveImageUrl(activeMascot.value.avatar);
+        }
+    }
+    return '';
+});
+
+// 描画されるべき表情の画像パスの解決
+const currentExpressionPath = computed(() => {
+    if (activeExpressionEmoji.value && isImage(activeExpressionEmoji.value)) {
+        return resolveImageUrl(activeExpressionEmoji.value);
+    }
+    return '';
+});
+
+// 体（ポーズ・服装）テクスチャのロードと適用
+const updateBodySprite = async (path: string) => {
+    if (!bodySprite) return;
+    if (!path) {
+        bodySprite.texture = Texture.EMPTY;
+        return;
+    }
+    try {
+        const texture = await Assets.load(path);
+        if (!bodySprite) return; // ロード中にアンマウントされた場合の安全策
+        bodySprite.texture = texture;
+        
+        // object-fit: contain の再現
+        const containerW = 512;
+        const containerH = 683;
+        const aspect = texture.width / texture.height;
+        const containerAspect = containerW / containerH;
+        
+        if (aspect > containerAspect) {
+            bodySprite.width = containerW;
+            bodySprite.height = containerW / aspect;
+        } else {
+            bodySprite.height = containerH;
+            bodySprite.width = containerH * aspect;
+        }
+        bodySprite.x = containerW / 2;
+        bodySprite.y = containerH / 2;
+        bodySprite.anchor.set(0.5);
+
+        // クリック透過領域の更新
+        updateCharacterBoundsFromUrl(path);
+    } catch (err) {
+        console.error('[MascotViewer] Failed to load body texture:', path, err);
+    }
+};
+
+// URLから非表示Imageを読み込んで、透過境界を計算してElectronに通知する
+const updateCharacterBoundsFromUrl = (url: string) => {
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => {
+        const bounds = getNonTransparentBounds(img);
+        
+        // 512x683 のコンテナ内での表示サイズを計算 (object-fit: contain)
+        const containerW = 512;
+        const containerH = 683;
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const containerAspect = containerW / containerH;
+        
+        let drawW = containerW;
+        let drawH = containerH;
+        let drawTop = 0;
+        let drawLeft = 0;
+        
+        if (imgAspect > containerAspect) {
+            drawH = containerW / imgAspect;
+            drawTop = (containerH - drawH) / 2;
+        } else {
+            drawW = containerH * imgAspect;
+            drawLeft = (containerW - drawW) / 2;
+        }
+        
+        const relativeTop = bounds.top / img.naturalHeight;
+        const relativeBottom = bounds.bottom / img.naturalHeight;
+        const relativeLeft = bounds.left / img.naturalWidth;
+        const relativeRight = bounds.right / img.naturalWidth;
+        
+        const charTop = drawTop + relativeTop * drawH;
+        const charBottom = drawTop + relativeBottom * drawH;
+        const charLeft = drawLeft + relativeLeft * drawW;
+        const charRight = drawLeft + relativeRight * drawW;
+        
+        if (
+            Number.isFinite(charTop) && 
+            Number.isFinite(charBottom) && 
+            Number.isFinite(charLeft) && 
+            Number.isFinite(charRight)
+        ) {
+            if (window.electronAPI && window.electronAPI.updateCharacterBounds) {
+                window.electronAPI.updateCharacterBounds({
+                    top: charTop,
+                    bottom: charBottom,
+                    left: charLeft,
+                    right: charRight
+                });
+            }
+        }
+    };
+    img.src = url;
+};
+
+const isBlinking = ref(false);
+const isMouthOpen = ref(false);
+
+let expressionNormalTexture: Texture | null = null;
+let expressionCloseTexture: Texture | null = null;
+let expressionTalkTexture: Texture | null = null;
+
+// 表情関連テクスチャのロードとアニメーション準備
+const loadExpressionTextures = async (basePath: string) => {
+    expressionNormalTexture = null;
+    expressionCloseTexture = null;
+    expressionTalkTexture = null;
+
+    if (!expressionSprite) return;
+    if (!basePath) {
+        expressionSprite.texture = Texture.EMPTY;
+        return;
+    }
+
+    try {
+        // 通常の表情テクスチャのロード
+        expressionNormalTexture = await Assets.load(basePath);
+        
+        // 閉じ目のパス解決 (_close)
+        const closePath = getSuffixPath(basePath, '_close');
+        try {
+            expressionCloseTexture = await Assets.load(closePath);
+            console.log('[MascotViewer] Loaded blink close-eye texture:', closePath);
+        } catch (e) {
+            expressionCloseTexture = null;
+        }
+
+        // 口開きのパス解決 (_talk)
+        const talkPath = getSuffixPath(basePath, '_talk');
+        try {
+            expressionTalkTexture = await Assets.load(talkPath);
+            console.log('[MascotViewer] Loaded talk mouth texture:', talkPath);
+        } catch (e) {
+            expressionTalkTexture = null;
+        }
+
+        // 初期テクスチャ反映
+        refreshExpressionTexture();
+        
+        // まばたきループを開始
+        if (expressionCloseTexture) {
+            startBlinkLoop();
+        } else {
+            stopBlinkLoop();
+        }
+    } catch (err) {
+        console.error('[MascotViewer] Failed to load expression textures:', basePath, err);
+        expressionSprite.texture = Texture.EMPTY;
+    }
+};
+
+// クエリパラメータを壊さずに _close や _talk を拡張子の直前に入れるユーティリティ
+const getSuffixPath = (path: string, suffix: string): string => {
+    const parts = path.split('?');
+    const basePath = parts[0];
+    const query = parts[1] ? `?${parts[1]}` : '';
+    const lastDot = basePath.lastIndexOf('.');
+    if (lastDot !== -1) {
+        return basePath.slice(0, lastDot) + suffix + basePath.slice(lastDot) + query;
+    }
+    return basePath + suffix + query;
+};
+
+// スプライトのテクスチャを状態に応じて更新
+const refreshExpressionTexture = () => {
+    if (!expressionSprite) return;
+
+    let targetTexture = expressionNormalTexture || Texture.EMPTY;
+
+    // 優先度：まばたき中 > 口パク中
+    if (isBlinking.value && expressionCloseTexture) {
+        targetTexture = expressionCloseTexture;
+    } else if (isSpeaking.value && isMouthOpen.value && expressionTalkTexture) {
+        targetTexture = expressionTalkTexture;
+    }
+
+    expressionSprite.texture = targetTexture;
+
+    // 基準サイズ171pxに設定
+    expressionSprite.width = 171;
+    expressionSprite.height = 171;
+    expressionSprite.anchor.set(0.5);
+
+    // トランスフォームの適用
+    applyExpressionTransform();
+};
+
+// まばたきループの制御
+let blinkTimeoutId: NodeJS.Timeout | null = null;
+const startBlinkLoop = () => {
+    stopBlinkLoop();
+    if (!expressionCloseTexture) return;
+
+    const nextBlinkDelay = 3000 + Math.random() * 4000; // 3〜7秒のランダム
+    blinkTimeoutId = setTimeout(async () => {
+        if (expressionCloseTexture) {
+            isBlinking.value = true;
+            refreshExpressionTexture();
+            
+            // 150ms 目を閉じる
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
+            isBlinking.value = false;
+            refreshExpressionTexture();
+        }
+        startBlinkLoop();
+    }, nextBlinkDelay);
+};
+
+const stopBlinkLoop = () => {
+    if (blinkTimeoutId) {
+        clearTimeout(blinkTimeoutId);
+        blinkTimeoutId = null;
+    }
+    isBlinking.value = false;
+};
+
+// 口パク（リップシンク）ループの制御
+let talkIntervalId: NodeJS.Timeout | null = null;
+const startTalkLoop = () => {
+    stopTalkLoop();
+    if (!expressionTalkTexture) return;
+
+    talkIntervalId = setInterval(() => {
+        isMouthOpen.value = !isMouthOpen.value;
+        refreshExpressionTexture();
+    }, 150); // 150ms 周期で口を開閉
+};
+
+const stopTalkLoop = () => {
+    if (talkIntervalId) {
+        clearInterval(talkIntervalId);
+        talkIntervalId = null;
+    }
+    isMouthOpen.value = false;
+    refreshExpressionTexture();
+};
+
+// 表情の位置合わせ（Transform）の適用
+const applyExpressionTransform = () => {
+    if (!expressionSprite) return;
+    const found = activeExpression.value;
+    if (!found) {
+        expressionSprite.x = 512 / 2;
+        expressionSprite.y = 683 / 2;
+        expressionSprite.scale.set(1);
+        expressionSprite.rotation = 0;
+        return;
+    }
+
+    const ox = previewState.value ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
+    const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
+    const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
+    const rot = previewState.value ? (previewState.value.expressionRotation ?? 0) : (found.rotation ?? 0);
+
+    const scaleFactor = 512 / 420;
+    const scaledOx = ox * scaleFactor;
+    const scaledOy = oy * scaleFactor;
+
+    // 中央原点に対するオフセット調整
+    expressionSprite.x = (512 / 2) + scaledOx;
+    expressionSprite.y = (683 / 2) + scaledOy;
+    
+    // スケール適用 (テクスチャ本来のサイズに対する 171px の基本スケール比に sc を乗算)
+    const baseScale = 171 / (expressionSprite.texture?.width || 171);
+    expressionSprite.scale.set(baseScale * sc);
+    
+    // 回転の適用 (角度からラジアン)
+    expressionSprite.rotation = rot * (Math.PI / 180);
+};
+
+// パスの変更を監視
+watch(currentBodyPath, (newVal) => {
+    updateBodySprite(newVal);
+}, { immediate: true });
+
+watch(currentExpressionPath, (newVal) => {
+    loadExpressionTextures(newVal);
+}, { immediate: true });
+
+// isSpeaking（音声再生状態）を監視して口パクの開始・停止
+watch(isSpeaking, (speaking) => {
+    if (speaking) {
+        startTalkLoop();
+    } else {
+        stopTalkLoop();
+    }
+});
+
+// アニメーション状態フラグの監視による表示更新
+watch([isBlinking, isMouthOpen], () => {
+    refreshExpressionTexture();
+});
+
+// 表情の位置・スケール等の設定変更を監視
+watch([
+    () => activeExpression.value,
+    () => previewState.value?.expressionOffsetX,
+    () => previewState.value?.expressionOffsetY,
+    () => previewState.value?.expressionScale,
+    () => previewState.value?.expressionRotation
+], () => {
+    applyExpressionTransform();
+}, { deep: true });
+
 // 既定の正面画像
 const defaultFrontAvatar = computed(() => {
     return activeMascotImageSet.value?.getFrontImage() || null;
@@ -366,59 +729,7 @@ const getNonTransparentBounds = (img: HTMLImageElement) => {
     return { top: minY, bottom: maxY, left: minX, right: maxX };
 };
 
-const onImageLoad = (event: Event) => {
-    const img = event.target as HTMLImageElement;
-    if (!img) return;
 
-    if (!img.naturalWidth || !img.naturalHeight) return;
-
-    const imgRect = img.getBoundingClientRect();
-    const imgW = imgRect.width;
-    const imgH = imgRect.height;
-    
-    const imgAspect = img.naturalWidth / img.naturalHeight;
-    const rectAspect = imgW / imgH;
-    
-    let drawW = imgW;
-    let drawH = imgH;
-    let drawTop = imgRect.top;
-    let drawLeft = imgRect.left;
-    
-    if (imgAspect > rectAspect) {
-        drawH = imgW / imgAspect;
-        drawTop = imgRect.top + (imgH - drawH) / 2;
-    } else {
-        drawW = imgH * imgAspect;
-        drawLeft = imgRect.left + (imgW - drawW) / 2;
-    }
-    
-    const bounds = getNonTransparentBounds(img);
-    const relativeTop = bounds.top / img.naturalHeight;
-    const relativeBottom = bounds.bottom / img.naturalHeight;
-    const relativeLeft = bounds.left / img.naturalWidth;
-    const relativeRight = bounds.right / img.naturalWidth;
-    
-    const charTop = drawTop + relativeTop * drawH;
-    const charBottom = drawTop + relativeBottom * drawH;
-    const charLeft = drawLeft + relativeLeft * drawW;
-    const charRight = drawLeft + relativeRight * drawW;
-    
-    if (
-        Number.isFinite(charTop) && 
-        Number.isFinite(charBottom) && 
-        Number.isFinite(charLeft) && 
-        Number.isFinite(charRight)
-    ) {
-        if (window.electronAPI && window.electronAPI.updateCharacterBounds) {
-            window.electronAPI.updateCharacterBounds({
-                top: charTop,
-                bottom: charBottom,
-                left: charLeft,
-                right: charRight
-            });
-        }
-    }
-};
 
 const toggleChat = () => {
     if (window.electronAPI) {
@@ -444,6 +755,10 @@ const onMouseDown = (e: MouseEvent) => {
         startMouseX = e.screenX;
         startMouseY = e.screenY;
         hasMoved = false;
+
+        if (window.electronAPI && window.electronAPI.dragWindow) {
+            window.electronAPI.dragWindow({ dx: 0, dy: 0, isStart: true });
+        }
 
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
@@ -477,6 +792,10 @@ const onMouseUp = () => {
 
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);
+
+    if (window.electronAPI && window.electronAPI.dragWindow) {
+        window.electronAPI.dragWindow({ dx: 0, dy: 0, isEnd: true });
+    }
 
     if (!hasMoved) {
         toggleChat();
@@ -540,6 +859,33 @@ const handleWindowMouseMove = (e: MouseEvent) => {
 };
 
 onMounted(async () => {
+    // PixiJS Application の初期化
+    if (pixiCanvas.value) {
+        try {
+            pixiApp = new Application();
+            await pixiApp.init({
+                canvas: pixiCanvas.value,
+                width: 512,
+                height: 683,
+                backgroundAlpha: 0,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true
+            });
+            console.log('[MascotViewer] PixiJS Application initialized successfully.');
+
+            // マスコットの描画構造を構築
+            mascotContainer = new Container();
+            pixiApp.stage.addChild(mascotContainer);
+
+            bodySprite = new Sprite();
+            expressionSprite = new Sprite();
+            mascotContainer.addChild(bodySprite);
+            mascotContainer.addChild(expressionSprite);
+        } catch (err) {
+            console.error('[MascotViewer] Failed to initialize PixiJS Application:', err);
+        }
+    }
+
     // ストアの設定データを初期ロード
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
@@ -617,36 +963,30 @@ onMounted(async () => {
             }
         });
     }
+
+    // PixiJS のスプライト作成完了後、初期画像パスの読み込みを明示的に実行する
+    // （setup時のimmediate watchがスプライト生成前に走って無視されてしまうのを防ぐため）
+    if (currentBodyPath.value) {
+        await updateBodySprite(currentBodyPath.value);
+    }
+    if (currentExpressionPath.value) {
+        await loadExpressionTextures(currentExpressionPath.value);
+    }
 });
 
-// 画像かどうかの判定
-const isImage = (path: string | undefined | null): boolean => {
-    if (!path) return false;
-    return path.startsWith('data:image/') || 
-           path.startsWith('/mascots/') || 
-           path.startsWith('http://') || 
-           path.startsWith('https://') ||
-           /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
-};
 
-// アセットURLの解決
-const resolveImageUrl = (path: string | undefined | null): string => {
-    if (!path) return '';
-    if (path.startsWith('data:image/')) {
-        return path;
-    }
-    let resolved = path;
-    if (path.startsWith('/mascots/') && configStore.useServer) {
-        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
-    }
-    if (/^[a-zA-Z]:\\/.test(resolved)) {
-        return resolved;
-    }
-    const separator = resolved.includes('?') ? '&' : '?';
-    return `${resolved}${separator}v=${configStore.configVersion}`;
-};
 
 onUnmounted(() => {
+    if (pixiApp) {
+        if (mascotContainer) {
+            mascotContainer.destroy({ children: true });
+            mascotContainer = null;
+        }
+        pixiApp.destroy({ removeView: true });
+        pixiApp = null;
+        console.log('[MascotViewer] PixiJS Application destroyed.');
+    }
+
     window.removeEventListener('mousemove', handleWindowMouseMove);
 
     if (unsubscribePreview) {
@@ -671,7 +1011,10 @@ onUnmounted(() => {
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
         <div 
             class="mascot-character" 
-            :style="{ transform: `scale(${totalMascotScale})` }"
+            :style="{ 
+                transform: `scale(${totalMascotScale})`,
+                transformOrigin: windowMode === 'compact' ? 'bottom center' : 'center center'
+            }"
             @mousedown="onMouseDown" 
             @contextmenu.prevent="openSettings" 
             @dragstart.prevent 
@@ -685,33 +1028,28 @@ onUnmounted(() => {
             </transition>
 
             <div class="mascot-visual" :class="emotionClass">
-                <!-- キャラクター本体表示 (ポーズ > 服装 > ベースアバター の順で優先) -->
+                <!-- PixiJS 描画キャンバス -->
+                <canvas ref="pixiCanvas" class="pixi-canvas"></canvas>
+
+                <!-- キャラクター本体表示 (画像以外はフォールバックテキストで表示、画像はPixiJSで描画) -->
                 <!-- ポーズ優先 -->
                 <template v-if="activePose">
-                    <img v-if="isImage(activePose.path)" :src="resolveImageUrl(activePose.path)" class="preview-full-img" @load="onImageLoad" />
-                    <span v-else class="preview-base-avatar">{{ activePose.path }}</span>
+                    <span v-if="!isImage(activePose.path)" class="preview-base-avatar">{{ activePose.path }}</span>
                 </template>
                 <!-- ポーズがなければ服装 -->
                 <template v-else-if="activeOutfit">
-                    <img v-if="isImage(activeOutfit.path)" :src="resolveImageUrl(activeOutfit.path)" class="preview-full-img" @load="onImageLoad" />
-                    <span v-else class="preview-base-avatar">{{ activeOutfit.path }}</span>
+                    <span v-if="!isImage(activeOutfit.path)" class="preview-base-avatar">{{ activeOutfit.path }}</span>
                 </template>
-                <!-- 何もなければベースアバター (front画像を優先) -->
+                <!-- 何もなければベースアバター -->
                 <template v-else-if="activeMascot">
-                    <img v-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-full-img" @load="onImageLoad" />
-                    <img v-else-if="isImage(activeMascot.avatar)" :src="resolveImageUrl(activeMascot.avatar)" class="preview-full-img" @load="onImageLoad" />
-                    <span v-else class="preview-base-avatar">{{ activeMascot.avatar }}</span>
+                    <span v-if="(!defaultFrontAvatar || !isImage(defaultFrontAvatar.path)) && !isImage(activeMascot.avatar)" class="preview-base-avatar">
+                        {{ defaultFrontAvatar?.path || activeMascot.avatar }}
+                    </span>
                 </template>
                 <span v-else class="preview-base-avatar">🤖</span>
                 
-                <!-- 表情レイヤー (これのみ重ね合わせ可能とする) -->
-                <img 
-                    v-if="isImage(activeExpressionEmoji)" 
-                    :src="resolveImageUrl(activeExpressionEmoji)" 
-                    class="preview-layer-img expression"
-                    :style="activeExpressionStyle"
-                />
-                <span v-else class="preview-layer expression" :style="activeExpressionStyle">{{ activeExpressionEmoji }}</span>
+                <!-- 表情レイヤー (画像以外はフォールバックの絵文字表示、画像はPixiJSで描画) -->
+                <span v-if="!isImage(activeExpressionEmoji)" class="preview-layer expression" :style="activeExpressionStyle">{{ activeExpressionEmoji }}</span>
             </div>
         </div>
     </div>
@@ -829,6 +1167,16 @@ onUnmounted(() => {
 
 .is-compact .mascot-visual {
     margin-bottom: -60px; /* 下部の透明余白分を相殺して底面に密着させる */
+}
+
+.mascot-wrapper.is-compact {
+    width: 100% !important;
+    height: 100% !important;
+    justify-content: flex-end !important;
+}
+
+.is-compact .mascot-character {
+    transform-origin: bottom center !important;
 }
 
 .preview-base-avatar {
@@ -953,6 +1301,17 @@ onUnmounted(() => {
     width: 171px;
     height: 171px;
     z-index: 4;
+}
+
+.pixi-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    background-color: transparent !important;
 }
 
 </style>

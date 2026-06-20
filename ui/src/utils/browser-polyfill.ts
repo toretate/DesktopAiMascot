@@ -47,6 +47,9 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         toggleChat: () => {
             console.log('[Polyfill] toggleChat triggered');
         },
+        resizeChatWindow: (size: { width: number; height: number }) => {
+            console.log(`[Polyfill] resizeChatWindow: ${size.width}x${size.height}`);
+        },
         openSettings: () => {
             // Web版では、ハッシュを #settings に切り替えることで設定画面を表示する
             window.location.hash = '#settings';
@@ -60,7 +63,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         setIgnoreMouseEvents: (ignore: boolean) => {
             // ブラウザでは何もしない
         },
-        dragWindow: (offset: { dx: number; dy: number }) => {
+        dragWindow: (offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => {
             // ブラウザでは何もしない
         },
         updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => {
@@ -281,6 +284,9 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         openChatHistory: () => {
             console.log('[Polyfill] openChatHistory triggered');
         },
+        openFolder: (path: string) => {
+            console.log(`[Polyfill] openFolder triggered for path: ${path}`);
+        },
         getMascotPrompts: async (mascotId: string) => {
             try {
                 const promptStr = localStorage.getItem(`desktop_ai_mascot_prompts_${mascotId}`);
@@ -479,6 +485,12 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             return {
                 success: true,
                 path: base64Data
+            };
+        },
+        saveMascotVoice: async (mascotId: string, base64Data: string, extension: string) => {
+            console.log(`[Polyfill] saveMascotVoice called for mascot: ${mascotId}, extension: ${extension}`);
+            return {
+                success: true
             };
         },
         previewMascotState: (previewState: any) => {

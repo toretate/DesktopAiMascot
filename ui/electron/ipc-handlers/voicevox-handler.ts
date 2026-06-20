@@ -1,16 +1,19 @@
 import { ipcMain } from 'electron';
 
-export function registerVoicevoxHandlers() {
+export function registerVoicevoxHandlers(config: any) {
     // 6. VOICEVOXによる音声合成のハンドラー
     ipcMain.handle('synthesize-voicevox', async (event, text: string, speakerId: number, endpoint?: string) => {
         const defaultEndpoint = 'http://localhost:50021';
         const baseUrl = endpoint || defaultEndpoint;
+        const showVoiceLog = config.get().showVoiceLog !== false;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒タイムアウト
 
         try {
-            console.log(`[VoiceVox] 音声合成クエリ作成開始: ${text}`);
+            if (showVoiceLog) {
+                console.log(`[VoiceVox] 音声合成クエリ作成開始: ${text}`);
+            }
             const encodedText = encodeURIComponent(text);
             const queryUrl = baseUrl.endsWith('/')
                 ? `${baseUrl}audio_query?text=${encodedText}&speaker=${speakerId}`
@@ -27,7 +30,9 @@ export function registerVoicevoxHandlers() {
             }
 
             const audioQuery = await queryResponse.json();
-            console.log('[VoiceVox] AudioQuery作成成功');
+            if (showVoiceLog) {
+                console.log('[VoiceVox] AudioQuery作成成功');
+            }
 
             // 2. 音声合成
             const synthesisUrl = baseUrl.endsWith('/')
@@ -53,7 +58,9 @@ export function registerVoicevoxHandlers() {
             const buffer = Buffer.from(arrayBuffer);
             const base64 = buffer.toString('base64');
 
-            console.log(`[VoiceVox] 音声合成成功: ${buffer.length} bytes`);
+            if (showVoiceLog) {
+                console.log(`[VoiceVox] 音声合成成功: ${buffer.length} bytes`);
+            }
             return base64;
 
         } catch (error: any) {
