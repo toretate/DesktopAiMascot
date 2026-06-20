@@ -5,8 +5,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Googleログインの開始
     loginWithGoogle: () => ipcRenderer.send('auth:login'),
 
-    // チャットパネルの表示・非表示のトグルを送信
+    // チャットウィンドウの表示・非表示のトグルを送信
     toggleChat: () => ipcRenderer.send('toggle-chat'),
+    
+    // チャットウィンドウのサイズ変更を送信
+    resizeChatWindow: (size: { width: number; height: number }) => ipcRenderer.send('resize-chat-window', size),
     
     // 設定画面を開くリクエストを送信
     openSettings: () => ipcRenderer.send('open-settings'),
@@ -18,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', ignore),
     
     // ウィンドウのドラッグ移動シグナルの送信 (HTML要素でドラッグを擬似実装する)
-    dragWindow: (offset: { dx: number; dy: number }) => ipcRenderer.send('drag-window', offset),
+    dragWindow: (offset: { dx: number; dy: number; isStart?: boolean; isEnd?: boolean }) => ipcRenderer.send('drag-window', offset),
     
     // キャラクター画像の描画境界をメインプロセスに通知
     updateCharacterBounds: (bounds: { top: number; bottom: number; left: number; right: number }) => 
@@ -58,6 +61,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // チャット履歴ファイルをシステムのエディタで開く
     openChatHistory: () => ipcRenderer.send('open-chat-history'),
+
+    // 指定されたパスのフォルダを開く
+    openFolder: (path: string) => ipcRenderer.send('open-folder', path),
 
     // マスコットごとの openclaw プロンプトの取得
     getMascotPrompts: (mascotId: string) => ipcRenderer.invoke('get-mascot-prompts', mascotId),
@@ -105,6 +111,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 画像データを mascots/<mascotId> に保存する
     saveMascotImage: (mascotId: string, filename: string, base64Data: string) =>
         ipcRenderer.invoke('save-mascot-image', mascotId, filename, base64Data),
+
+    // 音声データを mascots/<mascotId>/voices/<YYYYMMDD> に保存する
+    saveMascotVoice: (mascotId: string, base64Data: string, extension: string) =>
+        ipcRenderer.invoke('save-mascot-voice', mascotId, base64Data, extension),
     
     // 感情の変更をメインプロセスへ通知する
     changeEmotion: (emotion: string) => ipcRenderer.send('emotion-changed', emotion),

@@ -101,8 +101,8 @@ app.whenReady().then(() => {
     createWindows();
     registerSelectLocalImageHandler();
     registerLmStudioHandlers();
-    registerVoicevoxHandlers();
-    registerIrodoriHandlers();
+    registerVoicevoxHandlers(config);
+    registerIrodoriHandlers(config);
     registerGoogleHandlers();
     registerHeartbeatHandlers();
     registerHistoryHandlers();

@@ -1,6 +1,8 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
 import * as url from 'url';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ChatAiService } from '../services/chat-ai-service';
 import { VoiceAiService } from '../services/voice-ai-service';
 import { splitSentences } from '../utils/sentence-splitter';
@@ -102,6 +104,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                         lmstudioEndpoint,
                         history,
                         useTts,
+                        saveVoice,
+                        showVoiceLog,
                         attachments,
                         tools
                     } = data;
@@ -204,9 +208,9 @@ export function setupWebSocket(wss: WebSocketServer) {
                         const synthPromises = processedSentences.map(sentence => {
                             if (voiceEngine === 'irodori') {
                                 const cleanSentence = sanitizeForIrodoriTTS(sentence);
-                                return VoiceAiService.synthesizeIrodori(cleanSentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion);
+                                return VoiceAiService.synthesizeIrodori(cleanSentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion, showVoiceLog !== false);
                             } else {
-                                return VoiceAiService.synthesize(sentence, speaker, baseUrl);
+                                return VoiceAiService.synthesize(sentence, speaker, baseUrl, showVoiceLog !== false);
                             }
                         });
 
@@ -220,6 +224,37 @@ export function setupWebSocket(wss: WebSocketServer) {
                                             event: 'chat-audio',
                                             data: { audio: base64Audio }
                                         }));
+
+                                        // 音声の保存処理
+                                        if (data.saveVoice) {
+                                            try {
+                                                const currentCwd = process.cwd();
+                                                const dirName = path.basename(currentCwd);
+                                                const baseCwd = (dirName === 'ui' || dirName === 'server') ? path.dirname(currentCwd) : currentCwd;
+                                                
+                                                const today = new Date();
+                                                const yyyy = today.getFullYear();
+                                                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                                                const dd = String(today.getDate()).padStart(2, '0');
+                                                const dateStr = `${yyyy}${mm}${dd}`;
+
+                                                const mascotId = data.activeMascotId || 'default';
+                                                const dirPath = path.join(baseCwd, 'mascots', mascotId, 'voices', dateStr);
+                                                
+                                                if (!fs.existsSync(dirPath)) {
+                                                    fs.mkdirSync(dirPath, { recursive: true });
+                                                }
+
+                                                const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
+                                                const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+                                                const filePath = path.join(dirPath, filename);
+
+                                                fs.writeFileSync(filePath, Buffer.from(base64Audio, 'base64'));
+                                                console.log(`[WS] Voice saved to: ${filePath}`);
+                                            } catch (saveErr: any) {
+                                                console.error('[WS] Failed to save voice file:', saveErr.message);
+                                            }
+                                        }
                                     }
                                 } catch (err) {
                                     console.error('[WS] VOICEVOX並行合成エラー:', err);

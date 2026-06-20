@@ -19,6 +19,7 @@
         "esbuild": "^0.28.1",
         "js-yaml": "^4.2.0",
         "pinia": "^3.0.4",
+        "pixi.js": "^8.19.0",
         "primeflex": "^4.0.0",
         "primeicons": "^7.0.0",
         "primevue": "^4.0.0",
@@ -26,6 +27,7 @@
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^6.0.7",
+        "@vue/test-utils": "^2.4.11",
         "autoprefixer": "^10.5.0",
         "canvas": "^3.2.3",
         "electron": "^42.4.0",

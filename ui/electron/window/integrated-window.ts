@@ -45,8 +45,10 @@ export function createIntegratedWindow(): BrowserWindow {
 
     const defaultW = 1100;
     const defaultH = 800;
-    const savedW = configData.integratedWidth || defaultW;
-    const savedH = configData.integratedHeight || defaultH;
+    const minW = 800;
+    const minH = 500;
+    const savedW = Math.max(configData.integratedWidth || defaultW, minW);
+    const savedH = Math.max(configData.integratedHeight || defaultH, minH);
 
     let initialX = configData.integratedX;
     let initialY = configData.integratedY;
@@ -61,8 +63,9 @@ export function createIntegratedWindow(): BrowserWindow {
         height: savedH,
         x: initialX,
         y: initialY,
-        minWidth: 800,
-        minHeight: 500,
+        minWidth: minW,
+        minHeight: minH,
+        show: false, // 起動時の一瞬のチラつき（自動サイズ拡張）を隠すために最初は非表示にする
         transparent: false,
         frame: true,
         alwaysOnTop: configData.alwaysOnTop,
@@ -72,6 +75,13 @@ export function createIntegratedWindow(): BrowserWindow {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false
+        }
+    });
+
+    integratedWindow.once('ready-to-show', () => {
+        if (integratedWindow) {
+            integratedWindow.setSize(savedW, savedH);
+            integratedWindow.show();
         }
     });
 
