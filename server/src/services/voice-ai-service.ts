@@ -6,11 +6,13 @@ export class VoiceAiService {
      * @param endpoint VOICEVOXのエンドポイントURL
      * @returns Base64エンコードされた音声データ。エラー時は null
      */
-    public static async synthesize(text: string, speakerId: number, endpoint: string): Promise<string | null> {
+    public static async synthesize(text: string, speakerId: number, endpoint: string, showVoiceLog: boolean = true): Promise<string | null> {
         const baseUrl = endpoint || 'http://localhost:50021';
         const speaker = speakerId !== undefined ? speakerId : 2;
 
-        console.log(`[VoiceAiService] VOICEVOX synthesize start for: "${text}"`);
+        if (showVoiceLog) {
+            console.log(`[VoiceAiService] VOICEVOX synthesize start for: "${text}"`);
+        }
 
         const voiceController = new AbortController();
         const voiceTimeoutId = setTimeout(() => voiceController.abort(), 60000);
@@ -54,7 +56,9 @@ export class VoiceAiService {
             const arrayBuffer = await synthResponse.arrayBuffer();
             const base64Audio = Buffer.from(arrayBuffer).toString('base64');
 
-            console.log(`[VoiceAiService] VOICEVOX synthesize success`);
+            if (showVoiceLog) {
+                console.log(`[VoiceAiService] VOICEVOX synthesize success`);
+            }
             return base64Audio;
         } catch (voiceError: any) {
             clearTimeout(voiceTimeoutId);
@@ -78,7 +82,7 @@ export class VoiceAiService {
      * @param emotion 感情名 (happy, sad, angry, surprised, neutral)
      * @returns Base64エンコードされた音声データ。エラー時は null
      */
-    public static async synthesizeIrodori(text: string, endpoint: string, model: string, voice: string, emotion?: string): Promise<string | null> {
+    public static async synthesizeIrodori(text: string, endpoint: string, model: string, voice: string, emotion?: string, showVoiceLog: boolean = true): Promise<string | null> {
         const baseUrl = endpoint || 'http://127.0.0.1:8088';
         let targetModel = model || 'irodori-tts';
         if (targetModel === 'irodori-tts-500m-v3') {
@@ -91,7 +95,9 @@ export class VoiceAiService {
         //     textWithEmotion += VoiceAiService.getIrodoriEmoji(emotion);
         // }
 
-        console.log(`[VoiceAiService] irodori-tts synthesize start for: "${textWithEmotion}"`);
+        if (showVoiceLog) {
+            console.log(`[VoiceAiService] irodori-tts synthesize start for: "${textWithEmotion}"`);
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -121,7 +127,9 @@ export class VoiceAiService {
             const arrayBuffer = await response.arrayBuffer();
             const base64Audio = Buffer.from(arrayBuffer).toString('base64');
 
-            console.log(`[VoiceAiService] irodori-tts synthesize success`);
+            if (showVoiceLog) {
+                console.log(`[VoiceAiService] irodori-tts synthesize success`);
+            }
             return base64Audio;
         } catch (error: any) {
             clearTimeout(timeoutId);

@@ -284,6 +284,9 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         openChatHistory: () => {
             console.log('[Polyfill] openChatHistory triggered');
         },
+        openFolder: (path: string) => {
+            console.log(`[Polyfill] openFolder triggered for path: ${path}`);
+        },
         getMascotPrompts: async (mascotId: string) => {
             try {
                 const promptStr = localStorage.getItem(`desktop_ai_mascot_prompts_${mascotId}`);
@@ -482,6 +485,12 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             return {
                 success: true,
                 path: base64Data
+            };
+        },
+        saveMascotVoice: async (mascotId: string, base64Data: string, extension: string) => {
+            console.log(`[Polyfill] saveMascotVoice called for mascot: ${mascotId}, extension: ${extension}`);
+            return {
+                success: true
             };
         },
         previewMascotState: (previewState: any) => {

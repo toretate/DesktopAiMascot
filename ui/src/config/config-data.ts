@@ -79,6 +79,10 @@ export interface ConfigData {
     toolsVolume: boolean;
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
+
+    // 音声保存設定
+    saveVoice: boolean;
+    showVoiceLog: boolean;
 }
 
 export const defaultData: ConfigData = {
@@ -151,5 +155,7 @@ export const defaultData: ConfigData = {
     toolsWeather: true,
     toolsVolume: true,
     toolsAppLauncher: true,
-    toolsWebSearch: true
+    toolsWebSearch: true,
+    saveVoice: false,
+    showVoiceLog: true
 };

@@ -62,6 +62,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // チャット履歴ファイルをシステムのエディタで開く
     openChatHistory: () => ipcRenderer.send('open-chat-history'),
 
+    // 指定されたパスのフォルダを開く
+    openFolder: (path: string) => ipcRenderer.send('open-folder', path),
+
     // マスコットごとの openclaw プロンプトの取得
     getMascotPrompts: (mascotId: string) => ipcRenderer.invoke('get-mascot-prompts', mascotId),
         
@@ -108,6 +111,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // 画像データを mascots/<mascotId> に保存する
     saveMascotImage: (mascotId: string, filename: string, base64Data: string) =>
         ipcRenderer.invoke('save-mascot-image', mascotId, filename, base64Data),
+
+    // 音声データを mascots/<mascotId>/voices/<YYYYMMDD> に保存する
+    saveMascotVoice: (mascotId: string, base64Data: string, extension: string) =>
+        ipcRenderer.invoke('save-mascot-voice', mascotId, base64Data, extension),
     
     // 感情の変更をメインプロセスへ通知する
     changeEmotion: (emotion: string) => ipcRenderer.send('emotion-changed', emotion),

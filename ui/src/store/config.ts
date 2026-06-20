@@ -83,6 +83,8 @@ export interface AppConfig {
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
     useExRadio: boolean;
+    saveVoice?: boolean;
+    showVoiceLog?: boolean;
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -175,6 +177,8 @@ export const useConfigStore = defineStore('config', () => {
     const toolsAppLauncher = ref(true);
     const toolsWebSearch = ref(true);
     const useExRadio = ref(false);
+    const saveVoice = ref(false);
+    const showVoiceLog = ref(true);
     const configVersion = ref(0);
 
     // ---- Getters ----
@@ -277,6 +281,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = configData.toolsAppLauncher !== undefined ? !!configData.toolsAppLauncher : true;
             toolsWebSearch.value = configData.toolsWebSearch !== undefined ? !!configData.toolsWebSearch : true;
             useExRadio.value = configData.useExRadio !== undefined ? !!configData.useExRadio : false;
+            saveVoice.value = configData.saveVoice !== undefined ? !!configData.saveVoice : false;
+            showVoiceLog.value = configData.showVoiceLog !== undefined ? !!configData.showVoiceLog : true;
         } else {
             // Webブラウザ実行時の localStorage フォールバック
             googleAiStudioApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -376,6 +382,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = localStorage.getItem('toolsAppLauncher') !== 'false';
             toolsWebSearch.value = localStorage.getItem('toolsWebSearch') !== 'false';
             useExRadio.value = localStorage.getItem('useExRadio') === 'true';
+            saveVoice.value = localStorage.getItem('saveVoice') === 'true';
+            showVoiceLog.value = localStorage.getItem('showVoiceLog') !== 'false';
         }
 
         // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
@@ -469,7 +477,9 @@ export const useConfigStore = defineStore('config', () => {
             toolsVolume: toolsVolume.value,
             toolsAppLauncher: toolsAppLauncher.value,
             toolsWebSearch: toolsWebSearch.value,
-            useExRadio: useExRadio.value
+            useExRadio: useExRadio.value,
+            saveVoice: saveVoice.value,
+            showVoiceLog: showVoiceLog.value
         };
 
         // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
@@ -562,7 +572,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('chatWidth', chatWidth.value.toString());
         localStorage.setItem('chatHeight', chatHeight.value.toString());
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
-        localStorage.setItem('activeMascotId', activeMascotId.value,);
+        localStorage.setItem('activeMascotId', activeMascotId.value);
 
         localStorage.setItem('toolsCurrentTime', toolsCurrentTime.value.toString());
         localStorage.setItem('toolsGpsLocation', toolsGpsLocation.value.toString());
@@ -571,6 +581,8 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('toolsAppLauncher', toolsAppLauncher.value.toString());
         localStorage.setItem('toolsWebSearch', toolsWebSearch.value.toString());
         localStorage.setItem('useExRadio', useExRadio.value.toString());
+        localStorage.setItem('saveVoice', saveVoice.value.toString());
+        localStorage.setItem('showVoiceLog', showVoiceLog.value.toString());
     };
 
     // 一部の設定を一括で更新する
@@ -643,6 +655,8 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.toolsAppLauncher !== undefined) toolsAppLauncher.value = !!newConfig.toolsAppLauncher;
         if (newConfig.toolsWebSearch !== undefined) toolsWebSearch.value = !!newConfig.toolsWebSearch;
         if (newConfig.useExRadio !== undefined) useExRadio.value = !!newConfig.useExRadio;
+        if (newConfig.saveVoice !== undefined) saveVoice.value = !!newConfig.saveVoice;
+        if (newConfig.showVoiceLog !== undefined) showVoiceLog.value = !!newConfig.showVoiceLog;
         
         configVersion.value++;
     };
@@ -715,6 +729,8 @@ export const useConfigStore = defineStore('config', () => {
         toolsAppLauncher,
         toolsWebSearch,
         useExRadio,
+        saveVoice,
+        showVoiceLog,
         configVersion,
         loadConfig,
         saveConfig,
