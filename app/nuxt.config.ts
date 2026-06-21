@@ -8,6 +8,9 @@ const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');
 export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
     devtools: { enabled: true },
+    experimental: {
+        appManifest: true,
+    },
     ssr: false, // Electron クライアントで動かすために SSR はオフにする
     srcDir: 'src/', // 既存の src/ ディレクトリを Nuxt のルートにする
     css: [
@@ -43,6 +46,12 @@ export default defineNuxtConfig({
     },
 
     vite: {
+        resolve: {
+            alias: {
+                // Vite 6 + Nuxt 3.15 + ssr: false のデッドコードにおける解析バグの回避策
+                '#app-manifest': fileURLToPath(new URL('./src/main.ts', import.meta.url))
+            }
+        },
         server: {
             fs: {
                 // ワークスペース全体を dev server から参照できるように許可

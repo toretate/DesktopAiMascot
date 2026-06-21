@@ -42,6 +42,7 @@ const resolveImageUrl = (path: string | undefined | null): string => {
 
 const isChatVisible = ref(false);
 const emotionClass = ref('');
+const isReady = ref(false); // 初期ロード完了フラグ
 
 // ---- Stores ----
 const configStore = useConfigStore();
@@ -376,41 +377,6 @@ const currentExpressionPath = computed(() => {
 });
 
 // 体（ポーズ・服装）テクスチャのロードと適用
-const updateBodySprite = async (path: string) => {
-    if (!bodySprite) return;
-    if (!path) {
-        bodySprite.texture = Texture.EMPTY;
-        return;
-    }
-    try {
-        const texture = await Assets.load(path);
-        if (!bodySprite) return; // ロード中にアンマウントされた場合の安全策
-        bodySprite.texture = texture;
-        
-        // object-fit: contain の再現
-        const containerW = 512;
-        const containerH = 683;
-        const aspect = texture.width / texture.height;
-        const containerAspect = containerW / containerH;
-        
-        if (aspect > containerAspect) {
-            bodySprite.width = containerW;
-            bodySprite.height = containerW / aspect;
-        } else {
-            bodySprite.height = containerH;
-            bodySprite.width = containerH * aspect;
-        }
-        bodySprite.x = containerW / 2;
-        bodySprite.y = containerH / 2;
-        bodySprite.anchor.set(0.5);
-
-        // クリック透過領域の更新
-        updateCharacterBoundsFromUrl(path);
-    } catch (err) {
-        console.error('[MascotViewer] Failed to load body texture:', path, err);
-    }
-};
-
 // URLから非表示Imageを読み込んで、透過境界を計算してElectronに通知する
 const updateCharacterBoundsFromUrl = (url: string) => {
     if (!url) return;
@@ -473,52 +439,167 @@ let expressionNormalTexture: Texture | null = null;
 let expressionCloseTexture: Texture | null = null;
 let expressionTalkTexture: Texture | null = null;
 
-// 表情関連テクスチャのロードとアニメーション準備
-const loadExpressionTextures = async (basePath: string) => {
-    expressionNormalTexture = null;
-    expressionCloseTexture = null;
-    expressionTalkTexture = null;
+// 体と表情のロード処理をアトミックかつ並列に行う関数
+const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
+    if (!pixiApp || !bodySprite || !expressionSprite) return;
 
-    if (!expressionSprite) return;
-    if (!basePath) {
-        expressionSprite.texture = Texture.EMPTY;
-        return;
+    const promises: Promise<any>[] = [];
+
+    // 体画像のロードプロミス
+    let bodyPromise: Promise<Texture | null> = Promise.resolve(null);
+    if (bodyPath) {
+        bodyPromise = Assets.load(bodyPath).catch(err => {
+            console.error('[MascotViewer] Failed to load body texture:', bodyPath, err);
+            return null;
+        });
+        promises.push(bodyPromise);
     }
 
-    try {
-        // 通常の表情テクスチャのロード
-        expressionNormalTexture = await Assets.load(basePath);
-        
-        // 閉じ目のパス解決 (_close)
-        const closePath = getSuffixPath(basePath, '_close');
-        try {
-            expressionCloseTexture = await Assets.load(closePath);
-            console.log('[MascotViewer] Loaded blink close-eye texture:', closePath);
-        } catch (e) {
+    // 表情画像のロードプロミス
+    let normalPromise: Promise<Texture | null> = Promise.resolve(null);
+    let closePromise: Promise<Texture | null> = Promise.resolve(null);
+    let talkPromise: Promise<Texture | null> = Promise.resolve(null);
+
+    if (expressionPath) {
+        normalPromise = Assets.load(expressionPath).catch(err => {
+            console.error('[MascotViewer] Failed to load normal expression:', expressionPath, err);
+            return null;
+        });
+        promises.push(normalPromise);
+
+        const closePath = getSuffixPath(expressionPath, '_close');
+        closePromise = Assets.load(closePath).catch(() => null); // _close は存在しない場合もあるのでエラー無視
+        promises.push(closePromise);
+
+        const talkPath = getSuffixPath(expressionPath, '_talk');
+        talkPromise = Assets.load(talkPath).catch(() => null); // _talk も存在しない場合があるのでエラー無視
+        promises.push(talkPromise);
+    }
+
+    // すべてのアセットを並列ロード
+    await Promise.all(promises);
+
+    // すべてのロードが完了した段階で、同時にスプライトへ適用する
+    // 体画像の適用
+    if (bodyPath) {
+        const bodyTexture = await bodyPromise;
+        if (bodySprite && bodyTexture) {
+            bodySprite.texture = bodyTexture;
+            
+            // object-fit: contain の再現
+            const containerW = 512;
+            const containerH = 683;
+            const aspect = bodyTexture.width / bodyTexture.height;
+            const containerAspect = containerW / containerH;
+            
+            if (aspect > containerAspect) {
+                bodySprite.width = containerW;
+                bodySprite.height = containerW / aspect;
+            } else {
+                bodySprite.height = containerH;
+                bodySprite.width = containerH * aspect;
+            }
+            bodySprite.x = containerW / 2;
+            bodySprite.y = containerH / 2;
+            bodySprite.anchor.set(0.5);
+
+            // クリック透過領域の更新
+            updateCharacterBoundsFromUrl(bodyPath);
+        } else if (bodySprite) {
+            bodySprite.texture = Texture.EMPTY;
+        }
+    } else if (bodySprite) {
+        bodySprite.texture = Texture.EMPTY;
+    }
+
+    // 表情画像の適用
+    if (expressionPath) {
+        const normalTexture = await normalPromise;
+        const closeTexture = await closePromise;
+        const talkTexture = await talkPromise;
+
+        if (expressionSprite && normalTexture) {
+            expressionNormalTexture = normalTexture;
+            expressionCloseTexture = closeTexture;
+            expressionTalkTexture = talkTexture;
+
+            refreshExpressionTexture();
+
+            if (expressionCloseTexture) {
+                startBlinkLoop();
+            } else {
+                stopBlinkLoop();
+            }
+        } else if (expressionSprite) {
+            expressionNormalTexture = null;
             expressionCloseTexture = null;
-        }
-
-        // 口開きのパス解決 (_talk)
-        const talkPath = getSuffixPath(basePath, '_talk');
-        try {
-            expressionTalkTexture = await Assets.load(talkPath);
-            console.log('[MascotViewer] Loaded talk mouth texture:', talkPath);
-        } catch (e) {
             expressionTalkTexture = null;
-        }
-
-        // 初期テクスチャ反映
-        refreshExpressionTexture();
-        
-        // まばたきループを開始
-        if (expressionCloseTexture) {
-            startBlinkLoop();
-        } else {
+            expressionSprite.texture = Texture.EMPTY;
             stopBlinkLoop();
         }
-    } catch (err) {
-        console.error('[MascotViewer] Failed to load expression textures:', basePath, err);
+    } else if (expressionSprite) {
+        expressionNormalTexture = null;
+        expressionCloseTexture = null;
+        expressionTalkTexture = null;
         expressionSprite.texture = Texture.EMPTY;
+        stopBlinkLoop();
+    }
+};
+
+// マスコットのアセットを一括プリロードする関数
+const preloadMascotAssets = async (mascot: any) => {
+    if (!pixiApp || !mascot || !mascot.assets) return;
+
+    const pathsToLoad: string[] = [];
+
+    // outfits のパス
+    if (Array.isArray(mascot.assets.outfits)) {
+        for (const outfit of mascot.assets.outfits) {
+            if (outfit.path && isImage(outfit.path)) {
+                pathsToLoad.push(resolveImageUrl(outfit.path));
+            }
+            if (Array.isArray(outfit.expressions)) {
+                for (const expr of outfit.expressions) {
+                    if (expr.path && isImage(expr.path)) {
+                        const path = resolveImageUrl(expr.path);
+                        pathsToLoad.push(path);
+                        pathsToLoad.push(getSuffixPath(path, '_close'));
+                        pathsToLoad.push(getSuffixPath(path, '_talk'));
+                    }
+                }
+            }
+        }
+    }
+
+    // expressions のパス
+    if (Array.isArray(mascot.assets.expressions)) {
+        for (const expr of mascot.assets.expressions) {
+            if (expr.path && isImage(expr.path)) {
+                const path = resolveImageUrl(expr.path);
+                pathsToLoad.push(path);
+                pathsToLoad.push(getSuffixPath(path, '_close'));
+                pathsToLoad.push(getSuffixPath(path, '_talk'));
+            }
+        }
+    }
+
+    // poses のパス
+    if (Array.isArray(mascot.assets.poses)) {
+        for (const pose of mascot.assets.poses) {
+            if (pose.path && isImage(pose.path)) {
+                pathsToLoad.push(resolveImageUrl(pose.path));
+            }
+        }
+    }
+
+    // 重複を排除
+    const uniquePaths = Array.from(new Set(pathsToLoad.filter(p => !!p)));
+
+    if (uniquePaths.length > 0) {
+        console.log('[MascotViewer] Preloading assets for ' + mascot.name + ':', uniquePaths.length);
+        Assets.backgroundLoad(uniquePaths).catch(err => {
+            console.warn('[MascotViewer] Preloading failed:', err);
+        });
     }
 };
 
@@ -643,13 +724,15 @@ const applyExpressionTransform = () => {
 };
 
 // パスの変更を監視
-watch(currentBodyPath, (newVal) => {
-    updateBodySprite(newVal);
-}, { immediate: true });
+// パスの変更を監視してアトミックにロードを実行
+watch([currentBodyPath, currentExpressionPath], async ([newBodyPath, newExpressionPath]) => {
+    await loadMascotAssets(newBodyPath, newExpressionPath);
+});
 
-watch(currentExpressionPath, (newVal) => {
-    loadExpressionTextures(newVal);
-}, { immediate: true });
+// activeMascot の変更を監視してプリロードを実行
+watch(activeMascot, (newMascot) => {
+    preloadMascotAssets(newMascot);
+});
 
 // isSpeaking（音声再生状態）を監視して口パクの開始・停止
 watch(isSpeaking, (speaking) => {
@@ -881,6 +964,11 @@ onMounted(async () => {
             expressionSprite = new Sprite();
             mascotContainer.addChild(bodySprite);
             mascotContainer.addChild(expressionSprite);
+
+            // マスコットのアセットをプリロード
+            if (activeMascot.value) {
+                preloadMascotAssets(activeMascot.value);
+            }
         } catch (err) {
             console.error('[MascotViewer] Failed to initialize PixiJS Application:', err);
         }
@@ -965,13 +1053,10 @@ onMounted(async () => {
     }
 
     // PixiJS のスプライト作成完了後、初期画像パスの読み込みを明示的に実行する
-    // （setup時のimmediate watchがスプライト生成前に走って無視されてしまうのを防ぐため）
-    if (currentBodyPath.value) {
-        await updateBodySprite(currentBodyPath.value);
-    }
-    if (currentExpressionPath.value) {
-        await loadExpressionTextures(currentExpressionPath.value);
-    }
+    await loadMascotAssets(currentBodyPath.value, currentExpressionPath.value);
+
+    // 初期ロード完了
+    isReady.value = true;
 });
 
 
@@ -1005,7 +1090,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact' }">
+    <div class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact', 'is-ready': isReady }">
         <!-- 背景レイヤー -->
         <div class="mascot-background" :style="mascotBackgroundStyle"></div>
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
@@ -1146,7 +1231,12 @@ onUnmounted(() => {
     cursor: grab;
     user-select: none;
     transform-origin: center center;
-    transition: transform 0.1s ease-out;
+    transition: transform 0.1s ease-out, opacity 0.25s ease-in-out;
+    opacity: 0;
+}
+
+.mascot-wrapper.is-ready .mascot-character {
+    opacity: 1;
 }
 
 .mascot-character:active {
