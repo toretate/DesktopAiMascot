@@ -6,10 +6,13 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Checkbox from 'primevue/checkbox';
 import { useConfigStore } from '@/store/config';
+import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import { IrodoriTtsConnector } from '@/connector/irodori-tts-connector';
 
 const configStore = useConfigStore();
+const authStore = useAuthStore();
+const { user, isAuthenticated } = storeToRefs(authStore);
 const {
     selectedVoiceEngine,
     voicevoxEndpoint,
@@ -249,7 +252,8 @@ const todayDirName = computed(() => {
 
 const savePathDisplay = computed(() => {
     const mascotId = configStore.activeMascot?.id || 'default';
-    return `mascots/${mascotId}/voices/${todayDirName.value}`;
+    const userId = isAuthenticated.value && user.value?.id ? user.value.id : 'usr_local_dev_bypass';
+    return `mascots/users/${userId}/${mascotId}/voices/${todayDirName.value}`;
 });
 
 const openVoiceFolder = () => {

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useConfigStore } from './config';
 
 export interface User {
+    id: string;
     email: string;
     sub: string;
     role: string;

@@ -57,9 +57,15 @@ export function setupWebSocket(wss: WebSocketServer) {
             token = cookies['session_token'];
         }
 
+        const ip = req.socket.remoteAddress;
+        const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+
         let userId = 'anonymous';
         try {
-            if (!process.env.GOOGLE_CLIENT_ID) {
+            if (isLocal) {
+                userId = 'usr_local_dev_bypass';
+                console.log(`[WS] Local client connected via bypass. User ID set to: ${userId}`);
+            } else if (!process.env.GOOGLE_CLIENT_ID) {
                 console.warn('[WS] 警告: GOOGLE_CLIENT_ID が環境変数に設定されていません。認証なしで接続を許可します。');
             } else {
                 if (!token) {
@@ -68,8 +74,8 @@ export function setupWebSocket(wss: WebSocketServer) {
                     return;
                 }
                 const user = await authenticateUserToken(token);
-                console.log(`[WS] Authentication successful for user: ${user.email}`);
-                userId = user.email;
+                console.log(`[WS] Authentication successful for user: ${user.id}`);
+                userId = user.id;
             }
         } catch (authError: any) {
             console.error('[WS] Authentication failed:', authError.message);
@@ -239,7 +245,7 @@ export function setupWebSocket(wss: WebSocketServer) {
                                                 const dateStr = `${yyyy}${mm}${dd}`;
 
                                                 const mascotId = data.activeMascotId || 'default';
-                                                const dirPath = path.join(baseCwd, 'mascots', mascotId, 'voices', dateStr);
+                                                const dirPath = path.join(baseCwd, 'mascots', 'users', userId, mascotId, 'voices', dateStr);
                                                 
                                                 if (!fs.existsSync(dirPath)) {
                                                     fs.mkdirSync(dirPath, { recursive: true });

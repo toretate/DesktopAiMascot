@@ -92,7 +92,8 @@ router.get('/auth/callback', async (req, res) => {
 
         // 2.2. トークンの検証およびユーザーチェック（初回ログイン時はsub自動紐付け）
         const user = await authenticateUserToken(idToken);
-        console.log(`[Auth] ユーザーログイン成功: ${user.email}`);
+        const primaryEmail = user.identities.find(ident => ident.email)?.email || '';
+        console.log(`[Auth] ユーザーログイン成功: ${primaryEmail}`);
 
         // 2.3. Cookieの設定 (session_token としてIDトークンを格納)
         const isProduction = process.env.NODE_ENV === 'production';
