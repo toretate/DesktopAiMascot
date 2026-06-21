@@ -182,7 +182,7 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
         show: false, // 初期表示状態は後述の toggle 処理等に委ねる
         hasShadow: false,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -198,7 +198,8 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         chatWindow.loadURL(`${devUrl}#chat`);
     } else {
-        chatWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'chat' });
+        const port = process.env.PORT || '3000';
+        chatWindow.loadURL(`http://localhost:${port}/#chat`);
     }
 
     // チャットウィンドウ自体の移動を検知して相対オフセットを更新

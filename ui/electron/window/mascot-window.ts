@@ -63,7 +63,7 @@ export function createMascotWindow(onMove?: () => void): BrowserWindow {
         resizable: false,
         hasShadow: false,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -77,8 +77,8 @@ export function createMascotWindow(onMove?: () => void): BrowserWindow {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         mascotWindow.loadURL(`${devUrl}#mascot`);
     } else {
-        const htmlPath = path.join(__dirname, '../dist/index.html');
-        mascotWindow.loadFile(htmlPath, { hash: 'mascot' });
+        const port = process.env.PORT || '3000';
+        mascotWindow.loadURL(`http://localhost:${port}/#mascot`);
     }
 
     mascotWindow.on('move', () => {

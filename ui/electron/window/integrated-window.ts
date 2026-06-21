@@ -72,7 +72,7 @@ export function createIntegratedWindow(): BrowserWindow {
         resizable: true,
         title: 'Desktop AI Mascot - 統合モード',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -93,8 +93,8 @@ export function createIntegratedWindow(): BrowserWindow {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         integratedWindow.loadURL(`${devUrl}#integrated`);
     } else {
-        const htmlPath = path.join(__dirname, '../dist/index.html');
-        integratedWindow.loadFile(htmlPath, { hash: 'integrated' });
+        const port = process.env.PORT || '3000';
+        integratedWindow.loadURL(`http://localhost:${port}/#integrated`);
     }
 
     integratedWindow.on('resize', () => {

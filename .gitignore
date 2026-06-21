@@ -37,3 +37,9 @@ chat_history.json
 
 # Local Environment
 .env
+
+# Nuxt ignores
+.nuxt/
+.output/
+.output
+.nuxt

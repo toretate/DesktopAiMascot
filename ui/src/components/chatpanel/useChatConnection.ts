@@ -68,17 +68,16 @@ export function useChatConnection(params: {
     };
 
     const connectWebSocket = () => {
-        if (!useServer.value) {
-            disconnectWebSocket();
-            return;
-        }
-
         if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
             return;
         }
 
-        const wsUrl = `ws://${serverHost.value}:${serverPort.value}`;
-        console.log(`[useChatConnection] Connecting to WebSocket: ${wsUrl}`);
+        const isSecure = window.location.protocol === 'https:';
+        const wsProtocol = isSecure ? 'wss:' : 'ws:';
+        const wsHost = window.location.host;
+        const wsUrl = `${wsProtocol}//${wsHost}/ws`;
+
+        console.log(`[useChatConnection] Connecting to WebSocket (Nitro): ${wsUrl}`);
         socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
@@ -137,9 +136,8 @@ export function useChatConnection(params: {
             console.log('[useChatConnection] WebSocket disconnected');
             isWsConnected.value = false;
             socket = null;
-            if (useServer.value) {
-                setTimeout(connectWebSocket, 5000);
-            }
+            // 常に再接続を試みる
+            setTimeout(connectWebSocket, 5000);
         };
 
         socket.onerror = (err) => {
@@ -335,162 +333,48 @@ export function useChatConnection(params: {
         await nextTick();
         scrollToBottom();
 
-        if (useServer.value) {
-            if (!socket || socket.readyState !== WebSocket.OPEN) {
-                connectWebSocket();
-                const errorMsg = messages.value.find(m => m.id === aiMessageId);
-                if (errorMsg) {
-                    errorMsg.text = 'サーバーに接続されていません。再接続を試みています。もう一度送信してください。';
-                }
-                mascotStore.setLoading(false);
-                return;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            connectWebSocket();
+            const errorMsg = messages.value.find(m => m.id === aiMessageId);
+            if (errorMsg) {
+                errorMsg.text = 'サーバーに接続されていません。再接続を試みています。もう一度送信してください。';
             }
-
-            socket.send(JSON.stringify({
-                event: 'chat-send',
-                data: {
-                    message: userQuery,
-                    apiKey: apiKey,
-                    systemPrompt: systemPrompt,
-                    model: model,
-                    voicevoxSpeakerId: voicevoxSpeakerId,
-                    voicevoxEndpoint: voicevoxEndpointUrl,
-                    selectedVoiceEngine: voiceEngine,
-                    irodoriEndpoint: irodoriEndpointUrl,
-                    irodoriModel: irodoriModel,
-                    irodoriVoice: irodoriVoice,
-                    engine: engine,
-                    lmstudioEndpoint: lmsEndpoint,
-                    history: historyToSend,
-                    useTts: useTts.value,
-                    saveVoice: saveVoice.value,
-                    showVoiceLog: showVoiceLog.value,
-                    activeMascotId: activeMascot.value?.id || 'default',
-                    attachments: attachments.length > 0 ? attachments : undefined,
-                    tools: {
-                        toolsCurrentTime: toolsCurrentTime.value,
-                        toolsGpsLocation: toolsGpsLocation.value,
-                        toolsWeather: toolsWeather.value,
-                        toolsVolume: toolsVolume.value,
-                        toolsAppLauncher: toolsAppLauncher.value,
-                        toolsWebSearch: toolsWebSearch.value
-                    }
-                }
-            }));
-            await saveHistory();
+            mascotStore.setLoading(false);
             return;
         }
 
-        try {
-            let reply = '';
-            if (window.electronAPI) {
-                const rawHistory = JSON.parse(JSON.stringify(historyToSend));
-                const rawAttachments = attachments.length > 0 ? JSON.parse(JSON.stringify(attachments)) : undefined;
-                if (engine === 'lmstudio') {
-                    const toolsConfig = {
-                        toolsCurrentTime: toolsCurrentTime.value,
-                        toolsGpsLocation: toolsGpsLocation.value,
-                        toolsWeather: toolsWeather.value,
-                        toolsVolume: toolsVolume.value,
-                        toolsAppLauncher: toolsAppLauncher.value,
-                        toolsWebSearch: toolsWebSearch.value
-                    };
-                    reply = await window.electronAPI.askLmStudio(userQuery, systemPrompt, model, lmsEndpoint, rawHistory, rawAttachments, toolsConfig);
-                } else {
-                    if (!apiKey) {
-                        throw new Error(`${engine.toUpperCase()} APIキーが未設定です。右クリックから設定画面を開き、APIキーを登録してください。`);
-                    }
-                    reply = await window.electronAPI.askGemini(userQuery, apiKey, systemPrompt, model, rawHistory, rawAttachments);
-                }
-            } else {
-                reply = 'ブラウザ実行時のモック回答です。[happy]';
-            }
-
-            let timerData: { seconds: number; memo: string } | null = null;
-            const timerMatch = reply.match(/\[TIMER:(\d+),(.+?)\]/i);
-            if (timerMatch && timerMatch[1] && timerMatch[2]) {
-                timerData = {
-                    seconds: parseInt(timerMatch[1], 10),
-                    memo: timerMatch[2].trim()
-                };
-            }
-
-            const cleanReply = reply.replace(/\[TIMER:.*?\]/gi, '').trim();
-
-            const mascotMsg = messages.value.find(m => m.id === aiMessageId);
-            if (mascotMsg) {
-                mascotMsg.text = cleanReply;
-            }
-            await runCompaction(mascot?.id || 'default', activeSessionId.value!);
-            await saveHistory();
-
-            if (timerData && window.electronAPI) {
-                window.electronAPI.startTimer(timerData.seconds, timerData.memo);
-            }
-
-            let detectedEmotion = 'neutral';
-            const emotionMatch = cleanReply.match(/\[(\w+)\]/);
-            if (emotionMatch && emotionMatch[1]) {
-                detectedEmotion = emotionMatch[1].toLowerCase();
-                mascotStore.setEmotion(detectedEmotion);
-                if (window.electronAPI) {
-                    window.electronAPI.changeEmotion(detectedEmotion);
+        socket.send(JSON.stringify({
+            event: 'chat-send',
+            data: {
+                message: userQuery,
+                apiKey: apiKey,
+                systemPrompt: systemPrompt,
+                model: model,
+                voicevoxSpeakerId: voicevoxSpeakerId,
+                voicevoxEndpoint: voicevoxEndpointUrl,
+                selectedVoiceEngine: voiceEngine,
+                irodoriEndpoint: irodoriEndpointUrl,
+                irodoriModel: irodoriModel,
+                irodoriVoice: irodoriVoice,
+                engine: engine,
+                lmstudioEndpoint: lmsEndpoint,
+                history: historyToSend,
+                useTts: useTts.value,
+                saveVoice: saveVoice.value,
+                showVoiceLog: showVoiceLog.value,
+                activeMascotId: activeMascot.value?.id || 'default',
+                attachments: attachments.length > 0 ? attachments : undefined,
+                tools: {
+                    toolsCurrentTime: toolsCurrentTime.value,
+                    toolsGpsLocation: toolsGpsLocation.value,
+                    toolsWeather: toolsWeather.value,
+                    toolsVolume: toolsVolume.value,
+                    toolsAppLauncher: toolsAppLauncher.value,
+                    toolsWebSearch: toolsWebSearch.value
                 }
             }
-
-            await nextTick();
-            scrollToBottom();
-
-            if (window.electronAPI && useTts.value) {
-                const api = window.electronAPI;
-                const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
-
-                const processedSentences = splitSentences(speechText);
-
-                const synthPromises = processedSentences.map(sentence => {
-                    if (voiceEngine === 'irodori') {
-                        const cleanSentence = sanitizeForIrodoriTTS(sentence);
-                        return api.synthesizeIrodori(cleanSentence, irodoriEndpointUrl, irodoriModel, irodoriVoice, detectedEmotion);
-                    } else {
-                        return api.synthesizeVoicevox(sentence, voicevoxSpeakerId, voicevoxEndpointUrl);
-                    }
-                });
-
-                (async () => {
-                    for (const promise of synthPromises) {
-                        try {
-                            const base64Audio = await promise;
-                            if (base64Audio) {
-                                playlist.push(base64Audio);
-                                
-                                // 音声の保存処理
-                                if (saveVoice.value) {
-                                    const mascotId = activeMascot.value?.id || 'default';
-                                    const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
-                                    api.saveMascotVoice(mascotId, base64Audio, extension).catch((err) => {
-                                        console.error('[Chat] 音声保存エラー:', err);
-                                    });
-                                }
-                            }
-                        } catch (err) {
-                            console.error('[Chat] 音声合成エラー:', err);
-                        }
-                    }
-                })();
-            }
-
-        } catch (error: any) {
-            const mascotMsg = messages.value.find(m => m.id === aiMessageId);
-            if (mascotMsg) {
-                mascotMsg.text = `接続に失敗しました: ${error.message}`;
-            }
-            mascotStore.setSpeaking(false);
-            await saveHistory();
-        } finally {
-            mascotStore.setLoading(false);
-            await nextTick();
-            scrollToBottom();
-        }
+        }));
+        await saveHistory();
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {

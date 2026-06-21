@@ -72,7 +72,7 @@ export function createCompactWindow(): BrowserWindow {
         resizable: true,
         title: 'Desktop AI Mascot - コンパクトモード',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -93,8 +93,8 @@ export function createCompactWindow(): BrowserWindow {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         compactWindow.loadURL(`${devUrl}#compact`);
     } else {
-        const htmlPath = path.join(__dirname, '../dist/index.html');
-        compactWindow.loadFile(htmlPath, { hash: 'compact' });
+        const port = process.env.PORT || '3000';
+        compactWindow.loadURL(`http://localhost:${port}/#compact`);
     }
 
     compactWindow.on('resize', () => {

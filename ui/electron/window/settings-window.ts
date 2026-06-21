@@ -54,7 +54,7 @@ export function createSettingsWindow(): BrowserWindow {
         show: false, // 必要なタイミングまで非表示
         title: 'Desktop AI Mascot 設定',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false
         }
@@ -70,7 +70,8 @@ export function createSettingsWindow(): BrowserWindow {
     if (isDevMode) {
         settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
     } else {
-        settingsWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'settings' });
+        const port = process.env.PORT || '3000';
+        settingsWindow.loadURL(`http://localhost:${port}/#settings`);
     }
 
     // コンテンツ描画完了後に表示することで初期サイズを安定させる

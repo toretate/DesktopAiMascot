@@ -192,7 +192,25 @@ export const useConfigStore = defineStore('config', () => {
     const loadConfig = async () => {
         let configData: any = null;
 
-        if (window.electronAPI) {
+        // Nitro API から設定の取得を試みる
+        try {
+            console.log('[Config] Loading config from local Nitro API...');
+            const response = await fetch('/api/config', {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const resJson = await response.json();
+                if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
+                    configData = resJson.config;
+                    console.log('[Config] Config loaded from local Nitro API');
+                }
+            }
+        } catch (e: any) {
+            console.warn('[Config] Failed to fetch config from local Nitro API:', e.message);
+        }
+
+        // サーバーから取得できなかった場合は Electron API から試みる
+        if (!configData && window.electronAPI) {
             configData = await window.electronAPI.getAppConfig();
         }
 
@@ -385,28 +403,6 @@ export const useConfigStore = defineStore('config', () => {
             saveVoice.value = localStorage.getItem('saveVoice') === 'true';
             showVoiceLog.value = localStorage.getItem('showVoiceLog') !== 'false';
         }
-
-        // 外部サーバー連携が有効な場合、サーバーから最新の設定を取得してストアを同期
-        if (useServer.value) {
-            try {
-                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
-                console.log(`[Config] Fetching latest config from server: ${serverUrl}`);
-                const response = await fetch(serverUrl, {
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    const resJson = await response.json();
-                    if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
-                        console.log('[Config] Config successfully loaded from server');
-                        // サーバーの設定でストアを上書き
-                        updateConfig(resJson.config);
-                    }
-                }
-            } catch (e: any) {
-                console.warn('[Config] Failed to fetch config from server, using local fallback:', e.message);
-            }
-        }
-        
         isLoaded.value = true;
     };
 
@@ -482,32 +478,28 @@ export const useConfigStore = defineStore('config', () => {
             showVoiceLog: showVoiceLog.value
         };
 
-        // 外部サーバー連携が有効な場合、サーバー側にも設定データを送信して一元保存
+        // ローカルサーバー（Nitro）に設定データを送信して一元保存
         let savedPayload = payload;
-        if (useServer.value) {
-            try {
-                const serverUrl = `http://${serverHost.value}:${serverPort.value}/api/config`;
-                console.log(`[Config] Saving config to server: ${serverUrl}`);
-                const response = await fetch(serverUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload),
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    const resJson = await response.json();
-                    if (resJson.success && resJson.config) {
-                        console.log('[Config] Config successfully updated with server resolved static URLs');
-                        // サーバーで画像パスが置換された最新の設定にストアを同期
-                        updateConfig(resJson.config);
-                        savedPayload = resJson.config;
-                    }
+        try {
+            console.log('[Config] Saving config to local Nitro API...');
+            const response = await fetch('/api/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const resJson = await response.json();
+                if (resJson.success && resJson.config) {
+                    console.log('[Config] Config successfully saved to local Nitro API');
+                    updateConfig(resJson.config);
+                    savedPayload = resJson.config;
                 }
-            } catch (e: any) {
-                console.warn('[Config] Failed to save config to server:', e.message);
             }
+        } catch (e: any) {
+            console.warn('[Config] Failed to save config to local Nitro API:', e.message);
         }
 
         if (window.electronAPI) {

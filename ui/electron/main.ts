@@ -36,12 +36,84 @@ AiExpressionService.setAdapter({
     }
 });
 
+import { spawn, ChildProcess } from 'child_process';
+import * as net from 'net';
+
 // 開発環境と本番環境の判定
 const isDev = process.env.VITE_DEV_SERVER_URL !== undefined;
 
-
 // --- グローバル変数 ---
 let config: AppConfig;
+let serverProcess: ChildProcess | null = null;
+let serverPort = 3000;
+
+async function findFreePort(startPort: number): Promise<number> {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(startPort, () => {
+            const address = server.address();
+            const port = typeof address === 'string' ? startPort : address?.port || startPort;
+            server.close(() => {
+                resolve(port);
+            });
+        });
+        server.on('error', () => {
+            resolve(findFreePort(startPort + 1));
+        });
+    });
+}
+
+function startNitroServer() {
+    if (isDev) {
+        console.log('[Electron] Running in dev mode, relying on external Nuxt dev server.');
+        return;
+    }
+
+    let serverScriptPath = path.join(app.getAppPath(), '.output/server/index.mjs');
+    const unpackedPath = serverScriptPath.replace('app.asar', 'app.asar.unpacked');
+    if (fs.existsSync(unpackedPath)) {
+        serverScriptPath = unpackedPath;
+    } else {
+        const extraPath = path.join(process.resourcesPath, '.output/server/index.mjs');
+        if (fs.existsSync(extraPath)) {
+            serverScriptPath = extraPath;
+        }
+    }
+
+    console.log(`[Electron] Starting Nitro server at: ${serverScriptPath} on port ${serverPort}`);
+
+    if (!fs.existsSync(serverScriptPath)) {
+        console.error(`[Electron] Nitro server script not found! Path: ${serverScriptPath}`);
+        dialog.showErrorBox('サーバーエラー', `起動用サーバースクリプトが見つかりませんでした。\nパス: ${serverScriptPath}`);
+        return;
+    }
+
+    serverProcess = spawn(process.execPath, [serverScriptPath], {
+        env: {
+            ...process.env,
+            PORT: String(serverPort),
+            NODE_ENV: 'production',
+            ELECTRON_RUN_AS_NODE: '1'
+        },
+        stdio: 'inherit'
+    });
+
+    serverProcess.on('error', (err) => {
+        console.error('[Electron] Failed to start Nitro server:', err);
+    });
+
+    serverProcess.on('exit', (code, signal) => {
+        console.log(`[Electron] Nitro server exited with code ${code} and signal ${signal}`);
+    });
+}
+
+function stopNitroServer() {
+    if (serverProcess) {
+        console.log('[Electron] Killing Nitro server process...');
+        serverProcess.kill('SIGTERM');
+        serverProcess = null;
+    }
+}
 
 // --- ウィンドウ群の初期化 ---
 function createWindows() {
@@ -97,7 +169,18 @@ function createWindows() {
 }
 
 // --- IPCハンドラーの実装 ---
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    // 開発時以外は空きポートを探して Nitro サーバを起動
+    if (!isDev) {
+        serverPort = await findFreePort(3000);
+        process.env.PORT = String(serverPort);
+        startNitroServer();
+        // サーバーの起動待機（1.5秒）
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+    } else {
+        process.env.PORT = '3000';
+    }
+
     createWindows();
     registerSelectLocalImageHandler();
     registerLmStudioHandlers();
@@ -176,7 +259,12 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+    stopNitroServer();
     if (process.platform !== 'darwin') {
         app.quit();
     }
+});
+
+app.on('will-quit', () => {
+    stopNitroServer();
 });
