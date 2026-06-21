@@ -29,7 +29,8 @@ AiExpressionService.setAdapter({
     pathExtname: (p: string) => path.extname(p),
     cwd: () => {
         const currentCwd = process.cwd();
-        if (path.basename(currentCwd) === 'ui') {
+        const base = path.basename(currentCwd);
+        if (base === 'ui' || base === 'app') {
             return path.dirname(currentCwd);
         }
         return currentCwd;

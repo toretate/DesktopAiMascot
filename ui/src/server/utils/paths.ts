@@ -50,9 +50,10 @@ export function resolveMascotPath(requestPath: string): string {
 
     // 2. プリセット（共通）アセットの場合
     const isDev = process.env.NODE_ENV !== 'production';
+    const appDirName = fs.existsSync(path.resolve(PROJECT_ROOT, 'app')) ? 'app' : 'ui';
     const publicMascotsBase = isDev
-        ? path.resolve(PROJECT_ROOT, 'ui/src/public/mascots')
-        : path.resolve(PROJECT_ROOT, 'ui/.output/public/mascots');
+        ? path.resolve(PROJECT_ROOT, `${appDirName}/src/public/mascots`)
+        : path.resolve(PROJECT_ROOT, `${appDirName}/.output/public/mascots`);
 
     return path.resolve(publicMascotsBase, decodedSubpath);
 }
