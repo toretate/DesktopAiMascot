@@ -13,6 +13,88 @@ function getUserConfigPath(userId: string): string {
     return path.join(__dirname, `../../../server/users/${userId}/config.json`);
 }
 
+// 古い共有アセットディレクトリからユーザー個別ディレクトリへのマイグレーション関数
+function migrateUserAssets(userId: string, config: any): { migrated: boolean; config: any } {
+    let migrated = false;
+
+    if (!config || !Array.isArray(config.mascots)) {
+        return { migrated, config };
+    }
+
+    const MASCOTS_ROOT = path.join(__dirname, '../../../mascots');
+
+    for (const mascot of config.mascots) {
+        const mascotId = mascot.id;
+        if (!mascotId) continue;
+
+        // 古いアセットの物理ディレクトリ: mascots/<mascotId>
+        const oldMascotDir = path.join(MASCOTS_ROOT, mascotId);
+        // 新しいアセットの物理ディレクトリ: mascots/users/<userId>/<mascotId>
+        const newMascotDir = path.join(MASCOTS_ROOT, 'users', userId, mascotId);
+
+        // もし古いアセットの物理ディレクトリが存在し、かつ新しいアセットディレクトリが存在しない場合、コピーする
+        if (fs.existsSync(oldMascotDir) && !fs.existsSync(newMascotDir)) {
+            try {
+                // ディレクトリを再帰的にコピー
+                fs.mkdirSync(path.dirname(newMascotDir), { recursive: true });
+                fs.cpSync(oldMascotDir, newMascotDir, { recursive: true });
+                console.log(`[Migration] 古いマスコットアセットをコピーしました: ${oldMascotDir} -> ${newMascotDir}`);
+                migrated = true;
+            } catch (err: any) {
+                console.error(`[Migration] ${mascotId} のアセットコピーに失敗しました:`, err.message);
+            }
+        }
+
+        // 設定内のパスの置換処理
+        const replacePath = (oldPath: string): string => {
+            // パターン: /mascots/<mascotId>/...
+            // 置換後: /mascots/users/<userId>/<mascotId>/...
+            const prefix = `/mascots/${mascotId}/`;
+            if (oldPath && oldPath.startsWith(prefix)) {
+                migrated = true;
+                const newPath = `/mascots/users/${userId}/${mascotId}/${oldPath.substring(prefix.length)}`;
+                console.log(`[Migration] パスを置換しました: ${oldPath} -> ${newPath}`);
+                return newPath;
+            }
+            return oldPath;
+        };
+
+        // avatar の置換
+        if (mascot.avatar) {
+            mascot.avatar = replacePath(mascot.avatar);
+        }
+
+        // outfits の置換
+        if (mascot.assets && Array.isArray(mascot.assets.outfits)) {
+            for (const outfit of mascot.assets.outfits) {
+                if (outfit.path) {
+                    outfit.path = replacePath(outfit.path);
+                }
+            }
+        }
+
+        // expressions の置換
+        if (mascot.assets && Array.isArray(mascot.assets.expressions)) {
+            for (const expr of mascot.assets.expressions) {
+                if (expr.path) {
+                    expr.path = replacePath(expr.path);
+                }
+            }
+        }
+
+        // poses の置換
+        if (mascot.assets && Array.isArray(mascot.assets.poses)) {
+            for (const pose of mascot.assets.poses) {
+                if (pose.path) {
+                    pose.path = replacePath(pose.path);
+                }
+            }
+        }
+    }
+
+    return { migrated, config };
+}
+
 // Base64 DataURL をデコードしてファイルに保存し、静的URLパスを返す関数
 function saveBase64Image(base64Data: string, userId: string, mascotId: string, assetType: string, assetId: string): string {
     const matches = base64Data.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
@@ -70,7 +152,17 @@ router.get('/config', authMiddleware, (req, res) => {
         }
 
         const data = fs.readFileSync(userConfigPath, 'utf8');
-        return res.json({ success: true, config: JSON.parse(data) });
+        let config = JSON.parse(data);
+
+        // 古い共有アセットパスをユーザー個別アセットにマイグレーションする
+        const migrationResult = migrateUserAssets(userId, config);
+        if (migrationResult.migrated) {
+            fs.writeFileSync(userConfigPath, JSON.stringify(migrationResult.config, null, 4), 'utf8');
+            console.log(`[Server] config.json のアセットパスをマイグレーションして保存しました: ${userId}`);
+            config = migrationResult.config;
+        }
+
+        return res.json({ success: true, config });
     } catch (error: any) {
         console.error('[Server] Failed to load config:', error.message);
         return res.status(500).json({ success: false, error: error.message });

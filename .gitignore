@@ -27,6 +27,9 @@ Thumbs.db
 # Project configs and dynamic mascot data
 config.json
 mascots/mascot_*/
+mascots/users/
+server/users/
+scratch/
 
 # Local plan docs
 docs/plans/
