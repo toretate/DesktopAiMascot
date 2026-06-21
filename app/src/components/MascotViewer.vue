@@ -447,6 +447,11 @@ const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
     isAssetsLoading.value = true;
     bodySprite.visible = false;
     expressionSprite.visible = false;
+
+    // Vue にロード中状態（スピナー表示とキャラクター非表示）を確実に描画させる
+    await nextTick();
+    await new Promise(resolve => setTimeout(resolve, 80));
+
     try {
 
     const promises: Promise<any>[] = [];
@@ -551,6 +556,8 @@ const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
         stopBlinkLoop();
     }
     } finally {
+        // 適用後、Vueの次のティックを待ってから表示に戻す（テクスチャロードと描画タイミングの同期）
+        await nextTick();
         if (bodySprite) bodySprite.visible = true;
         if (expressionSprite) expressionSprite.visible = true;
         isAssetsLoading.value = false;
@@ -996,6 +1003,7 @@ onMounted(async () => {
     if (window.electronAPI) {
         // プレビュー状態の購読
         unsubscribePreview = window.electronAPI.onApplyPreviewState((state: any) => {
+            isAssetsLoading.value = true;
             previewState.value = state;
         });
 
@@ -1012,6 +1020,7 @@ onMounted(async () => {
         // 設定更新の購読
         unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
             console.log('[MascotViewer] Config updated via IPC:', newConfig);
+            isAssetsLoading.value = true;
             configStore.updateConfig(newConfig);
             // 正式な設定が届いたらプレビュー状態をクリアする
             previewState.value = null;
