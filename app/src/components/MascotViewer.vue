@@ -744,9 +744,11 @@ const applyExpressionTransform = () => {
         return;
     }
 
-    // previewStateがある場合でも、それが現在のアセットのIDと一致する場合のみプレビューの調整値を適用する。
-    // 衣装変更などで表情IDがずれている場合は、アセット本来の設定値（found.*）を優先する。
-    const isMatchingPreview = previewState.value && previewState.value.expressionId === found.id;
+    // previewStateがある場合でも、それが現在の衣装(outfit)および表情アセットのIDと一致する場合のみプレビューの調整値を適用する。
+    // 衣装変更などでIDがずれている場合は、アセット本来の設定値（found.*）を優先する。
+    const isMatchingPreview = previewState.value && 
+                              previewState.value.outfitId === activeOutfit.value?.id &&
+                              previewState.value.expressionId === found.id;
 
     const ox = isMatchingPreview ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
     const oy = isMatchingPreview ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);

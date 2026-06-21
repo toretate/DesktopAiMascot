@@ -223,16 +223,24 @@ export function useMascotSettings(
 
     const updateMascotPreview = (overrides: { expressionId?: string; outfitId?: string; poseId?: string } = {}) => {
         if (window.electronAPI && window.electronAPI.previewMascotState) {
+            // overrides.outfitId に基づいて表情リストの解決先を切り替える
+            const expressions = (overrides.outfitId !== undefined)
+                ? (editingMascot.value.assets.outfits.find(o => o.id === overrides.outfitId)?.expressions || [])
+                : currentExpressions.value;
+
             const currentExpr = (overrides.expressionId !== undefined)
-                ? currentExpressions.value.find(e => e.id === overrides.expressionId)
+                ? expressions.find(e => e.id === overrides.expressionId)
                 : activePreviewExpression.value;
             
+            // 表情が直接指定されていない場合、デフォルト表情または最初のアセットからアライメントパラメータを引き継ぐ
+            const fallbackExpr = currentExpr || expressions.find(e => e.id === editingMascot.value.defaultExpressionId) || expressions[0];
+
             window.electronAPI.previewMascotState({
-                expressionId: currentExpr?.id || editingMascot.value.defaultExpressionId,
-                expressionOffsetX: currentExpr?.offsetX ?? 0,
-                expressionOffsetY: currentExpr?.offsetY ?? 0,
-                expressionScale: currentExpr?.scale ?? 1.0,
-                expressionRotation: currentExpr?.rotation ?? 0,
+                expressionId: fallbackExpr?.id || editingMascot.value.defaultExpressionId,
+                expressionOffsetX: fallbackExpr?.offsetX ?? 0,
+                expressionOffsetY: fallbackExpr?.offsetY ?? 0,
+                expressionScale: fallbackExpr?.scale ?? 1.0,
+                expressionRotation: fallbackExpr?.rotation ?? 0,
                 outfitId: overrides.outfitId !== undefined ? overrides.outfitId : editingMascot.value.currentOutfitId,
                 poseId: overrides.poseId !== undefined ? overrides.poseId : editingMascot.value.currentPoseId
             });
