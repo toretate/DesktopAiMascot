@@ -88,6 +88,26 @@ let unsubscribePreview: (() => void) | null = null;
 let unsubscribeConfig: (() => void) | null = null;
 let unsubscribeTimer: (() => void) | null = null;
 
+// 衣装切り替えなどのバタつきを防止するための過渡期ロックフラグ
+const isTransitioning = ref(false);
+let transitionTimeoutId: NodeJS.Timeout | null = null;
+let activeLoadCount = 0;
+
+const triggerTransitionLock = () => {
+    isAssetsLoading.value = true;
+    isTransitioning.value = true;
+    if (transitionTimeoutId) clearTimeout(transitionTimeoutId);
+    transitionTimeoutId = setTimeout(() => {
+        isTransitioning.value = false;
+        if (activeLoadCount === 0) {
+            isAssetsLoading.value = false;
+            // 完全に完了した段階でスプライトを表示する
+            if (bodySprite) bodySprite.visible = true;
+            if (expressionSprite) expressionSprite.visible = true;
+        }
+    }, 450); // 最低450msはローディング画面を維持し、中途半端な描写のバタつきを防ぐ
+};
+
 const balloonText = ref('');
 const balloonVisible = ref(false);
 let balloonTimeoutId: NodeJS.Timeout | null = null;
@@ -444,6 +464,7 @@ let expressionTalkTexture: Texture | null = null;
 const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
     if (!pixiApp || !bodySprite || !expressionSprite) return;
 
+    activeLoadCount++;
     isAssetsLoading.value = true;
     bodySprite.visible = false;
     expressionSprite.visible = false;
@@ -556,11 +577,14 @@ const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
         stopBlinkLoop();
     }
     } finally {
-        // 適用後、Vueの次のティックを待ってから表示に戻す（テクスチャロードと描画タイミングの同期）
         await nextTick();
-        if (bodySprite) bodySprite.visible = true;
-        if (expressionSprite) expressionSprite.visible = true;
-        isAssetsLoading.value = false;
+        activeLoadCount--;
+        // 他のアクティブロードがなく、かつトランジションロック期間も明けている場合のみ表示を復帰する
+        if (activeLoadCount === 0 && !isTransitioning.value) {
+            if (bodySprite) bodySprite.visible = true;
+            if (expressionSprite) expressionSprite.visible = true;
+            isAssetsLoading.value = false;
+        }
     }
 };
 
@@ -774,6 +798,7 @@ watch([isBlinking, isMouthOpen], () => {
 // 表情の位置・スケール等の設定変更を監視
 watch([
     () => activeExpression.value,
+    () => previewState.value?.expressionId,
     () => previewState.value?.expressionOffsetX,
     () => previewState.value?.expressionOffsetY,
     () => previewState.value?.expressionScale,
@@ -1008,7 +1033,7 @@ onMounted(async () => {
     if (window.electronAPI) {
         // プレビュー状態の購読
         unsubscribePreview = window.electronAPI.onApplyPreviewState((state: any) => {
-            isAssetsLoading.value = true;
+            triggerTransitionLock();
             previewState.value = state;
         });
 
@@ -1025,7 +1050,7 @@ onMounted(async () => {
         // 設定更新の購読
         unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
             console.log('[MascotViewer] Config updated via IPC:', newConfig);
-            isAssetsLoading.value = true;
+            triggerTransitionLock();
             configStore.updateConfig(newConfig);
             // 正式な設定が届いたらプレビュー状態をクリアする
             previewState.value = null;
