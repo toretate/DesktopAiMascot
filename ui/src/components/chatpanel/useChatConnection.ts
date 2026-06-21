@@ -257,14 +257,15 @@ export function useChatConnection(params: {
             model = configStore.anthropicModel || mascot?.aiConfig?.chat?.model || 'claude-3-5-sonnet-latest';
         }
 
+        const voiceEngine = mascot?.aiConfig?.voice?.engine || configStore.selectedVoiceEngine || 'voicevox';
+
         const voicevoxSpeakerId = mascot?.aiConfig?.voice?.speaker_id !== undefined
             ? mascot.aiConfig.voice.speaker_id
             : (configStore.voicevoxSpeaker !== undefined ? configStore.voicevoxSpeaker : 2);
 
-        const voiceEngine = configStore.selectedVoiceEngine || mascot?.aiConfig?.voice?.engine || 'voicevox';
         const irodoriEndpointUrl = configStore.irodoriEndpoint || 'http://localhost:7861';
-        const irodoriModel = configStore.irodoriModel || 'irodori-tts-500m-v3';
-        const irodoriVoice = configStore.irodoriVoice || 'default';
+        const irodoriModel = mascot?.aiConfig?.voice?.irodori_model || configStore.irodoriModel || 'irodori-tts-500m-v3';
+        const irodoriVoice = mascot?.aiConfig?.voice?.irodori_voice || configStore.irodoriVoice || 'default';
 
         let systemPrompt = '';
 

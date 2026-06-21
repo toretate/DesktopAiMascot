@@ -28,9 +28,11 @@ interface MascotData {
             temperature: number;
         };
         voice: {
-            engine: string;
-            style: string;
-            speaker_id: number;
+            engine?: string;
+            speaker_id?: number;
+            style?: string;
+            irodori_voice?: string;
+            irodori_model?: string;
         };
     };
     assets: {

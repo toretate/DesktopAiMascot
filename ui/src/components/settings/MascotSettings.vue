@@ -43,7 +43,7 @@ interface MascotData {
     defaultExpressionId?: string;
     aiConfig: {
         chat: { engine: string; model: string; temperature: number; };
-        voice: { engine: string; speaker_id: number; style: string; };
+        voice: { engine?: string; speaker_id?: number; style?: string; irodori_voice?: string; irodori_model?: string; };
     };
     assets: { outfits: MascotAsset[]; expressions: MascotAsset[]; poses: MascotAsset[]; };
 }

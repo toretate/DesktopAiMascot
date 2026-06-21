@@ -283,13 +283,83 @@ const saveSettings = async () => {
     }
 };
 
+// 現在の画面のボイス設定をマスコット個別設定に反映・保存する
+const applyVoiceToMascot = async () => {
+    if (!activeMascot.value) return;
+    
+    isSaving.value = true;
+    saveStatus.value = '保存中...';
+    
+    // aiConfig や voice のオブジェクトが無い場合は初期化
+    if (!activeMascot.value.aiConfig) {
+        activeMascot.value.aiConfig = {
+            chat: { engine: 'gemini', model: 'gemini-1.5-flash', temperature: 0.7 },
+            voice: {}
+        };
+    }
+    if (!activeMascot.value.aiConfig.voice) {
+        activeMascot.value.aiConfig.voice = {};
+    }
+    
+    // 現在の選択内容を反映
+    activeMascot.value.aiConfig.voice.engine = selectedVoiceEngine.value;
+    if (selectedVoiceEngine.value === 'voicevox') {
+        activeMascot.value.aiConfig.voice.speaker_id = Number(voicevoxSpeaker.value);
+    } else if (selectedVoiceEngine.value === 'irodori') {
+        activeMascot.value.aiConfig.voice.irodori_voice = irodoriVoice.value;
+        activeMascot.value.aiConfig.voice.irodori_model = irodoriModel.value;
+    }
+    
+    console.log(`[VoiceGenSettingsPanel] Applied voice to mascot ${activeMascot.value.id}:`, activeMascot.value.aiConfig.voice);
+    
+    try {
+        await configStore.saveConfig();
+        setTimeout(() => {
+            saveStatus.value = 'マスコット設定に保存完了！';
+            isSaving.value = false;
+            setTimeout(() => {
+                saveStatus.value = '設定を保存';
+            }, 2000);
+        }, 600);
+    } catch (e) {
+        saveStatus.value = '保存エラー';
+        isSaving.value = false;
+    }
+};
+
+// マスコット個別音声設定のロード処理
+const loadMascotVoiceSettings = () => {
+    if (activeMascot.value && activeMascot.value.aiConfig?.voice) {
+        const mv = activeMascot.value.aiConfig.voice;
+        if (mv.engine) {
+            selectedVoiceEngine.value = mv.engine;
+        }
+        if (mv.speaker_id !== undefined) {
+            voicevoxSpeaker.value = mv.speaker_id;
+        }
+        if (mv.irodori_voice) {
+            irodoriVoice.value = mv.irodori_voice;
+        }
+        if (mv.irodori_model) {
+            irodoriModel.value = mv.irodori_model;
+        }
+        console.log('[VoiceGenSettingsPanel] Loaded voice settings from mascot:', activeMascot.value.name);
+    }
+};
+
 onMounted(() => {
+    loadMascotVoiceSettings();
     if (selectedVoiceEngine.value === 'voicevox') {
         testVoicevoxConnection();
     }
     if (selectedVoiceEngine.value === 'irodori') {
         fetchIrodoriVoices();
     }
+});
+
+// マスコットが切り替わった場合もロードし直す
+watch(activeMascot, () => {
+    loadMascotVoiceSettings();
 });
 </script>
 
@@ -448,10 +518,18 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <div class="flex justify-content-end mt-4">
+                <div class="flex justify-content-end gap-2 mt-4">
+                    <Button 
+                        v-if="activeMascot"
+                        label="マスコット設定に反映" 
+                        icon="pi pi-user" 
+                        class="p-button-outlined p-button-secondary" 
+                        :disabled="isSaving"
+                        @click="applyVoiceToMascot" 
+                    />
                     <Button 
                         :label="saveStatus" 
-                        :icon="saveStatus === '保存完了！' ? 'pi pi-check-circle' : 'pi pi-check'" 
+                        :icon="saveStatus.includes('完了') ? 'pi pi-check-circle' : 'pi pi-check'" 
                         class="p-button-primary" 
                         :disabled="isSaving"
                         @click="saveSettings" 
