@@ -720,10 +720,14 @@ const applyExpressionTransform = () => {
         return;
     }
 
-    const ox = previewState.value ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
-    const oy = previewState.value ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
-    const sc = previewState.value ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
-    const rot = previewState.value ? (previewState.value.expressionRotation ?? 0) : (found.rotation ?? 0);
+    // previewStateがある場合でも、それが現在のアセットのIDと一致する場合のみプレビューの調整値を適用する。
+    // 衣装変更などで表情IDがずれている場合は、アセット本来の設定値（found.*）を優先する。
+    const isMatchingPreview = previewState.value && previewState.value.expressionId === found.id;
+
+    const ox = isMatchingPreview ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
+    const oy = isMatchingPreview ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
+    const sc = isMatchingPreview ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
+    const rot = isMatchingPreview ? (previewState.value.expressionRotation ?? 0) : (found.rotation ?? 0);
 
     const scaleFactor = 512 / 420;
     const scaledOx = ox * scaleFactor;
@@ -734,7 +738,8 @@ const applyExpressionTransform = () => {
     expressionSprite.y = (683 / 2) + scaledOy;
     
     // スケール適用 (テクスチャ本来のサイズに対する 171px の基本スケール比に sc を乗算)
-    const baseScale = 171 / (expressionSprite.texture?.width || 171);
+    const textureWidth = expressionSprite.texture?.width;
+    const baseScale = (textureWidth && textureWidth > 1) ? (171 / textureWidth) : 1;
     expressionSprite.scale.set(baseScale * sc);
     
     // 回転の適用 (角度からラジアン)
