@@ -92,7 +92,7 @@ export function createCompactWindow(): BrowserWindow {
     if (isDevMode) {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         compactWindow.loadURL(`${devUrl}#compact`);
-        compactWindow.webContents.openDevTools();
+        // compactWindow.webContents.openDevTools();
     } else {
         const port = process.env.PORT || '3000';
         compactWindow.loadURL(`http://localhost:${port}/#compact`);

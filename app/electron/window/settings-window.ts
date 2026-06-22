@@ -69,7 +69,7 @@ export function createSettingsWindow(): BrowserWindow {
 
     if (isDevMode) {
         settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
-        settingsWindow.webContents.openDevTools();
+        // settingsWindow.webContents.openDevTools();
     } else {
         const port = process.env.PORT || '3000';
         settingsWindow.loadURL(`http://localhost:${port}/#settings`);

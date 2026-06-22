@@ -76,7 +76,7 @@ export function createMascotWindow(onMove?: () => void): BrowserWindow {
     if (isDevMode) {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         mascotWindow.loadURL(`${devUrl}#mascot`);
-        mascotWindow.webContents.openDevTools();
+        // mascotWindow.webContents.openDevTools();
     } else {
         const port = process.env.PORT || '3000';
         mascotWindow.loadURL(`http://localhost:${port}/#mascot`);
