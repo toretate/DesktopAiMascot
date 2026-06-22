@@ -1,7 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import electron from 'vite-plugin-electron';
-import renderer from 'vite-plugin-electron-renderer';
 import { fileURLToPath, URL } from 'node:url';
 import path from 'node:path';
 
@@ -14,16 +12,20 @@ const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');
 
 const isTest = !!process.env.VITEST;
 
-// https://vitejs.dev/config/
-export default defineConfig({
-    plugins: [
-        vue(),
-        ...(isTest ? [] : [
+// Electron プラグインの遅延読み込み（テスト時はスキップ）
+async function loadElectronPlugins() {
+    if (isTest) return [];
+    try {
+        const [{ default: electron }, { default: renderer }] = await Promise.all([
+            import('vite-plugin-electron'),
+            import('vite-plugin-electron-renderer')
+        ]);
+        return [
             electron([
                 {
                     // メインプロセスのエントリーポイント
                     entry: 'electron/main.ts',
-                    onstart(options) {
+                    onstart(options: any) {
                         if (process.env.VSCODE_DEBUG) {
                             console.log('VS Code Debug mode: Skip auto startup');
                         } else {
@@ -42,13 +44,26 @@ export default defineConfig({
                 {
                     // プリロードスクリプトのエントリーポイント
                     entry: 'electron/preload.ts',
-                    onstart(options) {
+                    onstart(options: any) {
                         options.reload();
                     },
                 },
             ]),
             renderer(),
-        ])
+        ];
+    } catch {
+        // vite-plugin-electron が未インストールの環境（テストCI等）ではスキップ
+        return [];
+    }
+}
+
+const electronPlugins = await loadElectronPlugins();
+
+// https://vitejs.dev/config/
+export default defineConfig({
+    plugins: [
+        vue(),
+        ...electronPlugins
     ],
     resolve: {
         alias: {

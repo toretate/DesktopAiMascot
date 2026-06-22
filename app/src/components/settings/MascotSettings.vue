@@ -146,11 +146,8 @@ const setMainOutfit = (outfit: MascotAsset) => {
         }
     }
 
-    updateMascotPreview({ 
-        outfitId: outfit.id,
-        poseId: '' 
-    });
-
+    // config-updated IPC 1回のみで MascotViewer 側が切り替わるようにし、
+    // updateMascotPreview との2重送信によるちらつきを防止する
     syncAndSave();
     emit('save-settings');
 };
@@ -167,7 +164,7 @@ const deleteOutfit = (outfit: MascotAsset) => {
                 const newExpr = nextOutfit.expressions?.find(e => e.name === activePreviewExpression.value?.name);
                 if (newExpr) activePreviewExpression.value = newExpr;
             }
-            updateMascotPreview({ outfitId: nextOutfitId });
+            // config-updated IPC のみで切り替え（updateMascotPreview の二重送信を防止）
         }
         syncAndSave();
         emit('save-settings');

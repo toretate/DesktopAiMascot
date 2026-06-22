@@ -92,18 +92,30 @@ let unsubscribeTimer: (() => void) | null = null;
 const isTransitioning = ref(false);
 let transitionTimeoutId: NodeJS.Timeout | null = null;
 let activeLoadCount = 0;
+let retryTransformTimeoutId: NodeJS.Timeout | null = null;
+let retryTransformCount = 0;
+// ロード世代カウンター: 新しいロードが開始されたら古いロードの表示復帰をスキップする
+let loadGeneration = 0;
 
 const triggerTransitionLock = () => {
     isAssetsLoading.value = true;
     isTransitioning.value = true;
+    // ロック発動時に即座にスプライトを非表示にして、中間状態の一瞬の表示を防ぐ
+    if (bodySprite) bodySprite.visible = false;
+    if (expressionSprite) expressionSprite.visible = false;
     if (transitionTimeoutId) clearTimeout(transitionTimeoutId);
     transitionTimeoutId = setTimeout(() => {
         isTransitioning.value = false;
         if (activeLoadCount === 0) {
-            isAssetsLoading.value = false;
-            // 完全に完了した段階でスプライトを表示する
-            if (bodySprite) bodySprite.visible = true;
-            if (expressionSprite) expressionSprite.visible = true;
+            // ロード完了済みパスが現在の描画パスと一致している場合のみ表示を復帰する
+            const cleanBody = getCleanPath(currentBodyPath.value);
+            const cleanExpr = getCleanPath(currentExpressionPath.value);
+            if (cleanBody === lastBodyPathClean && cleanExpr === lastExpressionPathClean) {
+                isAssetsLoading.value = false;
+                if (bodySprite) bodySprite.visible = true;
+                if (expressionSprite) expressionSprite.visible = true;
+            }
+            // パスが不一致の場合は、watch による再ロードが走るのを待つ
         }
     }, 450); // 最低450msはローディング画面を維持し、中途半端な描写のバタつきを防ぐ
 };
@@ -464,6 +476,15 @@ let expressionTalkTexture: Texture | null = null;
 const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
     if (!pixiApp || !bodySprite || !expressionSprite) return;
 
+    retryTransformCount = 0;
+    if (retryTransformTimeoutId) {
+        clearTimeout(retryTransformTimeoutId);
+        retryTransformTimeoutId = null;
+    }
+
+    // このロードの世代を記録。完了時に最新世代でなければ表示復帰をスキップする
+    const myGeneration = ++loadGeneration;
+
     activeLoadCount++;
     isAssetsLoading.value = true;
     bodySprite.visible = false;
@@ -579,6 +600,10 @@ const loadMascotAssets = async (bodyPath: string, expressionPath: string) => {
     } finally {
         await nextTick();
         activeLoadCount--;
+        // このロードが最新世代でない場合は表示復帰をスキップ（後続のロードに委ねる）
+        if (myGeneration !== loadGeneration) {
+            return;
+        }
         // 他のアクティブロードがなく、かつトランジションロック期間も明けている場合のみ表示を復帰する
         if (activeLoadCount === 0 && !isTransitioning.value) {
             if (bodySprite) bodySprite.visible = true;
@@ -671,10 +696,6 @@ const refreshExpressionTexture = () => {
     }
 
     expressionSprite.texture = targetTexture;
-
-    // 基準サイズ171pxに設定
-    expressionSprite.width = 171;
-    expressionSprite.height = 171;
     expressionSprite.anchor.set(0.5);
 
     // トランスフォームの適用
@@ -764,8 +785,36 @@ const applyExpressionTransform = () => {
     expressionSprite.y = (683 / 2) + scaledOy;
     
     // スケール適用 (テクスチャ本来のサイズに対する 171px の基本スケール比に sc を乗算)
-    const textureWidth = expressionSprite.texture?.width;
-    const baseScale = (textureWidth && textureWidth > 1) ? (171 / textureWidth) : 1;
+    const texture = expressionSprite.texture;
+    let textureWidth = texture?.width;
+
+    if (texture?.source && texture.source.width > 1) {
+        textureWidth = texture.source.width;
+    }
+
+    // テクスチャのサイズがまだロード完了していない（0や1、あるいは未定義）場合は、後で再計算を試みる
+    if (!textureWidth || textureWidth <= 1) {
+        if (retryTransformTimeoutId) clearTimeout(retryTransformTimeoutId);
+        
+        if (retryTransformCount < 30) {
+            retryTransformCount++;
+            retryTransformTimeoutId = setTimeout(() => {
+                applyExpressionTransform();
+            }, 50);
+        }
+        
+        expressionSprite.scale.set(sc);
+        expressionSprite.rotation = rot * (Math.PI / 180);
+        return;
+    }
+
+    retryTransformCount = 0;
+    if (retryTransformTimeoutId) {
+        clearTimeout(retryTransformTimeoutId);
+        retryTransformTimeoutId = null;
+    }
+
+    const baseScale = 171 / textureWidth;
     expressionSprite.scale.set(baseScale * sc);
     
     // 回転の適用 (角度からラジアン)
@@ -774,8 +823,23 @@ const applyExpressionTransform = () => {
 
 // パスの変更を監視
 // パスの変更を監視してアトミックにロードを実行
+const getCleanPath = (url: string | undefined | null): string => {
+    if (!url) return '';
+    return url.split('?')[0];
+};
+
+let lastBodyPathClean = '';
+let lastExpressionPathClean = '';
+
 watch([currentBodyPath, currentExpressionPath], async ([newBodyPath, newExpressionPath]) => {
-    await loadMascotAssets(newBodyPath, newExpressionPath);
+    const cleanBody = getCleanPath(newBodyPath);
+    const cleanExpr = getCleanPath(newExpressionPath);
+    
+    if (cleanBody !== lastBodyPathClean || cleanExpr !== lastExpressionPathClean) {
+        lastBodyPathClean = cleanBody;
+        lastExpressionPathClean = cleanExpr;
+        await loadMascotAssets(newBodyPath, newExpressionPath);
+    }
 }, { flush: 'sync' });
 
 // activeMascot の変更を監視してプリロードを実行
@@ -1035,7 +1099,16 @@ onMounted(async () => {
     if (window.electronAPI) {
         // プレビュー状態の購読
         unsubscribePreview = window.electronAPI.onApplyPreviewState((state: any) => {
-            triggerTransitionLock();
+            const prevOutfitId = activeOutfit.value?.id;
+            const prevPoseId = activePose.value?.id;
+
+            const nextOutfitId = state?.outfitId;
+            const nextPoseId = state?.poseId;
+
+            // 衣装かポーズが実際に変わる場合のみトランジションロックをトリガー
+            if (prevOutfitId !== nextOutfitId || prevPoseId !== nextPoseId) {
+                triggerTransitionLock();
+            }
             previewState.value = state;
         });
 
@@ -1052,7 +1125,26 @@ onMounted(async () => {
         // 設定更新の購読
         unsubscribeConfig = window.electronAPI.onConfigUpdated((newConfig: any) => {
             console.log('[MascotViewer] Config updated via IPC:', newConfig);
-            triggerTransitionLock();
+            
+            const prevMascotId = configStore.activeMascotId;
+            const prevOutfitId = activeOutfit.value?.id;
+            const prevPoseId = activePose.value?.id;
+            
+            const nextMascotId = newConfig.activeMascotId || prevMascotId;
+            const nextMascots = newConfig.mascots || configStore.mascots;
+            const nextMascot = nextMascots.find((m: any) => m.id === nextMascotId);
+            const nextOutfitId = nextMascot ? nextMascot.currentOutfitId : null;
+            const nextPoseId = nextMascot ? nextMascot.currentPoseId : null;
+            
+            // 見た目が実際に変わる場合のみトランジションロックをトリガーする
+            const isVisualChanged = prevMascotId !== nextMascotId || 
+                                    prevOutfitId !== nextOutfitId || 
+                                    prevPoseId !== nextPoseId;
+                                    
+            if (isVisualChanged) {
+                triggerTransitionLock();
+            }
+            
             configStore.updateConfig(newConfig);
             // 正式な設定が届いたらプレビュー状態をクリアする
             previewState.value = null;
