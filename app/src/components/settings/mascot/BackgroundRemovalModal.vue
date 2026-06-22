@@ -125,6 +125,7 @@ const handleApply = () => {
                                 optionValue="value" 
                                 class="w-full p-inputtext-sm"
                                 :disabled="isProcessing"
+                                :pt="{ overlay: { style: 'z-index: 4000 !important' } }"
                             />
                         </div>
 
@@ -136,6 +137,7 @@ const handleApply = () => {
                                 optionLabel="label" 
                                 optionValue="value" 
                                 class="w-full p-inputtext-sm"
+                                :pt="{ overlay: { style: 'z-index: 4000 !important' } }"
                             />
                         </div>
 
@@ -203,7 +205,7 @@ const handleApply = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: 3000;
 }
 
 .remove-bg-card {
@@ -234,5 +236,14 @@ const handleApply = () => {
                       linear-gradient(-45deg, transparent 75%, #efefef 75%);
     background-size: 16px 16px;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+</style>
+
+<style>
+/* 自前ダイアログの前面にドロップダウンパネルを表示させるためのグローバル上書き */
+.p-select-overlay,
+.p-select-panel,
+.p-dropdown-panel {
+    z-index: 9999 !important;
 }
 </style>

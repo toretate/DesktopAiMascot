@@ -7,6 +7,7 @@ import Select from 'primevue/select';
 import { alignSingle, isValidImageSource, autoCropImage, autoCropFaceRegion } from '../../../skills/expression-alignment/expression-auto-align';
 import { autoAlignSingle, CONFIDENCE_THRESHOLD, type AutoAlignV2Result } from '../../../skills/expression-alignment/auto-align-v2';
 import type { SharedTransform } from '@desktop-ai-mascot/expression-alignment';
+import BackgroundRemovalModal from './BackgroundRemovalModal.vue';
 
 const configStore = useConfigStore();
 
@@ -484,89 +485,53 @@ watch(
 
 // --- 背景除去 ---
 const isRemovingBackground = ref(false);
+const isBackgroundRemovalModalActive = ref(false);
 
-// 背景除去エンジン選択（既定はサーバ node.js）
-const bgRemovalEngines = ref([
-    { label: 'サーバ (node.js)', value: 'node' },
-    { label: 'ToonOut (アニメ向け)', value: 'toonout' },
-    { label: 'BiRefNet general (汎用)', value: 'birefnet-general' },
-    { label: 'BiRefNet lite (軽量/高速)', value: 'birefnet-lite' },
-    { label: 'ISNet-anime (rembg)', value: 'isnet-anime' },
-    { label: 'Comfy UI', value: 'comfy' },
-]);
-const bgRemovalEngine = ref('node');
+const openBackgroundRemovalModal = () => {
+    isBackgroundRemovalModalActive.value = true;
+};
 
-const handleRemoveBackground = async () => {
-    if (!selectedModalExpression.value || !selectedModalExpression.value.path) return;
-    if (!isImage(selectedModalExpression.value.path)) return;
+const handleBackgroundRemovalDone = async (newBase64: string) => {
+    if (!selectedModalExpression.value) return;
 
     isRemovingBackground.value = true;
     try {
-        const expressionImagePath = selectedModalExpression.value.path;
-        
-        console.log(`[ExpressionEditorModal] 背景除去サービスへリクエスト送信: http://localhost:3000/api/remove-background`);
-        const response = await fetch('http://localhost:3000/api/remove-background', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                imagePath: expressionImagePath,
-                mascotId: props.editingMascot.id,
-                engine: bgRemovalEngine.value
-            })
-        });
+        let finalPath = newBase64;
 
-        if (!response.ok) {
-            throw new Error(`背景削除エラー: ${response.statusText}`);
-        }
-
-        const resData = await response.json();
-        if (resData.success && resData.image) {
-            let finalPath = resData.image;
-
-            // Electron環境であれば背景除去済み画像をファイルとして保存する
-            if (window.electronAPI?.saveMascotImage && props.editingMascot?.id) {
-                try {
-                    const sanitizedLabel = selectedModalExpression.value.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
-                    const outfitName = props.activeOutfit?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
-                    const filename = `expressions/${outfitName}/expr_${sanitizedLabel}.png`;
-                    
-                    const saveResult = await window.electronAPI.saveMascotImage(
-                        props.editingMascot.id,
-                        filename,
-                        resData.image
-                    );
-                    if (saveResult.success && saveResult.path) {
-                        finalPath = saveResult.path;
-                    }
-                } catch (saveErr) {
-                    console.warn('[ExpressionEditorModal] 背景除去後画像の保存に失敗しました:', saveErr);
+        // Electron環境であれば背景除去済み画像をファイルとして保存する
+        if (window.electronAPI?.saveMascotImage && props.editingMascot?.id) {
+            try {
+                const sanitizedLabel = selectedModalExpression.value.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+                const outfitName = props.activeOutfit?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
+                const filename = `expressions/${outfitName}/expr_${sanitizedLabel}.png`;
+                
+                const saveResult = await window.electronAPI.saveMascotImage(
+                    props.editingMascot.id,
+                    filename,
+                    newBase64
+                );
+                if (saveResult.success && saveResult.path) {
+                    finalPath = saveResult.path;
                 }
+            } catch (saveErr) {
+                console.warn('[ExpressionEditorModal] 背景除去後画像の保存に失敗しました:', saveErr);
             }
-
-            // 背景削除前の元の画像パスを originalPath に退避（未設定の場合のみ）
-            if (!selectedModalExpression.value.originalPath) {
-                selectedModalExpression.value.originalPath = selectedModalExpression.value.path;
-            }
-
-            selectedModalExpression.value.path = finalPath;
-            handleLiveUpdate();
-            console.log('[ExpressionEditorModal] 背景除去に成功しました');
-        } else {
-            throw new Error(resData.error || '背景削除処理に失敗しました。');
         }
+
+        // 背景削除前の元の画像パスを originalPath に退避（未設定の場合のみ）
+        if (!selectedModalExpression.value.originalPath) {
+            selectedModalExpression.value.originalPath = selectedModalExpression.value.path;
+        }
+
+        selectedModalExpression.value.path = finalPath;
+        handleLiveUpdate();
+        console.log('[ExpressionEditorModal] 背景除去（モーダル経由）に成功しました');
     } catch (e: any) {
-        // 外部通信接続エラー時のハンドリング
-        if (e instanceof TypeError && e.message.includes('fetch')) {
-            console.warn('[ExpressionEditorModal] 背景除去サービスとの接続エラー');
-            alert('背景除去サービスに接続できませんでした。サーバーが起動しているか確認してください。');
-        } else {
-            console.error('[ExpressionEditorModal] 背景除去に失敗しました:', e);
-            alert(`背景除去に失敗しました: ${e.message}`);
-        }
+        console.error('[ExpressionEditorModal] 背景除去適用に失敗しました:', e);
+        alert(`背景除去適用に失敗しました: ${e.message}`);
     } finally {
         isRemovingBackground.value = false;
+        isBackgroundRemovalModalActive.value = false;
     }
 };
 </script>
@@ -797,24 +762,13 @@ const handleRemoveBackground = async () => {
                                         @click="handleAutoCrop" 
                                         title="表情画像の余白を自動的に検出して切り抜きます"
                                     />
-                                    <Select
-                                        v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
-                                        v-model="bgRemovalEngine"
-                                        :options="bgRemovalEngines"
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        class="p-inputtext-sm"
-                                        :disabled="isRemovingBackground || isAutoCropping || isAutoScaling || isAutoAligning"
-                                        title="背景除去エンジンを選択します"
-                                    />
                                     <Button
                                         v-if="selectedModalExpression.path && isImage(selectedModalExpression.path)"
-                                        :label="isRemovingBackground ? '処理中...' : '背景削除'"
+                                        label="背景削除"
                                         icon="pi pi-eraser"
                                         class="p-button-outlined p-button-secondary p-button-sm"
-                                        :loading="isRemovingBackground"
                                         :disabled="isRemovingBackground || isAutoCropping || isAutoScaling || isAutoAligning"
-                                        @click="handleRemoveBackground"
+                                        @click="openBackgroundRemovalModal"
                                         title="表情スプライト画像の背景を除去します"
                                     />
                                     <Button 
@@ -899,6 +853,15 @@ const handleRemoveBackground = async () => {
             </div>
         </div>
     </div>
+
+    <!-- 背景削除モーダル -->
+    <BackgroundRemovalModal
+        :visible="isBackgroundRemovalModalActive"
+        :image-src="selectedModalExpression?.path || ''"
+        :mascot-id="editingMascot.id"
+        @close="isBackgroundRemovalModalActive = false"
+        @done="handleBackgroundRemovalDone"
+    />
 </template>
 
 <style scoped>
