@@ -43,6 +43,25 @@ import * as net from 'net';
 // 開発環境と本番環境の判定
 const isDev = process.env.VITE_DEV_SERVER_URL !== undefined;
 
+// グローバルな例外ハンドラーの登録（アプリ終了時の接続リセット等を逃がす）
+process.on('unhandledRejection', (reason) => {
+    const reasonStr = String(reason);
+    if (reasonStr.includes('ECONNRESET') || (reason && (reason as any).code === 'ECONNRESET')) {
+        console.warn('[Electron] Unhandled Rejection (ECONNRESET) ignored:', reason);
+    } else {
+        console.error('[Electron] Unhandled Rejection:', reason);
+    }
+});
+
+process.on('uncaughtException', (error) => {
+    if (error && error.code === 'ECONNRESET') {
+        console.warn('[Electron] Uncaught Exception (ECONNRESET) ignored:', error.message);
+    } else {
+        console.error('[Electron] Uncaught Exception:', error);
+    }
+});
+
+
 // --- グローバル変数 ---
 let config: AppConfig;
 let serverProcess: ChildProcess | null = null;
