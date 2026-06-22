@@ -197,6 +197,7 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
     if (isDevMode) {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         chatWindow.loadURL(`${devUrl}#chat`);
+        chatWindow.webContents.openDevTools();
     } else {
         const port = process.env.PORT || '3000';
         chatWindow.loadURL(`http://localhost:${port}/#chat`);

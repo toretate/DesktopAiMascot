@@ -6,38 +6,31 @@ import { fileURLToPath } from 'url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
-// 指定したポートが起動するのを待つ
-function waitForPort(port, host, timeout = 60000) {
-    return new Promise((resolve, reject) => {
-        const startTime = Date.now();
-        const check = () => {
-            const socket = new net.Socket();
-            socket.setTimeout(1000);
-            socket.on('connect', () => {
-                socket.destroy();
-                resolve();
-            });
-            socket.on('error', () => {
-                socket.destroy();
-                if (Date.now() - startTime > timeout) {
-                    reject(new Error(`Timeout waiting for port ${port}`));
-                } else {
-                    setTimeout(check, 1000);
-                }
-            });
-            socket.connect(port, host);
-        };
-        check();
-    });
+// Nuxt サーバーが完全に起動し、200 OK を返すのを待つ
+async function waitForNuxt(url, timeout = 60000) {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+        try {
+            const res = await fetch(url);
+            if (res.status === 200) {
+                return;
+            }
+            console.log(`[DevElectron] Nuxt dev server status: ${res.status}. Waiting...`);
+        } catch (e) {
+            // 接続できない場合はリトライ
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error(`Timeout waiting for Nuxt dev server at ${url}`);
 }
 
 async function start() {
-    console.log('[DevElectron] Waiting for Nuxt dev server on port 3000...');
+    console.log('[DevElectron] Waiting for Nuxt dev server to be fully ready...');
     try {
-        await waitForPort(3000, 'localhost');
-        console.log('[DevElectron] Nuxt dev server detected! Building main process...');
+        await waitForNuxt('http://localhost:3000/');
+        console.log('[DevElectron] Nuxt dev server is ready! Building main process...');
     } catch (e) {
-        console.error('[DevElectron] Nuxt dev server not detected. Exiting.');
+        console.error('[DevElectron] Nuxt dev server was not ready. Exiting.');
         process.exit(1);
     }
 

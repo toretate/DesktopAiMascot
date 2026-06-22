@@ -9,10 +9,14 @@ export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
     devtools: { enabled: true },
     experimental: {
-        appManifest: true,
+        appManifest: false,
     },
     ssr: false, // Electron クライアントで動かすために SSR はオフにする
     srcDir: 'src/', // 既存の src/ ディレクトリを Nuxt のルートにする
+    devServer: {
+        port: 3000,
+        host: 'localhost'
+    },
     css: [
         '@/styles/main.css'
     ],
@@ -46,13 +50,11 @@ export default defineNuxtConfig({
     },
 
     vite: {
-        resolve: {
-            alias: {
-                // Vite 6 + Nuxt 3.15 + ssr: false のデッドコードにおける解析バグの回避策
-                '#app-manifest': fileURLToPath(new URL('./src/main.ts', import.meta.url))
-            }
-        },
         server: {
+            hmr: {
+                protocol: 'ws',
+                host: 'localhost',
+            },
             fs: {
                 // ワークスペース全体を dev server から参照できるように許可
                 allow: [

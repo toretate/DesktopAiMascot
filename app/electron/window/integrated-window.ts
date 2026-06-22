@@ -92,6 +92,7 @@ export function createIntegratedWindow(): BrowserWindow {
     if (isDevMode) {
         const devUrl = process.env.VITE_DEV_SERVER_URL!;
         integratedWindow.loadURL(`${devUrl}#integrated`);
+        integratedWindow.webContents.openDevTools();
     } else {
         const port = process.env.PORT || '3000';
         integratedWindow.loadURL(`http://localhost:${port}/#integrated`);
