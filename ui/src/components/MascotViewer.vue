@@ -936,14 +936,14 @@ onMounted(async () => {
             }, 8000);
 
             // VOICEVOX/IrodoriTTSによる音声合成と再生
-            const voiceEngine = selectedVoiceEngine.value || activeMascot.value?.aiConfig?.voice?.engine || 'voicevox';
+            const voiceEngine = activeMascot.value?.aiConfig?.voice?.engine || selectedVoiceEngine.value || 'voicevox';
             const speakerId = activeMascot.value?.aiConfig?.voice?.speaker_id !== undefined 
                 ? activeMascot.value.aiConfig.voice.speaker_id 
                 : (voicevoxSpeaker.value !== undefined ? voicevoxSpeaker.value : 2);
             const voicevoxEndpointUrl = voicevoxEndpoint.value || 'http://localhost:50021';
             const irodoriEndpointUrl = irodoriEndpoint.value || 'http://localhost:7861';
-            const irodoriModelName = irodoriModel.value || 'irodori-tts-500m-v3';
-            const irodoriVoiceName = irodoriVoice.value || 'default';
+            const irodoriModelName = activeMascot.value?.aiConfig?.voice?.irodori_model || irodoriModel.value || 'irodori-tts-500m-v3';
+            const irodoriVoiceName = activeMascot.value?.aiConfig?.voice?.irodori_voice || irodoriVoice.value || 'default';
 
             if (window.electronAPI) {
                 try {

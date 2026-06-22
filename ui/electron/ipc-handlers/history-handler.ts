@@ -60,7 +60,13 @@ export function registerHistoryHandlers() {
             const currentCwd = process.cwd();
             const dirName = path.basename(currentCwd);
             const baseCwd = (dirName === 'ui' || dirName === 'server') ? path.dirname(currentCwd) : currentCwd;
-            const fullPath = path.resolve(baseCwd, relativePath);
+
+            // 'mascots/mascot_xxx' のような古い形式のパスを 'mascots/users/usr_local_dev_bypass/mascot_xxx' にリダイレクト
+            let adjustedPath = relativePath;
+            if (relativePath.startsWith('mascots/') && !relativePath.startsWith('mascots/users/')) {
+                adjustedPath = relativePath.replace('mascots/', 'mascots/users/usr_local_dev_bypass/');
+            }
+            const fullPath = path.resolve(baseCwd, adjustedPath);
 
             if (!fs.existsSync(fullPath)) {
                 fs.mkdirSync(fullPath, { recursive: true });
@@ -84,7 +90,8 @@ export function registerHistoryHandlers() {
             const dd = String(today.getDate()).padStart(2, '0');
             const dateStr = `${yyyy}${mm}${dd}`;
 
-            const dirPath = path.join(baseCwd, 'mascots', mascotId, 'voices', dateStr);
+            // ローカル実行時は一貫して 'usr_local_dev_bypass' の個別ディレクトリ配下に保存
+            const dirPath = path.join(baseCwd, 'mascots', 'users', 'usr_local_dev_bypass', mascotId, 'voices', dateStr);
             if (!fs.existsSync(dirPath)) {
                 fs.mkdirSync(dirPath, { recursive: true });
             }

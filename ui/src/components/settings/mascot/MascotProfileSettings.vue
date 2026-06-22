@@ -29,9 +29,11 @@ interface MascotData {
             temperature: number;
         };
         voice: {
-            engine: string;
-            speaker_id: number;
-            style: string;
+            engine?: string;
+            speaker_id?: number;
+            style?: string;
+            irodori_voice?: string;
+            irodori_model?: string;
         };
     };
     assets: {
@@ -56,6 +58,14 @@ const emit = defineEmits<{
     (e: 'change'): void;
     (e: 'open-prompt-modal'): void;
 }>();
+
+const getVoiceEngineName = (engine?: string) => {
+    if (!engine) return '未設定 (グローバル設定を使用)';
+    if (engine === 'voicevox') return 'VOICEVOX (ローカル)';
+    if (engine === 'irodori') return 'irodori-tts (ローカル)';
+    if (engine === 'gtts') return 'Google Cloud TTS';
+    return engine;
+};
 </script>
 
 <template>
@@ -68,6 +78,44 @@ const emit = defineEmits<{
                 class="w-full p-inputtext-sm" 
                 @change="emit('change')"
             />
+        </div>
+
+        <!-- 音声設定の表示セクション -->
+        <div class="border-top border-gray-200 pt-3 mt-1 flex flex-column gap-2">
+            <label class="text-xs font-bold text-gray-700 flex align-items-center gap-1 select-none">
+                <i class="pi pi-volume-up text-purple-500"></i>
+                <span>音声（ボイス）設定</span>
+            </label>
+            <div class="bg-gray-50 dark:bg-gray-800 p-2.5 border-round border-1 border-gray-150 flex flex-column gap-2 text-xs text-gray-600 dark:text-gray-300">
+                <div class="flex justify-content-between align-items-center">
+                    <span class="font-medium text-gray-500">音声エンジン:</span>
+                    <span class="font-bold text-purple-600 dark:text-purple-400">
+                        {{ getVoiceEngineName(props.editingMascot.aiConfig?.voice?.engine) }}
+                    </span>
+                </div>
+                
+                <template v-if="props.editingMascot.aiConfig?.voice?.engine === 'voicevox'">
+                    <div class="flex justify-content-between align-items-center border-top border-gray-100 dark:border-gray-700 pt-1.5">
+                        <span class="font-medium text-gray-500">話者ID:</span>
+                        <span class="font-semibold">{{ props.editingMascot.aiConfig.voice.speaker_id }}</span>
+                    </div>
+                </template>
+                
+                <template v-else-if="props.editingMascot.aiConfig?.voice?.engine === 'irodori'">
+                    <div class="flex justify-content-between align-items-center border-top border-gray-100 dark:border-gray-700 pt-1.5">
+                        <span class="font-medium text-gray-500">使用モデル (model):</span>
+                        <span class="font-semibold">{{ props.editingMascot.aiConfig.voice.irodori_model || '未設定 (グローバルモデルを使用)' }}</span>
+                    </div>
+                    <div class="flex justify-content-between align-items-center border-top border-gray-100 dark:border-gray-700 pt-1.5">
+                        <span class="font-medium text-gray-500">使用ボイス (voice):</span>
+                        <span class="font-semibold">{{ props.editingMascot.aiConfig.voice.irodori_voice || '未設定 (グローバルボイスを使用)' }}</span>
+                    </div>
+                </template>
+                
+                <div v-if="!props.editingMascot.aiConfig?.voice?.engine" class="text-gray-400 italic text-center py-1">
+                    個別音声は設定されていません。「音声生成AI設定」からこのマスコットにボイス設定を反映できます。
+                </div>
+            </div>
         </div>
 
 

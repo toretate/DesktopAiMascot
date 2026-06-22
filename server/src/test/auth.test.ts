@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { verifyGoogleIdToken, GoogleTokenPayload } from '../services/auth-service';
-import { authenticateUserToken, User, parseCookies } from '../middlewares/auth-middleware';
+import { authenticateUserToken, User, parseCookies, readUsersConfig } from '../middlewares/auth-middleware';
 
 // テスト用の一時的な users.json パスを設定
 const ORIGINAL_USERS_FILE_PATH = path.resolve(__dirname, '../../../users.json');
@@ -94,6 +94,58 @@ describe('認証・認可機能のテスト', () => {
                     await authenticateUserToken('invalid-token');
                 }
             );
+        });
+    });
+
+    describe('readUsersConfig_ユーザー管理マイグレーションおよび読み込みのテスト', () => {
+        before(() => {
+            // テスト用に旧形式の allowedUsers を書き込む
+            const oldConfig = {
+                allowedUsers: [
+                    {
+                        email: 'migrate-test-1@gmail.com',
+                        sub: '',
+                        role: 'user'
+                    },
+                    {
+                        email: 'migrate-test-2@gmail.com',
+                        sub: 'local-dev-bypass',
+                        role: 'admin'
+                    }
+                ]
+            };
+            fs.writeFileSync(TEST_USERS_FILE_PATH, JSON.stringify(oldConfig, null, 2), 'utf8');
+        });
+
+        it('readUsersConfig_旧形式のallowedUsersから新形式のusers構造へ自動マイグレーションされること', () => {
+            const config = readUsersConfig();
+            
+            // 変換後の構造の検証
+            assert.ok(config.users);
+            assert.strictEqual(config.users.length, 2);
+            
+            const user1 = config.users.find(u => u.identities.some(i => i.email === 'migrate-test-1@gmail.com'));
+            const user2 = config.users.find(u => u.identities.some(i => i.email === 'migrate-test-2@gmail.com'));
+            
+            assert.ok(user1);
+            assert.ok(user2);
+            
+            // 内部ユーザーIDプレフィックスの検証
+            assert.ok(user1.id.startsWith('usr_'));
+            assert.strictEqual(user2.id, 'usr_local_dev_bypass');
+            
+            // ロールの引き継ぎの検証
+            assert.strictEqual(user1.role, 'user');
+            assert.strictEqual(user2.role, 'admin');
+            
+            // Identitiesマッピングの検証
+            const ident1 = user1.identities[0];
+            assert.strictEqual(ident1.provider, 'google');
+            assert.strictEqual(ident1.providerUserId, '');
+            
+            const ident2 = user2.identities[0];
+            assert.strictEqual(ident2.provider, 'google');
+            assert.strictEqual(ident2.providerUserId, 'local-dev-bypass');
         });
     });
 });
