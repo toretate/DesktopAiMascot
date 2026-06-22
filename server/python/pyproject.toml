@@ -1,0 +1,13 @@
+[project]
+name = "python"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "mediapipe>=0.10.35",
+    "onnxruntime>=1.27.0",
+    "opencv-python-headless>=4.13.0.92",
+    "pillow>=12.2.0",
+    "pytest>=9.0.3",
+    "rembg[cpu]>=2.0.76",
+]

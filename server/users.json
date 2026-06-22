@@ -1,0 +1,9 @@
+{
+  "allowedUsers": [
+    {
+      "email": "test-user@gmail.com",
+      "sub": "",
+      "role": "user"
+    }
+  ]
+}

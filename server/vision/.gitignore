@@ -1,0 +1,14 @@
+# setup.sh が生成・取得する成果物（コミット対象外）
+
+# クローン + ソースビルド（macOS など）
+vision.cpp/
+# プレビルトバイナリ展開先（Linux/Windows）
+bin/
+# プレビルトの共有ライブラリ
+lib/
+# プレビルト DL の一時展開先
+dl/
+# GGUF モデル（BiRefNet-ToonOut-F16.gguf 等、約420MB）
+models/
+# テスト実行結果（生成される PNG。python/test_results と同じく非コミット）
+test_results/

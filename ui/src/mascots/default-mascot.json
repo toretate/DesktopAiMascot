@@ -1,0 +1,66 @@
+{
+    "id": "mascot_robot_001",
+    "name": "デフォルトロボット",
+    "avatar": "🤖",
+    "profile": "あなたは対話型のAIデスクトップマスコットです。親しみやすく返答してください。回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。",
+    "aiConfig": {
+        "chat": {
+            "engine": "gemini",
+            "model": "gemini-2.0-flash-exp",
+            "temperature": 0.7
+        },
+        "voice": {
+            "engine": "voicevox",
+            "speaker_id": 2,
+            "style": "normal"
+        }
+    },
+    "assets": {
+        "outfits": [
+            {
+                "id": "outfit_default",
+                "name": "標準制服",
+                "path": "👕"
+            },
+            {
+                "id": "outfit_cyber",
+                "name": "サイバーコート",
+                "path": "🧥"
+            }
+        ],
+        "expressions": [
+            {
+                "id": "expr_normal",
+                "name": "通常",
+                "path": "😊"
+            },
+            {
+                "id": "expr_smile",
+                "name": "笑顔",
+                "path": "😆"
+            },
+            {
+                "id": "expr_sad",
+                "name": "悲しみ",
+                "path": "😢"
+            },
+            {
+                "id": "expr_angry",
+                "name": "怒り",
+                "path": "😠"
+            }
+        ],
+        "poses": [
+            {
+                "id": "pose_stand",
+                "name": "立ち姿",
+                "path": "🧍"
+            },
+            {
+                "id": "pose_wave",
+                "name": "手を振る",
+                "path": "👋"
+            }
+        ]
+    }
+}
