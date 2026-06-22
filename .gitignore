@@ -43,3 +43,7 @@ chat_history.json
 .output/
 .output
 .nuxt
+
+# Restored public mascot data (preventing tracking of personal data)
+app/src/public/mascots/mascot_*/
+storage/users/
