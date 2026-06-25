@@ -85,6 +85,15 @@ export interface AppConfig {
     useExRadio: boolean;
     saveVoice?: boolean;
     showVoiceLog?: boolean;
+    forgeEndpoint?: string;
+    forgeModel?: string;
+    forgeLora?: string;
+    forgeSteps?: number;
+    forgeCfgScale?: number;
+    forgeWidth?: number;
+    forgeHeight?: number;
+    forgeModelsList?: string[];
+    forgeLorasList?: string[];
 }
 
 export const useConfigStore = defineStore('config', () => {
@@ -179,6 +188,15 @@ export const useConfigStore = defineStore('config', () => {
     const useExRadio = ref(false);
     const saveVoice = ref(false);
     const showVoiceLog = ref(true);
+    const forgeEndpoint = ref('http://127.0.0.1:5555');
+    const forgeModel = ref('');
+    const forgeLora = ref('');
+    const forgeSteps = ref(25);
+    const forgeCfgScale = ref(7.0);
+    const forgeWidth = ref(1024);
+    const forgeHeight = ref(1024);
+    const forgeModelsList = ref<string[]>([]);
+    const forgeLorasList = ref<string[]>([]);
     const configVersion = ref(0);
 
     // ---- Getters ----
@@ -301,6 +319,15 @@ export const useConfigStore = defineStore('config', () => {
             useExRadio.value = configData.useExRadio !== undefined ? !!configData.useExRadio : false;
             saveVoice.value = configData.saveVoice !== undefined ? !!configData.saveVoice : false;
             showVoiceLog.value = configData.showVoiceLog !== undefined ? !!configData.showVoiceLog : true;
+            forgeEndpoint.value = configData.forgeEndpoint || 'http://127.0.0.1:5555';
+            forgeModel.value = configData.forgeModel || '';
+            forgeLora.value = configData.forgeLora || '';
+            forgeSteps.value = configData.forgeSteps !== undefined ? Number(configData.forgeSteps) : 25;
+            forgeCfgScale.value = configData.forgeCfgScale !== undefined ? Number(configData.forgeCfgScale) : 7.0;
+            forgeWidth.value = configData.forgeWidth !== undefined ? Number(configData.forgeWidth) : 1024;
+            forgeHeight.value = configData.forgeHeight !== undefined ? Number(configData.forgeHeight) : 1024;
+            forgeModelsList.value = configData.forgeModelsList || [];
+            forgeLorasList.value = configData.forgeLorasList || [];
         } else {
             // Webブラウザ実行時の localStorage フォールバック
             googleAiStudioApiKey.value = localStorage.getItem('GoogleAiStudioApiKey') || '';
@@ -402,6 +429,26 @@ export const useConfigStore = defineStore('config', () => {
             useExRadio.value = localStorage.getItem('useExRadio') === 'true';
             saveVoice.value = localStorage.getItem('saveVoice') === 'true';
             showVoiceLog.value = localStorage.getItem('showVoiceLog') !== 'false';
+            forgeEndpoint.value = localStorage.getItem('forgeEndpoint') || 'http://127.0.0.1:5555';
+            forgeModel.value = localStorage.getItem('forgeModel') || '';
+            forgeLora.value = localStorage.getItem('forgeLora') || '';
+            
+            const savedSteps = localStorage.getItem('forgeSteps');
+            forgeSteps.value = savedSteps ? parseInt(savedSteps) : 25;
+            const savedCfg = localStorage.getItem('forgeCfgScale');
+            forgeCfgScale.value = savedCfg ? parseFloat(savedCfg) : 7.0;
+            const savedW = localStorage.getItem('forgeWidth');
+            forgeWidth.value = savedW ? parseInt(savedW) : 1024;
+            const savedH = localStorage.getItem('forgeHeight');
+            forgeHeight.value = savedH ? parseInt(savedH) : 1024;
+            
+            try {
+                forgeModelsList.value = JSON.parse(localStorage.getItem('forgeModelsList') || '[]');
+                forgeLorasList.value = JSON.parse(localStorage.getItem('forgeLorasList') || '[]');
+            } catch {
+                forgeModelsList.value = [];
+                forgeLorasList.value = [];
+            }
         }
         isLoaded.value = true;
     };
@@ -475,7 +522,16 @@ export const useConfigStore = defineStore('config', () => {
             toolsWebSearch: toolsWebSearch.value,
             useExRadio: useExRadio.value,
             saveVoice: saveVoice.value,
-            showVoiceLog: showVoiceLog.value
+            showVoiceLog: showVoiceLog.value,
+            forgeEndpoint: forgeEndpoint.value,
+            forgeModel: forgeModel.value,
+            forgeLora: forgeLora.value,
+            forgeSteps: Number(forgeSteps.value),
+            forgeCfgScale: Number(forgeCfgScale.value),
+            forgeWidth: Number(forgeWidth.value),
+            forgeHeight: Number(forgeHeight.value),
+            forgeModelsList: JSON.parse(JSON.stringify(forgeModelsList.value)),
+            forgeLorasList: JSON.parse(JSON.stringify(forgeLorasList.value))
         };
 
         // ローカルサーバー（Nitro）に設定データを送信して一元保存
@@ -575,6 +631,15 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('useExRadio', useExRadio.value.toString());
         localStorage.setItem('saveVoice', saveVoice.value.toString());
         localStorage.setItem('showVoiceLog', showVoiceLog.value.toString());
+        localStorage.setItem('forgeEndpoint', forgeEndpoint.value);
+        localStorage.setItem('forgeModel', forgeModel.value);
+        localStorage.setItem('forgeLora', forgeLora.value);
+        localStorage.setItem('forgeSteps', forgeSteps.value.toString());
+        localStorage.setItem('forgeCfgScale', forgeCfgScale.value.toString());
+        localStorage.setItem('forgeWidth', forgeWidth.value.toString());
+        localStorage.setItem('forgeHeight', forgeHeight.value.toString());
+        localStorage.setItem('forgeModelsList', JSON.stringify(forgeModelsList.value));
+        localStorage.setItem('forgeLorasList', JSON.stringify(forgeLorasList.value));
     };
 
     // 一部の設定を一括で更新する
@@ -649,6 +714,15 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.useExRadio !== undefined) useExRadio.value = !!newConfig.useExRadio;
         if (newConfig.saveVoice !== undefined) saveVoice.value = !!newConfig.saveVoice;
         if (newConfig.showVoiceLog !== undefined) showVoiceLog.value = !!newConfig.showVoiceLog;
+        if (newConfig.forgeEndpoint !== undefined) forgeEndpoint.value = newConfig.forgeEndpoint;
+        if (newConfig.forgeModel !== undefined) forgeModel.value = newConfig.forgeModel;
+        if (newConfig.forgeLora !== undefined) forgeLora.value = newConfig.forgeLora;
+        if (newConfig.forgeSteps !== undefined) forgeSteps.value = Number(newConfig.forgeSteps);
+        if (newConfig.forgeCfgScale !== undefined) forgeCfgScale.value = Number(newConfig.forgeCfgScale);
+        if (newConfig.forgeWidth !== undefined) forgeWidth.value = Number(newConfig.forgeWidth);
+        if (newConfig.forgeHeight !== undefined) forgeHeight.value = Number(newConfig.forgeHeight);
+        if (newConfig.forgeModelsList !== undefined) forgeModelsList.value = newConfig.forgeModelsList;
+        if (newConfig.forgeLorasList !== undefined) forgeLorasList.value = newConfig.forgeLorasList;
         
         configVersion.value++;
     };
@@ -723,6 +797,15 @@ export const useConfigStore = defineStore('config', () => {
         useExRadio,
         saveVoice,
         showVoiceLog,
+        forgeEndpoint,
+        forgeModel,
+        forgeLora,
+        forgeSteps,
+        forgeCfgScale,
+        forgeWidth,
+        forgeHeight,
+        forgeModelsList,
+        forgeLorasList,
         configVersion,
         loadConfig,
         saveConfig,

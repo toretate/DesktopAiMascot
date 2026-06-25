@@ -5,6 +5,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Googleログインの開始
     loginWithGoogle: () => ipcRenderer.send('auth:login'),
 
+    // ウィンドウを強制フォーカス・最前面に表示する
+    focusWindow: () => ipcRenderer.send('focus-window'),
+
     // チャットウィンドウの表示・非表示のトグルを送信
     toggleChat: () => ipcRenderer.send('toggle-chat'),
     
@@ -178,5 +181,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getRadioPrompts: () => ipcRenderer.invoke('get-radio-prompts'),
 
     // ラジオモード用プロンプトの保存
-    saveRadioPrompts: (prompts: { radioMode: string; activeTalk: string }) => ipcRenderer.invoke('save-radio-prompts', prompts)
+    saveRadioPrompts: (prompts: { radioMode: string; activeTalk: string }) => ipcRenderer.invoke('save-radio-prompts', prompts),
+
+    // Forge (Stable Diffusion) 関連の IPC 呼び出し
+    forgeTestConnection: (host: string) => ipcRenderer.invoke('forge:health', host),
+    forgeGetModels: (host: string) => ipcRenderer.invoke('forge:models', host),
+    forgeGetLoras: (host: string) => ipcRenderer.invoke('forge:loras', host),
+    forgeGenerateImage: (params: any, host: string) => ipcRenderer.invoke('forge:generate', params, host)
 });

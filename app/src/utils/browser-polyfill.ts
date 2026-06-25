@@ -538,6 +538,62 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             return () => {
                 callbacks.timerTrigger = callbacks.timerTrigger.filter(cb => cb !== callback);
             };
+        },
+        forgeTestConnection: async (host: string) => {
+            try {
+                const response = await fetch(`/api/forge/health?host=${encodeURIComponent(host)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.success;
+                }
+            } catch (e) {
+                console.error('[Polyfill] forgeTestConnection failed:', e);
+            }
+            return false;
+        },
+        forgeGetModels: async (host: string) => {
+            try {
+                const response = await fetch(`/api/forge/models?host=${encodeURIComponent(host)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.models || [];
+                }
+            } catch (e) {
+                console.error('[Polyfill] forgeGetModels failed:', e);
+            }
+            return [];
+        },
+        forgeGetLoras: async (host: string) => {
+            try {
+                const response = await fetch(`/api/forge/loras?host=${encodeURIComponent(host)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.loras || [];
+                }
+            } catch (e) {
+                console.error('[Polyfill] forgeGetLoras failed:', e);
+            }
+            return [];
+        },
+        forgeGenerateImage: async (params: any, host: string) => {
+            try {
+                const response = await fetch(`/api/forge/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ params, host })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.image) {
+                        return data.image;
+                    }
+                    throw new Error(data.error || 'Unknown error');
+                }
+                throw new Error(`HTTP Error: ${response.status}`);
+            } catch (e: any) {
+                console.error('[Polyfill] forgeGenerateImage failed:', e);
+                throw e;
+            }
         }
     };
 }

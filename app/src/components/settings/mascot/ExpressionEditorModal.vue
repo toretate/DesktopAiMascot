@@ -3,7 +3,6 @@ import { ref, watch, computed, onUnmounted } from 'vue';
 import { useConfigStore } from '../../../store/config';
 import Button from 'primevue/button';
 import Slider from 'primevue/slider';
-import Select from 'primevue/select';
 import { alignSingle, isValidImageSource, autoCropImage, autoCropFaceRegion } from '../../../skills/expression-alignment/expression-auto-align';
 import { autoAlignSingle, CONFIDENCE_THRESHOLD, type AutoAlignV2Result } from '../../../skills/expression-alignment/auto-align-v2';
 import type { SharedTransform } from '@desktop-ai-mascot/expression-alignment';

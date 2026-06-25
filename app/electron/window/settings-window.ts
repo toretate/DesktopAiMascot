@@ -67,6 +67,10 @@ export function createSettingsWindow(): BrowserWindow {
 
     settingsWindow = new BrowserWindow(settingsOptions);
 
+    settingsWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[Renderer Log - Settings] [Level: ${level}] ${message} (Source: ${sourceId}:${line})`);
+    });
+
     if (isDevMode) {
         settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL!}#settings`);
         // settingsWindow.webContents.openDevTools();

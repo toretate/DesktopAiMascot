@@ -83,6 +83,15 @@ export interface ConfigData {
     // 音声保存設定
     saveVoice: boolean;
     showVoiceLog: boolean;
+
+    // Stable Diffusion Forge 設定
+    forgeEndpoint: string;
+    forgeModel: string;
+    forgeLora: string;
+    forgeSteps: number;
+    forgeCfgScale: number;
+    forgeWidth: number;
+    forgeHeight: number;
 }
 
 export const defaultData: ConfigData = {
@@ -157,5 +166,12 @@ export const defaultData: ConfigData = {
     toolsAppLauncher: true,
     toolsWebSearch: true,
     saveVoice: false,
-    showVoiceLog: true
+    showVoiceLog: true,
+    forgeEndpoint: 'http://127.0.0.1:5555',
+    forgeModel: '',
+    forgeLora: '',
+    forgeSteps: 25,
+    forgeCfgScale: 7.0,
+    forgeWidth: 1024,
+    forgeHeight: 1024
 };

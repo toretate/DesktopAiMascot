@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, screen, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ForgeConnector } from '../src/connector/forge-connector';
 import { AiExpressionService } from '../src/skills/expression-service/expression-service';
 import { registerSelectLocalImageHandler } from './ipc-handlers/select-local-image-handler';
 import { registerLmStudioHandlers } from './ipc-handlers/lmstudio-handler';
@@ -249,6 +250,20 @@ app.whenReady().then(async () => {
             history,
             appConfig.openaiApiKey
         );
+    });
+
+    // Forge (Stable Diffusion) 関連の IPC ハンドラー
+    ipcMain.handle('forge:health', async (event, host: string) => {
+        return await ForgeConnector.health(host);
+    });
+    ipcMain.handle('forge:models', async (event, host: string) => {
+        return await ForgeConnector.models(host);
+    });
+    ipcMain.handle('forge:loras', async (event, host: string) => {
+        return await ForgeConnector.loras(host);
+    });
+    ipcMain.handle('forge:generate', async (event, params: any, host: string) => {
+        return await ForgeConnector.generateImage(params, host);
     });
 
 

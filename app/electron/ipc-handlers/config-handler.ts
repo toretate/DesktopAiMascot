@@ -44,6 +44,7 @@ export function registerConfigHandlers(config: AppConfig) {
     });
 
     ipcMain.handle('update-app-config', async (event, newData: Partial<ConfigData>) => {
+        const previousConfig = { ...config.get() };
         config.update(newData);
         console.log('[Config] Configuration updated via IPC');
 
@@ -52,9 +53,13 @@ export function registerConfigHandlers(config: AppConfig) {
         // 1. チャットウィンドウへの伝達と最前面制御 (連動判定を考慮)
         const chatWin = getChatWindow();
         if (chatWin && !chatWin.isDestroyed()) {
-            if (newData.chatAlwaysOnTop !== undefined || newData.alwaysOnTop !== undefined) {
-                const effectiveAlwaysOnTop = getEffectiveChatAlwaysOnTop(currentConfig);
-                if (effectiveAlwaysOnTop) {
+            const prevEffectiveAlwaysOnTop = getEffectiveChatAlwaysOnTop(previousConfig);
+            const nextEffectiveAlwaysOnTop = getEffectiveChatAlwaysOnTop(currentConfig);
+            
+            // 実際に最前面状態が変化した場合のみ setAlwaysOnTop を実行する
+            if (prevEffectiveAlwaysOnTop !== nextEffectiveAlwaysOnTop) {
+                console.log(`[Config] Chat window AlwaysOnTop changed: ${prevEffectiveAlwaysOnTop} -> ${nextEffectiveAlwaysOnTop}`);
+                if (nextEffectiveAlwaysOnTop) {
                     chatWin.setAlwaysOnTop(true, 'floating');
                 } else {
                     chatWin.setAlwaysOnTop(false);
@@ -66,8 +71,13 @@ export function registerConfigHandlers(config: AppConfig) {
         // 2. マスコットウィンドウへの伝達と最前面制御 (レベル 'screen-saver' を指定)
         const mascotWin = getMascotWindow();
         if (mascotWin && !mascotWin.isDestroyed()) {
-            if (newData.alwaysOnTop !== undefined) {
-                if (newData.alwaysOnTop) {
+            const prevAlwaysOnTop = !!previousConfig.alwaysOnTop;
+            const nextAlwaysOnTop = !!currentConfig.alwaysOnTop;
+
+            // 実際に最前面状態が変化した場合のみ実行する
+            if (prevAlwaysOnTop !== nextAlwaysOnTop) {
+                console.log(`[Config] Mascot window AlwaysOnTop changed: ${prevAlwaysOnTop} -> ${nextAlwaysOnTop}`);
+                if (nextAlwaysOnTop) {
                     mascotWin.setAlwaysOnTop(true, 'screen-saver');
                 } else {
                     mascotWin.setAlwaysOnTop(false);
@@ -79,8 +89,11 @@ export function registerConfigHandlers(config: AppConfig) {
         // 4. 統合ウィンドウへの伝達と最前面制御
         const integratedWin = getIntegratedWindow();
         if (integratedWin && !integratedWin.isDestroyed()) {
-            if (newData.alwaysOnTop !== undefined) {
-                if (newData.alwaysOnTop) {
+            const prevAlwaysOnTop = !!previousConfig.alwaysOnTop;
+            const nextAlwaysOnTop = !!currentConfig.alwaysOnTop;
+
+            if (prevAlwaysOnTop !== nextAlwaysOnTop) {
+                if (nextAlwaysOnTop) {
                     integratedWin.setAlwaysOnTop(true, 'screen-saver');
                 } else {
                     integratedWin.setAlwaysOnTop(false);
@@ -92,8 +105,11 @@ export function registerConfigHandlers(config: AppConfig) {
         // 5. コンパクトウィンドウへの伝達と最前面制御
         const compactWin = getCompactWindow();
         if (compactWin && !compactWin.isDestroyed()) {
-            if (newData.alwaysOnTop !== undefined) {
-                if (newData.alwaysOnTop) {
+            const prevAlwaysOnTop = !!previousConfig.alwaysOnTop;
+            const nextAlwaysOnTop = !!currentConfig.alwaysOnTop;
+
+            if (prevAlwaysOnTop !== nextAlwaysOnTop) {
+                if (nextAlwaysOnTop) {
                     compactWin.setAlwaysOnTop(true, 'screen-saver');
                 } else {
                     compactWin.setAlwaysOnTop(false);

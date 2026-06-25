@@ -69,6 +69,10 @@ export function createMascotWindow(onMove?: () => void): BrowserWindow {
         }
     });
 
+    mascotWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[Renderer Log - Mascot] [Level: ${level}] ${message} (Source: ${sourceId}:${line})`);
+    });
+
     if (configData.alwaysOnTop) {
         mascotWindow.setAlwaysOnTop(true, 'screen-saver');
     }

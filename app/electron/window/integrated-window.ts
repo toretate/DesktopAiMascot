@@ -78,6 +78,10 @@ export function createIntegratedWindow(): BrowserWindow {
         }
     });
 
+    integratedWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[Renderer Log - Integrated] [Level: ${level}] ${message} (Source: ${sourceId}:${line})`);
+    });
+
     integratedWindow.once('ready-to-show', () => {
         if (integratedWindow) {
             integratedWindow.setSize(savedW, savedH);

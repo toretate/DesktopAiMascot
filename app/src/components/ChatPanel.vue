@@ -232,7 +232,18 @@ watch([() => isAiResponding.value, () => mascotStore.isSpeaking], ([responding, 
 
 let unsubscribeConfig: (() => void) | null = null;
 
+const handleChatMouseMove = () => {
+    if (window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
+        window.electronAPI.setIgnoreMouseEvents(false);
+    }
+};
+
 onMounted(async () => {
+    console.log('[ChatPanel] window.electronAPI diagnostics:', typeof window.electronAPI, window.electronAPI ? JSON.stringify({ isWeb: (window.electronAPI as any).isWeb, keys: Object.keys(window.electronAPI) }) : 'undefined');
+
+    // チャットウィンドウ自身のマウスイベント透過を強制解除するリスナーを追加
+    window.addEventListener('mousemove', handleChatMouseMove);
+
     // ストアの設定データを読み込み
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
@@ -258,6 +269,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+    window.removeEventListener('mousemove', handleChatMouseMove);
     disconnectWebSocket();
     if (unsubscribeConfig) {
         unsubscribeConfig();
@@ -268,6 +280,102 @@ onUnmounted(() => {
 const openSettings = () => {
     if (window.electronAPI && window.electronAPI.openSettings) {
         window.electronAPI.openSettings();
+    }
+};
+
+// ---- 画像生成 (t2i) モードフロー ----
+const isT2iMode = ref(false);
+
+const generateImageFlow = async () => {
+    const userPrompt = inputText.value.trim();
+    if (!userPrompt) return;
+    
+    inputText.value = '';
+
+    messages.value.push({
+        id: Date.now(),
+        sender: 'user',
+        text: userPrompt
+    });
+
+    const aiMessageId = Date.now() + 1;
+    messages.value.push({
+        id: aiMessageId,
+        sender: 'mascot',
+        text: '画像を生成しています...'
+    });
+
+    mascotStore.setLoading(true);
+    await nextTick();
+    scrollToBottom();
+
+    try {
+        const host = configStore.forgeEndpoint || 'http://127.0.0.1:5555';
+        const params = {
+            prompt: userPrompt,
+            steps: Number(configStore.forgeSteps) || 25,
+            cfgScale: Number(configStore.forgeCfgScale) || 7.0,
+            width: Number(configStore.forgeWidth) || 1024,
+            height: Number(configStore.forgeHeight) || 1024,
+            modelCheckpoint: configStore.forgeModel || undefined,
+            negativePrompt: 'nsfw, low quality, worst quality, deformed, bad anatomy'
+        };
+
+        let base64Image = '';
+        if (window.electronAPI && window.electronAPI.forgeGenerateImage) {
+            base64Image = await window.electronAPI.forgeGenerateImage(params, host);
+        } else {
+            throw new Error('window.electronAPI.forgeGenerateImage が定義されていません。この実行環境（Webブラウザなど）ではローカル画像生成機能は利用できません。');
+        }
+
+        const imgDataUrl = `data:image/png;base64,${base64Image}`;
+        const aiMsg = messages.value.find(m => m.id === aiMessageId);
+        if (aiMsg) {
+            aiMsg.text = '画像を生成しました。';
+            aiMsg.attachments = [{
+                type: 'image',
+                name: `generated_${Date.now()}.png`,
+                url: imgDataUrl
+            }];
+        }
+    } catch (error: any) {
+        console.error('[ChatPanel] Image generation failed:', error);
+        const aiMsg = messages.value.find(m => m.id === aiMessageId);
+        if (aiMsg) {
+            aiMsg.text = `画像の生成に失敗しました。理由: ${error.message || error}`;
+        }
+    } finally {
+        mascotStore.setLoading(false);
+        await saveHistory();
+        await nextTick();
+        scrollToBottom();
+    }
+};
+
+const handleFormSubmit = async () => {
+    if (!inputText.value.trim() && pendingAttachments.value.length === 0) return;
+    if (isAiResponding.value) return;
+
+    if (isT2iMode.value) {
+        await generateImageFlow();
+    } else {
+        await sendMessage();
+    }
+};
+
+const onTextareaKeyDown = (event: KeyboardEvent) => {
+    if (event.isComposing) return;
+
+    if (chatSendKey.value === 'enter') {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleFormSubmit();
+        }
+    } else {
+        if (event.key === 'Enter' && event.shiftKey) {
+            event.preventDefault();
+            handleFormSubmit();
+        }
     }
 };
 
@@ -318,18 +426,83 @@ const stopResize = () => {
     document.removeEventListener('mousemove', handleResizeMove);
     document.removeEventListener('mouseup', stopResize);
 };
+
+// --- ヘッダードラッグ制御 (カスタムドラッグ実装により、-webkit-app-regionのクリック透過バグを回避) ---
+let isHeaderDragging = false;
+let startHeaderMouseX = 0;
+let startHeaderMouseY = 0;
+
+const onHeaderMouseDown = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // 左クリックかつ、ボタン類（header-actions の中の要素）以外をクリックした場合のみドラッグ開始
+    if (e.button !== 0 || target.closest('.header-actions')) return;
+
+    e.preventDefault(); // ドラッグ中にヘッダーのテキスト選択が発生するのを防ぐ
+
+    isHeaderDragging = true;
+    startHeaderMouseX = e.screenX;
+    startHeaderMouseY = e.screenY;
+
+    if (window.electronAPI && window.electronAPI.dragWindow) {
+        window.electronAPI.dragWindow({ dx: 0, dy: 0, isStart: true });
+    }
+
+    window.addEventListener('mousemove', onHeaderMouseMove);
+    window.addEventListener('mouseup', onHeaderMouseUp);
+};
+
+const onHeaderMouseMove = (e: MouseEvent) => {
+    if (!isHeaderDragging) return;
+
+    if (e.buttons !== 1) { // 左ボタンが押されていない場合はドラッグ終了
+        onHeaderMouseUp();
+        return;
+    }
+
+    const dx = e.screenX - startHeaderMouseX;
+    const dy = e.screenY - startHeaderMouseY;
+
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        if (window.electronAPI && window.electronAPI.dragWindow) {
+            window.electronAPI.dragWindow({ dx, dy });
+        }
+        startHeaderMouseX = e.screenX;
+        startHeaderMouseY = e.screenY;
+    }
+};
+
+const onHeaderMouseUp = () => {
+    if (!isHeaderDragging) return;
+    isHeaderDragging = false;
+
+    window.removeEventListener('mousemove', onHeaderMouseMove);
+    window.removeEventListener('mouseup', onHeaderMouseUp);
+
+    if (window.electronAPI && window.electronAPI.dragWindow) {
+        window.electronAPI.dragWindow({ dx: 0, dy: 0, isEnd: true });
+    }
+};
+
+const focusWindow = () => {
+    if (window.electronAPI && window.electronAPI.focusWindow) {
+        window.electronAPI.focusWindow();
+    }
+};
 </script>
 
 <template>
-    <div class="chat-wrapper" :style="{ fontFamily: chatFontFamily, border: getBorderStyle }">
+    <div class="chat-wrapper" @mousedown="focusWindow" :style="{ fontFamily: chatFontFamily, border: getBorderStyle }">
         <!-- 背景レイヤー -->
         <div class="chat-background" :style="chatBackgroundStyle"></div>
         <!-- グラスモーフィズム調のヘッダー -->
-        <header class="chat-header drag-area">
+        <header class="chat-header" @mousedown="onHeaderMouseDown">
             <span class="chat-title">{{ activeMascot ? `${activeMascot.name} Chat` : 'Mascot Chat' }}</span>
-            <div class="header-actions no-drag">
+            <div class="header-actions">
                 <button class="icon-btn" @click="configStore.updateConfig({ useTts: !useTts }); configStore.saveConfig()" :class="{ 'active-btn': useTts }" title="音声読み上げ (TTS) ON/OFF">
                     <i :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
+                </button>
+                <button class="icon-btn" @click="isT2iMode = !isT2iMode" :class="{ 'active-btn': isT2iMode }" title="画像生成 (t2i) モード ON/OFF">
+                    <i class="pi pi-image"></i>
                 </button>
                 <button class="icon-btn" @click="mascotStore.setRadioMode(!isRadioMode)" :class="{ 'active-radio-btn': isRadioMode }" title="ラジオモード ON/OFF">
                     <img :src="radioIcon" class="radio-svg-icon" alt="ラジオ" />
@@ -403,7 +576,7 @@ const stopResize = () => {
                     </button>
                 </div>
             </div>
-            <form @submit.prevent="sendMessage()" class="input-form">
+            <form @submit.prevent="handleFormSubmit()" class="input-form">
                 <!-- ファイル選択用の隠しinput -->
                 <input 
                     type="file" 
@@ -420,7 +593,7 @@ const stopResize = () => {
                     placeholder="メッセージを入力..." 
                     class="message-input"
                     rows="1"
-                    @keydown="handleKeyDown"
+                    @keydown="onTextareaKeyDown"
                 ></textarea>
                 <button type="submit" class="send-btn" :disabled="!inputText.trim() && pendingAttachments.length === 0">
                     <i class="pi pi-send"></i>
@@ -450,7 +623,7 @@ const stopResize = () => {
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.001);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
@@ -479,6 +652,8 @@ const stopResize = () => {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     background: rgba(255, 255, 255, 0.3);
     cursor: move;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .chat-title {

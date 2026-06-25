@@ -51,6 +51,15 @@ export function registerWindowHandlers(config: AppConfig) {
         }
     });
 
+    // ウィンドウの強制フォーカス要求
+    ipcMain.on('focus-window', (event) => {
+        const webContents = event.sender;
+        const win = BrowserWindow.fromWebContents(webContents);
+        if (win && !win.isDestroyed()) {
+            win.focus();
+        }
+    });
+
     // 3. マウススルー（イベント無視）の制御
     // ignore: true の場合はクリックを透過させ、false の場合はウィンドウを通常クリック可能にする
     ipcMain.on('set-ignore-mouse-events', (event, ignore: boolean) => {

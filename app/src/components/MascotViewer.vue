@@ -1044,6 +1044,9 @@ watch(windowMode, (newMode) => {
 
 // --- マウス透過の動的制御 ---
 const handleWindowMouseMove = (e: MouseEvent) => {
+    // マスコットウィンドウ（#mascot）以外ではマウス透過の動的制御は行わない
+    if (window.location.hash !== '#mascot') return;
+
     // 統合・コンパクトモードなど、分割モード以外ではマウスイベントの透過制御は行わない（透過を解除する）
     if (windowMode.value && windowMode.value !== 'split') {
         if (window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
@@ -1071,8 +1074,8 @@ const handleWindowMouseMove = (e: MouseEvent) => {
 };
 
 onMounted(async () => {
-    // 起動直後はマウスクリックを受け付ける（透過しない）ようにリセット
-    if (window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
+    // 起動直後はマウスクリックを受け付ける（透過しない）ようにリセット（マスコットウィンドウのみ）
+    if (window.location.hash === '#mascot' && window.electronAPI && window.electronAPI.setIgnoreMouseEvents) {
         window.electronAPI.setIgnoreMouseEvents(false);
     }
 

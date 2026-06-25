@@ -178,7 +178,7 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
         transparent: true,
         frame: false,
         alwaysOnTop: initialChatAlwaysOnTop,
-        resizable: false,
+        resizable: true,
         show: false, // 初期表示状態は後述の toggle 処理等に委ねる
         hasShadow: false,
         webPreferences: {
@@ -186,6 +186,10 @@ export function createChatWindow(initialX: number, initialY: number, mascotWidth
             contextIsolation: true,
             nodeIntegration: false
         }
+    });
+
+    chatWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[Renderer Log - Chat] [Level: ${level}] ${message} (Source: ${sourceId}:${line})`);
     });
 
     if (initialChatAlwaysOnTop) {
