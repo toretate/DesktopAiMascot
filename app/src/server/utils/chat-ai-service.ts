@@ -134,16 +134,20 @@ export class ChatAiService {
             // 履歴のマッピング
             const messages: ModelMessage[] = [];
             if (history && history.length > 0) {
-                let firstUserFound = false;
+                // 最初のメッセージが user 以外（assistant など）の場合、APIの制約（最初が user でなければならない等）を回避するため、
+                // 先頭にダミーの user メッセージを挿入して履歴が切り捨てられるのを防ぐ
+                const firstMsg = history[0];
+                if (firstMsg && firstMsg.sender !== 'user') {
+                    messages.push({
+                        role: 'user',
+                        content: 'こんにちは'
+                    });
+                }
+
                 history.forEach((msg: any) => {
                     const role = msg.sender === 'user' ? 'user' : 'assistant';
                     const text = msg.text || '';
-                    
-                    if (role === 'user') {
-                        firstUserFound = true;
-                    }
-                    
-                    if (firstUserFound && text.trim()) {
+                    if (text.trim()) {
                         messages.push({
                             role,
                             content: text
