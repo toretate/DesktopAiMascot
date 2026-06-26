@@ -391,6 +391,11 @@ watch(activeMascot, () => {
                         <Checkbox v-model="configStore.showVoiceLog" :binary="true" inputId="show-voice-log" />
                         <label for="show-voice-log" class="font-medium cursor-pointer">TTS送信時のデバッグログを出力する</label>
                     </div>
+
+                    <div class="flex align-items-center gap-2">
+                        <Checkbox v-model="configStore.ttsReadNarrative" :binary="true" inputId="tts-read-narrative" />
+                        <label for="tts-read-narrative" class="font-medium cursor-pointer">地の文を読み上げる（朗読モード）</label>
+                    </div>
                 </div>
 
                 <div class="form-field">

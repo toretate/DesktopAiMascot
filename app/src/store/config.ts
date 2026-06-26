@@ -56,6 +56,7 @@ export interface AppConfig {
 
     // TTS設定
     useTts: boolean;
+    ttsReadNarrative?: boolean;
     
     // ウィンドウモード
     windowMode: 'split' | 'integrated' | 'compact';
@@ -158,6 +159,7 @@ export const useConfigStore = defineStore('config', () => {
 
     // TTS設定
     const useTts = ref(true);
+    const ttsReadNarrative = ref(true);
 
     // ウィンドウモード
     const windowMode = ref<'split' | 'integrated' | 'compact'>('split');
@@ -303,6 +305,7 @@ export const useConfigStore = defineStore('config', () => {
             serverPort.value = configData.serverPort !== undefined ? Number(configData.serverPort) : 3000;
             
             useTts.value = configData.useTts !== undefined ? !!configData.useTts : true;
+            ttsReadNarrative.value = configData.ttsReadNarrative !== undefined ? !!configData.ttsReadNarrative : true;
             
             windowMode.value = (configData.windowMode as any) || 'split';
             
@@ -414,6 +417,7 @@ export const useConfigStore = defineStore('config', () => {
             serverPort.value = savedServerPort ? parseInt(savedServerPort) : 3000;
             
             useTts.value = localStorage.getItem('useTts') !== 'false';
+            ttsReadNarrative.value = localStorage.getItem('ttsReadNarrative') !== 'false';
 
             windowMode.value = (localStorage.getItem('windowMode') as any) || 'split';
 
@@ -513,6 +517,7 @@ export const useConfigStore = defineStore('config', () => {
             serverHost: serverHost.value,
             serverPort: Number(serverPort.value),
             useTts: useTts.value,
+            ttsReadNarrative: ttsReadNarrative.value,
             windowMode: windowMode.value,
             integratedWidth: Number(integratedWidth.value),
             integratedHeight: Number(integratedHeight.value),
@@ -634,6 +639,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('serverHost', serverHost.value);
         localStorage.setItem('serverPort', serverPort.value.toString());
         localStorage.setItem('useTts', useTts.value.toString());
+        localStorage.setItem('ttsReadNarrative', ttsReadNarrative.value.toString());
         localStorage.setItem('windowMode', windowMode.value);
         localStorage.setItem('integratedWidth', integratedWidth.value.toString());
         localStorage.setItem('integratedHeight', integratedHeight.value.toString());
@@ -739,6 +745,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.serverHost !== undefined) serverHost.value = newConfig.serverHost;
         if (newConfig.serverPort !== undefined) serverPort.value = Number(newConfig.serverPort);
         if (newConfig.useTts !== undefined) useTts.value = !!newConfig.useTts;
+        if (newConfig.ttsReadNarrative !== undefined) ttsReadNarrative.value = !!newConfig.ttsReadNarrative;
         if (newConfig.windowMode !== undefined) windowMode.value = newConfig.windowMode as any;
         if (newConfig.integratedWidth !== undefined) integratedWidth.value = Number(newConfig.integratedWidth);
         if (newConfig.integratedHeight !== undefined) integratedHeight.value = Number(newConfig.integratedHeight);
@@ -823,6 +830,7 @@ export const useConfigStore = defineStore('config', () => {
         serverHost,
         serverPort,
         useTts,
+        ttsReadNarrative,
         windowMode,
         integratedWidth,
         integratedHeight,

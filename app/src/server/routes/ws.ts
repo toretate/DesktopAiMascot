@@ -5,6 +5,7 @@ import { ChatAiService } from '../utils/chat-ai-service';
 import { VoiceAiService } from '../utils/voice-ai-service';
 import { splitSentences } from '../utils/sentence-splitter';
 import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
+import { filterDialogue } from '../utils/dialogue-filter';
 import { authenticateUserToken } from '../middleware/auth';
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
 
@@ -126,6 +127,7 @@ export default defineWebSocketHandler({
                     lmstudioEndpoint,
                     history,
                     useTts,
+                    ttsReadNarrative,
                     saveVoice,
                     showVoiceLog,
                     attachments,
@@ -218,58 +220,62 @@ export default defineWebSocketHandler({
                     const irodoriModelName = irodoriModel || 'irodori-tts-500m-v3';
                     const irodoriVoiceName = irodoriVoice || 'default';
 
-                    const processedSentences = splitSentences(speechText);
+                    const targetSpeechText = ttsReadNarrative === false ? filterDialogue(speechText) : speechText;
 
-                    const synthPromises = processedSentences.map(sentence => {
-                        if (voiceEngine === 'irodori') {
-                            const cleanSentence = sanitizeForIrodoriTTS(sentence);
-                            return VoiceAiService.synthesizeIrodori(cleanSentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion, showVoiceLog !== false);
-                        } else {
-                            return VoiceAiService.synthesize(sentence, speaker, baseUrl, showVoiceLog !== false);
-                        }
-                    });
+                    if (targetSpeechText.trim()) {
+                        const processedSentences = splitSentences(targetSpeechText);
 
-                    (async () => {
-                        for (const promise of synthPromises) {
-                            try {
-                                const base64Audio = await promise;
-                                if (base64Audio) {
-                                    peer.send(JSON.stringify({
-                                        event: 'chat-audio',
-                                        data: { audio: base64Audio }
-                                    }));
+                        const synthPromises = processedSentences.map(sentence => {
+                            if (voiceEngine === 'irodori') {
+                                const cleanSentence = sanitizeForIrodoriTTS(sentence);
+                                return VoiceAiService.synthesizeIrodori(cleanSentence, irodoriUrl, irodoriModelName, irodoriVoiceName, detectedEmotion, showVoiceLog !== false);
+                            } else {
+                                return VoiceAiService.synthesize(sentence, speaker, baseUrl, showVoiceLog !== false);
+                            }
+                        });
 
-                                    if (data.saveVoice) {
-                                        try {
-                                            const today = new Date();
-                                            const yyyy = today.getFullYear();
-                                            const mm = String(today.getMonth() + 1).padStart(2, '0');
-                                            const dd = String(today.getDate()).padStart(2, '0');
-                                            const dateStr = `${yyyy}${mm}${dd}`;
+                        (async () => {
+                            for (const promise of synthPromises) {
+                                try {
+                                    const base64Audio = await promise;
+                                    if (base64Audio) {
+                                        peer.send(JSON.stringify({
+                                            event: 'chat-audio',
+                                            data: { audio: base64Audio }
+                                        }));
 
-                                            const mascotId = data.activeMascotId || 'default';
-                                            const dirPath = path.join(USERS_DIR, userId, 'mascots', mascotId, 'voices', dateStr);
-                                            
-                                            if (!fs.existsSync(dirPath)) {
-                                                fs.mkdirSync(dirPath, { recursive: true });
+                                        if (data.saveVoice) {
+                                            try {
+                                                const today = new Date();
+                                                const yyyy = today.getFullYear();
+                                                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                                                const dd = String(today.getDate()).padStart(2, '0');
+                                                const dateStr = `${yyyy}${mm}${dd}`;
+
+                                                const mascotId = data.activeMascotId || 'default';
+                                                const dirPath = path.join(USERS_DIR, userId, 'mascots', mascotId, 'voices', dateStr);
+                                                
+                                                if (!fs.existsSync(dirPath)) {
+                                                    fs.mkdirSync(dirPath, { recursive: true });
+                                                }
+
+                                                const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
+                                                const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+                                                const filePath = path.join(dirPath, filename);
+
+                                                fs.writeFileSync(filePath, Buffer.from(base64Audio, 'base64'));
+                                                console.log(`[WS] Voice saved to: ${filePath}`);
+                                            } catch (saveErr: any) {
+                                                console.error('[WS] Failed to save voice file:', saveErr.message);
                                             }
-
-                                            const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
-                                            const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
-                                            const filePath = path.join(dirPath, filename);
-
-                                            fs.writeFileSync(filePath, Buffer.from(base64Audio, 'base64'));
-                                            console.log(`[WS] Voice saved to: ${filePath}`);
-                                        } catch (saveErr: any) {
-                                            console.error('[WS] Failed to save voice file:', saveErr.message);
                                         }
                                     }
+                                } catch (err) {
+                                    console.error('[WS] VOICEVOX並行合成エラー:', err);
                                 }
-                            } catch (err) {
-                                console.error('[WS] VOICEVOX並行合成エラー:', err);
                             }
-                        }
-                    })();
+                        })();
+                    }
                 }
             }
         } catch (e: any) {
