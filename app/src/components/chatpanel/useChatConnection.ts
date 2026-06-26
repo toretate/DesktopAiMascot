@@ -187,7 +187,7 @@ export function useChatConnection(params: {
 
         playlist.stop();
 
-        const userQuery = isActiveTalk ? '（ラジオ番組のフリートークとして、新しい話題を切り出してください。リスナーに問いかけたり、最近の出来事や季節の話題など何でも良いです）' : inputText.value;
+        const userQuery = isActiveTalk ? '...' : inputText.value;
         if (!isActiveTalk) {
             inputText.value = '';
         }
