@@ -101,4 +101,29 @@ describe('useChatHistory.ts のテスト', () => {
         // 通常セッションなので saveMascotPrompts が呼び出されていること
         expect(window.electronAPI!.saveMascotPrompts).toHaveBeenCalled();
     });
+
+    it('deleteMessage_指定したIDのメッセージを削除し、履歴を保存すること', async () => {
+        const scrollToBottom = vi.fn();
+        const history = useChatHistory(scrollToBottom);
+        await history.loadHistory();
+
+        // メッセージをいくつか追加
+        history.messages.value = [
+            { id: 1, sender: 'mascot', text: '初期メッセージ' },
+            { id: 2, sender: 'user', text: 'ユーザーメッセージ1' },
+            { id: 3, sender: 'mascot', text: 'マスコットメッセージ1' }
+        ];
+
+        // ID=2 のメッセージを削除
+        await history.deleteMessage(2);
+
+        // ID=2 が削除され、1 と 3 が残っていること
+        expect(history.messages.value).toEqual([
+            { id: 1, sender: 'mascot', text: '初期メッセージ' },
+            { id: 3, sender: 'mascot', text: 'マスコットメッセージ1' }
+        ]);
+
+        // saveChatHistory が呼び出されたこと
+        expect(window.electronAPI!.saveChatHistory).toHaveBeenCalled();
+    });
 });

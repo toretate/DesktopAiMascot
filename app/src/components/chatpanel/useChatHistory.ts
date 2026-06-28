@@ -451,6 +451,11 @@ export function useChatHistory(scrollToBottom: () => void) {
         applyActiveMascotHistory();
     });
 
+    const deleteMessage = async (messageId: number) => {
+        messages.value = messages.value.filter(m => m.id !== messageId);
+        await saveHistory();
+    };
+
     return {
         allHistories,
         sessions,
@@ -464,6 +469,7 @@ export function useChatHistory(scrollToBottom: () => void) {
         clearHistory,
         selectSession,
         deleteSession,
+        deleteMessage,
         runCompaction,
         toggleHistoryList,
         applyActiveMascotHistory
