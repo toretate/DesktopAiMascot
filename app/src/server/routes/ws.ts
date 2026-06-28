@@ -131,7 +131,12 @@ export default defineWebSocketHandler({
                     saveVoice,
                     showVoiceLog,
                     attachments,
-                    tools
+                    tools,
+                    temperature,
+                    frequencyPenalty,
+                    repetitionPenalty,
+                    maxOutputTokens,
+                    enableThinking
                 } = data;
 
                 console.log(`=========================================`);
@@ -139,7 +144,12 @@ export default defineWebSocketHandler({
                 console.log(` - Message: "${message}"`);
                 console.log(` - Engine: "${engine}"`);
                 console.log(` - Model: "${model}"`);
-                console.log(` - API Key: ${apiKey ? '***(設定あり)***' : '(設定なし)'}`);
+                console.log(` - Temperature: ${temperature}`);
+                console.log(` - Frequency Penalty: ${frequencyPenalty}`);
+                console.log(` - Repetition Penalty: ${repetitionPenalty}`);
+                console.log(` - Max Output Tokens: ${maxOutputTokens}`);
+                console.log(` - Enable Thinking: ${enableThinking}`);
+                console.log(` - API Key: "${apiKey ? '***(設定あり)***' : '(設定なし)'}"`);
                 console.log(` - LM Studio Endpoint: "${lmstudioEndpoint}"`);
                 console.log(` - History elements: ${history ? history.length : 0}`);
                 console.log(` - Attachments count: ${attachments ? attachments.length : 0}`);
@@ -158,6 +168,11 @@ export default defineWebSocketHandler({
                         apiKey,
                         systemPrompt,
                         model,
+                        temperature,
+                        frequencyPenalty,
+                        repetitionPenalty,
+                        maxOutputTokens,
+                        enableThinking,
                         engine,
                         lmstudioEndpoint,
                         history,
@@ -190,12 +205,13 @@ export default defineWebSocketHandler({
                     detectedEmotion = emotionMatch[1].toLowerCase().trim();
                 }
 
+                // 表情対応処理（detectedEmotionの抽出）を行ってから、表示用テキストと音声テキストから表情タグを除去
                 const speechText = cleanReply.replace(/\[\w+\]/g, '').trim();
 
                 peer.send(JSON.stringify({
                     event: 'chat-response',
                     data: {
-                        text: cleanReply,
+                        text: speechText,
                         speechText: speechText,
                         emotion: detectedEmotion
                     }

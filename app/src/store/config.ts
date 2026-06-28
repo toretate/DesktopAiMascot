@@ -21,6 +21,10 @@ export interface AppConfig {
     irodoriModel: string;
     irodoriVoice: string;
     temperature: number;
+    frequencyPenalty: number;
+    repetitionPenalty: number;
+    maxOutputTokens: number;
+    enableThinking: boolean;
     
     // 要約設定
     summaryEngine: string;
@@ -144,6 +148,10 @@ export const useConfigStore = defineStore('config', () => {
     const irodoriModel = ref('irodori-tts');
     const irodoriVoice = ref('default');
     const temperature = ref(0.7);
+    const frequencyPenalty = ref(0.0);
+    const repetitionPenalty = ref(1.1);
+    const maxOutputTokens = ref(2048);
+    const enableThinking = ref(true);
 
     // チャットウィンドウ設定
     const chatOpacity = ref(1.0);
@@ -302,6 +310,10 @@ export const useConfigStore = defineStore('config', () => {
             irodoriModel.value = configData.irodoriModel || 'irodori-tts';
             irodoriVoice.value = configData.irodoriVoice || 'default';
             temperature.value = configData.temperature !== undefined ? Number(configData.temperature) : 0.7;
+            frequencyPenalty.value = configData.frequencyPenalty !== undefined ? Number(configData.frequencyPenalty) : 0.0;
+            repetitionPenalty.value = configData.repetitionPenalty !== undefined ? Number(configData.repetitionPenalty) : 1.1;
+            maxOutputTokens.value = configData.maxOutputTokens !== undefined ? Number(configData.maxOutputTokens) : 2048;
+            enableThinking.value = configData.enableThinking !== undefined ? !!configData.enableThinking : true;
             
             chatOpacity.value = configData.chatOpacity !== undefined ? Number(configData.chatOpacity) : 1.0;
             
@@ -410,6 +422,18 @@ export const useConfigStore = defineStore('config', () => {
             
             const temp = localStorage.getItem('temperature');
             temperature.value = temp ? parseFloat(temp) : 0.7;
+
+            const freqPenalty = localStorage.getItem('frequencyPenalty');
+            frequencyPenalty.value = freqPenalty ? parseFloat(freqPenalty) : 0.0;
+
+            const repPenalty = localStorage.getItem('repetitionPenalty');
+            repetitionPenalty.value = repPenalty ? parseFloat(repPenalty) : 1.1;
+
+            const maxTokensVal = localStorage.getItem('maxOutputTokens');
+            maxOutputTokens.value = maxTokensVal ? parseInt(maxTokensVal) : 2048;
+
+            const enableThinkVal = localStorage.getItem('enableThinking');
+            enableThinking.value = enableThinkVal !== 'false';
             
             const opacity = localStorage.getItem('chatOpacity');
             chatOpacity.value = opacity ? parseFloat(opacity) : 1.0;
@@ -549,6 +573,10 @@ export const useConfigStore = defineStore('config', () => {
             irodoriModel: irodoriModel.value,
             irodoriVoice: irodoriVoice.value,
             temperature: Number(temperature.value),
+            frequencyPenalty: Number(frequencyPenalty.value),
+            repetitionPenalty: Number(repetitionPenalty.value),
+            maxOutputTokens: Number(maxOutputTokens.value),
+            enableThinking: !!enableThinking.value,
             chatOpacity: Number(chatOpacity.value),
             chatAlwaysOnTop: chatAlwaysOnTop.value,
             chatSendKey: chatSendKey.value,
@@ -677,6 +705,10 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('irodoriModel', irodoriModel.value);
         localStorage.setItem('irodoriVoice', irodoriVoice.value);
         localStorage.setItem('temperature', temperature.value.toString());
+        localStorage.setItem('frequencyPenalty', frequencyPenalty.value.toString());
+        localStorage.setItem('repetitionPenalty', repetitionPenalty.value.toString());
+        localStorage.setItem('maxOutputTokens', maxOutputTokens.value.toString());
+        localStorage.setItem('enableThinking', enableThinking.value.toString());
         localStorage.setItem('chatOpacity', chatOpacity.value.toString());
         localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
         localStorage.setItem('chatSendKey', chatSendKey.value);
@@ -788,6 +820,10 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.irodoriModel !== undefined) irodoriModel.value = newConfig.irodoriModel;
         if (newConfig.irodoriVoice !== undefined) irodoriVoice.value = newConfig.irodoriVoice;
         if (newConfig.temperature !== undefined) temperature.value = Number(newConfig.temperature);
+        if (newConfig.frequencyPenalty !== undefined) frequencyPenalty.value = Number(newConfig.frequencyPenalty);
+        if (newConfig.repetitionPenalty !== undefined) repetitionPenalty.value = Number(newConfig.repetitionPenalty);
+        if (newConfig.maxOutputTokens !== undefined) maxOutputTokens.value = Number(newConfig.maxOutputTokens);
+        if (newConfig.enableThinking !== undefined) enableThinking.value = !!newConfig.enableThinking;
         
         if (newConfig.chatOpacity !== undefined) chatOpacity.value = Number(newConfig.chatOpacity);
         if (newConfig.chatAlwaysOnTop !== undefined) chatAlwaysOnTop.value = newConfig.chatAlwaysOnTop;
@@ -880,6 +916,10 @@ export const useConfigStore = defineStore('config', () => {
         irodoriModel,
         irodoriVoice,
         temperature,
+        frequencyPenalty,
+        repetitionPenalty,
+        maxOutputTokens,
+        enableThinking,
         chatOpacity,
         chatAlwaysOnTop,
         chatSendKey,

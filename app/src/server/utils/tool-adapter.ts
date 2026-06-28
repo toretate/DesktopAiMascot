@@ -18,31 +18,44 @@ function convertLmStudioSchemaToPlainJsonSchema(parametersSchema: any): any {
     const shape = parametersSchema.shape;
     for (const key of Object.keys(shape)) {
         const field = shape[key];
-        
+
         let isOptional = false;
         let currentField = field;
 
-        while (currentField && currentField.def) {
-            if (currentField.def.type === 'optional') {
+        // optional ラッパーの解決
+        while (currentField) {
+            const def = currentField._def || currentField.def;
+            if (!def) break;
+
+            const typeName = def.typeName;
+            const type = def.type;
+
+            if (typeName === 'ZodOptional' || type === 'optional') {
                 isOptional = true;
-                currentField = currentField.def.innerType;
+                currentField = def.innerType;
+            } else if (typeName === 'ZodNullable' || type === 'nullable') {
+                isOptional = true;
+                currentField = def.innerType;
+            } else if (typeName === 'ZodEffects') {
+                currentField = def.schema;
             } else {
                 break;
             }
         }
 
-        const fieldType = currentField && currentField.def ? currentField.def.type : 'string';
+        const def = currentField && (currentField._def || currentField.def);
+        const typeName = def ? (def.typeName || def.type) : '';
         const fieldSchema: any = {};
 
-        if (fieldType === 'number') {
+        if (typeName === 'ZodNumber' || typeName === 'number') {
             fieldSchema.type = 'number';
-        } else if (fieldType === 'boolean') {
+        } else if (typeName === 'ZodBoolean' || typeName === 'boolean') {
             fieldSchema.type = 'boolean';
         } else {
             fieldSchema.type = 'string';
         }
 
-        const description = field.description || (currentField && currentField.description);
+        const description = field.description || (currentField && currentField.description) || (def && def.description);
         if (description) {
             fieldSchema.description = description;
         }
@@ -73,7 +86,10 @@ export function convertLmStudioToolToVercel(lmTool: any): any {
         inputSchema: wrappedSchema,
         execute: async (args: any, { abortSignal }: { abortSignal?: AbortSignal } = {}) => {
             // 既存の implementation は引数オブジェクトを受け取る
-            return await lmTool.implementation(args, { abortSignal });
+            console.log(`[Tool Execution] Running "${lmTool.name}" with args:`, args);
+            const toolResponse = await lmTool.implementation(args, { abortSignal });
+            console.log(`[Tool Execution Result] "${toolResponse}"`)
+            return toolResponse;
         }
     };
 }

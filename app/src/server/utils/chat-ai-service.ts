@@ -81,12 +81,17 @@ export class ChatAiService {
         systemPrompt: string;
         model: string;
         engine: string;
-        lmstudioEndpoint: string;
+        lmstudioEndpoint?: string;
+        temperature?: number;
+        frequencyPenalty?: number;
+        repetitionPenalty?: number;
+        maxOutputTokens?: number;
+        enableThinking?: boolean;
         history?: any[];
         attachments?: any[];
         tools?: any;
     }): Promise<string> {
-        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, history, attachments, tools } = params;
+        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools } = params;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -124,10 +129,10 @@ export class ChatAiService {
             });
             const toolListStr = activeToolDescriptions.join(', ');
             const toolUseSection = activeToolDescriptions.length > 0
-                ? `- You have access to tools for ${toolListStr}.\n- Always call tools to get accurate information instead of guessing.`
-                : `- Do NOT call any tools.`;
+                ? `- 以下のツールが使用可能です: ${toolListStr}\n- 現在の情報や天気、時間、アプリの起動、音量の調整について尋ねられたり依頼された場合は、絶対に自分で推測して回答せず、必ず定義された対応するツールを呼び出してください。`
+                : `- 利用可能なツールはありません。`;
 
-            const toolUseGuideline = `\n\n# Tool Use Guidelines\n${toolUseSection}\n- Do NOT output any thought process, self-instructions, or meta-comments like "I got the time..." or "Now I will reply..." in the final response.\n- Answer in Japanese, speaking directly to the user as a friendly mascot character. Output ONLY the natural dialogue/reply.`;
+            const toolUseGuideline = `\n\n# ツール使用ガイドライン\n${toolUseSection}\n- 最終的な回答には、思考プロセス（Thinking Process）や、自己指示、"<|channel>thought" や "<|channel>" などの特殊なチャンネルタグ、メタコメント（"現在時刻を取得しました"、"ツールを実行します" など）を一切含めないでください。\n- 回答は日本語で、フレンドリーなマスコットキャラクターとしてユーザーに直接語りかけるように記述してください。出力するテキストは、自然なセリフ（発話内容）のみにしてください。`;
 
             const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}${toolUseGuideline}`;
 
@@ -221,7 +226,18 @@ export class ChatAiService {
                     apiKey: 'not-needed',
                     compatibility: 'compatible'
                 });
-                modelProvider = lmstudio.chat(model || 'unspecified');
+                const additionalBody: any = {};
+                if (repetitionPenalty !== undefined) {
+                    additionalBody.repetition_penalty = repetitionPenalty;
+                }
+                if (enableThinking === false) {
+                    additionalBody.reasoning_format = 'none';
+                    additionalBody.include_reasoning = false;
+                }
+                const chatSettings = Object.keys(additionalBody).length > 0 ? {
+                    additionalBody
+                } : {};
+                modelProvider = lmstudio.chat(model || 'unspecified', chatSettings);
             } else if (currentEngine === 'gemini') {
                 const targetModel = model || 'gemini-1.5-flash';
                 console.log(`[ChatAiService] Routing to Gemini via Vercel AI SDK (Model: ${targetModel})`);
@@ -254,6 +270,9 @@ export class ChatAiService {
                 model: modelProvider,
                 system: finalSystemPrompt,
                 messages: messages,
+                temperature: temperature !== undefined ? temperature : 0.7,
+                frequencyPenalty: frequencyPenalty !== undefined ? frequencyPenalty : 0.0,
+                maxOutputTokens: maxOutputTokens !== undefined ? maxOutputTokens : 2048,
                 abortSignal: controller.signal
             };
 
@@ -265,6 +284,19 @@ export class ChatAiService {
             let response;
             try {
                 response = await generateText(generateOptions);
+
+                // ツール呼び出しの有無をログ出力
+                if (response.toolCalls && response.toolCalls.length > 0) {
+                    console.log(`[ChatAiService] Tool use detected! Total tool calls: ${response.toolCalls.length}`);
+                    response.toolCalls.forEach(call => {
+                        console.log(`  - Tool Call: ${call.toolName}`, call.args);
+                    });
+                }
+                if (response.toolResults && response.toolResults.length > 0) {
+                    response.toolResults.forEach(res => {
+                        console.log(`  - Tool Result [${res.toolName}]:`, res.result);
+                    });
+                }
             } catch (firstTryError: any) {
                 const isLmStudio = currentEngine === 'lmstudio';
                 // 400 エラーかつ Jinja2 テンプレート関連のエラーと思われる文言が含まれる場合にフォールバック
@@ -287,19 +319,25 @@ export class ChatAiService {
 
             let cleanedContent = response.text || '';
 
-            // 思考プロセス（Thinking Process や <think>, <thought> タグ）のクレンジング
+            // 思考プロセス（Thinking Process や <think>, <thought> タグ、<|channel>thought タグ）のクレンジング
             if (cleanedContent.includes('</think>')) {
                 cleanedContent = cleanedContent.split(/<\/think>/i).pop() || '';
             }
             if (cleanedContent.includes('</thought>')) {
                 cleanedContent = cleanedContent.split(/<\/thought>/i).pop() || '';
             }
+            if (cleanedContent.includes('channel|>')) {
+                cleanedContent = cleanedContent.split(/channel\|>/gi).pop() || '';
+            }
+
             cleanedContent = cleanedContent
                 .replace(/<think>[\s\S]*?<\/think>/gi, '')
                 .replace(/<think>[\s\S]*/gi, '')
                 .replace(/<\/think>[\s\S]*/gi, '')
                 .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
                 .replace(/<thought>[\s\S]*/gi, '')
+                .replace(/<\|channel>thought[\s\S]*?<channel\|>/gi, '')
+                .replace(/<\|channel>thought[\s\S]*/gi, '')
                 .replace(/^Thinking Process:[\s\S]*?(?=\n\n\S|$)/i, '')
                 .replace(/\nThinking Process:[\s\S]*?(?=\n\n\S|$)/g, '');
 

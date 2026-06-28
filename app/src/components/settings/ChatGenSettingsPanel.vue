@@ -19,6 +19,8 @@ const {
     openaiModel,
     anthropicModel,
     temperature,
+    frequencyPenalty,
+    repetitionPenalty,
     googleAiStudioApiKey: geminiApiKey,
     useExRadio,
     summaryEngine,
@@ -764,6 +766,34 @@ onMounted(async () => {
                         <span>Temperature (創造性): {{ temperature }}</span>
                     </label>
                     <Slider v-model="temperature" :min="0" :max="1" :step="0.1" class="mt-2" />
+                </div>
+
+                <div class="form-field mt-3">
+                    <label class="font-medium flex justify-content-between">
+                        <span>Frequency Penalty: {{ frequencyPenalty }}</span>
+                    </label>
+                    <Slider v-model="frequencyPenalty" :min="-2.0" :max="2.0" :step="0.1" class="mt-2" />
+                </div>
+
+                <div class="form-field mt-3">
+                    <label class="font-medium flex justify-content-between">
+                        <span>Repeat Penalty (繰り返しペナルティ): {{ repetitionPenalty }}</span>
+                    </label>
+                    <Slider v-model="repetitionPenalty" :min="0.5" :max="2.0" :step="0.05" class="mt-2" />
+                </div>
+
+                <div class="form-field mt-3">
+                    <label class="font-medium flex justify-content-between">
+                        <span>応答長制限 (Max Output Tokens): {{ maxOutputTokens }}</span>
+                    </label>
+                    <Slider v-model="maxOutputTokens" :min="128" :max="8192" :step="128" class="mt-2" />
+                </div>
+
+                <div class="form-field mt-3 flex align-items-center gap-2">
+                    <input type="checkbox" id="enableThinking" v-model="enableThinking" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                    <label for="enableThinking" class="font-medium cursor-pointer">
+                        思考機能を有効にする (Enable Thinking / Reasoning)
+                    </label>
                 </div>
 
                 <!-- 区切り線 -->

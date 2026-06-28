@@ -8,6 +8,10 @@ export interface ConfigData {
     alwaysOnTop: boolean;
     selectedEngine: string;
     temperature: number;
+    frequencyPenalty: number;
+    repetitionPenalty: number;
+    maxOutputTokens: number;
+    enableThinking: boolean;
     googleAiStudioApiKey: string;
     geminiModel: string;
     openaiModel: string;
@@ -107,6 +111,10 @@ export const defaultData: ConfigData = {
     alwaysOnTop: true,
     selectedEngine: 'gemini',
     temperature: 0.7,
+    frequencyPenalty: 0.0,
+    repetitionPenalty: 1.1,
+    maxOutputTokens: 2048,
+    enableThinking: true,
     googleAiStudioApiKey: '',
     geminiModel: 'gemini-3.1-flash-lite',
     openaiModel: 'gpt-4o',

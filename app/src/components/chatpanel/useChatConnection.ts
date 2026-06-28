@@ -51,7 +51,12 @@ export function useChatConnection(params: {
         toolsAppLauncher,
         toolsWebSearch,
         saveVoice,
-        showVoiceLog
+        showVoiceLog,
+        temperature,
+        frequencyPenalty,
+        repetitionPenalty,
+        maxOutputTokens,
+        enableThinking
     } = storeToRefs(configStore);
 
     const { isLoading: isAiResponding } = storeToRefs(mascotStore);
@@ -332,7 +337,7 @@ export function useChatConnection(params: {
         }
 
         // 感情表現ブロック(Irodori-TTSのみ)
-        if (voiceEngine === 'irodori') {
+        if (useTts.value && voiceEngine === 'irodori') {
             systemPrompt += useIrodoriEmotion();
         }
         // 感情タグブロック(マスコットの表情向け)
@@ -383,6 +388,11 @@ export function useChatConnection(params: {
                 irodoriVoice: irodoriVoice,
                 engine: engine,
                 lmstudioEndpoint: lmsEndpoint,
+                temperature: temperature.value,
+                frequencyPenalty: frequencyPenalty.value,
+                repetitionPenalty: repetitionPenalty.value,
+                maxOutputTokens: maxOutputTokens.value,
+                enableThinking: enableThinking.value,
                 history: historyToSend,
                 useTts: useTts.value,
                 ttsReadNarrative: ttsReadNarrative.value,
