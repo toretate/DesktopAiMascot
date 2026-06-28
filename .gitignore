@@ -40,3 +40,6 @@ storage/*
 
 # AI generated temp file
 scratch/
+
+# Base Prompt
+prompts/radio/ex_*.md
