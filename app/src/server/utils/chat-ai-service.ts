@@ -262,7 +262,26 @@ export class ChatAiService {
                 generateOptions.stopWhen = [isLoopFinished(), stepCountIs(5)];
             }
 
-            const response = await generateText(generateOptions);
+            let response;
+            try {
+                response = await generateText(generateOptions);
+            } catch (firstTryError: any) {
+                const isLmStudio = currentEngine === 'lmstudio';
+                // 400 エラーかつ Jinja2 テンプレート関連のエラーと思われる文言が含まれる場合にフォールバック
+                const errorStr = (firstTryError.message || '') + (firstTryError.responseBody || '');
+                const isTemplateError = firstTryError.statusCode === 400 && 
+                    (errorStr.includes('template') || errorStr.includes('jinja') || errorStr.includes('UndefinedValue'));
+
+                if (isLmStudio && hasTools && isTemplateError) {
+                    console.warn('[ChatAiService] LM Studio のプロンプトテンプレートエラーを検知しました。ツール呼び出しを無効化して再試行します。', firstTryError.message);
+                    const retryOptions = { ...generateOptions };
+                    delete retryOptions.tools;
+                    delete retryOptions.stopWhen;
+                    response = await generateText(retryOptions);
+                } else {
+                    throw firstTryError;
+                }
+            }
 
             clearTimeout(timeoutId);
 
