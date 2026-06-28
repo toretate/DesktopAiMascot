@@ -1098,6 +1098,7 @@ const focusWindow = () => {
 }
 
 .attachment-image-box {
+    position: relative;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
@@ -1722,7 +1723,9 @@ const focusWindow = () => {
     align-items: center;
     gap: 4px;
     opacity: 0;
-    transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease, background 0.2s ease, transform 0.2s ease;
     backdrop-filter: blur(4px);
     z-index: 10;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -1730,6 +1733,8 @@ const focusWindow = () => {
 
 .attachment-image-box:hover .use-i2i-btn {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .use-i2i-btn:hover {
