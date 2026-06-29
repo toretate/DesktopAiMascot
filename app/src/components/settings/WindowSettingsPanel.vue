@@ -922,6 +922,8 @@ onMounted(async () => {
                     </div>
                 </div>
 
+
+
                 <!-- サーバー連携設定 -->
                 <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-purple-600 flex align-items-center gap-2">
                     <i class="pi pi-server text-purple-500"></i>

@@ -113,4 +113,19 @@ export function registerWindowHandlers(config: AppConfig) {
             }
         }
     });
+
+    // 汎用ウィンドウサイズ変更
+    ipcMain.on('resize-window', (event, size: { width: number; height: number }) => {
+        const webContents = event.sender;
+        const win = BrowserWindow.fromWebContents(webContents);
+        if (win && !win.isDestroyed()) {
+            const bounds = win.getBounds();
+            win.setBounds({
+                x: bounds.x,
+                y: bounds.y,
+                width: Math.round(size.width),
+                height: Math.round(size.height)
+            });
+        }
+    });
 }

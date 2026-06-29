@@ -155,6 +155,7 @@ export const useConfigStore = defineStore('config', () => {
 
     // チャットウィンドウ設定
     const chatOpacity = ref(1.0);
+    const taskOpacity = ref(1.0);
     const chatAlwaysOnTop = ref<boolean | 'sync'>(true);
     const chatSendKey = ref('enter');
     const chatFontFamily = ref('sans-serif');
@@ -316,6 +317,7 @@ export const useConfigStore = defineStore('config', () => {
             enableThinking.value = configData.enableThinking !== undefined ? !!configData.enableThinking : true;
             
             chatOpacity.value = configData.chatOpacity !== undefined ? Number(configData.chatOpacity) : 1.0;
+            taskOpacity.value = configData.taskOpacity !== undefined ? Number(configData.taskOpacity) : 1.0;
             
             if (configData.chatAlwaysOnTop === 'sync') {
                 chatAlwaysOnTop.value = 'sync';
@@ -437,6 +439,9 @@ export const useConfigStore = defineStore('config', () => {
             
             const opacity = localStorage.getItem('chatOpacity');
             chatOpacity.value = opacity ? parseFloat(opacity) : 1.0;
+
+            const tOpacity = localStorage.getItem('taskOpacity');
+            taskOpacity.value = tOpacity ? parseFloat(tOpacity) : 1.0;
             
             const savedChatAlwaysOnTop = localStorage.getItem('chatAlwaysOnTop');
             if (savedChatAlwaysOnTop === 'sync') {
@@ -578,6 +583,7 @@ export const useConfigStore = defineStore('config', () => {
             maxOutputTokens: Number(maxOutputTokens.value),
             enableThinking: !!enableThinking.value,
             chatOpacity: Number(chatOpacity.value),
+            taskOpacity: Number(taskOpacity.value),
             chatAlwaysOnTop: chatAlwaysOnTop.value,
             chatSendKey: chatSendKey.value,
             chatFontFamily: chatFontFamily.value,
@@ -710,6 +716,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('maxOutputTokens', maxOutputTokens.value.toString());
         localStorage.setItem('enableThinking', enableThinking.value.toString());
         localStorage.setItem('chatOpacity', chatOpacity.value.toString());
+        localStorage.setItem('taskOpacity', taskOpacity.value.toString());
         localStorage.setItem('chatAlwaysOnTop', chatAlwaysOnTop.value.toString());
         localStorage.setItem('chatSendKey', chatSendKey.value);
         localStorage.setItem('chatFontFamily', chatFontFamily.value);
@@ -826,6 +833,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.enableThinking !== undefined) enableThinking.value = !!newConfig.enableThinking;
         
         if (newConfig.chatOpacity !== undefined) chatOpacity.value = Number(newConfig.chatOpacity);
+        if (newConfig.taskOpacity !== undefined) taskOpacity.value = Number(newConfig.taskOpacity);
         if (newConfig.chatAlwaysOnTop !== undefined) chatAlwaysOnTop.value = newConfig.chatAlwaysOnTop;
         if (newConfig.chatSendKey !== undefined) chatSendKey.value = newConfig.chatSendKey;
         if (newConfig.chatFontFamily !== undefined) chatFontFamily.value = newConfig.chatFontFamily;
@@ -921,6 +929,7 @@ export const useConfigStore = defineStore('config', () => {
         maxOutputTokens,
         enableThinking,
         chatOpacity,
+        taskOpacity,
         chatAlwaysOnTop,
         chatSendKey,
         chatFontFamily,

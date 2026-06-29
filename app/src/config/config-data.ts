@@ -27,6 +27,7 @@ export interface ConfigData {
     selectedImageEngine: string;
     selectedVideoEngine: string;
     chatOpacity: number;
+    taskOpacity: number;
     chatAlwaysOnTop: boolean | 'sync';
     chatSendKey: string;
     chatFontFamily: string;
@@ -130,6 +131,7 @@ export const defaultData: ConfigData = {
     selectedImageEngine: 'dalle3',
     selectedVideoEngine: 'runway',
     chatOpacity: 1.0,
+    taskOpacity: 1.0,
     chatAlwaysOnTop: true,
     chatSendKey: 'enter',
     chatFontFamily: 'sans-serif',

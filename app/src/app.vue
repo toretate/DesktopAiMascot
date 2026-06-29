@@ -5,6 +5,7 @@ import ChatPanel from './components/ChatPanel.vue';
 import SettingsWindow from './components/settings/SettingsWindow.vue';
 import IntegratedLayout from './components/layouts/IntegratedLayout.vue';
 import CompactLayout from './components/layouts/CompactLayout.vue';
+import TaskManagement from './components/TaskManagement.vue';
 
 const currentHash = ref(window.location.hash);
 
@@ -27,6 +28,7 @@ onUnmounted(() => {
         <MascotViewer v-if="currentHash === '#mascot'" />
         <ChatPanel v-else-if="currentHash === '#chat'" />
         <SettingsWindow v-else-if="currentHash === '#settings'" />
+        <TaskManagement v-else-if="currentHash === '#tasks'" />
         <IntegratedLayout v-else-if="currentHash === '#integrated' || currentHash === '' || currentHash === '#/' || currentHash === '#web'" />
         <CompactLayout v-else-if="currentHash === '#compact'" />
         <div v-else class="fallback-view">

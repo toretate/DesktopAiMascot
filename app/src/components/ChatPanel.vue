@@ -15,13 +15,34 @@ import ChatHeader from './chatpanel/ChatHeader.vue';
 import MessageList from './chatpanel/MessageList.vue';
 import ChatInputForm from './chatpanel/ChatInputForm.vue';
 import { extractImagePrompt } from '../utils/png-metadata';
+import TaskManagement from './TaskManagement.vue';
+import { useTaskStore } from '../store/task';
 
 const inputText = ref('');
 const messageListRef = ref<any>(null);
+const showTaskManagement = ref(false);
 
-// ---- Stores ----
 const configStore = useConfigStore();
 const mascotStore = useMascotStore();
+const taskStore = useTaskStore();
+
+// タスク管理ウィジェット表示のトグル制御
+watch(showTaskManagement, (newVal) => {
+    if (configStore.windowMode === 'integrated') {
+        taskStore.showTaskWidget = newVal;
+    } else {
+        if (window.electronAPI && window.electronAPI.toggleTasks) {
+            window.electronAPI.toggleTasks();
+        }
+    }
+});
+
+// 統合モード時にストア側変更からヘッダーのトグル状態へ同期
+watch(() => taskStore.showTaskWidget, (newVal) => {
+    if (configStore.windowMode === 'integrated') {
+        showTaskManagement.value = newVal;
+    }
+});
 
 const playlist = new AudioPlaylist((speaking) => {
     mascotStore.setSpeaking(speaking);
@@ -468,46 +489,54 @@ const focusWindow = () => {
         <ChatHeader
             v-model:imageGenMode="imageGenMode"
             v-model:showHistoryList="showHistoryList"
+            v-model:showTaskManagement="showTaskManagement"
             @clear-history="clearHistory"
             @open-image-gen-dialog="imageGenDialogVisible = true"
         />
 
-        <!-- メッセージスクロール領域 -->
-        <MessageList
-            v-if="!showHistoryList"
-            ref="messageListRef"
-            :messages="messages"
-            :isSecretMode="isSecretMode"
-            @open-image="openImageModal"
-            @use-i2i="useAsI2iSource"
-            @delete-message="deleteMessage"
-        />
-
-        <!-- 履歴スレッド一覧領域 -->
-        <HistoryPanel
-            v-else
-            :sessions="sessions"
-            :activeSessionId="activeSessionId"
-            @select-session="selectSession"
-            @delete-session="({ sessionId, event }) => deleteSession(sessionId, event)"
-        />
-
-        <!-- コンパクトモード時のマスコット領域 -->
-        <div v-if="!showHistoryList && windowMode === 'compact'" class="compact-mascot-container">
-            <MascotViewer />
+        <!-- コンパクト表示かつタスク表示ONのときは画面切り替え -->
+        <div v-if="showTaskManagement && windowMode === 'compact'" class="task-management-section">
+            <TaskManagement />
         </div>
 
-        <!-- フッター（入力・送信） -->
-        <ChatInputForm
-            v-if="!showHistoryList"
-            v-model:inputText="inputText"
-            v-model:imageGenMode="imageGenMode"
-            :isSecretMode="isSecretMode"
-            :pendingAttachments="pendingAttachments"
-            @attach-files="attachFiles"
-            @remove-attachment="removeAttachment"
-            @submit="handleFormSubmit"
-        />
+        <template v-else>
+            <!-- メッセージスクロール領域 -->
+            <MessageList
+                v-if="!showHistoryList"
+                ref="messageListRef"
+                :messages="messages"
+                :isSecretMode="isSecretMode"
+                @open-image="openImageModal"
+                @use-i2i="useAsI2iSource"
+                @delete-message="deleteMessage"
+            />
+
+            <!-- 履歴スレッド一覧領域 -->
+            <HistoryPanel
+                v-else
+                :sessions="sessions"
+                :activeSessionId="activeSessionId"
+                @select-session="selectSession"
+                @delete-session="({ sessionId, event }) => deleteSession(sessionId, event)"
+            />
+
+            <!-- コンパクトモード時のマスコット領域 -->
+            <div v-if="!showHistoryList && windowMode === 'compact'" class="compact-mascot-container">
+                <MascotViewer />
+            </div>
+
+            <!-- フッター（入力・送信） -->
+            <ChatInputForm
+                v-if="!showHistoryList"
+                v-model:inputText="inputText"
+                v-model:imageGenMode="imageGenMode"
+                :isSecretMode="isSecretMode"
+                :pendingAttachments="pendingAttachments"
+                @attach-files="attachFiles"
+                @remove-attachment="removeAttachment"
+                @submit="handleFormSubmit"
+            />
+        </template>
 
         <!-- 画像拡大モーダル -->
         <AttachmentImageModal :url="activeImageUrl" @close="activeImageUrl = null" @use-i2i="useAsI2iSource" />
@@ -615,6 +644,12 @@ const focusWindow = () => {
 .chat-wrapper.secret-mode .chat-background {
     opacity: 0.15 !important;
     background-color: #0f0b21 !important;
+}
+
+.task-management-section {
+    flex-grow: 1;
+    overflow: hidden;
+    height: 0;
 }
 </style>
 

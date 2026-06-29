@@ -8,11 +8,13 @@ import radioIcon from '../../assets/radio_icon.svg';
 const props = defineProps<{
     imageGenMode: 't2i' | 'i2i' | null;
     showHistoryList: boolean;
+    showTaskManagement: boolean;
 }>();
 
 const emit = defineEmits<{
     (e: 'update:imageGenMode', value: 't2i' | 'i2i' | null): void;
     (e: 'update:showHistoryList', value: boolean): void;
+    (e: 'update:showTaskManagement', value: boolean): void;
     (e: 'clear-history'): void;
     (e: 'open-image-gen-dialog'): void;
 }>();
@@ -165,6 +167,9 @@ onUnmounted(() => {
             </div>
             <button class="icon-btn" @click="mascotStore.setRadioMode(!isRadioMode)" :class="{ 'active-radio-btn': isRadioMode, 'secret-mode': isSecretMode }" title="ラジオモード ON/OFF">
                 <img :src="radioIcon" class="radio-svg-icon" :class="{ 'active-radio-btn': isRadioMode }" alt="ラジオ" />
+            </button>
+            <button class="icon-btn" @click="emit('update:showTaskManagement', !showTaskManagement)" :class="{ 'active-btn': showTaskManagement, 'secret-mode': isSecretMode }" title="タスク管理 ON/OFF">
+                <i class="pi pi-check-square"></i>
             </button>
             <button class="icon-btn" @click="triggerClearHistory" :class="{ 'secret-mode': isSecretMode }" title="新規話題"><i class="pi pi-plus"></i></button>
             <button class="icon-btn" @click="toggleHistory" :class="{ 'active-btn': showHistoryList, 'secret-mode': isSecretMode }" title="履歴一覧"><i class="pi pi-history"></i></button>

@@ -2,10 +2,13 @@
 import { computed } from 'vue';
 import MascotViewer from '../MascotViewer.vue';
 import ChatPanel from '../ChatPanel.vue';
+import TaskManagement from '../TaskManagement.vue';
 import { useConfigStore } from '../../store/config';
+import { useTaskStore } from '../../store/task';
 import { storeToRefs } from 'pinia';
 
 const configStore = useConfigStore();
+const taskStore = useTaskStore();
 const { 
     windowMode,
     integratedBackgroundColor,
@@ -18,6 +21,8 @@ const {
     serverPort,
     configVersion
 } = storeToRefs(configStore);
+
+const { showTaskWidget } = storeToRefs(taskStore);
 
 // アセットURLの解決
 const resolveImageUrl = (path: string | undefined | null): string => {
@@ -107,6 +112,9 @@ const integratedBackgroundStyle = computed(() => {
         <div class="chat-section" :class="{ 'is-compact': windowMode === 'compact' }">
             <ChatPanel />
         </div>
+        
+        <!-- タスク管理フローティングウィジェット -->
+        <TaskManagement v-if="showTaskWidget" />
     </div>
 </template>
 

@@ -10,9 +10,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // チャットウィンドウの表示・非表示のトグルを送信
     toggleChat: () => ipcRenderer.send('toggle-chat'),
+
+    // タスクウィンドウの表示・非表示のトグルを送信
+    toggleTasks: () => ipcRenderer.send('toggle-tasks-window'),
     
     // チャットウィンドウのサイズ変更を送信
     resizeChatWindow: (size: { width: number; height: number }) => ipcRenderer.send('resize-chat-window', size),
+
+    // 汎用ウィンドウサイズ変更の送信
+    resizeWindow: (size: { width: number; height: number }) => ipcRenderer.send('resize-window', size),
     
     // 設定画面を開くリクエストを送信
     openSettings: () => ipcRenderer.send('open-settings'),
