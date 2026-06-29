@@ -26,6 +26,27 @@ const newSubTaskTitleMap = ref<Record<string, string>>({});
 // インプレース編集用ステート
 const editingTaskId = ref<string | null>(null);
 const editingSubTaskId = ref<string | null>(null);
+const activeCalendarTaskId = ref<string | null>(null);
+
+const getDatetimeLocalString = (isoString?: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+    return localISOTime;
+};
+
+const handleDateChange = (taskId: string, event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const val = target.value;
+    if (val) {
+        const date = new Date(val);
+        taskStore.updateTask(taskId, { scheduledAt: date.toISOString() });
+    } else {
+        taskStore.updateTask(taskId, { scheduledAt: undefined });
+    }
+    activeCalendarTaskId.value = null;
+};
 const editingTitle = ref('');
 
 // 新規カテゴリ名
@@ -383,6 +404,16 @@ const formatTime = (isoString: string) => {
         return '';
     }
 };
+
+const formatScheduledDate = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    } catch {
+        return '';
+    }
+};
 </script>
 
 <template>
@@ -436,6 +467,7 @@ const formatTime = (isoString: string) => {
                     v-for="task in taskStore.filteredTasks" 
                     :key="task.id"
                     class="task-card"
+                    :class="{ 'status-doing': task.status === 'doing', 'status-done': task.completed }"
                     draggable="true"
                     @dragstart="onDragStart(task.id)"
                     @dragover="onDragOver"
@@ -453,8 +485,9 @@ const formatTime = (isoString: string) => {
                             <i :class="task.completed ? 'pi pi-check-circle checked' : 'pi pi-circle-off unchecked'"></i>
                         </div>
 
-                        <!-- タイトル -->
-                        <div class="task-title-container flex-grow-1" style="display: flex; align-items: center; overflow: hidden; min-width: 0;">
+                        <!-- タイトル ＆ 進行中バッジ -->
+                        <div class="task-title-container flex-grow-1" style="display: flex; align-items: center; overflow: hidden; min-width: 0; gap: 6px;">
+                            <span v-if="task.status === 'doing'" class="doing-badge-pill">進行中</span>
                             <span 
                                 v-if="editingTaskId !== task.id || editingSubTaskId !== null"
                                 class="task-title" 
@@ -490,6 +523,34 @@ const formatTime = (isoString: string) => {
                             {{ task.steps.filter(s => s.completed).length }}/{{ task.steps.length }} Steps
                         </div>
 
+                        <!-- 開始・終了ボタン -->
+                        <button 
+                            v-if="task.status === 'todo' && !task.completed"
+                            class="action-icon-btn start-task-btn" 
+                            @click="taskStore.startTask(task.id)"
+                            title="タスクを開始（着手）"
+                        >
+                            <i class="pi pi-play"></i>
+                        </button>
+                        <button 
+                            v-else-if="task.status === 'doing'"
+                            class="action-icon-btn complete-task-btn" 
+                            @click="taskStore.completeTask(task.id)"
+                            title="タスクを終了（完了）"
+                        >
+                            <i class="pi pi-stop"></i>
+                        </button>
+
+                        <!-- カレンダー設定ボタン (未設定時のみ) -->
+                        <button 
+                            v-if="!task.scheduledAt"
+                            class="action-icon-btn calendar-set-btn" 
+                            @click="activeCalendarTaskId = task.id"
+                            title="実施予定日時を設定"
+                        >
+                            <i class="pi pi-calendar"></i>
+                        </button>
+
                         <!-- 優先度切り替え -->
                         <button 
                             class="priority-btn" 
@@ -517,6 +578,30 @@ const formatTime = (isoString: string) => {
                             @click="taskStore.deleteTask(task.id)"
                             title="タスクを削除"
                         />
+                    </div>
+
+                    <!-- 予定日時 & カレンダー設定用サブ行 -->
+                    <div class="task-schedule-row" v-if="task.scheduledAt || activeCalendarTaskId === task.id">
+                        <div v-if="activeCalendarTaskId !== task.id" class="scheduled-display" @click="activeCalendarTaskId = task.id" title="クリックして予定を変更">
+                            <i class="pi pi-calendar-times icon-cal"></i>
+                            <span class="scheduled-time">{{ formatScheduledDate(task.scheduledAt) }}</span>
+                            <Button 
+                                icon="pi pi-times" 
+                                class="p-button-text p-button-danger p-button-xs date-clear-btn" 
+                                @click.stop="taskStore.updateTask(task.id, { scheduledAt: undefined })" 
+                                title="予定をクリア" 
+                            />
+                        </div>
+                        <div v-else class="scheduled-picker-wrapper">
+                            <input 
+                                type="datetime-local" 
+                                :value="getDatetimeLocalString(task.scheduledAt)" 
+                                class="datetime-picker-input"
+                                @change="handleDateChange(task.id, $event)"
+                                @blur="activeCalendarTaskId = null"
+                                v-focus
+                            />
+                        </div>
                     </div>
 
                     <!-- サブタスク（Step）展開エリア -->
@@ -1399,5 +1484,125 @@ const formatTime = (isoString: string) => {
 
 .opacity-slider {
     flex-grow: 1;
+}
+
+/* 開始・終了・カレンダー関連 */
+.action-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 13px;
+    color: #64748b;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    width: 24px;
+    height: 24px;
+}
+
+.action-icon-btn:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.start-task-btn {
+    color: #10b981; /* 緑 */
+}
+.start-task-btn:hover {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.complete-task-btn {
+    color: #ef4444; /* 赤 */
+}
+.complete-task-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.calendar-set-btn {
+    color: #3b82f6; /* 青 */
+}
+.calendar-set-btn:hover {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+/* 進行中のタスクスタイル */
+.task-card.status-doing {
+    border-left: 3px solid #f59e0b; /* オレンジ色の左枠線 */
+    background: #fffbeb; /* 薄いオレンジの背景 */
+}
+
+.doing-badge-pill {
+    font-size: 9px;
+    font-weight: 600;
+    color: #d97706;
+    background: #fef3c7;
+    padding: 2px 5px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    border: 1px solid #fde68a;
+}
+
+/* 予定日時行 */
+.task-schedule-row {
+    padding: 2px 12px 6px 36px;
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+}
+
+.scheduled-display {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    border: 1px dashed #bfdbfe;
+}
+
+.scheduled-display:hover {
+    background: #dbeafe;
+}
+
+.icon-cal {
+    font-size: 10px;
+}
+
+.date-clear-btn {
+    width: 14px !important;
+    height: 14px !important;
+    padding: 0 !important;
+    font-size: 8px !important;
+}
+
+.scheduled-picker-wrapper {
+    width: 100%;
+}
+
+.datetime-picker-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: #334155;
+    background: #ffffff;
+    width: 170px;
+    height: 24px;
+}
+
+.datetime-picker-input:focus {
+    border-color: #3b82f6;
+    outline: none;
 }
 </style>

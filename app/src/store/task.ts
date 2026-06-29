@@ -27,6 +27,10 @@ export interface Task {
     expanded?: boolean;
     order: number;
     createdAt: string;
+    status?: 'todo' | 'doing' | 'done';
+    startedAt?: string;
+    endedAt?: string;
+    scheduledAt?: string;
 }
 
 export const useTaskStore = defineStore('task', () => {
@@ -173,7 +177,8 @@ export const useTaskStore = defineStore('task', () => {
             steps: [],
             expanded: false,
             order,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            status: 'todo'
         });
     };
 
@@ -192,11 +197,39 @@ export const useTaskStore = defineStore('task', () => {
         const task = tasks.value.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
+            task.status = task.completed ? 'done' : 'todo';
+            if (task.completed) {
+                task.endedAt = new Date().toISOString();
+            } else {
+                task.endedAt = undefined;
+            }
             // 親タスクが完了になった場合、配下のサブタスクをすべて完了（done）にする。
             // 未完了になった場合は、配下のサブタスクをすべて未完了（todo）にする。
             task.steps.forEach(step => {
                 step.completed = task.completed;
                 step.status = task.completed ? 'done' : 'todo';
+            });
+        }
+    };
+
+    const startTask = (id: string) => {
+        const task = tasks.value.find(t => t.id === id);
+        if (task) {
+            task.status = 'doing';
+            task.startedAt = new Date().toISOString();
+            task.completed = false;
+        }
+    };
+
+    const completeTask = (id: string) => {
+        const task = tasks.value.find(t => t.id === id);
+        if (task) {
+            task.status = 'done';
+            task.completed = true;
+            task.endedAt = new Date().toISOString();
+            task.steps.forEach(step => {
+                step.completed = true;
+                step.status = 'done';
             });
         }
     };
@@ -295,6 +328,8 @@ export const useTaskStore = defineStore('task', () => {
         updateTask,
         deleteTask,
         toggleTask,
+        startTask,
+        completeTask,
         updateTasksOrder,
         addSubTask,
         deleteSubTask,
