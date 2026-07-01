@@ -11,7 +11,7 @@ import { useMascotSettings } from './composables/useMascotSettings';
 import MascotVerticalList from './components/MascotVerticalList.vue';
 import MascotProfileSettings from './mascot/MascotProfileSettings.vue';
 import MascotOutfitSettngs from './mascot/MascotOutfitSettngs.vue';
-import ExpressionEditorModal from './mascot/ExpressionEditorModal.vue';
+import ExpressionEditor from './mascot/ExpressionEditor.vue';
 import EmotionAssignmentModal from './mascot/EmotionAssignmentModal.vue';
 import ImageCropModal from './mascot/ImageCropModal.vue';
 import AiExpressionGeneratorModal from './mascot/AiExpressionGeneratorModal.vue';
@@ -297,7 +297,15 @@ watch(() => props.mascots, () => {
 </script>
 
 <template>
-    <div class="mascot-settings-container" :class="{ 'show-detail-mobile': showDetailOnMobile }">
+    <ExpressionEditor
+        v-if="isEditingExpressionsModal"
+        :editing-mascot="editingMascot"
+        :active-outfit="activeOutfit"
+        :active-pose="activePose"
+        :default-front-avatar="defaultFrontAvatar"
+        @back-to-settings="isEditingExpressionsModal = false"
+    />
+    <div v-else class="mascot-settings-container" :class="{ 'show-detail-mobile': showDetailOnMobile }">
         <!-- 左側: マスコットリスト -->
         <MascotVerticalList
             :mascots="mascots"
@@ -453,19 +461,7 @@ watch(() => props.mascots, () => {
         </div>
     </div>
 
-    <!-- 表情大画面エディタモーダル -->
-    <ExpressionEditorModal 
-        :visible="isEditingExpressionsModal"
-        :editing-mascot="editingMascot"
-        :active-outfit="activeOutfit"
-        :active-pose="activePose"
-        :default-front-avatar="defaultFrontAvatar"
-        @close="closeExpressionEditModal"
-        @live-update="syncAndSave"
-        @clear-expression="handleClearExpression"
-        @crop-current="handleCropCurrent"
-        @crop-new="handleCropNew"
-    />
+    <!-- ExpressionEditorModal was replaced by the full-screen ExpressionEditor component above -->
 
     <!-- AI表情スプライト感情割り当てモーダル -->
     <EmotionAssignmentModal 

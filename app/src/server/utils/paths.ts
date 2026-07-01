@@ -21,7 +21,7 @@ export const USERS_FILE_PATH = path.join(PROJECT_ROOT, 'storage/users.json');
 
 // Python関連
 export const VISION_DIR = path.join(PROJECT_ROOT, 'python-services/vision');
-export const PYTHON_DIR = path.join(PROJECT_ROOT, 'python-services/python');
+export const PYTHON_DIR = path.join(PROJECT_ROOT, 'python-services');
 
 // 設定・履歴テンプレート
 export const CONFIG_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'config.json');
