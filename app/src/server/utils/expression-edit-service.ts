@@ -2,7 +2,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import fs from 'node:fs';
-import { PYTHON_DIR, resolveMascotPath } from './paths';
+import { PYTHON_DIR, resolveMascotPath, PROJECT_ROOT } from './paths';
+import { uploadImage, runWorkflow } from './comfy-connector';
 
 const execFileAsync = promisify(execFile);
 
@@ -22,7 +23,103 @@ function resolveImagePath(imagePath: string): string {
 /**
  * のっぺらぼう画像を自動生成する。
  */
-export async function generateNofaceImage(inputPath: string, outputPath: string): Promise<string> {
+async function generateNofaceWithComfyUI(inputPath: string, outputPath: string, prompt: string): Promise<string> {
+    const absInput = resolveImagePath(inputPath);
+    const absOutput = resolveImagePath(outputPath);
+
+    const imageBuffer = fs.readFileSync(absInput);
+    const ext = path.extname(absInput).substring(1) || 'png';
+    const filename = `noface_in_${Date.now()}.${ext}`;
+
+    // 1. 画像アップロード
+    const uploadedFileName = await uploadImage(imageBuffer, filename);
+
+    // 2. ワークフローの書き換え
+    const workflowPath = path.join(PROJECT_ROOT, 'aiservice/image/comfy_workflows/qwen3_image_edit_workflow.json');
+    if (!fs.existsSync(workflowPath)) {
+        throw new Error(`Workflow template not found at ${workflowPath}`);
+    }
+    const workflowJson = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
+
+    if (workflowJson['41'] && workflowJson['41'].inputs) {
+        workflowJson['41'].inputs.image = uploadedFileName;
+    }
+    if (workflowJson['89:68'] && workflowJson['89:68'].inputs) {
+        workflowJson['89:68'].inputs.prompt = prompt;
+    }
+
+    // 3. 実行して保存
+    console.log(`[ComfyUI] Running Inpainting workflow for noface generation with prompt: ${prompt}`);
+    const resultBuffer = await runWorkflow(workflowJson);
+    fs.writeFileSync(absOutput, resultBuffer);
+
+    return outputPath;
+}
+
+async function generateNofaceWithGemini(
+    inputPath: string,
+    outputPath: string,
+    prompt: string,
+    apiKey: string
+): Promise<string> {
+    const absInput = resolveImagePath(inputPath);
+    const absOutput = resolveImagePath(outputPath);
+
+    const imageBuffer = fs.readFileSync(absInput);
+    const rawBase64 = imageBuffer.toString('base64');
+    const mimeType = 'image/png';
+
+    const model = 'gemini-3.1-flash-image';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const contents = [{
+        role: 'user',
+        parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType, data: rawBase64 } }
+        ]
+    }];
+
+    console.log(`[Gemini] Requesting noface generation with model ${model} and prompt: ${prompt}`);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents,
+            generationConfig: { responseModalities: ["IMAGE"] }
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API Error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json() as any;
+    const resParts = data.candidates?.[0]?.content?.parts || [];
+    const imagePart = resParts.find((p: any) => p.inlineData);
+
+    if (!imagePart) {
+        throw new Error('Gemini did not return any image data.');
+    }
+
+    const resultBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+    fs.writeFileSync(absOutput, resultBuffer);
+
+    return outputPath;
+}
+
+/**
+ * のっぺらぼう画像を自動生成する。
+ */
+export async function generateNofaceImage(
+    inputPath: string,
+    outputPath: string,
+    detectMode = 'ai',
+    engine = 'mediapipe',
+    prompt = '',
+    geminiApiKey = ''
+): Promise<string> {
     const absInput = resolveImagePath(inputPath);
     const absOutput = resolveImagePath(outputPath);
 
@@ -33,9 +130,19 @@ export async function generateNofaceImage(inputPath: string, outputPath: string)
         throw new Error(`Input image not found: ${absInput}`);
     }
 
+    if (engine === 'comfy') {
+        return await generateNofaceWithComfyUI(inputPath, outputPath, prompt || 'Remove eyes, eyebrows, mouth, and nose from the face, making the face completely blank/faceless. Keep all other parts like hair, clothes, and outline exactly the same.');
+    } else if (engine === 'gemini') {
+        if (!geminiApiKey) {
+            throw new Error('Gemini API Key is required for Gemini engine');
+        }
+        return await generateNofaceWithGemini(inputPath, outputPath, prompt || '目、眉、口、鼻を完全に消去し、周囲の肌色と滑らかに馴染ませた「のっぺらぼう」の顔にしてください。髪や輪郭、服、ポーズ、背景などは一切変更せず、完全に元のままとし、顔のパーツ（目・眉・口・鼻）の領域だけを周囲の肌色で自然に埋めてください。最終的な画像のみを出力してください。', geminiApiKey);
+    }
+
+    // 従来の MediaPipe / OpenCV を使用した画像処理
     const { stdout } = await execFileAsync(
         PYTHON_BIN,
-        [NOFACE_SCRIPT, absInput, absOutput],
+        [NOFACE_SCRIPT, absInput, absOutput, '--mode', detectMode],
         { timeout: 30_000 }
     );
 

@@ -35,6 +35,7 @@ const props = defineProps<{
     activeOutfit: MascotAsset | null;
     activePose: MascotAsset | null;
     defaultFrontAvatar: MascotAsset | null;
+    geminiApiKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -84,8 +85,30 @@ const animationSpeed = ref(1.0);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let ctx: CanvasRenderingContext2D | null = null;
 const isDrawing = ref(false);
+const originalImageObj = ref<HTMLImageElement | null>(null);
 
 const isDetectingFace = ref(false);
+
+const generateEngine = ref<'mediapipe' | 'gemini' | 'comfy'>('mediapipe');
+
+const defaultPrompts = {
+    gemini: '目、眉、口、鼻を完全に消去し、周囲の肌色と滑らかに馴染ませた「のっぺらぼう」の顔にしてください。髪や輪郭、服、ポーズ、背景などは一切変更せず、完全に元のままとし、顔のパーツ（目・眉・口・鼻）の領域だけを周囲の肌色で自然に埋めてください。最終的な画像のみを出力してください。',
+    comfy: 'Remove eyes, eyebrows, mouth, and nose from the face, making the face completely blank/faceless. Keep all other parts like hair, clothes, and outline exactly the same.'
+};
+
+const nofacePrompt = ref(defaultPrompts.gemini);
+
+const geminiApiKey = computed(() => {
+    return props.geminiApiKey || configStore.googleAiStudioApiKey || '';
+});
+
+watch(generateEngine, (newEngine) => {
+    if (newEngine === 'gemini') {
+        nofacePrompt.value = defaultPrompts.gemini;
+    } else if (newEngine === 'comfy') {
+        nofacePrompt.value = defaultPrompts.comfy;
+    }
+});
 
 // 元画像から顔領域を自動検出して初期ガイド枠を設定
 const initFaceGuide = async () => {
@@ -137,7 +160,11 @@ const generateAndNext = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 mascotId: props.editingMascot.id,
-                inputPath: baseMascotImageUrl.value
+                inputPath: baseMascotImageUrl.value,
+                detectMode: detectMode.value,
+                engine: generateEngine.value,
+                prompt: nofacePrompt.value,
+                geminiApiKey: geminiApiKey.value
             })
         });
         const data = await response.json();
@@ -163,6 +190,106 @@ const generateAndNext = async () => {
         isGeneratingNoface.value = false;
     }
 };
+
+// のっぺらぼう画像を再生成する
+const reprocessNoface = async () => {
+    if (isGeneratingNoface.value) return;
+    isGeneratingNoface.value = true;
+    try {
+        const response = await fetch('/api/mascots/generate-noface', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mascotId: props.editingMascot.id,
+                inputPath: baseMascotImageUrl.value,
+                detectMode: detectMode.value,
+                engine: generateEngine.value,
+                prompt: nofacePrompt.value,
+                geminiApiKey: geminiApiKey.value
+            })
+        });
+        const data = await response.json();
+        if (data.success && data.path) {
+            nofaceImagePath.value = data.path;
+            nofaceCacheQuery.value = Date.now();
+            
+            await nextTick();
+            await initCanvas(data.path);
+        } else {
+            console.error('Failed to regenerate noface:', data.error);
+            alert('のっぺらぼう画像の生成に失敗しました: ' + (data.error || '不明なエラー'));
+        }
+    } catch (e) {
+        console.error('Error regenerating noface:', e);
+        alert('のっぺらぼう画像生成中にエラーが発生しました。');
+    } finally {
+        isGeneratingNoface.value = false;
+    }
+};
+
+// Canvasの物理解像度に合わせて顔ガイド座標をスケール変換する
+const convertedFaceGuide = computed(() => {
+    const baseW = baseNaturalWidth.value || 768;
+    const baseH = baseNaturalHeight.value || 1280;
+    
+    const guideBaseW = faceGuide.value?.baseWidth || baseW;
+    const guideBaseH = faceGuide.value?.baseHeight || baseH;
+    
+    const scaleX = baseW / guideBaseW;
+    const scaleY = baseH / guideBaseH;
+    
+    return {
+        x: (faceGuide.value?.x !== undefined ? faceGuide.value.x : (guideBaseW / 2)) * scaleX,
+        y: (faceGuide.value?.y !== undefined ? faceGuide.value.y : (guideBaseH / 2)) * scaleY,
+        width: (faceGuide.value?.width !== undefined ? faceGuide.value.width : 250) * scaleX,
+        height: (faceGuide.value?.height !== undefined ? faceGuide.value.height : 250) * scaleY
+    };
+});
+
+// 顔周辺のズーム倍率を計算する
+const zoom = computed(() => {
+    if (!baseNaturalWidth.value) return 2.0;
+    // 変換後の顔幅の約2.5倍の領域を表示するようにスケールを決定
+    const targetWidth = convertedFaceGuide.value.width * 2.5;
+    return Math.max(1.5, Math.min(4.0, baseNaturalWidth.value / targetWidth));
+});
+
+// CanvasおよびSVGの位置・ズームを正確に中央配置するスタイル
+const canvasStyle = computed(() => {
+    const zoomVal = zoom.value || 2.0;
+    const scale = displayScale.value || 1.0;
+    const baseW = baseNaturalWidth.value || 768;
+    const baseH = baseNaturalHeight.value || 1280;
+    const fgX = convertedFaceGuide.value.x;
+    const fgY = convertedFaceGuide.value.y;
+
+    const dx = (baseW / 2 - fgX) * scale;
+    const dy = (baseH / 2 - fgY) * scale;
+    
+    const style = {
+        width: `${baseW * scale}px`,
+        height: `${baseH * scale}px`,
+        transform: `translate(-50%, -50%) scale(${zoomVal}) translate(${dx}px, ${dy}px)`,
+        left: '50%',
+        top: '50%',
+        position: 'absolute' as const,
+        transformOrigin: 'center center'
+    };
+    
+    console.log('[canvasStyle] debug info:', {
+        zoomVal,
+        scale,
+        baseW,
+        baseH,
+        fgX,
+        fgY,
+        dx,
+        dy,
+        styleString: style.transform
+    });
+    
+    return style;
+});
 
 // 画面表示時に自動でのっぺらぼう生成を実行
 import { onMounted, onUnmounted, watch } from 'vue';
@@ -238,6 +365,23 @@ const resolvedNofaceUrl = computed(() => {
 
 // Canvasへの画像読み込みと描画
 const initCanvas = async (imagePath: string) => {
+    // オリジナル画像のロード（消しゴム用）
+    if (baseMascotImageUrl.value) {
+        const origImg = new Image();
+        origImg.crossOrigin = 'anonymous';
+        origImg.src = `${resolveImageUrl(baseMascotImageUrl.value)}?t=${Date.now()}`;
+        await new Promise((resolve) => {
+            origImg.onload = () => {
+                originalImageObj.value = origImg;
+                resolve(null);
+            };
+            origImg.onerror = () => {
+                console.warn('Failed to load original image for eraser function.');
+                resolve(null);
+            };
+        });
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = `${resolveImageUrl(imagePath)}?t=${Date.now()}`;
@@ -328,7 +472,43 @@ const handleNext = async () => {
 
 // レタッチブラシ設定 (Step 1)
 const brushSize = ref(15);
-const activeTool = ref<'brush' | 'eraser'>('brush');
+const activeTool = ref<'brush' | 'eraser' | 'polygon'>('brush');
+const selectionPoints = ref<{ x: number; y: number }[]>([]);
+
+const changeTool = (tool: 'brush' | 'eraser' | 'polygon') => {
+    activeTool.value = tool;
+    selectionPoints.value = [];
+};
+
+const applyPolygonFill = (action: 'fill' | 'restore') => {
+    if (selectionPoints.value.length < 3 || !ctx || !canvasRef.value) return;
+    
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(selectionPoints.value[0].x, selectionPoints.value[0].y);
+    for (let i = 1; i < selectionPoints.value.length; i++) {
+        ctx.lineTo(selectionPoints.value[i].x, selectionPoints.value[i].y);
+    }
+    ctx.closePath();
+    ctx.clip();
+    
+    if (action === 'fill') {
+        // 重心の周辺から肌色を取得
+        let sumX = 0, sumY = 0;
+        selectionPoints.value.forEach(p => { sumX += p.x; sumY += p.y; });
+        const cx = Math.round(sumX / selectionPoints.value.length);
+        const cy = Math.round(sumY / selectionPoints.value.length);
+        const color = getLocalSkinColor(cx, cy);
+        
+        ctx.fillStyle = color;
+        ctx.fill();
+    } else if (action === 'restore' && originalImageObj.value) {
+        ctx.drawImage(originalImageObj.value, 0, 0);
+    }
+    
+    ctx.restore();
+    selectionPoints.value = [];
+};
 
 // Canvas上でのドラッグ座標取得ヘルパー
 const getCanvasCoords = (event: MouseEvent) => {
@@ -386,7 +566,14 @@ const getLocalSkinColor = (x: number, y: number): string => {
 
 // マウスイベントハンドラー
 const startDrawing = (event: MouseEvent) => {
-    if (currentStep.value !== 1 || !ctx) return;
+    if (currentStep.value !== 2 || !ctx) return;
+    
+    if (activeTool.value === 'polygon') {
+        const { x, y } = getCanvasCoords(event);
+        selectionPoints.value.push({ x, y });
+        return;
+    }
+    
     isDrawing.value = true;
     draw(event);
 };
@@ -403,11 +590,13 @@ const draw = (event: MouseEvent) => {
     ctx.save();
     
     if (activeTool.value === 'eraser') {
-        // 消しゴム (アルファ透過)
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, pixelRadius, 0, Math.PI * 2);
-        ctx.fill();
+        // 消しゴム (オリジナル画像の重ね合わせ復元)
+        if (originalImageObj.value) {
+            ctx.beginPath();
+            ctx.arc(x, y, pixelRadius, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(originalImageObj.value, 0, 0);
+        }
     } else {
         // 修復ブラシ (周辺肌色のスポイトと塗りつぶし)
         ctx.globalCompositeOperation = 'source-over';
@@ -646,8 +835,11 @@ const updateDisplayScale = async () => {
     let displayedWidth = 0;
     if (currentStep.value === 1 && originalImageRef.value) {
         displayedWidth = originalImageRef.value.clientWidth;
-    } else if (currentStep.value === 2 && canvasRef.value) {
-        displayedWidth = canvasRef.value.clientWidth;
+    } else if (currentStep.value === 2) {
+        // 高さ500pxのアスペクト比から幅を逆算して循環参照を防ぐ
+        if (baseNaturalHeight.value > 0) {
+            displayedWidth = 500 * (baseNaturalWidth.value / baseNaturalHeight.value);
+        }
     } else if (baseImageRef.value) {
         displayedWidth = baseImageRef.value.clientWidth;
     }
@@ -681,8 +873,12 @@ const resetAlign = () => {
     selectedExpression.value.rotation = 0;
 };
 
-watch(currentStep, () => {
+watch(currentStep, async (newStep) => {
+    await nextTick();
     updateDisplayScale();
+    if (newStep === 2 && nofaceImagePath.value) {
+        await initCanvas(nofaceImagePath.value);
+    }
 });
 </script>
 
@@ -791,8 +987,24 @@ watch(currentStep, () => {
                             この調整結果が、目・口を消した「のっぺらぼう画像」の自動生成や、ステップ3での表情パーツ位置合わせの正確な基準位置として使用されます。
                         </p>
 
-                        <!-- 顔領域の検出方式 -->
+                        <!-- のっぺらぼう生成方式 -->
                         <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">のっぺらぼう生成エンジン</span>
+                            <Dropdown 
+                                v-model="generateEngine" 
+                                :options="[
+                                    { label: 'ローカル画像処理 (MediaPipe/OpenCV)', value: 'mediapipe' },
+                                    { label: 'マルチモーダルAI (Gemini)', value: 'gemini' },
+                                    { label: '画像生成AI (ComfyUI)', value: 'comfy' }
+                                ]" 
+                                optionLabel="label" 
+                                optionValue="value" 
+                                class="w-full text-sm"
+                            />
+                        </div>
+
+                        <!-- 顔領域の検出方式 (mediapipe エンジン時のみ表示) -->
+                        <div v-if="generateEngine === 'mediapipe'" class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
                             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">顔の検出方式</span>
                             <Dropdown 
                                 v-model="detectMode" 
@@ -805,6 +1017,17 @@ watch(currentStep, () => {
                                 class="w-full text-sm"
                                 @change="initFaceGuide"
                             />
+                        </div>
+
+                        <!-- AI用プロンプト (Gemini / ComfyUI エンジン時に表示) -->
+                        <div v-if="generateEngine !== 'mediapipe'" class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">AI消去用プロンプト</span>
+                            <textarea 
+                                v-model="nofacePrompt" 
+                                rows="4" 
+                                class="w-full text-xs p-2 border border-slate-300 rounded focus:ring-primary-500 focus:border-primary-500 bg-white"
+                                placeholder="消去指示プロンプトを入力してください"
+                            ></textarea>
                         </div>
 
                         <!-- 顔領域ガイドトグル -->
@@ -844,26 +1067,50 @@ watch(currentStep, () => {
             <!-- STEP 2: のっぺらぼう確認 -->
             <div v-if="currentStep === 2" class="flex-1 flex flex-row">
                 <!-- 左側プレビュー -->
-                <div class="flex-1 bg-slate-100 p-6 flex items-center justify-center min-h-[400px] overflow-auto relative">
+                <div class="flex-1 bg-slate-100 p-6 flex items-center justify-center min-h-[400px] overflow-hidden relative">
                     <!-- ローディング表示 -->
                     <div v-if="isGeneratingNoface" class="absolute inset-0 bg-white/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 select-none">
                         <i class="pi pi-spin pi-spinner text-3xl text-primary-500 mb-2"></i>
                         <span class="text-sm font-medium text-slate-600">処理中...</span>
                     </div>
 
-                    <div class="relative max-w-full max-h-[600px] border border-slate-300 rounded shadow-md overflow-hidden bg-white">
+                    <div class="relative w-full h-[500px] border border-slate-300 rounded shadow-md overflow-hidden bg-white">
                         <canvas 
                             ref="canvasRef"
-                            class="max-h-[500px] object-contain cursor-crosshair block"
-                            style="max-width: 100%; height: auto;"
+                            class="cursor-crosshair block absolute"
+                            :style="canvasStyle"
                             @mousedown="startDrawing"
                             @mousemove="draw"
                             @mouseup="stopDrawing"
                             @mouseleave="stopDrawing"
                         ></canvas>
-                        <div class="absolute inset-0 bg-transparent flex items-center justify-center text-slate-400 pointer-events-none">
-                            [のっぺらぼうプレビュー]
-                        </div>
+                        <!-- SVG overlay for rendering polygon selection path -->
+                        <svg 
+                            v-if="activeTool === 'polygon' && selectionPoints.length > 0"
+                            class="absolute pointer-events-none"
+                            :style="canvasStyle"
+                        >
+                            <!-- 選択範囲のポリゴンパス -->
+                            <polygon 
+                                v-if="selectionPoints.length >= 2"
+                                :points="selectionPoints.map(p => `${p.x * displayScale},${p.y * displayScale}`).join(' ')"
+                                fill="rgba(56, 189, 248, 0.2)"
+                                stroke="rgb(56, 189, 248)"
+                                stroke-width="1.5"
+                                stroke-dasharray="4"
+                            />
+                            <!-- 頂点マーカー -->
+                            <circle 
+                                v-for="(p, idx) in selectionPoints"
+                                :key="idx"
+                                :cx="p.x * displayScale"
+                                :cy="p.y * displayScale"
+                                r="4"
+                                fill="white"
+                                stroke="rgb(14, 165, 233)"
+                                stroke-width="2"
+                            />
+                        </svg>
                     </div>
                 </div>
                 <!-- 右側設定パネル -->
@@ -874,20 +1121,87 @@ watch(currentStep, () => {
                             AIにより目・鼻・口を消去した顔の仕上がりを確認してください。消し残しがある場合は、画像の上を直接クリック（またはドラッグ）して手動で補正できます。
                         </p>
 
+                        <!-- のっぺらぼう生成方式 -->
+                        <div class="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">のっぺらぼう生成エンジン</span>
+                            <Dropdown 
+                                v-model="generateEngine" 
+                                :options="[
+                                    { label: 'ローカル画像処理 (MediaPipe/OpenCV)', value: 'mediapipe' },
+                                    { label: 'マルチモーダルAI (Gemini)', value: 'gemini' },
+                                    { label: '画像生成AI (ComfyUI)', value: 'comfy' }
+                                ]" 
+                                optionLabel="label" 
+                                optionValue="value" 
+                                class="w-full text-sm"
+                                @change="reprocessNoface"
+                            />
+                        </div>
+
+                        <!-- 顔領域の検出方式 (mediapipe エンジン時のみ表示) -->
+                        <div v-if="generateEngine === 'mediapipe'" class="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">顔の検出方式</span>
+                            <Dropdown 
+                                v-model="detectMode" 
+                                :options="[
+                                    { label: '汎用AIモデル (MediaPipe)', value: 'ai' },
+                                    { label: '二次元特化モデル (AnimeFace)', value: 'anime' }
+                                ]" 
+                                optionLabel="label" 
+                                optionValue="value" 
+                                class="w-full text-sm"
+                                @change="reprocessNoface"
+                            />
+                        </div>
+
+                        <!-- AI用プロンプト (Gemini / ComfyUI エンジン時に表示) -->
+                        <div v-if="generateEngine !== 'mediapipe'" class="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">AI消去用プロンプト</span>
+                            <textarea 
+                                v-model="nofacePrompt" 
+                                rows="4" 
+                                class="w-full text-xs p-2 border border-slate-300 rounded focus:ring-primary-500 focus:border-primary-500 bg-white"
+                                placeholder="消去指示プロンプトを入力してください"
+                            ></textarea>
+                            <Button 
+                                severity="secondary" 
+                                class="w-full py-1.5 text-xs font-medium border-slate-300 mt-1" 
+                                label="プロンプトを指定して再生成" 
+                                icon="pi pi-refresh" 
+                                :loading="isGeneratingNoface"
+                                @click="reprocessNoface"
+                            />
+                        </div>
+
                         <!-- レタッチツールボックス -->
                         <div class="space-y-4">
                             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">レタッチツール</span>
                             <div class="flex space-x-2">
-                                <Button :severity="activeTool === 'brush' ? 'primary' : 'secondary'" @click="activeTool = 'brush'" class="flex-1 py-2 font-medium" label="修復ブラシ" />
-                                <Button :severity="activeTool === 'eraser' ? 'primary' : 'secondary'" @click="activeTool = 'eraser'" class="flex-1 py-2 font-medium" label="消しゴム" />
+                                <Button :severity="activeTool === 'brush' ? 'primary' : 'secondary'" @click="changeTool('brush')" class="flex-1 py-2 font-medium text-xs" label="修復ブラシ" />
+                                <Button :severity="activeTool === 'eraser' ? 'primary' : 'secondary'" @click="changeTool('eraser')" class="flex-1 py-2 font-medium text-xs" label="消しゴム" />
+                                <Button :severity="activeTool === 'polygon' ? 'primary' : 'secondary'" @click="changeTool('polygon')" class="flex-1 py-2 font-medium text-xs" label="範囲選択" />
                             </div>
-                            <div class="space-y-2">
+                            <div v-show="activeTool !== 'polygon'" class="space-y-2">
                                 <div class="flex justify-between text-xs text-slate-500">
                                     <span>ブラシサイズ</span>
                                     <span>{{ brushSize }}px</span>
                                 </div>
                                 <Slider v-model="brushSize" :min="5" :max="50" class="w-full" />
                             </div>
+                        </div>
+
+                        <!-- 範囲選択操作ボックス -->
+                        <div v-if="activeTool === 'polygon'" class="mt-6 p-4 bg-sky-50 border border-sky-100 rounded-lg space-y-3">
+                            <span class="text-xs font-semibold text-sky-800 uppercase tracking-wider block">選択範囲のアクション (頂点: {{ selectionPoints.length }})</span>
+                            <div class="flex flex-col space-y-2">
+                                <Button severity="primary" class="w-full py-2 text-xs font-medium" label="選択範囲を塗りつぶす (消去)" icon="pi pi-clone" :disabled="selectionPoints.length < 3" @click="applyPolygonFill('fill')" />
+                                <Button severity="success" class="w-full py-2 text-xs font-medium" label="選択範囲を復元 (元に戻す)" icon="pi pi-undo" :disabled="selectionPoints.length < 3" @click="applyPolygonFill('restore')" />
+                                <div class="flex space-x-2">
+                                    <Button severity="secondary" class="flex-1 py-1.5 text-xs border-slate-300" label="1点戻す" icon="pi pi-arrow-left" :disabled="selectionPoints.length === 0" @click="selectionPoints.pop()" />
+                                    <Button severity="danger" class="flex-1 py-1.5 text-xs" label="クリア" icon="pi pi-trash" :disabled="selectionPoints.length === 0" @click="selectionPoints = []" />
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-500 leading-normal block">※画像上を3点以上クリックして領域を囲み、「塗りつぶす」または「復元」を実行してください。</span>
                         </div>
                     </div>
                     

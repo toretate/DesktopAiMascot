@@ -4,7 +4,14 @@ import { generateNofaceImage } from '../../utils/expression-edit-service';
 export default defineEventHandler(async (event) => {
     try {
         const body = await readBody(event);
-        const { mascotId, inputPath } = body as { mascotId?: string; inputPath?: string };
+        const { mascotId, inputPath, detectMode, engine, prompt, geminiApiKey } = body as {
+            mascotId?: string;
+            inputPath?: string;
+            detectMode?: string;
+            engine?: string;
+            prompt?: string;
+            geminiApiKey?: string;
+        };
 
         if (!mascotId || !inputPath) {
             throw createError({
@@ -16,8 +23,8 @@ export default defineEventHandler(async (event) => {
         // のっぺらぼう画像の保存先を決定
         const filename = `/mascots/users/usr_local_dev_bypass/${mascotId}/noface.png`;
 
-        console.log(`[Server] Generating noface image for ${mascotId} from ${inputPath}`);
-        const resultPath = await generateNofaceImage(inputPath, filename);
+        console.log(`[Server] Generating noface image for ${mascotId} from ${inputPath} with engine=${engine || 'mediapipe'} detectMode=${detectMode || 'ai'}`);
+        const resultPath = await generateNofaceImage(inputPath, filename, detectMode, engine, prompt, geminiApiKey);
 
         return { success: true, path: resultPath };
     } catch (error: any) {
