@@ -12,6 +12,7 @@ import MascotVerticalList from './components/MascotVerticalList.vue';
 import MascotProfileSettings from './mascot/MascotProfileSettings.vue';
 import MascotOutfitSettngs from './mascot/MascotOutfitSettngs.vue';
 import ExpressionEditor from './mascot/ExpressionEditor.vue';
+import ExpressionAnimationEditor from './mascot/ExpressionAnimationEditor.vue';
 import EmotionAssignmentModal from './mascot/EmotionAssignmentModal.vue';
 import ImageCropModal from './mascot/ImageCropModal.vue';
 import AiExpressionGeneratorModal from './mascot/AiExpressionGeneratorModal.vue';
@@ -98,6 +99,8 @@ const {
 
 // モーダル管理用の状態
 const isEditingExpressionsModal = ref(false);
+const editorInitialStep = ref(1);
+const isEditingAnimationModal = ref(false);
 const isCropModalActive = ref(false);
 const isAiGeneratingModalActive = ref(false);
 const isBackgroundRemovalModalActive = ref(false);
@@ -201,7 +204,10 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
 const cropImageSrc = ref('');
 const selectedCropExpression = ref<MascotAsset | null>(null);
 
-const openExpressionEditModal = () => { isEditingExpressionsModal.value = true; };
+const openExpressionEditModal = (step: number) => {
+    editorInitialStep.value = step;
+    isEditingExpressionsModal.value = true;
+};
 
 const closeExpressionEditModal = async () => {
     isEditingExpressionsModal.value = false;
@@ -303,6 +309,7 @@ watch(() => props.mascots, () => {
         :active-outfit="activeOutfit"
         :active-pose="activePose"
         :default-front-avatar="defaultFrontAvatar"
+        :initial-step="editorInitialStep"
         @back-to-settings="isEditingExpressionsModal = false"
     />
     <div v-else class="mascot-settings-container" :class="{ 'show-detail-mobile': showDetailOnMobile }">
@@ -373,15 +380,41 @@ watch(() => props.mascots, () => {
             <div class="detail-tab-content">
                 <!-- サブタブ中身: 表情アセット -->
                 <div v-if="activeMascotSubTab === 'expression'" class="flex flex-column gap-3">
-                    <div class="flex gap-2">
-                        <Button 
-                            icon="pi pi-sliders-h" 
-                            class="p-button-primary p-button-sm flex-1"
-                            @click="openExpressionEditModal"
-                        >
-                            <span class="desktop-text">表情編集</span>
-                            <span class="mobile-text">表情編集</span>
-                        </Button>
+                    <div class="grid w-full gap-1 m-0">
+                        <div class="col-6 p-1">
+                            <Button 
+                                label="1. 顔領域" 
+                                icon="pi pi-user" 
+                                class="p-button-outlined p-button-secondary p-button-sm w-full"
+                                @click="openExpressionEditModal(1)" 
+                            />
+                        </div>
+                        <div class="col-6 p-1">
+                            <Button 
+                                label="2. ベース顔生成" 
+                                icon="pi pi-sparkles" 
+                                class="p-button-outlined p-button-secondary p-button-sm w-full"
+                                @click="openExpressionEditModal(2)" 
+                            />
+                        </div>
+                        <div class="col-6 p-1">
+                            <Button 
+                                label="3. 表情位置" 
+                                icon="pi pi-sliders-h" 
+                                class="p-button-outlined p-button-primary p-button-sm w-full"
+                                @click="openExpressionEditModal(3)" 
+                            />
+                        </div>
+                        <div class="col-6 p-1">
+                            <Button 
+                                label="4. 表情アニメ" 
+                                icon="pi pi-video" 
+                                class="p-button-primary p-button-sm w-full"
+                                @click="isEditingAnimationModal = true" 
+                            />
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-2 w-full">
                         <Button 
                             v-if="scannedSprites.length > 0"
                             label="感情割り当て画面を開く" 
@@ -460,6 +493,17 @@ watch(() => props.mascots, () => {
             </div>
         </div>
     </div>
+
+    <!-- 表情アニメーション編集モーダル -->
+    <ExpressionAnimationEditor
+        :visible="isEditingAnimationModal"
+        :editing-mascot="editingMascot"
+        :active-outfit="activeOutfit"
+        :active-pose="activePose"
+        :default-front-avatar="defaultFrontAvatar"
+        @close="isEditingAnimationModal = false"
+        @live-update="syncAndSave"
+    />
 
     <!-- ExpressionEditorModal was replaced by the full-screen ExpressionEditor component above -->
 

@@ -43,7 +43,10 @@ export function resolveMascotPath(requestPath: string): string {
         const parts = decodedSubpath.split('/');
         const userId = parts[1];
         if (userId) {
-            const mascotSubpath = parts.slice(2).join('/');
+            let mascotSubpath = parts.slice(2).join('/');
+            if (mascotSubpath.startsWith('mascots/')) {
+                mascotSubpath = mascotSubpath.substring('mascots/'.length);
+            }
             return path.resolve(USERS_DIR, userId, 'mascots', mascotSubpath);
         }
     }

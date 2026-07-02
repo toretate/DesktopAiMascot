@@ -466,7 +466,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 return { success: false, error: e.message || 'スプライトシートの解析に失敗しました' };
             }
         },
-        alignExpression: async (basePath: string, expressionPath: string) => {
+        alignExpression: async (basePath: string, expressionPath: string, detectMode?: string) => {
             try {
                 const response = await fetch('/api/mascots/align-expression', {
                     method: 'POST',

@@ -7,9 +7,6 @@ import Dropdown from 'primevue/dropdown';
 
 const configStore = useConfigStore();
 
-// ウィザードのステップ状態 (1: ベース顔確認, 2: 位置調整, 3: アニメ確認, 4: アトラス化)
-const currentStep = ref(1);
-
 interface MascotAsset {
     id: string;
     name: string;
@@ -36,7 +33,17 @@ const props = defineProps<{
     activePose: MascotAsset | null;
     defaultFrontAvatar: MascotAsset | null;
     geminiApiKey?: string;
+    initialStep?: number;
 }>();
+
+// ウィザードのステップ状態 (1: ベース顔確認, 2: 位置調整, 3: アニメ確認, 4: アトラス化)
+const currentStep = ref(props.initialStep || 1);
+
+watch(() => props.initialStep, (newVal) => {
+    if (newVal !== undefined) {
+        currentStep.value = newVal;
+    }
+});
 
 const emit = defineEmits<{
     (e: 'back-to-settings'): void;
@@ -151,7 +158,7 @@ const initFaceGuide = async () => {
 };
 
 // のっぺらぼう自動生成を実行してステップ2へ進む
-const generateAndNext = async () => {
+const generateAndNext = async (goToNext = true) => {
     if (isGeneratingNoface.value) return;
     isGeneratingNoface.value = true;
     try {
@@ -173,12 +180,16 @@ const generateAndNext = async () => {
             originalImagePath.value = baseMascotImageUrl.value;
             nofaceCacheQuery.value = Date.now();
             
-            // ステップ2 (ベース確認) へ進む
-            currentStep.value = 2;
-            
-            // 画像ロード後に Canvas を初期化する
-            await nextTick();
-            await initCanvas(data.path);
+            if (goToNext) {
+                // ステップ2 (ベース確認) へ進む
+                currentStep.value = 2;
+                
+                // 画像ロード後に Canvas を初期化する
+                await nextTick();
+                await initCanvas(data.path);
+            } else {
+                emit('back-to-settings');
+            }
         } else {
             console.error('Failed to generate noface:', data.error);
             alert('のっぺらぼう画像の生成に失敗しました: ' + (data.error || '不明なエラー'));
@@ -450,23 +461,69 @@ if (currentExpressions.value.length > 0) {
 }
 
 const handleBack = () => {
-    if (currentStep.value > 1) {
-        currentStep.value--;
-    } else {
-        emit('back-to-settings');
+    emit('back-to-settings');
+};
+
+const isExtractingSingle = ref(false);
+
+const extractSinglePart = async (expr: MascotAsset) => {
+    if (!expr || isExtractingSingle.value) return;
+    
+    // originalPath がなければ現在の path を退避
+    if (!expr.originalPath) {
+        expr.originalPath = expr.path;
+    }
+    
+    const nofacePath = nofaceImagePath.value || `/mascots/users/usr_local_dev_bypass/${props.editingMascot.id}/noface.png`;
+    
+    const sanitizedLabel = expr.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_');
+    const outfitName = props.activeOutfit?.name.replace(/[^\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, '_') || 'default';
+    const outputPath = `/mascots/users/usr_local_dev_bypass/${props.editingMascot.id}/expressions/${outfitName}/parts_${sanitizedLabel}.png`;
+    
+    isExtractingSingle.value = true;
+    try {
+        const response = await fetch('/api/mascots/extract-parts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nofacePath: nofacePath,
+                expressionPath: expr.originalPath,
+                outputPath: outputPath,
+                offsetX: expr.offsetX || 0,
+                offsetY: expr.offsetY || 0,
+                scale: expr.scale || 1.0,
+                rotation: expr.rotation || 0
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success && data.outputPath) {
+            expr.path = data.outputPath;
+            // 差分表示プレビューも更新する
+            await updateExtractedParts();
+            console.log(`[ExtractSingleParts] Extracted for ${expr.name}: ${data.outputPath}`);
+        } else {
+            alert('パーツの切り出しに失敗しました: ' + (data.error || '不明なエラー'));
+        }
+    } catch (e) {
+        console.error('Failed to extract part:', e);
+        alert('パーツ切り出し中にエラーが発生しました。');
+    } finally {
+        isExtractingSingle.value = false;
     }
 };
 
 const handleNext = async () => {
-    if (currentStep.value === 2) {
-        // Step 2 から遷移する直前に、手動レタッチの結果をサーバーへ保存
+    if (currentStep.value === 1) {
+        // Step 1: のっぺらぼう生成を実行して設定に戻る
+        await generateAndNext(false);
+    } else if (currentStep.value === 2) {
+        // Step 2: 手動レタッチを保存して設定に戻る
         await saveEditedNoface();
-    }
-    
-    if (currentStep.value < 5) {
-        currentStep.value++;
-    } else {
-        saveAtlas();
+        emit('back-to-settings');
+    } else if (currentStep.value === 3) {
+        // Step 3: 各位置合わせの適用（同期済みなのでそのまま戻る。一括での自動切り出しは行わない）
+        emit('back-to-settings');
     }
 };
 
@@ -873,6 +930,134 @@ const resetAlign = () => {
     selectedExpression.value.rotation = 0;
 };
 
+// --- 表情パーツ（目・眉・口・記号のみ）の動的差分抽出ロジック ---
+const extractedPartsUrl = ref<string | null>(null);
+const isExtractingParts = ref(false);
+const partsImageCache = new Map<string, HTMLCanvasElement>();
+
+const performDifferenceExtraction = (imgExpr: HTMLImageElement, imgNoface: HTMLImageElement): HTMLCanvasElement | null => {
+    const canvas = document.createElement('canvas');
+    const w = imgExpr.naturalWidth || 768;
+    const h = imgExpr.naturalHeight || 1280;
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const canvasNoface = document.createElement('canvas');
+    canvasNoface.width = w;
+    canvasNoface.height = h;
+    const ctxNoface = canvasNoface.getContext('2d');
+    if (!ctxNoface) return null;
+
+    ctx.drawImage(imgExpr, 0, 0);
+    ctxNoface.drawImage(imgNoface, 0, 0);
+
+    const imgDataExpr = ctx.getImageData(0, 0, w, h);
+    const imgDataNoface = ctxNoface.getImageData(0, 0, w, h);
+
+    const dataExpr = imgDataExpr.data;
+    const dataNoface = imgDataNoface.data;
+    const len = dataExpr.length;
+
+    // ピクセルごとの差分を計算
+    for (let i = 0; i < len; i += 4) {
+        const r1 = dataExpr[i];
+        const g1 = dataExpr[i + 1];
+        const b1 = dataExpr[i + 2];
+        const a1 = dataExpr[i + 3];
+
+        const r2 = dataNoface[i];
+        const g2 = dataNoface[i + 1];
+        const b2 = dataNoface[i + 2];
+        const a2 = dataNoface[i + 3];
+
+        const diffR = Math.abs(r1 - r2);
+        const diffG = Math.abs(g1 - g2);
+        const diffB = Math.abs(b1 - b2);
+        const diffA = Math.abs(a1 - a2);
+
+        // 差分が小さい（同一箇所とみなせる）ピクセルは透明にする
+        const threshold = 18; // 差分しきい値
+        if (diffR < threshold && diffG < threshold && diffB < threshold && diffA < threshold) {
+            dataExpr[i + 3] = 0; // 完全透過
+        }
+    }
+
+    ctx.putImageData(imgDataExpr, 0, 0);
+    return canvas;
+};
+
+const getPartsImage = (exprPath: string, nofacePath: string): Promise<HTMLCanvasElement | null> => {
+    const cacheKey = `${exprPath}_${nofacePath}`;
+    if (partsImageCache.has(cacheKey)) {
+        return Promise.resolve(partsImageCache.get(cacheKey)!);
+    }
+
+    return new Promise((resolve) => {
+        const imgExpr = new Image();
+        const imgNoface = new Image();
+        let loadedCount = 0;
+
+        const checkLoad = () => {
+            loadedCount++;
+            if (loadedCount === 2) {
+                const partsCanvas = performDifferenceExtraction(imgExpr, imgNoface);
+                if (partsCanvas) {
+                    partsImageCache.set(cacheKey, partsCanvas);
+                }
+                resolve(partsCanvas);
+            }
+        };
+
+        imgExpr.crossOrigin = 'anonymous';
+        imgNoface.crossOrigin = 'anonymous';
+        imgExpr.onload = checkLoad;
+        imgNoface.onload = checkLoad;
+        imgExpr.onerror = () => resolve(null);
+        imgNoface.onerror = () => resolve(null);
+
+        imgExpr.src = resolveImageUrl(exprPath);
+        imgNoface.src = resolveImageUrl(nofacePath);
+    });
+};
+
+const updateExtractedParts = async () => {
+    if (!selectedExpression.value?.path) {
+        extractedPartsUrl.value = null;
+        return;
+    }
+    const nofacePath = nofaceImagePath.value || baseMascotImageUrl.value;
+    if (!nofacePath) {
+        extractedPartsUrl.value = null;
+        return;
+    }
+
+    isExtractingParts.value = true;
+    try {
+        const partsCanvas = await getPartsImage(selectedExpression.value.path, nofacePath);
+        if (partsCanvas) {
+            extractedPartsUrl.value = partsCanvas.toDataURL('image/png');
+        } else {
+            extractedPartsUrl.value = resolveImageUrl(selectedExpression.value.path);
+        }
+    } catch (e) {
+        console.error('[PartsExtract] 差分抽出エラー:', e);
+        extractedPartsUrl.value = resolveImageUrl(selectedExpression.value.path);
+    } finally {
+        isExtractingParts.value = false;
+    }
+};
+
+watch(
+    () => [selectedExpression.value?.path, nofaceImagePath.value],
+    () => {
+        updateExtractedParts();
+    },
+    { immediate: true }
+);
+
 watch(currentStep, async (newStep) => {
     await nextTick();
     updateDisplayScale();
@@ -887,21 +1072,15 @@ watch(currentStep, async (newStep) => {
         <!-- ヘッダーおよびステップバー -->
         <header class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between border-b pb-4 border-slate-200">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-slate-900">表情作成 & 位置調整ワークフロー</h1>
-                <p class="text-sm text-slate-500">マスコットの表情差分を最適化し、アトラスとアニメーションを構築します。</p>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">表情作成 & 位置調整</h1>
+                <p class="text-sm text-slate-500">マスコットの表情差分やベース顔領域を個別に調整します。</p>
             </div>
             
-            <!-- ステップバー -->
-            <div class="mt-4 md:mt-0 flex items-center space-x-2 text-sm font-medium">
-                <span :class="['px-3 py-1.5 rounded-full border', currentStep === 1 ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-600 border-slate-300']">1. 顔領域確認</span>
-                <span class="text-slate-400">➔</span>
-                <span :class="['px-3 py-1.5 rounded-full border', currentStep === 2 ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-600 border-slate-300']">2. ベース確認</span>
-                <span class="text-slate-400">➔</span>
-                <span :class="['px-3 py-1.5 rounded-full border', currentStep === 3 ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-600 border-slate-300']">3. 位置調整</span>
-                <span class="text-slate-400">➔</span>
-                <span :class="['px-3 py-1.5 rounded-full border', currentStep === 4 ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-600 border-slate-300']">4. アニメ確認</span>
-                <span class="text-slate-400">➔</span>
-                <span :class="['px-3 py-1.5 rounded-full border', currentStep === 5 ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-600 border-slate-300']">5. 保存</span>
+            <!-- 現在のステップ表示 -->
+            <div class="mt-4 md:mt-0 flex items-center space-x-2 text-sm font-medium animate-fade-in">
+                <span v-if="currentStep === 1" class="px-3 py-1.5 rounded-full border bg-primary-500 text-white border-primary-500">1. 顔領域調整</span>
+                <span v-if="currentStep === 2" class="px-3 py-1.5 rounded-full border bg-primary-500 text-white border-primary-500">2. ベース顔生成（手動修正）</span>
+                <span v-if="currentStep === 3" class="px-3 py-1.5 rounded-full border bg-primary-500 text-white border-primary-500">3. 表情位置調整</span>
             </div>
         </header>
 
@@ -1059,7 +1238,7 @@ watch(currentStep, async (newStep) => {
                     
                     <div class="pt-6 border-t border-slate-100 flex flex-col space-y-2">
                         <Button severity="secondary" class="w-full py-2 font-medium text-sm border-slate-300" label="顔の自動検出を再実行" icon="pi pi-refresh" @click="initFaceGuide" :loading="isDetectingFace" />
-                        <Button severity="primary" class="w-full py-2.5 font-medium text-sm" label="のっぺらぼう生成して次へ" icon="pi pi-arrow-right" iconPos="right" @click="generateAndNext" :loading="isGeneratingNoface" />
+                        <Button severity="primary" class="w-full py-2.5 font-medium text-sm" label="のっぺらぼう生成して完了" icon="pi pi-check" iconPos="right" @click="handleNext" :loading="isGeneratingNoface" />
                     </div>
                 </div>
             </div>
@@ -1206,8 +1385,8 @@ watch(currentStep, async (newStep) => {
                     </div>
                     
                     <div class="pt-6 border-t border-slate-100 flex space-x-2">
-                        <Button severity="secondary" class="flex-1 py-2 text-sm border-slate-300" label="戻る" @click="handleBack" />
-                        <Button severity="primary" class="flex-1 py-2 text-sm" label="保存して次へ" @click="handleNext" />
+                        <Button severity="secondary" class="flex-1 py-2 text-sm border-slate-300" label="キャンセル" @click="handleBack" />
+                        <Button severity="primary" class="flex-1 py-2 text-sm" label="のっぺらぼう保存して完了" @click="handleNext" />
                     </div>
                 </div>
             </div>
@@ -1250,7 +1429,18 @@ watch(currentStep, async (newStep) => {
                             }"
                             @mousedown.prevent="startDragExpression"
                         >
-                            <img :src="resolveImageUrl(selectedExpression.path)" class="w-full h-full object-contain pointer-events-none" alt="表情パーツ" @load="onExprImageLoad" />
+                            <!-- 差分抽出されたパーツ画像を表示 -->
+                            <img 
+                                v-if="extractedPartsUrl"
+                                :src="extractedPartsUrl" 
+                                class="w-full h-full object-contain pointer-events-none" 
+                                alt="表情パーツ" 
+                                @load="onExprImageLoad" 
+                            />
+                            <!-- ロード中はスピナーを表示 -->
+                            <div v-else class="w-full h-full flex items-center justify-center bg-slate-100/50">
+                                <i class="pi pi-spin pi-spinner text-slate-400"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1298,7 +1488,28 @@ watch(currentStep, async (newStep) => {
                                 <Slider v-model="selectedExpression.rotation" :min="-45" :max="45" class="w-full" />
                             </div>
                         </div>
-                    </div>
+                        <!-- 切り出しパーツ確認プレビュー -->
+                        <div class="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">切り出しパーツ単体プレビュー</span>
+                                <div class="w-full h-24 bg-slate-900 border border-slate-700 rounded flex items-center justify-center relative overflow-hidden checkerboard-bg">
+                                    <img 
+                                        v-if="selectedExpression.path && selectedExpression.path.includes('parts_')" 
+                                        :src="resolveImageUrl(selectedExpression.path)" 
+                                        class="max-h-20 max-w-full object-contain" 
+                                        alt="切り出し済みパーツ"
+                                    />
+                                    <span v-else class="text-[10px] text-slate-400">パーツ未切り出し（全体画像の状態）</span>
+                                </div>
+                                <Button 
+                                    severity="warning" 
+                                    class="w-full py-2 font-medium text-xs shadow-sm" 
+                                    label="このパーツを切り出す" 
+                                    icon="pi pi-scissors" 
+                                    :loading="isExtractingSingle"
+                                    @click="extractSinglePart(selectedExpression)"
+                                />
+                            </div>
+                        </div>
                     <div v-else class="text-slate-400 text-center py-12">
                         感情を選択してください。
                     </div>
@@ -1323,102 +1534,36 @@ watch(currentStep, async (newStep) => {
                 </div>
             </div>
 
-            <!-- STEP 4: アニメーション動作確認 -->
-            <div v-if="currentStep === 4" class="flex-1 flex flex-row">
-                <!-- 左側プレビュー -->
-                <div class="flex-1 bg-slate-100 p-6 flex items-center justify-center min-h-[400px] overflow-auto">
-                    <div class="relative max-w-full max-h-[600px] border border-slate-300 rounded shadow-md overflow-hidden bg-white flex items-center justify-center p-4">
-                        <img v-if="baseMascotImageUrl" :src="resolveImageUrl(baseMascotImageUrl)" alt="のっぺらぼう" class="max-h-[500px] object-contain" />
-                        <!-- アニメーション表示のモック -->
-                        <div class="absolute text-center bg-slate-900/80 text-white px-4 py-2 rounded text-sm pointer-events-none">
-                            [瞬き・口パク アニメーション再生中]
-                        </div>
-                    </div>
-                </div>
-                <!-- 右側設定パネル -->
-                <div class="w-80 border-l border-slate-200 p-6 flex flex-col justify-between bg-white overflow-y-auto">
-                    <div>
-                        <h2 class="text-lg font-semibold text-slate-900 mb-4">アニメーションプレビュー</h2>
-                        <p class="text-sm text-slate-600 mb-6">
-                            分離した目（瞬き）と口（口パク）パーツがのっぺらぼう画像の上で自然に動作しているか確認してください。
-                        </p>
 
-                        <div class="space-y-6">
-                            <!-- アニメーションコントロール -->
-                            <div class="space-y-2">
-                                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">再生コントロール</span>
-                                <div class="flex space-x-2">
-                                    <Button severity="primary" class="flex-1 py-1.5 text-xs font-medium" label="瞬きテスト" />
-                                    <Button severity="primary" class="flex-1 py-1.5 text-xs font-medium" label="口パクテスト" />
-                                </div>
-                            </div>
-
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-xs text-slate-500">
-                                    <span>再生速度</span>
-                                    <span>{{ animationSpeed.toFixed(1) }}x</span>
-                                </div>
-                                <Slider v-model="animationSpeed" :min="0.5" :max="2.0" :step="0.1" class="w-full" />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="pt-6 border-t border-slate-100">
-                        <p class="text-xs text-slate-400">
-                            ※実際のデスクトップ上では、音声データと同調した口パクアニメーションが行われます。
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STEP 5: アトラス化と保存 -->
-            <div v-if="currentStep === 5" class="flex-1 flex flex-row">
-                <!-- 左側プレビュー -->
-                <div class="flex-1 bg-slate-100 p-6 flex items-center justify-center min-h-[400px] overflow-auto">
-                    <div class="max-w-full max-h-[600px] border border-slate-300 rounded shadow-md overflow-hidden bg-white p-4 flex flex-col items-center">
-                        <span class="text-xs text-slate-400 mb-2">生成予定のテクスチャアトラス (2048x2048) プレビュー</span>
-                        <div class="w-80 h-80 bg-slate-200 border-2 border-dashed border-slate-400 rounded flex items-center justify-center text-slate-500">
-                            [atlas.png の結合プレビュー]
-                        </div>
-                    </div>
-                </div>
-                <!-- 右側設定パネル -->
-                <div class="w-80 border-l border-slate-200 p-6 flex flex-col justify-between bg-white overflow-y-auto">
-                    <div>
-                        <h2 class="text-lg font-semibold text-slate-900 mb-4">アトラス化とエクスポート</h2>
-                        <p class="text-sm text-slate-600 mb-6">
-                            すべての表情パーツとアニメーションコマが1つのアトラス画像（`atlas.png`）と定義情報（`atlas.json`）にまとめられます。
-                        </p>
-
-                        <!-- アセット統計情報 -->
-                        <div class="bg-slate-50 rounded-lg p-4 border border-slate-100 space-y-2 text-xs">
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">のっぺらぼう:</span>
-                                <span class="font-semibold text-slate-800">1枚</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">感情パーツ:</span>
-                                <span class="font-semibold text-slate-800">{{ currentExpressions.length }}種類</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">アニメーション総コマ数:</span>
-                                <span class="font-semibold text-slate-800">約80コマ</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="pt-6 border-t border-slate-100">
-                        <Button severity="primary" class="w-full py-3 font-semibold text-sm" @click="saveAtlas" label="アトラスを生成して保存" />
-                    </div>
-                </div>
-            </div>
 
         </main>
 
         <!-- 下部ナビゲーション -->
         <footer class="mt-6 flex justify-between">
-            <Button severity="secondary" class="px-6 py-2.5 font-medium border-slate-300" @click="handleBack" :label="currentStep === 1 ? '設定に戻る' : '戻る'" />
-            <Button severity="primary" class="px-6 py-2.5 font-medium" @click="handleNext" :label="currentStep === 5 ? 'アトラス生成 & 完了' : '次へ'" />
+            <Button severity="secondary" class="px-6 py-2.5 font-medium border-slate-300" @click="handleBack" label="設定に戻る" />
+            <Button 
+                v-if="currentStep === 1" 
+                severity="primary" 
+                class="px-6 py-2.5 font-medium" 
+                @click="handleNext" 
+                label="のっぺらぼう生成＆完了" 
+                :loading="isGeneratingNoface" 
+            />
+            <Button 
+                v-else-if="currentStep === 2" 
+                severity="primary" 
+                class="px-6 py-2.5 font-medium" 
+                @click="handleNext" 
+                label="のっぺらぼう保存＆完了" 
+                :loading="isGeneratingNoface" 
+            />
+            <Button 
+                v-else-if="currentStep === 3" 
+                severity="primary" 
+                class="px-6 py-2.5 font-medium" 
+                @click="handleNext" 
+                label="位置調整完了して戻る" 
+            />
         </footer>
     </div>
 </template>

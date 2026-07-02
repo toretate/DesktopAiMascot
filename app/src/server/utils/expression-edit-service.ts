@@ -242,3 +242,89 @@ export async function detectBaseFace(
     const result = JSON.parse(stdout.trim());
     return result;
 }
+
+const PACK_ATLAS_SCRIPT = path.join(PYTHON_DIR, 'pack_atlas.py');
+
+/**
+ * テクスチャアトラスをパッキングする。
+ */
+export async function packTextureAtlas(
+    mascotId: string,
+    partsList: Array<{ name: string; path: string; offsetX: number; offsetY: number }>
+): Promise<{ success: boolean; atlasPath: string; jsonPath: string; width: number; height: number; error?: string }> {
+    const mascotDir = path.dirname(resolveImagePath(`/mascots/users/usr_local_dev_bypass/${mascotId}/noface.png`));
+    
+    // 一時JSONファイルを作成
+    const tempPartsJsonPath = path.join(mascotDir, `temp_parts_${Date.now()}.json`);
+    fs.writeFileSync(tempPartsJsonPath, JSON.stringify(partsList, null, 2), 'utf8');
+
+    try {
+        const { stdout } = await execFileAsync(
+            PYTHON_BIN,
+            [
+                PACK_ATLAS_SCRIPT,
+                '--mascot-dir',
+                mascotDir,
+                '--parts-json',
+                tempPartsJsonPath,
+                '--out-atlas',
+                'atlas.png',
+                '--out-json',
+                'atlas.json'
+            ],
+            { timeout: 30_000 }
+        );
+
+        const result = JSON.parse(stdout.trim());
+        return result;
+    } finally {
+        // 一時ファイルの削除
+        if (fs.existsSync(tempPartsJsonPath)) {
+            try {
+                fs.unlinkSync(tempPartsJsonPath);
+            } catch (e) {
+                console.warn('[Server] Failed to clean up temp parts json:', e);
+            }
+        }
+    }
+}
+
+const EXTRACT_PARTS_SCRIPT = path.join(PYTHON_DIR, 'extract_parts.py');
+
+/**
+ * 表情から目・眉・口のみの透過パーツを抽出・保存する。
+ */
+export async function extractExpressionParts(
+    nofacePath: string,
+    expressionPath: string,
+    outputPath: string,
+    offsetX: number,
+    offsetY: number,
+    scale: number,
+    rotation: number
+): Promise<{ success: boolean; outputPath: string; width: number; height: number; error?: string }> {
+    const absNoface = resolveImagePath(nofacePath);
+    const absExpr = resolveImagePath(expressionPath);
+    const absOutput = resolveImagePath(outputPath);
+
+    // ディレクトリ確保
+    fs.mkdirSync(path.dirname(absOutput), { recursive: true });
+
+    const { stdout } = await execFileAsync(
+        PYTHON_BIN,
+        [
+            EXTRACT_PARTS_SCRIPT,
+            '--noface', absNoface,
+            '--expression', absExpr,
+            '--output', absOutput,
+            '--offset-x', String(offsetX),
+            '--offset-y', String(offsetY),
+            '--scale', String(scale),
+            '--rotation', String(rotation)
+        ],
+        { timeout: 30_000 }
+    );
+
+    const result = JSON.parse(stdout.trim());
+    return result;
+}
