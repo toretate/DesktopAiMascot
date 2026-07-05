@@ -300,6 +300,12 @@ watch(() => props.activeMascotId, () => {
 watch(() => props.mascots, () => {
     initEditingMascot();
 }, { deep: true });
+
+const handleBackFromExpressionEditor = async () => {
+    await syncAndSave();
+    emit('save-settings');
+    isEditingExpressionsModal.value = false;
+};
 </script>
 
 <template>
@@ -310,7 +316,8 @@ watch(() => props.mascots, () => {
         :active-pose="activePose"
         :default-front-avatar="defaultFrontAvatar"
         :initial-step="editorInitialStep"
-        @back-to-settings="isEditingExpressionsModal = false"
+        :initial-expression-id="activePreviewExpression?.id"
+        @back-to-settings="handleBackFromExpressionEditor"
     />
     <div v-else class="mascot-settings-container" :class="{ 'show-detail-mobile': showDetailOnMobile }">
         <!-- 左側: マスコットリスト -->
