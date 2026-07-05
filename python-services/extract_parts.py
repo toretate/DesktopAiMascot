@@ -53,6 +53,8 @@ def main():
     parser.add_argument("--offset-y", type=float, default=0.0, help="Y方向オフセット")
     parser.add_argument("--scale", type=float, default=1.0, help="拡大率")
     parser.add_argument("--rotation", type=float, default=0.0, help="回転角度")
+    parser.add_argument("--mode", type=str, default="xor", choices=["xor", "comfy"], help="抽出モード (xor = 差分, comfy = ComfyUI検出結果)")
+    parser.add_argument("--comfy-json", type=str, default="", help="ComfyUI顔検出JSONファイルのパス")
     args = parser.parse_args()
 
     # 画像のロード
@@ -112,25 +114,103 @@ def main():
         borderValue=0
     )
 
-    # 4. アライメント後の画像同士のカラー絶対値差分（XOR）を計算
-    diff = cv2.absdiff(img_expr_aligned, img_noface)
-    diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGRA2GRAY)
-    
-    # しきい値 6 で二値化（眉毛などの細い線の差分もピクセル単位で漏らさず抽出）
-    _, diff_mask = cv2.threshold(diff_gray, 6, 255, cv2.THRESH_BINARY)
+    final_mask = np.zeros((H, W), dtype=np.uint8)
 
-    # 5. 「アライメント済み境界除外マスク」の内部だけで差分を残す
-    diff_mask_in_face = cv2.bitwise_and(mask_aligned, diff_mask)
+    if args.mode == "comfy":
+        # ComfyUIの顔検出JSONによる矩形領域切り出し
+        if not args.comfy_json or not os.path.exists(args.comfy_json):
+            print(json.dumps({"success": False, "error": f"comfy_json file not found: {args.comfy_json}"}))
+            sys.exit(1)
+            
+        try:
+            with open(args.comfy_json, 'r', encoding='utf-8') as f:
+                comfy_data = json.load(f)
+                
+            # 表情画像サイズのマスクを作成
+            mask_comfy = np.zeros((eh, ew), dtype=np.uint8)
+            
+            # 左右の目・眉、口のグループ別の点群を分類
+            landmarks = comfy_data.get("landmarks", [])
+            left_pts = []
+            right_pts = []
+            mouth_pts = []
+            
+            for idx, pt in enumerate(landmarks):
+                lx = int(pt.get("x", 0))
+                ly = int(pt.get("y", 0))
+                
+                # 画像サイズ範囲内であることを確認して追加
+                if 0 <= lx < ew and 0 <= ly < eh:
+                    if idx in [0, 1, 2, 3, 4, 10, 11, 12, 13]: # 左眉・左目
+                        left_pts.append([lx, ly])
+                    elif idx in [5, 6, 7, 8, 9, 14, 15, 16, 17]: # 右眉・右目
+                        right_pts.append([lx, ly])
+                    elif idx in [22, 23, 24, 25, 26, 27]: # 口
+                        mouth_pts.append([lx, ly])
+            
+            # 各パーツグループについて凸包 (Convex Hull) を描画して塗りつぶす
+            for pts in [left_pts, right_pts, mouth_pts]:
+                if len(pts) >= 3:
+                    pts_np = np.array(pts, dtype=np.int32)
+                    hull = cv2.convexHull(pts_np)
+                    cv2.fillPoly(mask_comfy, [hull], 255)
+                elif len(pts) > 0:
+                    # 点が少なすぎる場合は点で描画（安全用のフォールバック）
+                    for pt in pts:
+                        cv2.circle(mask_comfy, (pt[0], pt[1]), 15, 255, -1)
+                        
+            # 点群から構築できなかった場合の最終フォールバック（従来のBBoxベースの矩形塗りつぶし）
+            if len(left_pts) == 0 and len(right_pts) == 0 and len(mouth_pts) == 0:
+                for part_key in ["left_eye_bbox", "right_eye_bbox", "mouth_bbox"]:
+                    bbox = comfy_data.get(part_key)
+                    if bbox:
+                        x = int(bbox.get("x", 0))
+                        y = int(bbox.get("y", 0))
+                        w = int(bbox.get("w", 0))
+                        h = int(bbox.get("h", 0))
+                        if "eye" in part_key:
+                            y_extended = max(0, y - int(h * 0.6))
+                            h_extended = h + (y - y_extended)
+                            cv2.rectangle(mask_comfy, (x, y_extended), (x + w, y_extended + h_extended), 255, -1)
+                        else:
+                            cv2.rectangle(mask_comfy, (x, y), (x + w, y + h), 255, -1)
 
-    # 6. 外郭穴埋め処理 (RETR_EXTERNAL による Contour Filling)
-    # これにより、アニメ目の大きさ・形状をそのままになぞり、かつ白目やハイライトの透過穴を完全に塞ぎます。
-    final_mask = np.zeros_like(diff_mask_in_face)
-    contours, _ = cv2.findContours(diff_mask_in_face, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area >= 150:
-            cv2.drawContours(final_mask, [cnt], -1, 255, -1)
+            # この表情パーツマスクを中心配置
+            mask_comfy_canvas = np.zeros((H, W), dtype=np.uint8)
+            mask_comfy_canvas[y1:y2, x1:x2] = mask_comfy[0:(y2-y1), 0:(x2-x1)]
+
+            # アライメント適用
+            final_mask = cv2.warpAffine(
+                mask_comfy_canvas,
+                M,
+                (W, H),
+                flags=cv2.INTER_NEAREST,
+                borderMode=cv2.BORDER_CONSTANT,
+                borderValue=0
+            )
+            # 髪・服ノードによる境界除外
+            final_mask = cv2.bitwise_and(mask_aligned, final_mask)
+            
+        except Exception as e:
+            print(json.dumps({"success": False, "error": f"Failed to process comfy_json: {str(e)}"}))
+            sys.exit(1)
+    else:
+        # 従来のXOR差分（カラー絶対値差分）による検出
+        diff = cv2.absdiff(img_expr_aligned, img_noface)
+        diff_gray = cv2.cvtColor(diff, cv2.COLOR_BGRA2GRAY)
+        
+        # しきい値 6 で二値化
+        _, diff_mask = cv2.threshold(diff_gray, 6, 255, cv2.THRESH_BINARY)
+
+        # 「アライメント済み境界除外マスク」の内部だけで差分を残す
+        diff_mask_in_face = cv2.bitwise_and(mask_aligned, diff_mask)
+
+        # 外郭穴埋め処理 (RETR_EXTERNAL による Contour Filling)
+        contours, _ = cv2.findContours(diff_mask_in_face, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if area >= 150:
+                cv2.drawContours(final_mask, [cnt], -1, 255, -1)
 
     # 7. エッジを滑らかにするため膨張とフェザーぼかしを適用
     kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))

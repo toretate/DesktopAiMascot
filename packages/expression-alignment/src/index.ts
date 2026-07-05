@@ -40,3 +40,8 @@ export {
     type AlignmentCalcParams,
     type PreviewSize,
 } from './alignment-calculator';
+export {
+    ComfyLandmarkRegistrationProvider,
+    type ComfyFaceDetection,
+} from './registration-comfy';
+

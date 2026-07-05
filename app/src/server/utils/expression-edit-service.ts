@@ -118,16 +118,23 @@ export async function generateNofaceImage(
     detectMode = 'ai',
     engine = 'mediapipe',
     prompt = '',
-    geminiApiKey = ''
+    geminiApiKey = '',
+    force = true
 ): Promise<string> {
     const absInput = resolveImagePath(inputPath);
     const absOutput = resolveImagePath(outputPath);
 
+    // すでにのっぺらぼう画像が存在し、かつ強制再生成でない場合は既存の画像をそのまま使う
+    if (!force && fs.existsSync(absOutput)) {
+        console.log(`[Server] Existing noface image found at ${absOutput}, skipping generation.`);
+        return outputPath;
+    }
+
     // 出力先ディレクトリの確保
     fs.mkdirSync(path.dirname(absOutput), { recursive: true });
 
-    if (!fs.existsSync(absInput)) {
-        throw new Error(`Input image not found: ${absInput}`);
+    if (inputPath === '🤖' || !inputPath || !fs.existsSync(absInput)) {
+        throw new Error('ベースとなる画像ファイルが見つかりません。マスコットの衣装やポーズ、またはアバターに有効な画像ファイルを設定してください。');
     }
 
     if (engine === 'comfy') {
@@ -140,9 +147,11 @@ export async function generateNofaceImage(
     }
 
     // 従来の MediaPipe / OpenCV を使用した画像処理
+    // Python側は --mode に 'comfy' をサポートしていないため、'comfy' の場合は 'ai' にフォールバックする
+    const pyMode = detectMode === 'comfy' ? 'ai' : detectMode;
     const { stdout } = await execFileAsync(
         PYTHON_BIN,
-        [NOFACE_SCRIPT, absInput, absOutput, '--mode', detectMode],
+        [NOFACE_SCRIPT, absInput, absOutput, '--mode', pyMode],
         { timeout: 30_000 }
     );
 
@@ -226,20 +235,64 @@ const DETECT_FACE_SCRIPT = path.join(PYTHON_DIR, 'detect_base_face.py');
 export async function detectBaseFace(
     imagePath: string,
     detectMode = 'ai'
-): Promise<{ success: boolean; fallback: boolean; faceX: number; faceY: number; faceWidth: number; faceHeight: number; baseWidth: number; baseHeight: number; error?: string }> {
+): Promise<{ success: boolean; fallback: boolean; faceX: number; faceY: number; faceWidth: number; faceHeight: number; baseWidth: number; baseHeight: number; candidates?: any[]; error?: string }> {
     const absPath = resolveImagePath(imagePath);
 
     if (!fs.existsSync(absPath)) {
         throw new Error(`Target image not found: ${absPath}`);
     }
 
+    const pythonMode = detectMode === 'comfy' ? 'ai' : detectMode;
     const { stdout } = await execFileAsync(
         PYTHON_BIN,
-        [DETECT_FACE_SCRIPT, '--image', absPath, '--mode', detectMode],
+        [DETECT_FACE_SCRIPT, '--image', absPath, '--mode', pythonMode],
         { timeout: 30_000 }
     );
 
     const result = JSON.parse(stdout.trim());
+
+    if (detectMode === 'comfy') {
+        try {
+            console.log('[ComfyUI] Detecting face on-demand...');
+            const imageBuffer = fs.readFileSync(absPath);
+            const ext = path.extname(absPath).substring(1) || 'png';
+            const uploadFilename = `face_detect_${Date.now()}.${ext}`;
+            const uploadedFileName = await uploadImage(imageBuffer, uploadFilename);
+
+            const workflowPath = path.join(PROJECT_ROOT, 'docs/specs/comfyui-desktop-ai-mascot-tools/face_detection_api.json');
+            if (!fs.existsSync(workflowPath)) {
+                throw new Error(`Workflow template not found at ${workflowPath}`);
+            }
+            const workflowJson = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
+
+            if (workflowJson['1'] && workflowJson['1'].inputs) {
+                workflowJson['1'].inputs.image = uploadedFileName;
+            }
+
+            const detectionData = await runJsonWorkflow(workflowJson);
+            const bbox = detectionData.face_bbox;
+            if (bbox && bbox.w > 0 && bbox.h > 0) {
+                result.faceX = bbox.x + bbox.w / 2.0;
+                result.faceY = bbox.y + bbox.h / 2.0;
+                result.faceWidth = bbox.w;
+                result.faceHeight = bbox.h;
+                result.fallback = false;
+                result.method = 'comfy';
+                result.candidates = [{
+                    faceX: result.faceX,
+                    faceY: result.faceY,
+                    faceWidth: result.faceWidth,
+                    faceHeight: result.faceHeight
+                }];
+                console.log('[ComfyUI] Face detection successful:', bbox);
+            } else {
+                console.log('[ComfyUI] Face detection returned no bbox. Using fallback.');
+            }
+        } catch (e: any) {
+            console.warn('[ComfyUI] Face detection failed. Using Python-fallback:', e.message);
+        }
+    }
+
     return result;
 }
 
@@ -301,7 +354,9 @@ export async function extractExpressionParts(
     offsetX: number,
     offsetY: number,
     scale: number,
-    rotation: number
+    rotation: number,
+    mode = 'xor',
+    comfyJsonPath?: string
 ): Promise<{ success: boolean; outputPath: string; width: number; height: number; error?: string }> {
     const absNoface = resolveImagePath(nofacePath);
     const absExpr = resolveImagePath(expressionPath);
@@ -310,18 +365,25 @@ export async function extractExpressionParts(
     // ディレクトリ確保
     fs.mkdirSync(path.dirname(absOutput), { recursive: true });
 
+    const pyArgs = [
+        EXTRACT_PARTS_SCRIPT,
+        '--noface', absNoface,
+        '--expression', absExpr,
+        '--output', absOutput,
+        '--offset-x', String(offsetX),
+        '--offset-y', String(offsetY),
+        '--scale', String(scale),
+        '--rotation', String(rotation),
+        '--mode', mode
+    ];
+
+    if (mode === 'comfy' && comfyJsonPath) {
+        pyArgs.push('--comfy-json', resolveImagePath(comfyJsonPath));
+    }
+
     const { stdout } = await execFileAsync(
         PYTHON_BIN,
-        [
-            EXTRACT_PARTS_SCRIPT,
-            '--noface', absNoface,
-            '--expression', absExpr,
-            '--output', absOutput,
-            '--offset-x', String(offsetX),
-            '--offset-y', String(offsetY),
-            '--scale', String(scale),
-            '--rotation', String(rotation)
-        ],
+        pyArgs,
         { timeout: 30_000 }
     );
 
