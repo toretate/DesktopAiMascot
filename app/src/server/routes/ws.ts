@@ -8,7 +8,7 @@ import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
 import { filterDialogue } from '../utils/dialogue-filter';
 import { authenticateUserToken } from '../middleware/auth';
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
-import { addTaskToDb } from '../utils/tasks-service';
+import { addTaskToDb, searchTasksFromDb, updateTaskInDb, deleteTaskFromDb } from '../utils/tasks-service';
 
 // ユーザーごとの接続管理（crosswsのPeerオブジェクトをSetに保存）
 const userConnections = new Map<string, Set<any>>();
@@ -179,19 +179,63 @@ export default defineWebSocketHandler({
                         history,
                         attachments,
                         tools,
+                        onToolExecute: async (toolName, args) => {
+                            const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
+                            console.log(`[WS] Tool execution intercept: ${toolName}`, args);
+                            try {
+                                if (toolName === 'searchTasks') {
+                                    const tasks = searchTasksFromDb(userId, args.query, args.date, args.completed);
+                                    if (tasks.length === 0) {
+                                        return JSON.stringify({
+                                            success: true,
+                                            message: '該当する予定やタスクは見つかりませんでした。'
+                                        });
+                                    }
+                                    const lines = tasks.map(t => {
+                                        const dateStr = t.scheduledAt ? ` (予定日時: ${new Date(t.scheduledAt).toLocaleString('ja-JP')})` : '';
+                                        const statusStr = t.completed ? '[完了]' : '[未完了]';
+                                        return `- ${statusStr} ${t.title}${dateStr}`;
+                                    });
+                                    return JSON.stringify({
+                                        success: true,
+                                        message: `タスク・予定が ${tasks.length} 件見つかりました：\n${lines.join('\n')}`
+                                    });
+                                } else if (toolName === 'updateTask') {
+                                    const saved = updateTaskInDb(userId, args.id, args);
+                                    return JSON.stringify({
+                                        success: true,
+                                        action: 'updateTask',
+                                        task: saved.task
+                                    });
+                                } else if (toolName === 'deleteTask') {
+                                    deleteTaskFromDb(userId, args.id);
+                                    return JSON.stringify({
+                                        success: true,
+                                        action: 'deleteTask',
+                                        id: args.id
+                                    });
+                                }
+                            } catch (e: any) {
+                                console.error(`[WS] Intercepted tool ${toolName} failed:`, e.message);
+                                return JSON.stringify({
+                                    success: false,
+                                    error: e.message
+                                });
+                            }
+                            return null;
+                        },
                         onToolResult: (toolName, args, result) => {
-                            if (toolName === 'addTask' || toolName === 'addSchedule') {
-                                console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
-                                const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
-                                try {
-                                    const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+                            const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
+                            try {
+                                const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+                                if (toolName === 'addTask' || toolName === 'addSchedule') {
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
                                     const payload = {
                                         title: args.title,
                                         priority: args.priority,
                                         categoryId: args.categoryId,
                                         scheduledAt: toolName === 'addSchedule' ? (parsedResult?.schedule?.scheduledAt || args.scheduledAt) : undefined
                                     };
-                                    // サーバー側DBに直接書き込み
                                     const saved = addTaskToDb(userId, payload);
                                     
                                     peer.send(JSON.stringify({
@@ -202,9 +246,33 @@ export default defineWebSocketHandler({
                                             task: saved.task
                                         }
                                     }));
-                                } catch (e: any) {
-                                    console.error('[WS] Failed to save tool task to DB:', e.message);
+                                } else if (toolName === 'updateTask') {
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
+                                    if (parsedResult && parsedResult.success) {
+                                        const saved = updateTaskInDb(userId, args.id, {});
+                                        peer.send(JSON.stringify({
+                                            event: 'task-action',
+                                            data: {
+                                                action: 'updateTask',
+                                                categories: saved.categories,
+                                                task: saved.task
+                                            }
+                                        }));
+                                    }
+                                } else if (toolName === 'deleteTask') {
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
+                                    if (parsedResult && parsedResult.success) {
+                                        peer.send(JSON.stringify({
+                                            event: 'task-action',
+                                            data: {
+                                                action: 'deleteTask',
+                                                taskId: args.id
+                                            }
+                                        }));
+                                    }
                                 }
+                            } catch (e: any) {
+                                console.error('[WS] Failed to sync tool task action to client:', e.message);
                             }
                         }
                     });

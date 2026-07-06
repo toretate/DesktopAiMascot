@@ -150,10 +150,14 @@ export function useChatConnection(params: {
                         window.electronAPI.triggerTimerNotification(memo);
                     }
                 } else if (wsEvent === 'task-action') {
-                    const { action, task, categories } = data;
-                    console.log('[useChatConnection] Task action received:', action, task);
+                    const { action, task, categories, taskId } = data;
+                    console.log('[useChatConnection] Task action received:', action, task, taskId);
                     const taskStore = useTaskStore();
-                    if (task) {
+                    if (action === 'deleteTask') {
+                        if (taskId) {
+                            taskStore.deleteTask(taskId);
+                        }
+                    } else if (task) {
                         taskStore.addTaskFromServer(task, categories);
                     }
                 } else if (wsEvent === 'chat-error') {

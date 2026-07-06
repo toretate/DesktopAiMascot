@@ -35,6 +35,9 @@ import { appLauncherTool } from '../app-launcher-tool';
 import { webSearchTool } from '../web-search-tool';
 import { addTaskTool } from '../add-task-tool';
 import { addScheduleTool } from '../add-schedule-tool';
+import { searchTasksTool } from '../search-tasks-tool';
+import { updateTaskTool } from '../update-task-tool';
+import { deleteTaskTool } from '../delete-task-tool';
 import { exec } from 'child_process';
 
 describe('Tool Use - 各ツールの挙動テスト', () => {
@@ -214,4 +217,38 @@ describe('Tool Use - 各ツールの挙動テスト', () => {
         expect(parsed.schedule.priority).toBe('normal');
         expect(parsed.schedule.categoryId).toBe('default');
     });
+
+    // 9. タスク検索ツール (searchTasks)
+    test('searchTasks - タスクの検索パラメータが正常にパースされて返ること', async () => {
+        const result = await searchTasksTool.implementation({ query: 'テスト', date: '2026-07-06', completed: false }, {} as any);
+        const parsed = JSON.parse(result);
+        expect(parsed.success).toBe(true);
+        expect(parsed.action).toBe('searchTasks');
+        expect(parsed.query).toBe('テスト');
+        expect(parsed.date).toBe('2026-07-06');
+        expect(parsed.completed).toBe(false);
+    });
+
+    // 10. タスク更新ツール (updateTask)
+    test('updateTask - タスクの更新パラメータが正常にパースされて返ること', async () => {
+        const result = await updateTaskTool.implementation({ id: 'task_123', title: '更新後タスク', priority: 'thunder', scheduledAt: '2026-07-06T20:00:00+09:00', completed: true }, {} as any);
+        const parsed = JSON.parse(result);
+        expect(parsed.success).toBe(true);
+        expect(parsed.action).toBe('updateTask');
+        expect(parsed.task.id).toBe('task_123');
+        expect(parsed.task.title).toBe('更新後タスク');
+        expect(parsed.task.priority).toBe('thunder');
+        expect(parsed.task.scheduledAt).toBe('2026-07-06T20:00:00+09:00');
+        expect(parsed.task.completed).toBe(true);
+    });
+
+    // 11. タスク削除ツール (deleteTask)
+    test('deleteTask - タスクの削除パラメータが正常にパースされて返ること', async () => {
+        const result = await deleteTaskTool.implementation({ id: 'task_123' }, {} as any);
+        const parsed = JSON.parse(result);
+        expect(parsed.success).toBe(true);
+        expect(parsed.action).toBe('deleteTask');
+        expect(parsed.id).toBe('task_123');
+    });
 });
+

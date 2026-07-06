@@ -1,5 +1,5 @@
 import { lmStudioTools } from '../skills/tool-use';
-import { generateText, ModelMessage, isLoopFinished, stepCountIs } from 'ai';
+import { generateText, CoreMessage } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
@@ -91,8 +91,9 @@ export class ChatAiService {
         attachments?: any[];
         tools?: any;
         onToolResult?: (toolName: string, args: any, result: any) => void;
+        onToolExecute?: (toolName: string, args: any) => Promise<any>;
     }): Promise<string> {
-        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools, onToolResult } = params;
+        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools, onToolResult, onToolExecute } = params;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -138,7 +139,7 @@ export class ChatAiService {
             const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}${toolUseGuideline}`;
 
             // 履歴のマッピング
-            const messages: ModelMessage[] = [];
+            const messages: CoreMessage[] = [];
             if (history && history.length > 0) {
                 // 最初のメッセージが user 以外（assistant など）の場合、APIの制約（最初が user でなければならない等）を回避するため、
                 // 先頭にダミーの user メッセージを挿入して履歴が切り捨てられるのを防ぐ
@@ -210,9 +211,18 @@ export class ChatAiService {
             // Vercel AI SDK 形式のツール定義に変換
             const vercelTools: Record<string, any> = {};
             filteredTools.forEach(t => {
-                vercelTools[t.name] = convertLmStudioToolToVercel(t, (args, result) => {
-                    executedTools.push({ toolName: t.name, args, result });
-                });
+                vercelTools[t.name] = convertLmStudioToolToVercel(
+                    t,
+                    (args, result) => {
+                        executedTools.push({ toolName: t.name, args, result });
+                    },
+                    async (args) => {
+                        if (onToolExecute) {
+                            return await onToolExecute(t.name, args);
+                        }
+                        return null;
+                    }
+                );
             });
 
             // プロバイダーとモデルの設定
@@ -291,6 +301,75 @@ export class ChatAiService {
             try {
                 response = await generateText(generateOptions);
 
+                // 手動マルチステップのフォールバック
+                // もし自動マルチステップが動作せず、finishReason が tool-calls で終わっている場合、手動でループする
+                let currentResponse = response;
+                let stepsCount = currentResponse.steps.length;
+                const maxManualSteps = 5;
+
+                while (
+                    currentResponse.steps[currentResponse.steps.length - 1]?.finishReason === 'tool-calls' &&
+                    stepsCount < maxManualSteps
+                ) {
+                    const lastStep = currentResponse.steps[currentResponse.steps.length - 1];
+                    console.log(`[ChatAiService] Auto-multistep failed to proceed (finishReason is tool-calls). Proceeding with manual step ${stepsCount + 1}...`);
+                    
+                    // ツール実行結果のテキスト表現を構築
+                    const toolResultsText = lastStep.toolResults.map((tr: any) => {
+                        let resVal = tr.output !== undefined ? tr.output : tr.result;
+                        if (typeof resVal === 'string') {
+                            try {
+                                resVal = JSON.parse(resVal);
+                            } catch (e) {}
+                        }
+                        const resultStr = typeof resVal === 'object'
+                            ? (resVal.message || JSON.stringify(resVal))
+                            : String(resVal);
+                        return `[ツール ${tr.toolName} の実行結果]:\n${resultStr}`;
+                    }).join('\n\n');
+
+                    // 元の最後の user メッセージを取得し、ツール結果を結合する
+                    let lastUserMsgIndex = -1;
+                    for (let i = messages.length - 1; i >= 0; i--) {
+                        if (messages[i].role === 'user') {
+                            lastUserMsgIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (lastUserMsgIndex !== -1) {
+                        const originalContent = messages[lastUserMsgIndex].content;
+                        if (typeof originalContent === 'string') {
+                            messages[lastUserMsgIndex].content = `${originalContent}\n\n(システム情報: ツールが実行されました)\n${toolResultsText}`;
+                        } else if (Array.isArray(originalContent)) {
+                            const textPart = originalContent.find((p: any) => p.type === 'text');
+                            if (textPart) {
+                                textPart.text = `${textPart.text}\n\n(システム情報: ツールが実行されました)\n${toolResultsText}`;
+                            } else {
+                                originalContent.push({ type: 'text', text: `\n\n(システム情報: ツールが実行されました)\n${toolResultsText}` });
+                            }
+                        }
+                    } else {
+                        messages.push({
+                            role: 'user',
+                            content: `(システム情報: ツールが実行されました)\n${toolResultsText}`
+                        });
+                    }
+
+                    // 再度 generateText を呼び出す (tools は削除して無限呼び出しを防ぐ)
+                    const nextOptions = { ...generateOptions, messages: messages };
+                    delete nextOptions.tools;
+                    
+                    const nextResponse = await generateText(nextOptions);
+
+                    // 新しい response で上書きし、ステップを追加
+                    const newSteps = [...currentResponse.steps, ...nextResponse.steps];
+                    currentResponse = nextResponse;
+                    currentResponse.steps = newSteps;
+                    stepsCount++;
+                }
+                response = currentResponse;
+
                 // ツール呼び出しの有無をログ出力
                 // Vercel AI SDK の toolResults の仕様不整合や undefined 化を回避するため、
                 // 実際に execute された実績である executedTools キャッシュから直接通知を送信する
@@ -322,6 +401,13 @@ export class ChatAiService {
 
             clearTimeout(timeoutId);
 
+            console.log("[ChatAiService] raw generateText response.text:", response.text);
+            console.log("[ChatAiService] generateText response steps:", JSON.stringify(response.steps.map(s => ({
+                text: s.text,
+                toolCalls: s.toolCalls,
+                toolResults: s.toolResults,
+                finishReason: s.finishReason
+            })), null, 2));
             let cleanedContent = response.text || '';
 
             // 思考プロセス（Thinking Process や <think>, <thought> タグ、<|channel>thought タグ）のクレンジング

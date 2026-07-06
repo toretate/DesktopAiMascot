@@ -77,7 +77,11 @@ function convertLmStudioSchemaToPlainJsonSchema(parametersSchema: any): any {
  * LM Studio SDK のツール定義を Vercel AI SDK のツール定義に変換します。
  * @param lmTool LM Studio SDK のツールオブジェクト
  */
-export function convertLmStudioToolToVercel(lmTool: any, onExecute?: (args: any, result: any) => void): any {
+export function convertLmStudioToolToVercel(
+    lmTool: any,
+    onExecute?: (args: any, result: any) => void,
+    onInterceptExecute?: (args: any) => Promise<any>
+): any {
     const rawSchema = convertLmStudioSchemaToPlainJsonSchema(lmTool.parametersSchema);
 
     // jsonSchema() ヘルパーでラップして、parameters と inputSchema の両方に設定する
@@ -88,14 +92,37 @@ export function convertLmStudioToolToVercel(lmTool: any, onExecute?: (args: any,
         parameters: wrappedSchema,
         inputSchema: wrappedSchema,
         execute: async (args: any, { abortSignal }: { abortSignal?: AbortSignal } = {}) => {
-            // 既存の implementation は引数オブジェクトを受け取る
             console.log(`[Tool Execution] Running "${lmTool.name}" with args:`, args);
-            const toolResponse = await lmTool.implementation(args, { abortSignal });
+            
+            let toolResponse;
+            if (onInterceptExecute) {
+                try {
+                    const intercepted = await onInterceptExecute(args);
+                    if (intercepted !== undefined && intercepted !== null) {
+                        toolResponse = intercepted;
+                    }
+                } catch (e: any) {
+                    console.error(`[Tool Intercept Error] Intercepting execution of "${lmTool.name}" failed:`, e.message);
+                }
+            }
+
+            if (toolResponse === undefined) {
+                toolResponse = await lmTool.implementation(args, { abortSignal });
+            }
+
             console.log(`[Tool Execution Result] "${toolResponse}"`);
             if (onExecute) {
                 onExecute(args, toolResponse);
+            }
+            if (typeof toolResponse === 'string') {
+                try {
+                    return JSON.parse(toolResponse);
+                } catch (e) {
+                    return { result: toolResponse };
+                }
             }
             return toolResponse;
         }
     };
 }
+

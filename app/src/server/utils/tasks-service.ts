@@ -82,3 +82,140 @@ export function addTaskToDb(userId: string, payload: TaskData) {
         task: newTask
     };
 }
+
+/**
+ * ユーザーのタスクを検索します。
+ */
+export function searchTasksFromDb(
+    userId: string,
+    query?: string,
+    date?: string,
+    completed?: boolean
+) {
+    const tasksPath = getUserTasksPath(userId);
+    if (!fs.existsSync(tasksPath)) {
+        return [];
+    }
+
+    try {
+        const raw = fs.readFileSync(tasksPath, 'utf8');
+        const data = JSON.parse(raw);
+        let tasks = data.tasks || [];
+
+        if (query) {
+            const lowerQuery = query.toLowerCase();
+            tasks = tasks.filter((t: any) => t.title && t.title.toLowerCase().includes(lowerQuery));
+        }
+
+        if (date) {
+            tasks = tasks.filter((t: any) => {
+                if (!t.scheduledAt) return false;
+                return t.scheduledAt.startsWith(date);
+            });
+        }
+
+        if (completed !== undefined) {
+            tasks = tasks.filter((t: any) => t.completed === completed);
+        }
+
+        return tasks;
+    } catch (e) {
+        console.error('[TasksDB] Failed to search tasks:', e);
+        return [];
+    }
+}
+
+/**
+ * ユーザーのタスクを更新します。
+ */
+export function updateTaskInDb(
+    userId: string,
+    id: string,
+    updates: {
+        title?: string;
+        priority?: 'normal' | 'star' | 'thunder';
+        categoryId?: string;
+        scheduledAt?: string | null;
+        completed?: boolean;
+    }
+) {
+    const tasksPath = getUserTasksPath(userId);
+    if (!fs.existsSync(tasksPath)) {
+        throw new Error('Tasks database does not exist.');
+    }
+
+    const raw = fs.readFileSync(tasksPath, 'utf8');
+    const data = JSON.parse(raw);
+    const tasks = data.tasks || [];
+
+    const task = tasks.find((t: any) => t.id === id);
+    if (!task) {
+        throw new Error(`Task with ID ${id} not found.`);
+    }
+
+    if (updates.title !== undefined) task.title = updates.title;
+    if (updates.priority !== undefined) task.priority = updates.priority;
+    
+    if (updates.categoryId !== undefined) {
+        let categoryId = updates.categoryId;
+        const lowerCat = categoryId.toLowerCase();
+        const matchedCat = data.categories.find((c: any) => c.id.toLowerCase() === lowerCat || c.name.toLowerCase() === lowerCat);
+        if (matchedCat) {
+            task.categoryId = matchedCat.id;
+        } else {
+            const newCatId = 'cat_' + Math.random().toString(36).substring(2, 11);
+            const order = data.categories.length;
+            data.categories.push({ id: newCatId, name: updates.categoryId, order });
+            task.categoryId = newCatId;
+        }
+    }
+
+    if (updates.scheduledAt !== undefined) {
+        task.scheduledAt = updates.scheduledAt === null || updates.scheduledAt === '' ? undefined : updates.scheduledAt;
+    }
+
+    if (updates.completed !== undefined) {
+        task.completed = updates.completed;
+        task.status = updates.completed ? 'done' : 'todo';
+        if (updates.completed) {
+            task.endedAt = new Date().toISOString();
+        } else {
+            task.endedAt = undefined;
+        }
+        if (task.steps && Array.isArray(task.steps)) {
+            task.steps.forEach((step: any) => {
+                step.completed = updates.completed;
+                step.status = updates.completed ? 'done' : 'todo';
+            });
+        }
+    }
+
+    safeWriteFileSync(tasksPath, JSON.stringify(data, null, 4));
+
+    return {
+        categories: data.categories,
+        task
+    };
+}
+
+/**
+ * ユーザーのタスクを削除します。
+ */
+export function deleteTaskFromDb(userId: string, id: string) {
+    const tasksPath = getUserTasksPath(userId);
+    if (!fs.existsSync(tasksPath)) {
+        throw new Error('Tasks database does not exist.');
+    }
+
+    const raw = fs.readFileSync(tasksPath, 'utf8');
+    const data = JSON.parse(raw);
+    const initialLength = data.tasks.length;
+    data.tasks = data.tasks.filter((t: any) => t.id !== id);
+
+    if (data.tasks.length === initialLength) {
+        throw new Error(`Task with ID ${id} not found.`);
+    }
+
+    safeWriteFileSync(tasksPath, JSON.stringify(data, null, 4));
+}
+
