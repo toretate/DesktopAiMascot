@@ -395,33 +395,43 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             }
         },
         getVoicevoxSpeakers: async (endpoint: string) => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
             try {
-                const response = await fetch(`${endpoint}/speakers`, {
-                    method: 'GET',
-                    signal: controller.signal
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'getVoicevoxSpeakers',
+                        endpoint
+                    })
                 });
-                clearTimeout(timeoutId);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                const speakers = data.map((sp: any) => {
-                    const style = sp.styles?.[0]?.id !== undefined ? sp.styles[0].id : 0;
-                    return { name: `${sp.name} (${sp.styles?.[0]?.name || ''})`, value: style };
-                });
-                return { success: true, speakers };
+                return data.success
+                    ? { success: true, speakers: data.speakers }
+                    : { success: false, speakers: [], error: data.error || 'スピーカーの取得に失敗しました。' };
             } catch (e: any) {
-                clearTimeout(timeoutId);
                 return { success: false, speakers: [], error: e.message || '接続に失敗しました' };
             }
         },
         getIrodoriVoices: async (endpoint: string) => {
             try {
-                const result = await IrodoriTtsConnector.listVoices(endpoint);
-                if (result && result.data) {
-                    return { success: true, voices: result.data };
-                }
-                return { success: false, voices: [], error: 'ボイス一覧の取得に失敗しました。' };
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'getIrodoriVoices',
+                        endpoint
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data.success
+                    ? { success: true, voices: data.voices }
+                    : { success: false, voices: [], error: data.error || 'ボイス一覧の取得に失敗しました。' };
             } catch (e: any) {
                 return { success: false, voices: [], error: e.message || '接続に失敗しました' };
             }
