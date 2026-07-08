@@ -47,7 +47,7 @@ describe('ChatAiService の LM Studio 実機統合テスト (Mockなし)', () =>
             },
             onToolExecute: async (toolName, args) => {
                 console.log(`[Real Test onToolExecute] Intercepted tool: ${toolName}`, args);
-                if (toolName === 'searchTasks') {
+                if (toolName === 'manageTasks' && args.action === 'search') {
                     return JSON.stringify({
                         success: true,
                         message: 'タスク・予定が 1 件見つかりました：\n- [未完了] LM Studio 実機テスト会議 (予定日時: 2026/07/07 15:00:00)'
@@ -80,7 +80,7 @@ describe('ChatAiService の LM Studio 実機統合テスト (Mockなし)', () =>
             tools: {},
             onToolExecute: async (toolName, args) => {
                 console.log(`[Real Test onToolExecute] Intercepted tool: ${toolName}`, args);
-                if (toolName === 'addTask') {
+                if (toolName === 'manageTasks' && args.action === 'add') {
                     toolCalled = true;
                     return JSON.stringify({
                         success: true,
@@ -112,7 +112,7 @@ describe('ChatAiService の LM Studio 実機統合テスト (Mockなし)', () =>
             tools: {},
             onToolExecute: async (toolName, args) => {
                 console.log(`[Real Test onToolExecute] Intercepted tool: ${toolName}`, args);
-                if (toolName === 'updateTask') {
+                if (toolName === 'manageTasks' && args.action === 'update') {
                     toolCalled = true;
                     expect(args.id).toBe('task_123');
                     expect(args.completed).toBe(true);
@@ -146,7 +146,7 @@ describe('ChatAiService の LM Studio 実機統合テスト (Mockなし)', () =>
             tools: {},
             onToolExecute: async (toolName, args) => {
                 console.log(`[Real Test onToolExecute] Intercepted tool: ${toolName}`, args);
-                if (toolName === 'deleteTask') {
+                if (toolName === 'manageTasks' && args.action === 'delete') {
                     toolCalled = true;
                     expect(args.id).toBe('task_123');
                     return JSON.stringify({

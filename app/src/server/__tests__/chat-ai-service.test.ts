@@ -46,16 +46,16 @@ describe('ChatAiService.generateResponse のテスト', () => {
                         {
                             type: 'tool-call',
                             toolCallId: 'call_123',
-                            toolName: 'searchTasks',
-                            args: { completed: false }
+                            toolName: 'manageTasks',
+                            args: { action: 'search', completed: false }
                         }
                     ],
                     toolResults: [
                         {
                             type: 'tool-result',
                             toolCallId: 'call_123',
-                            toolName: 'searchTasks',
-                            args: { completed: false },
+                            toolName: 'manageTasks',
+                            args: { action: 'search', completed: false },
                             result: {
                                 success: true,
                                 message: 'タスク・予定が 1 件見つかりました：\n- [未完了] テスト会議'
@@ -82,7 +82,7 @@ describe('ChatAiService.generateResponse のテスト', () => {
                 toolsWebSearch: true
             },
             onToolExecute: async (toolName, args) => {
-                if (toolName === 'searchTasks') {
+                if (toolName === 'manageTasks' && args.action === 'search') {
                     return JSON.stringify({
                         success: true,
                         message: 'タスク・予定が 1 件見つかりました：\n- [未完了] テスト会議'
@@ -94,11 +94,11 @@ describe('ChatAiService.generateResponse のテスト', () => {
 
         // 期待される返答テキストが得られることを検証
         expect(reply).toContain('今日の予定はテスト会議があります。');
-        
+
         // generateText が適切なパラメータで呼び出されたことを検証
         expect(generateText).toHaveBeenCalled();
         const callArgs = vi.mocked(generateText).mock.calls[0][0];
-        expect(callArgs.tools).toHaveProperty('searchTasks');
+        expect(callArgs.tools).toHaveProperty('manageTasks');
     });
 
     it('generateResponse_自動マルチステップが停止した際に手動フォールバックループが走り最終回答を生成すること', async () => {
@@ -112,8 +112,9 @@ describe('ChatAiService.generateResponse のテスト', () => {
                         {
                             type: 'tool-call',
                             toolCallId: 'call_999',
-                            toolName: 'searchTasks',
+                            toolName: 'manageTasks',
                             args: {
+                                action: 'search',
                                 completed: false
                             }
                         }
@@ -122,8 +123,9 @@ describe('ChatAiService.generateResponse のテスト', () => {
                         {
                             type: 'tool-result',
                             toolCallId: 'call_999',
-                            toolName: 'searchTasks',
+                            toolName: 'manageTasks',
                             args: {
+                                action: 'search',
                                 completed: false
                             },
                             result: "{\"success\":true,\"message\":\"タスク・予定が 1 件見つかりました：\\n- [未完了] 特報会議\"}"
@@ -159,7 +161,7 @@ describe('ChatAiService.generateResponse のテスト', () => {
                 toolsWebSearch: true
             },
             onToolExecute: async (toolName, args) => {
-                if (toolName === 'searchTasks') {
+                if (toolName === 'manageTasks' && args.action === 'search') {
                     return JSON.stringify({
                         success: true,
                         message: 'タスク・予定が 1 件見つかりました：\n- [未完了] 特報会議'

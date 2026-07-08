@@ -33,11 +33,7 @@ import { weatherTool } from '../weather-tool';
 import { volumeTool } from '../volume-tool';
 import { appLauncherTool } from '../app-launcher-tool';
 import { webSearchTool } from '../web-search-tool';
-import { addTaskTool } from '../add-task-tool';
-import { addScheduleTool } from '../add-schedule-tool';
-import { searchTasksTool } from '../search-tasks-tool';
-import { updateTaskTool } from '../update-task-tool';
-import { deleteTaskTool } from '../delete-task-tool';
+import { manageTasksTool } from '../manage-tasks-tool';
 import { exec } from 'child_process';
 
 describe('Tool Use - 各ツールの挙動テスト', () => {
@@ -195,59 +191,60 @@ describe('Tool Use - 各ツールの挙動テスト', () => {
         expect(result).toContain('Web検索中にエラーが発生しました');
     });
 
-    // 7. タスク追加ツール (addTask)
-    test('addTask - タスクの追加が正常にシミュレートされ、結果がJSON形式で返ること', async () => {
-        const result = await addTaskTool.implementation({ title: '宿題をする', priority: 'star', categoryId: 'private' }, {} as any);
+    // 7. タスク一元管理ツール (manageTasks) - 追加（期限なし）
+    test('manageTasks(add) - 期限なしタスクの追加が正常にシミュレートされ、結果がJSON形式で返ること', async () => {
+        const result = await manageTasksTool.implementation({ action: 'add', title: '宿題をする', priority: 'star', categoryId: 'private' }, {} as any);
         const parsed = JSON.parse(result);
         expect(parsed.success).toBe(true);
-        expect(parsed.action).toBe('addTask');
-        expect(parsed.task.title).toBe('宿題をする');
-        expect(parsed.task.priority).toBe('star');
-        expect(parsed.task.categoryId).toBe('private');
+        expect(parsed.action).toBe('add');
+        expect(parsed.title).toBe('宿題をする');
+        expect(parsed.priority).toBe('star');
+        expect(parsed.categoryId).toBe('private');
+        expect(parsed.scheduledAt).toBeUndefined();
     });
 
-    // 8. スケジュール追加ツール (addSchedule)
-    test('addSchedule - スケジュールの追加が正常にシミュレートされ、結果がJSON形式で返ること', async () => {
-        const result = await addScheduleTool.implementation({ title: '会議', scheduledAt: '2026-07-06T18:00:00+09:00', priority: 'normal', categoryId: 'default' }, {} as any);
+    // 8. タスク一元管理ツール (manageTasks) - 追加（期限あり = 旧addSchedule相当）
+    test('manageTasks(add) - scheduledAt指定時に予定の追加が正常にシミュレートされ、結果がJSON形式で返ること', async () => {
+        const result = await manageTasksTool.implementation({ action: 'add', title: '会議', scheduledAt: '2026-07-06T18:00:00+09:00', priority: 'normal', categoryId: 'default' }, {} as any);
         const parsed = JSON.parse(result);
         expect(parsed.success).toBe(true);
-        expect(parsed.action).toBe('addSchedule');
-        expect(parsed.schedule.title).toBe('会議');
-        expect(parsed.schedule.scheduledAt).toBe('2026-07-06T18:00:00+09:00');
-        expect(parsed.schedule.priority).toBe('normal');
-        expect(parsed.schedule.categoryId).toBe('default');
+        expect(parsed.action).toBe('add');
+        expect(parsed.title).toBe('会議');
+        expect(parsed.scheduledAt).toBe('2026-07-06T18:00:00+09:00');
+        expect(parsed.priority).toBe('normal');
+        expect(parsed.categoryId).toBe('default');
     });
 
-    // 9. タスク検索ツール (searchTasks)
-    test('searchTasks - タスクの検索パラメータが正常にパースされて返ること', async () => {
-        const result = await searchTasksTool.implementation({ query: 'テスト', date: '2026-07-06', completed: false }, {} as any);
+    // 9. タスク一元管理ツール (manageTasks) - 検索
+    test('manageTasks(search) - タスクの検索パラメータが正常にパースされて返ること', async () => {
+        const result = await manageTasksTool.implementation({ action: 'search', query: 'テスト', date: '2026-07-06', completed: false }, {} as any);
         const parsed = JSON.parse(result);
         expect(parsed.success).toBe(true);
-        expect(parsed.action).toBe('searchTasks');
+        expect(parsed.action).toBe('search');
         expect(parsed.query).toBe('テスト');
         expect(parsed.date).toBe('2026-07-06');
         expect(parsed.completed).toBe(false);
     });
 
-    // 10. タスク更新ツール (updateTask)
-    test('updateTask - タスクの更新パラメータが正常にパースされて返ること', async () => {
-        const result = await updateTaskTool.implementation({ id: 'task_123', title: '更新後タスク', priority: 'thunder', scheduledAt: '2026-07-06T20:00:00+09:00', completed: true }, {} as any);
+    // 10. タスク一元管理ツール (manageTasks) - 更新
+    test('manageTasks(update) - タスクの更新パラメータが正常にパースされて返ること', async () => {
+        const result = await manageTasksTool.implementation({ action: 'update', id: 'task_123', title: '更新後タスク', priority: 'thunder', scheduledAt: '2026-07-06T20:00:00+09:00', completed: true }, {} as any);
         const parsed = JSON.parse(result);
         expect(parsed.success).toBe(true);
-        expect(parsed.action).toBe('updateTask');
-        expect(parsed.task.id).toBe('task_123');
-        expect(parsed.task.title).toBe('更新後タスク');
-        expect(parsed.task.priority).toBe('thunder');
-        expect(parsed.task.scheduledAt).toBe('2026-07-06T20:00:00+09:00');
-        expect(parsed.task.completed).toBe(true);
+        expect(parsed.action).toBe('update');
+        expect(parsed.id).toBe('task_123');
+        expect(parsed.title).toBe('更新後タスク');
+        expect(parsed.priority).toBe('thunder');
+        expect(parsed.scheduledAt).toBe('2026-07-06T20:00:00+09:00');
+        expect(parsed.completed).toBe(true);
     });
 
-    // 11. タスク削除ツール (deleteTask)
-    test('deleteTask - タスクの削除パラメータが正常にパースされて返ること', async () => {
-        const result = await deleteTaskTool.implementation({ id: 'task_123' }, {} as any);
+    // 11. タスク一元管理ツール (manageTasks) - 削除
+    test('manageTasks(delete) - タスクの削除パラメータが正常にパースされて返ること', async () => {
+        const result = await manageTasksTool.implementation({ action: 'delete', id: 'task_123' }, {} as any);
         const parsed = JSON.parse(result);
         expect(parsed.success).toBe(true);
-        expect(parsed.action).toBe('deleteTask');
+        expect(parsed.action).toBe('delete');
         expect(parsed.id).toBe('task_123');
     });
 });
