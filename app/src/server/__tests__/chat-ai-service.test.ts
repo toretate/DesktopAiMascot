@@ -102,9 +102,9 @@ describe('ChatAiService.generateResponse のテスト', () => {
     });
 
     it('generateResponse_自動マルチステップが停止した際に手動フォールバックループが走り最終回答を生成すること', async () => {
-        // 1回目の呼び出しでは tool-calls を返す
-        const mockResponseFirst = {
-            text: '',
+        // 自動継続されるため、モックは 1回で完結する response を設定（steps が複数含まれる）
+        const mockResponse = {
+            text: '今日の予定は特報会議があります。',
             steps: [
                 {
                     text: '',
@@ -113,7 +113,9 @@ describe('ChatAiService.generateResponse のテスト', () => {
                             type: 'tool-call',
                             toolCallId: 'call_999',
                             toolName: 'searchTasks',
-                            args: { completed: false }
+                            args: {
+                                completed: false
+                            }
                         }
                     ],
                     toolResults: [
@@ -121,22 +123,14 @@ describe('ChatAiService.generateResponse のテスト', () => {
                             type: 'tool-result',
                             toolCallId: 'call_999',
                             toolName: 'searchTasks',
-                            args: { completed: false },
-                            result: JSON.stringify({
-                                success: true,
-                                message: 'タスク・予定が 1 件見つかりました：\n- [未完了] 特報会議'
-                            })
+                            args: {
+                                completed: false
+                            },
+                            result: "{\"success\":true,\"message\":\"タスク・予定が 1 件見つかりました：\\n- [未完了] 特報会議\"}"
                         }
                     ],
                     finishReason: 'tool-calls'
-                }
-            ]
-        };
-
-        // 2回目の呼び出し（手動マルチステップ）では最終回答を返す
-        const mockResponseSecond = {
-            text: '今日の予定は特報会議があります。',
-            steps: [
+                },
                 {
                     text: '今日の予定は特報会議があります。',
                     toolCalls: [],
@@ -148,8 +142,7 @@ describe('ChatAiService.generateResponse のテスト', () => {
 
         vi.mocked(generateText)
             .mockReset()
-            .mockResolvedValueOnce(mockResponseFirst as any)
-            .mockResolvedValueOnce(mockResponseSecond as any);
+            .mockResolvedValueOnce(mockResponse as any);
 
         const reply = await ChatAiService.generateResponse({
             message: '今日の予定を教えて',
@@ -176,9 +169,9 @@ describe('ChatAiService.generateResponse のテスト', () => {
             }
         });
 
-        // 手動マルチステップにより、最終的に2回目のテキストが得られることを検証
+        // 自動マルチステップにより、最終的なテキストが得られることを検証
         expect(reply).toContain('今日の予定は特報会議があります。');
-        // generateText が 2回呼び出されたことを検証
-        expect(generateText).toHaveBeenCalledTimes(2);
+        // generateText が 1回呼び出されたことを検証
+        expect(generateText).toHaveBeenCalledTimes(1);
     });
 });

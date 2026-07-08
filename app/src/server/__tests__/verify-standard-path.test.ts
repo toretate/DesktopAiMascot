@@ -13,7 +13,9 @@ describe('Standard Multistep Path Verification', () => {
         inputSchema: z.object({
             query: z.string().optional().describe('タイトルに含まれる検索キーワード'),
             date: z.string().optional().describe('予定日 (YYYY-MM-DD)'),
-            completed: z.boolean().optional().describe('完了状態で絞り込む場合は true')
+            completed: z.boolean().optional().describe('完了状態で絞り込む場合は true'),
+            action: z.enum(['add', 'search', 'delete']).optional().describe('操作アクション'),
+            tags: z.array(z.string()).optional().describe('タグのリスト')
         }),
         execute: async (args) => {
             console.log('[Verify Test] searchTasks executed with args:', args);
