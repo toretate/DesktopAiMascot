@@ -88,6 +88,13 @@ export interface AppConfig {
     chatWidth?: number;
     chatHeight?: number;
 
+    // 統合ウィンドウでのチャット欄の幅比率 (0.2 - 0.8)
+    integratedChatRatio?: number;
+
+    // 統合ウィンドウ内でのマスコット表示位置 (マスコット表示エリアに対する縦横の比率 0.0 - 1.0)
+    integratedMascotXRatio?: number;
+    integratedMascotYRatio?: number;
+
     // ツール使用設定 (ToolUse)
 
     toolsGpsLocation: boolean;
@@ -206,6 +213,13 @@ export const useConfigStore = defineStore('config', () => {
     const compactY = ref(-1);
     const chatWidth = ref(350);
     const chatHeight = ref(400);
+
+    // 統合ウィンドウでのチャット欄の幅比率 (0.2 - 0.8)
+    const integratedChatRatio = ref(0.6);
+
+    // 統合ウィンドウ内でのマスコット表示位置 (マスコット表示エリアに対する縦横の比率 0.0 - 1.0)
+    const integratedMascotXRatio = ref(0.5);
+    const integratedMascotYRatio = ref(0.5);
 
     // マスコット一覧とアクティブなマスコットID
     const mascots = ref<any[]>([]);
@@ -367,6 +381,9 @@ export const useConfigStore = defineStore('config', () => {
             compactY.value = configData.compactY !== undefined ? Number(configData.compactY) : -1;
             chatWidth.value = configData.chatWidth !== undefined ? Number(configData.chatWidth) : 350;
             chatHeight.value = configData.chatHeight !== undefined ? Number(configData.chatHeight) : 400;
+            integratedChatRatio.value = configData.integratedChatRatio !== undefined ? Number(configData.integratedChatRatio) : 0.6;
+            integratedMascotXRatio.value = configData.integratedMascotXRatio !== undefined ? Number(configData.integratedMascotXRatio) : 0.5;
+            integratedMascotYRatio.value = configData.integratedMascotYRatio !== undefined ? Number(configData.integratedMascotYRatio) : 0.5;
 
             if (mascots.value.length === 0 && configData.mascots) {
                 mascots.value = configData.mascots;
@@ -499,6 +516,9 @@ export const useConfigStore = defineStore('config', () => {
             compactY.value = Number(localStorage.getItem('compactY') || '-1');
             chatWidth.value = Number(localStorage.getItem('chatWidth') || '350');
             chatHeight.value = Number(localStorage.getItem('chatHeight') || '400');
+            integratedChatRatio.value = Number(localStorage.getItem('integratedChatRatio') || '0.6');
+            integratedMascotXRatio.value = Number(localStorage.getItem('integratedMascotXRatio') || '0.5');
+            integratedMascotYRatio.value = Number(localStorage.getItem('integratedMascotYRatio') || '0.5');
 
             const localMascots = localStorage.getItem('mascots');
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
@@ -619,6 +639,9 @@ export const useConfigStore = defineStore('config', () => {
             compactY: Number(compactY.value),
             chatWidth: Number(chatWidth.value),
             chatHeight: Number(chatHeight.value),
+            integratedChatRatio: Number(integratedChatRatio.value),
+            integratedMascotXRatio: Number(integratedMascotXRatio.value),
+            integratedMascotYRatio: Number(integratedMascotYRatio.value),
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value,
             toolsGpsLocation: toolsGpsLocation.value,
@@ -751,6 +774,9 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('compactY', compactY.value.toString());
         localStorage.setItem('chatWidth', chatWidth.value.toString());
         localStorage.setItem('chatHeight', chatHeight.value.toString());
+        localStorage.setItem('integratedChatRatio', integratedChatRatio.value.toString());
+        localStorage.setItem('integratedMascotXRatio', integratedMascotXRatio.value.toString());
+        localStorage.setItem('integratedMascotYRatio', integratedMascotYRatio.value.toString());
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
 
@@ -867,7 +893,10 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.compactY !== undefined) compactY.value = Number(newConfig.compactY);
         if (newConfig.chatWidth !== undefined) chatWidth.value = Number(newConfig.chatWidth);
         if (newConfig.chatHeight !== undefined) chatHeight.value = Number(newConfig.chatHeight);
-        
+        if (newConfig.integratedChatRatio !== undefined) integratedChatRatio.value = Number(newConfig.integratedChatRatio);
+        if (newConfig.integratedMascotXRatio !== undefined) integratedMascotXRatio.value = Number(newConfig.integratedMascotXRatio);
+        if (newConfig.integratedMascotYRatio !== undefined) integratedMascotYRatio.value = Number(newConfig.integratedMascotYRatio);
+
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
 
@@ -962,6 +991,9 @@ export const useConfigStore = defineStore('config', () => {
         compactY,
         chatWidth,
         chatHeight,
+        integratedChatRatio,
+        integratedMascotXRatio,
+        integratedMascotYRatio,
         mascots,
         summaryEngine,
         summaryGeminiModel,

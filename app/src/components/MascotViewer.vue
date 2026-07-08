@@ -65,7 +65,9 @@ const {
     mascotBackgroundOpacity,
     mascotBackgroundImage,
     mascotBackgroundImageOpacity,
-    mascotBackgroundImageFit
+    mascotBackgroundImageFit,
+    integratedMascotXRatio,
+    integratedMascotYRatio
 } = storeToRefs(configStore);
 
 const {
@@ -886,6 +888,25 @@ const totalMascotScale = computed(() => {
     return mascotScale.value || 1.0;
 });
 
+// マスコットキャラクターの表示スタイル（統合モードでは保存された比率位置に絶対配置する）
+const mascotCharacterStyle = computed(() => {
+    if (windowMode.value === 'integrated') {
+        const x = clamp01(integratedMascotXRatio.value ?? 0.5);
+        const y = clamp01(integratedMascotYRatio.value ?? 0.5);
+        return {
+            position: 'absolute' as const,
+            left: `${(x * 100).toFixed(2)}%`,
+            top: `${(y * 100).toFixed(2)}%`,
+            transform: `translate(-50%, -50%) scale(${totalMascotScale.value})`,
+            transformOrigin: 'center center'
+        };
+    }
+    return {
+        transform: `scale(${totalMascotScale.value})`,
+        transformOrigin: windowMode.value === 'compact' ? 'bottom center' : 'center center'
+    };
+});
+
 const getNonTransparentBounds = (img: HTMLImageElement) => {
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth || 1;
@@ -941,10 +962,14 @@ const openSettings = () => {
 };
 
 // --- ドラッグおよびクリックの制御 ---
+// 統合モードではウィンドウ内でマスコット自体を移動し、それ以外のモードではウィンドウごと移動する
+const mascotWrapper = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
 let startMouseX = 0;
 let startMouseY = 0;
 let hasMoved = false;
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 const onMouseDown = (e: MouseEvent) => {
     if (e.button === 0) {
@@ -953,7 +978,7 @@ const onMouseDown = (e: MouseEvent) => {
         startMouseY = e.screenY;
         hasMoved = false;
 
-        if (window.electronAPI && window.electronAPI.dragWindow) {
+        if (windowMode.value !== 'integrated' && window.electronAPI && window.electronAPI.dragWindow) {
             window.electronAPI.dragWindow({ dx: 0, dy: 0, isStart: true });
         }
 
@@ -975,7 +1000,14 @@ const onMouseMove = (e: MouseEvent) => {
 
     if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
         hasMoved = true;
-        if (window.electronAPI && window.electronAPI.dragWindow) {
+        if (windowMode.value === 'integrated') {
+            // マスコット表示エリアに対する縦横比率で位置を更新（ウィンドウサイズ可変に対応）
+            const rect = mascotWrapper.value?.getBoundingClientRect();
+            if (rect && rect.width > 0 && rect.height > 0) {
+                integratedMascotXRatio.value = clamp01((integratedMascotXRatio.value ?? 0.5) + dx / rect.width);
+                integratedMascotYRatio.value = clamp01((integratedMascotYRatio.value ?? 0.5) + dy / rect.height);
+            }
+        } else if (window.electronAPI && window.electronAPI.dragWindow) {
             window.electronAPI.dragWindow({ dx, dy });
         }
         startMouseX = e.screenX;
@@ -990,7 +1022,11 @@ const onMouseUp = () => {
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);
 
-    if (window.electronAPI && window.electronAPI.dragWindow) {
+    if (windowMode.value === 'integrated') {
+        if (hasMoved) {
+            configStore.saveConfig();
+        }
+    } else if (window.electronAPI && window.electronAPI.dragWindow) {
         window.electronAPI.dragWindow({ dx: 0, dy: 0, isEnd: true });
     }
 
@@ -1257,23 +1293,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact', 'is-ready': isReady && !isAssetsLoading }">
+    <div ref="mascotWrapper" class="mascot-wrapper app-dark" :class="{ 'is-compact': windowMode === 'compact', 'is-integrated': windowMode === 'integrated', 'is-ready': isReady && !isAssetsLoading }">
         <!-- 背景レイヤー -->
         <div class="mascot-background" :style="mascotBackgroundStyle"></div>
         <!-- ローディングインジケーター -->
         <div v-if="isAssetsLoading || !isReady" class="mascot-loading-overlay">
             <i class="pi pi-spin pi-spinner text-4xl text-purple-500"></i>
         </div>
-        <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。元のコンパイル済みで動作確認済みの拡大縮小ロジック) -->
-        <div 
-            class="mascot-character" 
-            :style="{ 
-                transform: `scale(${totalMascotScale})`,
-                transformOrigin: windowMode === 'compact' ? 'bottom center' : 'center center'
-            }"
-            @mousedown="onMouseDown" 
-            @contextmenu.prevent="openSettings" 
-            @dragstart.prevent 
+        <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。統合モードでは比率位置に絶対配置) -->
+        <div
+            class="mascot-character"
+            :style="mascotCharacterStyle"
+            @mousedown="onMouseDown"
+            @contextmenu.prevent="openSettings"
+            @dragstart.prevent
             @wheel="onWheel"
         >
             <!-- 吹き出し -->
@@ -1436,6 +1469,12 @@ onUnmounted(() => {
     width: 100% !important;
     height: 100% !important;
     justify-content: flex-end !important;
+}
+
+/* 統合モードではマスコット表示エリア（親セクション）いっぱいに広げ、比率位置の基準にする */
+.mascot-wrapper.is-integrated {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .is-compact .mascot-character {
