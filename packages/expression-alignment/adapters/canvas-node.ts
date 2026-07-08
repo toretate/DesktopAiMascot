@@ -6,7 +6,7 @@
  * 通常の import で canvas を解決する。
  */
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { loadImage as canvasLoadImage, createCanvas } from 'canvas';
 import type { ImageLoader } from '../src/image-input';
@@ -14,7 +14,13 @@ import type { RasterImage } from '../src/types';
 
 export class NodeCanvasImageLoader implements ImageLoader {
     async load(source: string): Promise<RasterImage> {
-        const img = await canvasLoadImage(source);
+        let img;
+        if (typeof source === 'string' && !source.startsWith('data:')) {
+            const buf = readFileSync(source);
+            img = await canvasLoadImage(buf);
+        } else {
+            img = await canvasLoadImage(source);
+        }
         const width = img.width;
         const height = img.height;
         const canvas = createCanvas(width, height);

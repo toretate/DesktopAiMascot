@@ -72,14 +72,8 @@ export function getHistoryDB(userId: string): Database.Database {
         );
     `);
 
-    // セッション最終更新日時自動更新トリガー
-    db.exec(`
-        CREATE TRIGGER IF NOT EXISTS update_chat_sessions_time
-        AFTER UPDATE ON chat_sessions
-        BEGIN
-            UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE session_id = NEW.session_id;
-        END;
-    `);
+    // 以前に設定されていた自動更新トリガーを削除 (フロントエンドから渡される timestamp を維持するため)
+    db.exec(`DROP TRIGGER IF EXISTS update_chat_sessions_time;`);
 
     dbCache.set(userId, db);
     return db;
@@ -112,6 +106,16 @@ function formatDatetime(timestamp: number): string {
     const min = String(date.getMinutes()).padStart(2, '0');
     const s = String(date.getSeconds()).padStart(2, '0');
     return `${y}-${m}-${d} ${h}:${min}:${s}`;
+}
+
+/**
+ * SQLite の DATETIME 文字列 (YYYY-MM-DD HH:MM:SS) をエポックミリ秒に安全に変換する
+ */
+function parseDatetime(datetimeStr: string): number {
+    if (!datetimeStr) return Date.now();
+    const isoStr = datetimeStr.replace(' ', 'T');
+    const parsed = new Date(isoStr).getTime();
+    return isNaN(parsed) ? Date.now() : parsed;
 }
 
 /**
@@ -281,7 +285,7 @@ export function loadHistoryFromDB(userId: string): any {
             });
 
             // SQLite の DATETIME 文字列をエポックミリ秒に戻す
-            const sessionTimestamp = new Date(session.updated_at).getTime();
+            const sessionTimestamp = parseDatetime(session.updated_at);
 
             // セッションの参加メンバー全員を取得（マスコットだけでなくユーザーも含む）
             const allParticipantsData = db.prepare(`

@@ -8,6 +8,7 @@ import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
 import { filterDialogue } from '../utils/dialogue-filter';
 import { authenticateUserToken } from '../middleware/auth';
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
+import { addTaskToDb, searchTasksFromDb, updateTaskInDb, deleteTaskFromDb } from '../utils/tasks-service';
 
 // ユーザーごとの接続管理（crosswsのPeerオブジェクトをSetに保存）
 const userConnections = new Map<string, Set<any>>();
@@ -177,7 +178,119 @@ export default defineWebSocketHandler({
                         lmstudioEndpoint,
                         history,
                         attachments,
-                        tools
+                        tools,
+                        onToolExecute: async (toolName, args) => {
+                            const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
+                            console.log(`[WS] Tool execution intercept: ${toolName}`, args);
+                            if (toolName !== 'manageTasks') {
+                                return null;
+                            }
+                            try {
+                                switch (args.action) {
+                                    case 'add': {
+                                        if (!args.title) {
+                                            return JSON.stringify({ success: false, error: 'add には title が必須です。' });
+                                        }
+                                        const saved = addTaskToDb(userId, {
+                                            title: args.title,
+                                            priority: args.priority,
+                                            categoryId: args.categoryId,
+                                            scheduledAt: args.scheduledAt || undefined
+                                        });
+                                        return JSON.stringify({
+                                            success: true,
+                                            action: 'add',
+                                            id: saved.task.id,
+                                            task: saved.task
+                                        });
+                                    }
+                                    case 'search': {
+                                        const tasks = searchTasksFromDb(userId, args.query, args.date, args.completed);
+                                        if (tasks.length === 0) {
+                                            return JSON.stringify({
+                                                success: true,
+                                                message: '該当する予定やタスクは見つかりませんでした。'
+                                            });
+                                        }
+                                        const lines = tasks.map(t => {
+                                            const dateStr = t.scheduledAt ? ` (予定日時: ${new Date(t.scheduledAt).toLocaleString('ja-JP')})` : '';
+                                            const statusStr = t.completed ? '[完了]' : '[未完了]';
+                                            return `- ${statusStr} ${t.title}${dateStr}`;
+                                        });
+                                        return JSON.stringify({
+                                            success: true,
+                                            message: `タスク・予定が ${tasks.length} 件見つかりました：\n${lines.join('\n')}`
+                                        });
+                                    }
+                                    case 'update': {
+                                        if (!args.id) {
+                                            return JSON.stringify({ success: false, error: 'update には id が必須です。' });
+                                        }
+                                        const saved = updateTaskInDb(userId, args.id, args);
+                                        return JSON.stringify({
+                                            success: true,
+                                            action: 'update',
+                                            id: args.id,
+                                            task: saved.task
+                                        });
+                                    }
+                                    case 'delete': {
+                                        if (!args.id) {
+                                            return JSON.stringify({ success: false, error: 'delete には id が必須です。' });
+                                        }
+                                        deleteTaskFromDb(userId, args.id);
+                                        return JSON.stringify({
+                                            success: true,
+                                            action: 'delete',
+                                            id: args.id
+                                        });
+                                    }
+                                    default:
+                                        return JSON.stringify({ success: false, error: `不明な action: ${args.action}` });
+                                }
+                            } catch (e: any) {
+                                console.error(`[WS] Intercepted tool ${toolName} (action: ${args.action}) failed:`, e.message);
+                                return JSON.stringify({
+                                    success: false,
+                                    error: e.message
+                                });
+                            }
+                        },
+                        onToolResult: (toolName, input, output) => {
+                            const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
+                            if (toolName !== 'manageTasks') {
+                                return;
+                            }
+                            try {
+                                const parsedOutput = typeof output === 'string' ? JSON.parse(output) : output;
+                                if (!parsedOutput || !parsedOutput.success) {
+                                    return;
+                                }
+                                console.log(`[WS] Tool execution detected in ws.ts: ${toolName} (action: ${input.action})`, input);
+                                if (input.action === 'add' || input.action === 'update') {
+                                    // カテゴリの最新スナップショットを取得するため、無害な空更新でDBから再取得する
+                                    const saved = updateTaskInDb(userId, parsedOutput.id, {});
+                                    peer.send(JSON.stringify({
+                                        event: 'task-action',
+                                        data: {
+                                            action: input.action === 'add' ? (input.scheduledAt ? 'addSchedule' : 'addTask') : 'updateTask',
+                                            categories: saved.categories,
+                                            task: saved.task
+                                        }
+                                    }));
+                                } else if (input.action === 'delete') {
+                                    peer.send(JSON.stringify({
+                                        event: 'task-action',
+                                        data: {
+                                            action: 'deleteTask',
+                                            taskId: input.id
+                                        }
+                                    }));
+                                }
+                            } catch (e: any) {
+                                console.error('[WS] Failed to sync tool task action to client:', e.message);
+                            }
+                        }
                     });
                 } catch (aiError: any) {
                     console.error('[WS] AI Engine Error:', aiError.message);

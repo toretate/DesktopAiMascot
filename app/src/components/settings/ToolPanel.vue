@@ -7,7 +7,6 @@ import { storeToRefs } from 'pinia';
 
 const configStore = useConfigStore();
 const {
-    toolsCurrentTime,
     toolsGpsLocation,
     toolsWeather,
     toolsVolume,
@@ -48,21 +47,6 @@ const saveSettings = async () => {
                 </p>
 
                 <div class="flex flex-column gap-3">
-                    <!-- 1. 時刻取得 -->
-                    <div class="flex align-items-center gap-2">
-                        <input 
-                            type="checkbox" 
-                            id="toolsCurrentTime" 
-                            v-model="toolsCurrentTime" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
-                        />
-                        <label for="toolsCurrentTime" class="font-medium cursor-pointer">
-                            システム時刻の取得 (getCurrentTime)
-                        </label>
-                    </div>
-                    <span class="text-xs text-gray-400 pl-6">
-                        現在の日時や曜日をAIが取得できるようにします。
-                    </span>
 
                     <!-- 2. 位置情報 -->
                     <div class="flex align-items-center gap-2 mt-2">

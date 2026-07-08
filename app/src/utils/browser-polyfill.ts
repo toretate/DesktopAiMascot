@@ -349,81 +349,164 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             }
         },
         synthesizeVoicevox: async (text: string, speakerId: number, endpoint?: string) => {
-            const baseEndpoint = endpoint || 'http://localhost:50021';
             try {
-                // 1. 音声クエリの作成
-                const queryRes = await fetch(`${baseEndpoint}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`, {
-                    method: 'POST'
-                });
-                if (!queryRes.ok) throw new Error(`audio_query failed: ${queryRes.status}`);
-                const queryJson = await queryRes.json();
-
-                // 2. 音声合成
-                const synthRes = await fetch(`${baseEndpoint}/synthesis?speaker=${speakerId}`, {
+                const response = await fetch('/api/tts', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(queryJson)
+                    body: JSON.stringify({
+                        engine: 'voicevox',
+                        text,
+                        speakerId,
+                        endpoint
+                    })
                 });
-                if (!synthRes.ok) throw new Error(`synthesis failed: ${synthRes.status}`);
-
-                // 3. バイナリデータを Base64 に変換
-                const arrayBuffer = await synthRes.arrayBuffer();
-                const base64 = btoa(
-                    new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                );
-                return base64;
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data.success ? data.audio : null;
             } catch (e) {
                 console.error('[Polyfill] VOICEVOX synthesis failed:', e);
                 return null;
             }
         },
         synthesizeIrodori: async (text: string, endpoint: string, model: string, voice: string, emotion?: string) => {
-            return IrodoriTtsConnector.synthesize(
-                {
-                    input: text,
-                    model: model,
-                    voice: voice
-                },
-                emotion,
-                endpoint
-            );
-        },
-        getVoicevoxSpeakers: async (endpoint: string) => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
             try {
-                const response = await fetch(`${endpoint}/speakers`, {
-                    method: 'GET',
-                    signal: controller.signal
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        engine: 'irodori',
+                        text,
+                        endpoint,
+                        model,
+                        voice,
+                        emotion
+                    })
                 });
-                clearTimeout(timeoutId);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                const speakers = data.map((sp: any) => {
-                    const style = sp.styles?.[0]?.id !== undefined ? sp.styles[0].id : 0;
-                    return { name: `${sp.name} (${sp.styles?.[0]?.name || ''})`, value: style };
+                return data.success ? data.audio : null;
+            } catch (e) {
+                console.error('[Polyfill] Irodori synthesis failed:', e);
+                return null;
+            }
+        },
+        getVoicevoxSpeakers: async (endpoint: string) => {
+            try {
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'getVoicevoxSpeakers',
+                        endpoint
+                    })
                 });
-                return { success: true, speakers };
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data.success
+                    ? { success: true, speakers: data.speakers }
+                    : { success: false, speakers: [], error: data.error || 'スピーカーの取得に失敗しました。' };
             } catch (e: any) {
-                clearTimeout(timeoutId);
                 return { success: false, speakers: [], error: e.message || '接続に失敗しました' };
             }
         },
         getIrodoriVoices: async (endpoint: string) => {
             try {
-                const result = await IrodoriTtsConnector.listVoices(endpoint);
-                if (result && result.data) {
-                    return { success: true, voices: result.data };
-                }
-                return { success: false, voices: [], error: 'ボイス一覧の取得に失敗しました。' };
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'getIrodoriVoices',
+                        endpoint
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data.success
+                    ? { success: true, voices: data.voices }
+                    : { success: false, voices: [], error: data.error || 'ボイス一覧の取得に失敗しました。' };
             } catch (e: any) {
                 return { success: false, voices: [], error: e.message || '接続に失敗しました' };
             }
         },
-        generateMascotExpressions: async () => {
-            return { success: false, error: 'AI表情自動生成機能はWeb版ではサポートされていません。' };
+        generateMascotExpressions: async (
+            base64Image: string,
+            apiKey: string,
+            emotions: { name: string, label: string }[],
+            userPromptTemplate: string,
+            engine?: string,
+            model?: string,
+            history?: any[]
+        ) => {
+            try {
+                const response = await fetch('/api/mascots/generate-expressions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        base64Image,
+                        apiKey,
+                        emotions,
+                        userPromptTemplate,
+                        engine,
+                        model,
+                        history
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e: any) {
+                console.error('[Polyfill] generateMascotExpressions failed:', e);
+                return { success: false, error: e.message || '表情生成に失敗しました' };
+            }
+        },
+        analyzeSpriteSheet: async (imagePath: string, apiKey: string) => {
+            try {
+                const response = await fetch('/api/mascots/analyze-sprite-sheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagePath, apiKey })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e: any) {
+                console.error('[Polyfill] analyzeSpriteSheet failed:', e);
+                return { success: false, error: e.message || 'スプライトシートの解析に失敗しました' };
+            }
+        },
+        alignExpression: async (basePath: string, expressionPath: string, detectMode?: string) => {
+            try {
+                const response = await fetch('/api/mascots/align-expression', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ basePath, expressionPath, detectMode })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e: any) {
+                console.error('[Polyfill] alignExpression failed:', e);
+                return { success: false, error: e.message || '自動位置合わせに失敗しました' };
+            }
+        },
+        detectBaseFace: async (imagePath: string, detectMode?: string) => {
+            try {
+                const response = await fetch('/api/mascots/detect-base-face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imagePath, detectMode })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e: any) {
+                console.error('[Polyfill] detectBaseFace failed:', e);
+                return { success: false, error: e.message || '顔領域の自動検出に失敗しました' };
+            }
         },
         getImagenModels: async () => {
             return [];
@@ -448,9 +531,6 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 clearTimeout(timeoutId);
                 return { success: false, models: [], error: e.message || '接続確認に失敗しました。' };
             }
-        },
-        analyzeSpriteSheet: async () => {
-            return null;
         },
         selectLocalImage: async () => {
             // ブラウザの画像ファイル選択ダイアログを開き、Base64（DataURL）として返す
@@ -481,11 +561,18 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
             });
         },
         saveMascotImage: async (mascotId: string, filename: string, base64Data: string) => {
-            console.log(`[Polyfill] saveMascotImage called for mascot: ${mascotId}, file: ${filename}`);
-            return {
-                success: true,
-                path: base64Data
-            };
+            try {
+                const response = await fetch('/api/mascots/save-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mascotId, filename, base64Data })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (e: any) {
+                console.error('[Polyfill] saveMascotImage failed:', e);
+                return { success: false, error: e.message || '画像の保存に失敗しました' };
+            }
         },
         saveMascotVoice: async (mascotId: string, base64Data: string, extension: string) => {
             console.log(`[Polyfill] saveMascotVoice called for mascot: ${mascotId}, extension: ${extension}`);

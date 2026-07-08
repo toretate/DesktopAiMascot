@@ -28,18 +28,19 @@ const taskStore = useTaskStore();
 
 // タスク管理ウィジェット表示のトグル制御
 watch(showTaskManagement, (newVal) => {
-    if (configStore.windowMode === 'integrated') {
+    if (taskStore.showTaskWidget !== newVal) {
         taskStore.showTaskWidget = newVal;
-    } else {
+    }
+    if (configStore.windowMode !== 'integrated' && configStore.windowMode !== 'compact') {
         if (window.electronAPI && window.electronAPI.toggleTasks) {
             window.electronAPI.toggleTasks();
         }
     }
 });
 
-// 統合モード時にストア側変更からヘッダーのトグル状態へ同期
+// ストア側変更からヘッダーのトグル状態へ同期
 watch(() => taskStore.showTaskWidget, (newVal) => {
-    if (configStore.windowMode === 'integrated') {
+    if (showTaskManagement.value !== newVal) {
         showTaskManagement.value = newVal;
     }
 });

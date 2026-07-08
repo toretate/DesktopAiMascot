@@ -40,7 +40,7 @@ export class GeminiExpressionEngine {
         const prompts = loadPrompts();
         const basePrompt = prompts['common'];
         const userPrompt = userPromptTemplate.replace("__EMOTIONS_LABLE__", emotionsLabels);
-        const labelInstruction = prompts.labels.replace("__EMOTION_LABELS__", emotionsLabels);
+        const labelInstruction = prompts.labels.replace("__EMOTIONS_LABLE__", emotionsLabels);
         const finalPrompt = `${basePrompt} ${userPrompt} ${labelInstruction}`;
         console.log("Gemini Expression Engine Final Prompt: \n", finalPrompt);
 

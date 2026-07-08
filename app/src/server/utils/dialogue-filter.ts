@@ -1,3 +1,9 @@
+/**
+ * TTS読み上げ用テキストから「地の文」を除外し、台詞部分のみを抽出します。
+ * 
+ * @param text フィルタ対象のテキスト
+ * @returns 抽出された台詞テキスト
+ */
 export function filterDialogue(text: string): string {
     if (!text) return '';
 
@@ -22,21 +28,59 @@ export function filterDialogue(text: string): string {
         
         if (hasTextOutside) {
             // 括弧の外側に言葉がある場合（例: 「おはよう」と言った）
-            // 括弧の中身だけを抽出して結合する
-            const regex = /[「『](.*?)[」』]/g;
+            // 括弧の直後が「と」や「って」で始まっているかチェックし、すべてがそうであるか、または直後に文字がない場合は「地の文の引用」と判断する
+            const regex = /[「『](.*?)[」』](.?)/g;
             let match;
-            const parts: string[] = [];
+            let isQuoteStyle = true;
+            let hasQuoteIndicator = false;
             while ((match = regex.exec(cleanText)) !== null) {
-                if (match[1].trim()) {
-                    parts.push(match[1].trim());
+                const nextChar = match[2];
+                
+                // 「と」や「って」のチェック
+                let isCurrentQuote = false;
+                if (nextChar === 'と') {
+                    isCurrentQuote = true;
+                } else if (nextChar === 'っ') {
+                    const afterNextIndex = match.index + match[0].length;
+                    const afterNextChar = cleanText[afterNextIndex];
+                    if (afterNextChar === 'て') {
+                        isCurrentQuote = true;
+                    }
+                }
+                
+                if (isCurrentQuote) {
+                    hasQuoteIndicator = true;
+                } else {
+                    // 「と」や「って」ではない場合、許容されるのは空（文末）や句読点・スペース・改行のみ
+                    if (nextChar && !/^[、。！？\s\n]$/.test(nextChar)) {
+                        isQuoteStyle = false;
+                        break;
+                    }
                 }
             }
-            if (parts.length > 0) {
-                return parts.join(' ');
+
+            // 引用を示す「と」や「って」が1つもない場合は、地の文の引用スタイルではないとみなす
+            if (!hasQuoteIndicator) {
+                isQuoteStyle = false;
+            }
+
+            if (isQuoteStyle) {
+                // 括弧の中身だけを抽出して結合する
+                const extractRegex = /[「『](.*?)[」』]/g;
+                let extractMatch;
+                const parts: string[] = [];
+                while ((extractMatch = extractRegex.exec(cleanText)) !== null) {
+                    if (extractMatch[1].trim()) {
+                        parts.push(extractMatch[1].trim());
+                    }
+                }
+                if (parts.length > 0) {
+                    return parts.join(' ');
+                }
             }
         }
         
-        // 括弧の外側に言葉がない、または括弧の中身が空だった場合
+        // 括弧の外側に言葉がない、または括弧の中身が空だった場合、あるいは単なる単語の強調の場合
         return cleanText.replace(/[「」『』]/g, '').trim();
     }
     

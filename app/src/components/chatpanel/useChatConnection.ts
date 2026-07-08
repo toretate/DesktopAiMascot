@@ -8,6 +8,7 @@ import useRadioMode from './use-radiomode-prompt';
 import useIrodoriEmotion from './use-irodori-emotion';
 import { splitSentences } from '../../utils/sentence-splitter';
 import { sanitizeForIrodoriTTS } from '../../utils/irodori-sanitizer';
+import { useTaskStore } from '../../store/task';
 
 export function useChatConnection(params: {
     messages: Ref<Message[]>;
@@ -30,6 +31,10 @@ export function useChatConnection(params: {
 
     const configStore = useConfigStore();
     const mascotStore = useMascotStore();
+    const taskStore = useTaskStore();
+    if (!taskStore.isLoaded) {
+        taskStore.loadFromLocalStorage();
+    }
     let compactionTimer: any = null;
 
     const playlist = new AudioPlaylist((speaking) => {
@@ -44,7 +49,6 @@ export function useChatConnection(params: {
         serverPort,
         useTts,
         ttsReadNarrative,
-        toolsCurrentTime,
         toolsGpsLocation,
         toolsWeather,
         toolsVolume,
@@ -143,6 +147,17 @@ export function useChatConnection(params: {
                     console.log('[useChatConnection] Timer triggered from server:', memo);
                     if (window.electronAPI) {
                         window.electronAPI.triggerTimerNotification(memo);
+                    }
+                } else if (wsEvent === 'task-action') {
+                    const { action, task, categories, taskId } = data;
+                    console.log('[useChatConnection] Task action received:', action, task, taskId);
+                    const taskStore = useTaskStore();
+                    if (action === 'deleteTask') {
+                        if (taskId) {
+                            taskStore.deleteTask(taskId);
+                        }
+                    } else if (task) {
+                        taskStore.addTaskFromServer(task, categories);
                     }
                 } else if (wsEvent === 'chat-error') {
                     updateLastMascotMessage(`接続エラー: ${data.message}`);
@@ -401,7 +416,6 @@ export function useChatConnection(params: {
                 activeMascotId: activeMascot.value?.id || 'default',
                 attachments: attachments.length > 0 ? attachments : undefined,
                 tools: {
-                    toolsCurrentTime: toolsCurrentTime.value,
                     toolsGpsLocation: toolsGpsLocation.value,
                     toolsWeather: toolsWeather.value,
                     toolsVolume: toolsVolume.value,

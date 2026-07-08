@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue';
 import Button from 'primevue/button';
 import { useConfigStore } from '../../../store/config';
 
@@ -111,10 +112,149 @@ const getMascotCoverImage = (mascot: MascotData): string => {
     }
     return '';
 };
+
+const nofaceErrors = ref<Record<string, boolean>>({});
+const handleNofaceError = (mascotId: string) => {
+    nofaceErrors.value[mascotId] = true;
+};
+
+// 元の衣装画像の元のサイズ
+const outfitNaturalWidth = ref(0);
+const outfitNaturalHeight = ref(0);
+
+const onOutfitImageLoad = (event: Event) => {
+    const img = event.target as HTMLImageElement;
+    outfitNaturalWidth.value = img.naturalWidth;
+    outfitNaturalHeight.value = img.naturalHeight;
+};
+
+// ベース画像（のっぺらぼう等）の元のサイズ
+const baseNaturalWidth = ref(0);
+const baseNaturalHeight = ref(0);
+
+// 表情パーツ画像の元のサイズ
+const exprNaturalWidth = ref(0);
+const exprNaturalHeight = ref(0);
+
+// のっぺらぼう画像のロード完了ハンドラー
+const onBaseImageLoad = (event: Event) => {
+    const img = event.target as HTMLImageElement;
+    baseNaturalWidth.value = img.naturalWidth;
+    baseNaturalHeight.value = img.naturalHeight;
+};
+
+// 表情パーツ画像のロード完了ハンドラー
+const onExprImageLoad = (event: Event) => {
+    const img = event.target as HTMLImageElement;
+    exprNaturalWidth.value = img.naturalWidth;
+    exprNaturalHeight.value = img.naturalHeight;
+};
+
+// 選択マスコット切替時の画像サイズ初期化
+watch(() => props.activeMascotId, () => {
+    baseNaturalWidth.value = 0;
+    baseNaturalHeight.value = 0;
+    exprNaturalWidth.value = 0;
+    exprNaturalHeight.value = 0;
+    outfitNaturalWidth.value = 0;
+    outfitNaturalHeight.value = 0;
+});
+
+// 重ね合わせ用のスタイル計算
+const computedExpressionStyle = computed(() => {
+    const expr = props.activePreviewExpression;
+    if (!expr || !expr.path || baseNaturalWidth.value === 0 || baseNaturalHeight.value === 0 || exprNaturalWidth.value === 0 || exprNaturalHeight.value === 0 || outfitNaturalWidth.value === 0 || outfitNaturalHeight.value === 0) {
+        return { display: 'none' };
+    }
+
+    const containerW = 140;
+    const containerH = 186.66;
+
+    // contain での表示サイズと位置を計算
+    const baseAspect = baseNaturalWidth.value / baseNaturalHeight.value;
+    const containerAspect = containerW / containerH;
+
+    let dispW = containerW;
+    let dispH = containerH;
+    let dispLeft = 0;
+    let dispTop = 0;
+
+    if (baseAspect > containerAspect) {
+        // 横幅いっぱいに収まる場合
+        dispH = containerW / baseAspect;
+        dispTop = (containerH - dispH) / 2.0;
+    } else {
+        // 縦幅いっぱいに収まる場合
+        dispW = containerH * baseAspect;
+        dispLeft = (containerW - dispW) / 2.0;
+    }
+
+    // 表示上の縮尺（displayScale）
+    const displayScale = dispW / baseNaturalWidth.value;
+
+    const ox = expr.offsetX ?? 0;
+    const oy = expr.offsetY ?? 0;
+    const sc = expr.scale ?? 1.0;
+    const rot = expr.rotation ?? 0;
+
+    // のっぺらぼう画像と元の衣装画像との縮尺比率
+    const scaleToNoface = baseNaturalWidth.value / outfitNaturalWidth.value;
+    const adjustedOx = ox * scaleToNoface;
+    const adjustedOy = oy * scaleToNoface;
+
+    // 全身キャンバスサイズかどうかの判定 (幅の差が10%以内なら全身サイズとみなす)
+    // 表情パーツ画像も元の衣装画像と同じ比率でリサイズされていると仮定するため、元の衣装幅 outfitNaturalWidth に scaleToNoface を掛けたものと比較する
+    const expectedFullWidth = outfitNaturalWidth.value * scaleToNoface;
+    const isFullCanvas = Math.abs(exprNaturalWidth.value - expectedFullWidth) / expectedFullWidth < 0.1;
+
+    if (isFullCanvas) {
+        // 全身キャンバスサイズの場合:
+        // のっぺらぼうと全く同じサイズで重ね合わせ、中心を基準にアライメント(translate, scale, rotate)を適用する
+        // (extract_parts.py のアフィン変換と100%一致するレイアウト)
+        return {
+            position: 'absolute' as const,
+            width: `${dispW}px`,
+            height: `${dispH}px`,
+            left: `${dispLeft}px`,
+            top: `${dispTop}px`,
+            transform: `translate(${adjustedOx * displayScale}px, ${adjustedOy * displayScale}px) scale(${sc}) rotate(${rot}deg)`,
+            transformOrigin: 'center center',
+            zIndex: 10,
+            pointerEvents: 'none' as const
+        };
+    } else {
+        // トリミングされたパーツ画像の場合:
+        // パーツの元のサイズにスケールと縮尺を掛けて表示し、のっぺらぼうの中心を基準に重ねる
+        const wDisp = (exprNaturalWidth.value * scaleToNoface) * sc * displayScale;
+        const hDisp = (exprNaturalHeight.value * scaleToNoface) * sc * displayScale;
+
+        const left = dispLeft + (baseNaturalWidth.value / 2.0 + adjustedOx - ((exprNaturalWidth.value * scaleToNoface) * sc) / 2.0) * displayScale;
+        const top = dispTop + (baseNaturalHeight.value / 2.0 + adjustedOy - ((exprNaturalHeight.value * scaleToNoface) * sc) / 2.0) * displayScale;
+
+        return {
+            position: 'absolute' as const,
+            width: `${wDisp}px`,
+            height: `${hDisp}px`,
+            left: `${left}px`,
+            top: `${top}px`,
+            transform: `rotate(${rot}deg)`,
+            transformOrigin: 'center center',
+            zIndex: 10,
+            pointerEvents: 'none' as const
+        };
+    }
+});
 </script>
 
 <template>
     <div class="mascot-list-container">
+        <!-- 元の衣装のサイズを動的ロードして検出するための非表示画像タグ -->
+        <img 
+            v-if="activeOutfit" 
+            :src="resolveImageUrl(activeOutfit.path)" 
+            style="display: none;" 
+            @load="onOutfitImageLoad" 
+        />
         <div class="mascot-items-scroll-area">
             <div 
                 v-for="mascot in mascots" 
@@ -135,8 +275,17 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                     <div class="mascot-composite-preview relative flex align-items-center justify-content-center" style="width: 140px; height: 186.66px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                         <!-- 1. ベースキャラクターアバターの優先度表示 -->
                         <template v-if="activeMascotId === mascot.id">
+                            <!-- のっぺらぼう画像（表情プレビュー中でエラーがない場合） -->
+                            <img 
+                                v-if="activePreviewExpression && !nofaceErrors[mascot.id]" 
+                                key="active-noface" 
+                                :src="resolveImageUrl(`/mascots/users/usr_local_dev_bypass/${mascot.id}/noface.png`)" 
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" 
+                                @load="onBaseImageLoad"
+                                @error="handleNofaceError(mascot.id)"
+                            />
                             <!-- ポーズ画像優先 -->
-                            <img v-if="activePose && isImage(activePose.path)" key="active-pose" :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <img v-else-if="activePose && isImage(activePose.path)" key="active-pose" :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <!-- 衣装画像優先 -->
                             <img v-else-if="activeOutfit && isImage(activeOutfit.path)" key="active-outfit" :src="resolveImageUrl(activeOutfit.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
                             <!-- フロント画像優先 -->
@@ -156,13 +305,13 @@ const getMascotCoverImage = (mascot: MascotData): string => {
                             <img 
                                 v-if="isImage(activePreviewExpression.path)" 
                                 :src="resolveImageUrl(activePreviewExpression.path)" 
-                                class="absolute"
-                                :style="computedListPreviewExpressionStyle"
+                                :style="computedExpressionStyle"
+                                @load="onExprImageLoad"
                             />
                             <span 
                                 v-else 
                                 class="absolute font-bold text-lg"
-                                :style="computedListPreviewExpressionStyle"
+                                :style="computedExpressionStyle"
                             >{{ activePreviewExpression.path }}</span>
                         </template>
                     </div>

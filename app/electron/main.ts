@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ForgeConnector } from '../src/connector/forge-connector';
 import { AiExpressionService } from '../src/skills/expression-service/expression-service';
+import { alignExpression, detectBaseFace } from '../src/server/utils/expression-edit-service';
 import { registerSelectLocalImageHandler } from './ipc-handlers/select-local-image-handler';
 import { registerLmStudioHandlers } from './ipc-handlers/lmstudio-handler';
 import { registerVoicevoxHandlers } from './ipc-handlers/voicevox-handler';
@@ -257,6 +258,14 @@ app.whenReady().then(async () => {
             history,
             appConfig.openaiApiKey
         );
+    });
+
+    ipcMain.handle('align-expression', async (event, basePath: string, expressionPath: string, detectMode?: string) => {
+        return await alignExpression(basePath, expressionPath, detectMode);
+    });
+
+    ipcMain.handle('detect-base-face', async (event, imagePath: string, detectMode?: string) => {
+        return await detectBaseFace(imagePath, detectMode);
     });
 
     // Forge (Stable Diffusion) 関連の IPC ハンドラー

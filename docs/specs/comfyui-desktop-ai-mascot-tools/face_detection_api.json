@@ -1,0 +1,103 @@
+{
+  "1": {
+    "inputs": {
+      "image": "expr_all_body_base.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "AnimeFaceDetectorNode",
+    "_meta": {
+      "title": "Anime Face Detector"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "face_bbox": [
+        "2",
+        0
+      ],
+      "left_eye_bbox": [
+        "2",
+        1
+      ],
+      "right_eye_bbox": [
+        "2",
+        2
+      ],
+      "mouth_bbox": [
+        "2",
+        3
+      ],
+      "landmarks": [
+        "2",
+        4
+      ]
+    },
+    "class_type": "FacePartsVisualizerNode",
+    "_meta": {
+      "title": "Face Parts Visualizer"
+    }
+  },
+  "4": {
+    "inputs": {
+      "filename_prefix": "visualized_face",
+      "images": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "5": {
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ],
+      "face_bbox": [
+        "2",
+        0
+      ],
+      "left_eye_bbox": [
+        "2",
+        1
+      ],
+      "right_eye_bbox": [
+        "2",
+        2
+      ],
+      "mouth_bbox": [
+        "2",
+        3
+      ],
+      "landmarks": [
+        "2",
+        4
+      ],
+      "filename_prefix": "face_parts",
+      "output_dir": ""
+    },
+    "class_type": "SaveFacePartsJsonNode",
+    "_meta": {
+      "title": "Save Face Parts JSON"
+    }
+  }
+}

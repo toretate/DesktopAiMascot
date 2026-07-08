@@ -1,5 +1,5 @@
 import { lmStudioTools } from '../skills/tool-use';
-import { generateText, ModelMessage, isLoopFinished, stepCountIs } from 'ai';
+import { generateText, ModelMessage, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
@@ -10,7 +10,7 @@ function removeRepetitiveLoops(text: string): string {
 
     const sentences = text.split(/([。！？\n]+)/);
     const cleanedSentences: string[] = [];
-    
+
     for (let i = 0; i < sentences.length; i++) {
         const current = sentences[i].trim();
         if (!current) {
@@ -54,12 +54,12 @@ function decodeDataUrlAsText(dataUrl: string): string | null {
         if (!match) return null;
         const mimeType = match[1];
         const base64Data = match[2];
-        const isText = mimeType.startsWith('text/') || 
-                       mimeType.includes('json') || 
-                       mimeType.includes('javascript') ||
-                       mimeType.includes('xml') ||
-                       mimeType.includes('yaml') ||
-                       mimeType.includes('html');
+        const isText = mimeType.startsWith('text/') ||
+            mimeType.includes('json') ||
+            mimeType.includes('javascript') ||
+            mimeType.includes('xml') ||
+            mimeType.includes('yaml') ||
+            mimeType.includes('html');
         if (isText) {
             const buffer = Buffer.from(base64Data, 'base64');
             return buffer.toString('utf-8');
@@ -90,8 +90,10 @@ export class ChatAiService {
         history?: any[];
         attachments?: any[];
         tools?: any;
+        onToolResult?: (toolName: string, input: any, output: any) => void;
+        onToolExecute?: (toolName: string, args: any) => Promise<any>;
     }): Promise<string> {
-        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools } = params;
+        const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools, onToolResult, onToolExecute } = params;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
@@ -107,8 +109,7 @@ export class ChatAiService {
                 switch (tool.name) {
                     case 'launchApp':
                         return tools.toolsAppLauncher !== false;
-                    case 'getCurrentTime':
-                        return tools.toolsCurrentTime !== false;
+
                     case 'getGPSLocation':
                         return tools.toolsGpsLocation !== false;
                     case 'adjustVolume':
@@ -129,10 +130,10 @@ export class ChatAiService {
             });
             const toolListStr = activeToolDescriptions.join(', ');
             const toolUseSection = activeToolDescriptions.length > 0
-                ? `- 以下のツールが使用可能です: ${toolListStr}\n- 現在の情報や天気、時間、アプリの起動、音量の調整について尋ねられたり依頼された場合は、絶対に自分で推測して回答せず、必ず定義された対応するツールを呼び出してください。`
+                ? `- 以下のツールが使用可能です: ${toolListStr}\n- 現在の情報や天気、時間、アプリの起動、音量の調整、および【タスクや予定（スケジュール）の追加・登録・検索・更新・削除】について尋ねられたり依頼された場合は、絶対に自分で推測して会話だけで完了せず、必ず定義された対応するツール（manageTasks。追加時は action: "add" を指定し、期限付きの予定にする場合は scheduledAt も指定してください）を呼び出してください。`
                 : `- 利用可能なツールはありません。`;
 
-            const toolUseGuideline = `\n\n# ツール使用ガイドライン\n${toolUseSection}\n- 最終的な回答には、思考プロセス（Thinking Process）や、自己指示、"<|channel>thought" や "<|channel>" などの特殊なチャンネルタグ、メタコメント（"現在時刻を取得しました"、"ツールを実行します" など）を一切含めないでください。\n- 回答は日本語で、フレンドリーなマスコットキャラクターとしてユーザーに直接語りかけるように記述してください。出力するテキストは、自然なセリフ（発話内容）のみにしてください。`;
+            const toolUseGuideline = `\n\n# ツール使用ガイドライン\n${toolUseSection}\n- タスクやスケジュールの追加時には、ツールを呼び出した後に、ユーザーに「登録しました」と伝える応答を返してください。\n- 最終的な回答には、思考プロセス（Thinking Process）や、自己指示、"<|channel>thought" や "<|channel>" などの特殊なチャンネルタグ、メタコメント（"現在時刻を取得しました"、"ツールを実行します" など）を一切含めないでください。\n- 回答は日本語で、フレンドリーなマスコットキャラクターとしてユーザーに直接語りかけるように記述してください。出力するテキストは、自然なセリフ（発話内容）のみにしてください。`;
 
             const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}${toolUseGuideline}`;
 
@@ -181,7 +182,7 @@ export class ChatAiService {
             }
 
             const userContent: any[] = [{ type: 'text', text: finalMessage.trim() || 'こんにちは' }];
-            
+
             // 画像の添付
             if (attachments && attachments.length > 0) {
                 for (const att of attachments) {
@@ -203,10 +204,24 @@ export class ChatAiService {
                 content: userContent.length === 1 && userContent[0].type === 'text' ? userContent[0].text : userContent
             });
 
-            // Vercel AI SDK 形式のツール定義に変換
+            // ツール実行結果を確実に収集する一時配列
+            const executedTools: Array<{ toolName: string; input: any; output: any }> = [];
+
+            // Vercel AI SDK 形式 of ツール定義に変換
             const vercelTools: Record<string, any> = {};
             filteredTools.forEach(t => {
-                vercelTools[t.name] = convertLmStudioToolToVercel(t);
+                vercelTools[t.name] = convertLmStudioToolToVercel(
+                    t,
+                    (input, output) => {
+                        executedTools.push({ toolName: t.name, input, output });
+                    },
+                    async (args) => {
+                        if (onToolExecute) {
+                            return await onToolExecute(t.name, args);
+                        }
+                        return null;
+                    }
+                );
             });
 
             // プロバイダーとモデルの設定
@@ -220,7 +235,7 @@ export class ChatAiService {
                     finalEndpoint = finalEndpoint.endsWith('/') ? `${finalEndpoint}v1` : `${finalEndpoint}/v1`;
                 }
                 console.log(`[ChatAiService] Routing to LM Studio via Vercel AI SDK: ${finalEndpoint} (Model: ${model || 'unspecified'})`);
-                
+
                 const lmstudio = createOpenAI({
                     baseURL: finalEndpoint,
                     apiKey: 'not-needed',
@@ -241,7 +256,7 @@ export class ChatAiService {
             } else if (currentEngine === 'gemini') {
                 const targetModel = model || 'gemini-1.5-flash';
                 console.log(`[ChatAiService] Routing to Gemini via Vercel AI SDK (Model: ${targetModel})`);
-                
+
                 const googleInstance = createGoogleGenerativeAI({
                     apiKey: apiKey,
                 });
@@ -249,7 +264,7 @@ export class ChatAiService {
             } else if (currentEngine === 'openai') {
                 const targetModel = model || 'gpt-4o';
                 console.log(`[ChatAiService] Routing to OpenAI via Vercel AI SDK (Model: ${targetModel})`);
-                
+
                 const openaiInstance = createOpenAI({
                     apiKey: apiKey,
                 });
@@ -262,7 +277,6 @@ export class ChatAiService {
             console.log("[ChatAiService] finalSystemPrompt:", finalSystemPrompt);
             console.log("[ChatAiService] messages:", JSON.stringify(messages, null, 2));
             console.log("[ChatAiService] vercelTools:", Object.keys(vercelTools));
-            console.log("[ChatAiService] vercelTools schema example (getCurrentTime):", JSON.stringify(vercelTools.getCurrentTime, null, 2));
 
             // Vercel AI SDK での生成実行 (ツールが定義されている場合のみ tools / stopWhen を指定する)
             const hasTools = Object.keys(vercelTools).length > 0;
@@ -278,30 +292,30 @@ export class ChatAiService {
 
             if (hasTools) {
                 generateOptions.tools = vercelTools;
-                generateOptions.stopWhen = [isLoopFinished(), stepCountIs(5)];
+                generateOptions.stopWhen = stepCountIs(5);
             }
 
             let response;
             try {
                 response = await generateText(generateOptions);
 
+
                 // ツール呼び出しの有無をログ出力
-                if (response.toolCalls && response.toolCalls.length > 0) {
-                    console.log(`[ChatAiService] Tool use detected! Total tool calls: ${response.toolCalls.length}`);
-                    response.toolCalls.forEach(call => {
-                        console.log(`  - Tool Call: ${call.toolName}`, call.args);
-                    });
-                }
-                if (response.toolResults && response.toolResults.length > 0) {
-                    response.toolResults.forEach(res => {
-                        console.log(`  - Tool Result [${res.toolName}]:`, res.result);
+                // Vercel AI SDK の toolResults の仕様不整合や undefined 化を回避するため、
+                // 実際に execute された実績である executedTools キャッシュから直接通知を送信する
+                if (executedTools.length > 0) {
+                    console.log(`[ChatAiService] Dispatching ${executedTools.length} executed tools directly from cache`);
+                    executedTools.forEach(et => {
+                        if (onToolResult) {
+                            onToolResult(et.toolName, et.input, et.output);
+                        }
                     });
                 }
             } catch (firstTryError: any) {
                 const isLmStudio = currentEngine === 'lmstudio';
                 // 400 エラーかつ Jinja2 テンプレート関連のエラーと思われる文言が含まれる場合にフォールバック
                 const errorStr = (firstTryError.message || '') + (firstTryError.responseBody || '');
-                const isTemplateError = firstTryError.statusCode === 400 && 
+                const isTemplateError = firstTryError.statusCode === 400 &&
                     (errorStr.includes('template') || errorStr.includes('jinja') || errorStr.includes('UndefinedValue'));
 
                 if (isLmStudio && hasTools && isTemplateError) {
@@ -317,6 +331,13 @@ export class ChatAiService {
 
             clearTimeout(timeoutId);
 
+            console.log("[ChatAiService] raw generateText response.text:", response.text);
+            console.log("[ChatAiService] generateText response steps:", JSON.stringify(response.steps.map(s => ({
+                text: s.text,
+                toolCalls: s.toolCalls,
+                toolResults: s.toolResults,
+                finishReason: s.finishReason
+            })), null, 2));
             let cleanedContent = response.text || '';
 
             // 思考プロセス（Thinking Process や <think>, <thought> タグ、<|channel>thought タグ）のクレンジング

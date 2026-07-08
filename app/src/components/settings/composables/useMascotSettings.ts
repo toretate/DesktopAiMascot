@@ -126,6 +126,7 @@ export function useMascotSettings(
                 id: existing?.id || 'expr_' + emotion,
                 name: emotion,
                 path: existing?.path || '',
+                originalPath: existing?.originalPath || undefined,
                 offsetX: existing?.offsetX ?? 0,
                 offsetY: existing?.offsetY ?? 0,
                 scale: existing?.scale ?? 1.0,

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
+import { startNotificationCheck } from '../utils/task-notification';
 
 // カテゴリ（タブ）のインターフェース
 export interface Category {
@@ -31,6 +32,7 @@ export interface Task {
     startedAt?: string;
     endedAt?: string;
     scheduledAt?: string;
+    notified?: boolean;
 }
 
 export const useTaskStore = defineStore('task', () => {
@@ -40,53 +42,93 @@ export const useTaskStore = defineStore('task', () => {
     const activeCategoryId = ref<string>('default');
     const currentView = ref<'todo' | 'timeline'>('todo');
     const showTaskWidget = ref<boolean>(false);
+    const enableNotification = ref<boolean>(true);
+    const notificationMinutes = ref<number>(5);
     const isLoaded = ref(false);
 
-    // LocalStorage からデータをロード
-    const loadFromLocalStorage = () => {
+    // LocalStorage および サーバーからデータをロード
+    const loadFromLocalStorage = async () => {
         if (typeof window === 'undefined') return;
 
+        // 1. まず LocalStorage の値を読み込んで初期表示を高速にする
         try {
             const savedCategories = localStorage.getItem('desktop-mascot-categories');
             if (savedCategories) {
                 categories.value = JSON.parse(savedCategories);
-            } else {
-                // デフォルト初期値
+            }
+            const savedTasks = localStorage.getItem('desktop-mascot-tasks');
+            if (savedTasks) {
+                tasks.value = JSON.parse(savedTasks);
+            }
+            const savedActiveId = localStorage.getItem('desktop-mascot-active-category');
+            if (savedActiveId) {
+                activeCategoryId.value = savedActiveId;
+            }
+            const savedView = localStorage.getItem('desktop-mascot-task-view');
+            if (savedView === 'todo' || savedView === 'timeline') {
+                currentView.value = savedView;
+            }
+            const savedShowWidget = localStorage.getItem('desktop-mascot-show-task-widget');
+            if (savedShowWidget) {
+                showTaskWidget.value = savedShowWidget === 'true';
+            }
+            const savedEnableNotif = localStorage.getItem('desktop-mascot-enable-notification');
+            if (savedEnableNotif) {
+                enableNotification.value = savedEnableNotif === 'true';
+            }
+            const savedNotifMin = localStorage.getItem('desktop-mascot-notification-minutes');
+            if (savedNotifMin) {
+                notificationMinutes.value = parseInt(savedNotifMin, 10) || 5;
+            }
+        } catch (error) {
+            console.warn('LocalStorageからの初期タスク読み込みエラー:', error);
+        }
+
+        // 2. 次にサーバー（API）から最新データをロードする
+        try {
+            const res = await fetch('/api/tasks', { credentials: 'include' });
+            if (res.ok) {
+                const resJson = await res.json();
+                if (resJson.success) {
+                    if (Array.isArray(resJson.categories)) {
+                        categories.value = resJson.categories;
+                    }
+                    if (Array.isArray(resJson.tasks)) {
+                        tasks.value = resJson.tasks;
+                    }
+                    if (resJson.enableNotification !== undefined) {
+                        enableNotification.value = resJson.enableNotification;
+                    }
+                    if (resJson.notificationMinutes !== undefined) {
+                        notificationMinutes.value = resJson.notificationMinutes;
+                    }
+                    // 同期のために LocalStorage にも書き込んでおく
+                    localStorage.setItem('desktop-mascot-categories', JSON.stringify(categories.value));
+                    localStorage.setItem('desktop-mascot-tasks', JSON.stringify(tasks.value));
+                    localStorage.setItem('desktop-mascot-enable-notification', String(enableNotification.value));
+                    localStorage.setItem('desktop-mascot-notification-minutes', String(notificationMinutes.value));
+                }
+            }
+        } catch (error) {
+            console.warn('サーバーからのタスクロードに失敗しました (LocalStorageを使用します):', error);
+        } finally {
+            // デフォルトカテゴリの初期化
+            if (categories.value.length === 0) {
                 categories.value = [
                     { id: 'default', name: 'Work', order: 0 },
                     { id: 'private', name: 'Private', order: 1 }
                 ];
             }
-
-            const savedTasks = localStorage.getItem('desktop-mascot-tasks');
-            if (savedTasks) {
-                tasks.value = JSON.parse(savedTasks);
-            }
-
-            const savedActiveId = localStorage.getItem('desktop-mascot-active-category');
-            if (savedActiveId && categories.value.some(c => c.id === savedActiveId)) {
-                activeCategoryId.value = savedActiveId;
-            } else if (categories.value.length > 0) {
+            if (!activeCategoryId.value && categories.value.length > 0) {
                 activeCategoryId.value = categories.value[0].id;
             }
-
-            const savedView = localStorage.getItem('desktop-mascot-task-view');
-            if (savedView === 'todo' || savedView === 'timeline') {
-                currentView.value = savedView;
-            }
-
-            const savedShowWidget = localStorage.getItem('desktop-mascot-show-task-widget');
-            if (savedShowWidget) {
-                showTaskWidget.value = savedShowWidget === 'true';
-            }
-        } catch (error) {
-            console.error('LocalStorageからのタスク読み込みエラー:', error);
-        } finally {
             isLoaded.value = true;
+            // 監視タイマーの開始
+            startNotificationCheck();
         }
     };
 
-    // LocalStorage へデータを保存
+    // LocalStorage および サーバーへデータを保存
     const saveToLocalStorage = () => {
         if (typeof window === 'undefined' || !isLoaded.value) return;
 
@@ -96,15 +138,46 @@ export const useTaskStore = defineStore('task', () => {
             localStorage.setItem('desktop-mascot-active-category', activeCategoryId.value);
             localStorage.setItem('desktop-mascot-task-view', currentView.value);
             localStorage.setItem('desktop-mascot-show-task-widget', String(showTaskWidget.value));
+            localStorage.setItem('desktop-mascot-enable-notification', String(enableNotification.value));
+            localStorage.setItem('desktop-mascot-notification-minutes', String(notificationMinutes.value));
+
+            // サーバーへ同期保存 (非同期実行)
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    categories: categories.value,
+                    tasks: tasks.value,
+                    enableNotification: enableNotification.value,
+                    notificationMinutes: notificationMinutes.value
+                }),
+                credentials: 'include'
+            }).catch(err => {
+                console.warn('サーバーへのタスク保存に失敗しました:', err);
+            });
         } catch (error) {
             console.error('LocalStorageへのタスク保存エラー:', error);
         }
     };
 
     // 自動保存の設定
-    watch([categories, tasks, activeCategoryId, currentView, showTaskWidget], () => {
-        saveToLocalStorage();
-    }, { deep: true });
+    watch(
+        [
+            () => categories.value,
+            () => tasks.value,
+            () => activeCategoryId.value,
+            () => currentView.value,
+            () => showTaskWidget.value,
+            () => enableNotification.value,
+            () => notificationMinutes.value
+        ],
+        () => {
+            saveToLocalStorage();
+        },
+        { deep: true }
+    );
 
     // ゲッター：アクティブなカテゴリに属するタスクを順序順に取得
     const filteredTasks = computed(() => {
@@ -165,7 +238,7 @@ export const useTaskStore = defineStore('task', () => {
     };
 
     // --- タスク操作 ---
-    const addTask = (categoryId: string, title: string, priority: 'normal' | 'star' | 'thunder' = 'normal') => {
+    const addTask = (categoryId: string, title: string, priority: 'normal' | 'star' | 'thunder' = 'normal', scheduledAt?: string) => {
         const id = 'task_' + Math.random().toString(36).substring(2, 11);
         const order = tasks.value.filter(t => t.categoryId === categoryId).length;
         tasks.value.push({
@@ -178,8 +251,24 @@ export const useTaskStore = defineStore('task', () => {
             expanded: false,
             order,
             createdAt: new Date().toISOString(),
-            status: 'todo'
+            status: 'todo',
+            scheduledAt
         });
+    };
+
+    const addTaskFromServer = (task: Task, updatedCategories?: Category[]) => {
+        if (updatedCategories) {
+            categories.value = updatedCategories;
+        }
+        const exists = tasks.value.some(t => t.id === task.id);
+        if (!exists) {
+            tasks.value.push(task);
+        } else {
+            const idx = tasks.value.findIndex(t => t.id === task.id);
+            if (idx !== -1) {
+                tasks.value[idx] = task;
+            }
+        }
     };
 
     const updateTask = (id: string, updates: Partial<Task>) => {
@@ -404,22 +493,44 @@ export const useTaskStore = defineStore('task', () => {
         task.completed = allCompleted;
     };
 
+    // 他のウィンドウによる localStorage の変更を検知して自動で同期する
+    if (typeof window !== 'undefined') {
+        window.addEventListener('storage', (e) => {
+            if (
+                e.key === 'desktop-mascot-tasks' || 
+                e.key === 'desktop-mascot-categories' || 
+                e.key === 'desktop-mascot-active-category' ||
+                e.key === 'desktop-mascot-show-task-widget' ||
+                e.key === 'desktop-mascot-enable-notification' ||
+                e.key === 'desktop-mascot-notification-minutes'
+            ) {
+                console.log('[TaskStore] Detected storage change from another window, reloading...');
+                isLoaded.value = false;
+                loadFromLocalStorage();
+            }
+        });
+    }
+
     return {
         categories,
         tasks,
         activeCategoryId,
         currentView,
         showTaskWidget,
+        enableNotification,
+        notificationMinutes,
         isLoaded,
         filteredTasks,
         timelineTasks,
         activeCategoryCompletionRate,
         loadFromLocalStorage,
+        saveToLocalStorage,
         addCategory,
         updateCategory,
         deleteCategory,
         updateCategoriesOrder,
         addTask,
+        addTaskFromServer,
         updateTask,
         deleteTask,
         toggleTask,

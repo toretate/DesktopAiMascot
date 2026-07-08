@@ -147,6 +147,7 @@ export function useChatHistory(scrollToBottom: () => void) {
             const currentSession = sessions.value.find(s => s.id === activeSessionId.value);
             if (currentSession) {
                 currentSession.messages = [...messages.value];
+                currentSession.timestamp = Date.now();
                 const firstUserMsg = messages.value.find(m => m.sender === 'user');
                 const defaultTitle = isSecretMode.value ? 'シークレットの話題' : '新しい話題';
                 if (firstUserMsg && currentSession.title === defaultTitle) {
@@ -154,6 +155,9 @@ export function useChatHistory(scrollToBottom: () => void) {
                 }
             }
         }
+        
+        // タイムスタンプ降順でソート
+        sessions.value.sort((a, b) => b.timestamp - a.timestamp);
         
         if (!allHistories.value[mascotId]) {
             allHistories.value[mascotId] = { sessions: [] };

@@ -112,6 +112,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Gemini Visionによるスプライトシート解析
     analyzeSpriteSheet: (base64Image: string, apiKey: string) =>
         ipcRenderer.invoke('analyze-sprite-sheet', base64Image, apiKey),
+        
+    // 表情パーツとベース顔の自動位置合わせ判定
+    alignExpression: (basePath: string, expressionPath: string, detectMode?: string) =>
+        ipcRenderer.invoke('align-expression', basePath, expressionPath, detectMode),
+    
+    // ベース顔領域の自動検出
+    detectBaseFace: (imagePath: string, detectMode?: string) =>
+        ipcRenderer.invoke('detect-base-face', imagePath, detectMode),
     
     // ローカルPCの画像ファイルを選択し、Base64データURLとして取得する
     selectLocalImage: () =>

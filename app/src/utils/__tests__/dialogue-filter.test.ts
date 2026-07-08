@@ -37,4 +37,30 @@ describe('filterDialogue', () => {
         expect(filterDialogue(null as any)).toBe('');
         expect(filterDialogue(undefined as any)).toBe('');
     });
+
+    test('filterDialogue - 単語の強調（括弧の直後が「と」や「って」ではない場合）は、全体を読み上げ対象として括弧だけを除去すること', () => {
+        const text = 'それは「時間になったもの」を全て自動で消去してほしいということですね？「食事」は既に過ぎています。';
+        expect(filterDialogue(text)).toBe('それは時間になったものを全て自動で消去してほしいということですね？食事は既に過ぎています。');
+    });
+
+    test('filterDialogue - 括弧の直後に句読点や改行、または文末が来る場合も、全体を読み上げ対象とすること', () => {
+        // 直後に読点
+        expect(filterDialogue('もし「〇時になったら教えて！」、リマインド設定もできますよ！👌')).toBe('もし〇時になったら教えて！、リマインド設定もできますよ！👌');
+        // 直後に改行
+        expect(filterDialogue('もし「〇時になったら教えて！」\nリマインド設定もできますよ！👌')).toBe('もし〇時になったら教えて！\nリマインド設定もできますよ！👌');
+        // 直後が文末
+        expect(filterDialogue('かしこまりました！「〇時になったら教えて！」')).toBe('かしこまりました！〇時になったら教えて！');
+    });
+
+    test('filterDialogue - 波ダッシュや感嘆符を含む文章が誤ってト書き（地の文）扱いされて切り落とされないこと', () => {
+        const text = 'はーい、了解です〜！「〇〇を登録したよ！」';
+        expect(filterDialogue(text)).toBe('はーい、了解です〜！〇〇を登録したよ！');
+    });
+
+    test('filterDialogue - 今日の予定を消去するテキストに対する挙動テスト', () => {
+        const text = 'えっ？今日の予定を全部消しちゃうの？😳💦 大副かな？🥺 でも、マスターがそう言うなら仕方ないよ！👌 じゃあ、今の「今日の予定」を全てリセット（削除）するね！💨 ...はいっ！ 今日のスケジュールはキレイさっぱり空っぽになったよ！😌 これでスッキリしたね！💕 他に何か消したいものとかある？それとも新しいことを始めようか？🤔 💋';
+        const result = filterDialogue(text);
+        expect(result).not.toBe('今日の予定');
+        expect(result).toContain('えっ？今日の予定を全部消しちゃうの？');
+    });
 });

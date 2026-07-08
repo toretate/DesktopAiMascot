@@ -260,4 +260,36 @@ describe('履歴 SQLite データベース (history-db.ts) のテスト', () => 
         expect(loaded.mascot_test.sessions[0].title).toBe('JSONの対話');
         expect(loaded.mascot_test.sessions[0].messages[0].text).toBe('JSONからのインポートテスト');
     });
+
+    it('saveHistoryToDB で更新日時を指定したとき、自動更新トリガー等によって現在時刻に上書きされないこと', () => {
+        const mascotId = 'mascot_1';
+        const sessionId = 'session_timestamp_test';
+        const pastTimestamp = 1767225600000; // 2026/01/01
+        
+        const historyData = {
+            [mascotId]: {
+                activeSessionId: sessionId,
+                sessions: [
+                    {
+                        id: sessionId,
+                        title: 'タイムスタンプテスト',
+                        timestamp: pastTimestamp,
+                        messages: [{ id: 1, sender: 'mascot', text: 'テストです' }]
+                    }
+                ]
+            }
+        };
+
+        saveHistoryToDB(userId, historyData);
+
+        let loaded = loadHistoryFromDB(userId);
+        expect(loaded[mascotId].sessions[0].timestamp).toBe(pastTimestamp);
+
+        // 2回目の保存（タイトル更新）でタイムスタンプが上書きされないか検証
+        historyData[mascotId].sessions[0].title = '更新されたタイトル';
+        saveHistoryToDB(userId, historyData);
+
+        loaded = loadHistoryFromDB(userId);
+        expect(loaded[mascotId].sessions[0].timestamp).toBe(pastTimestamp);
+    });
 });

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import Button from 'primevue/button';
+import { useConfigStore } from '@/store/config';
 
 const props = defineProps<{
     visible: boolean;
+    mascotId?: string;
 }>();
 
 const emit = defineEmits<{
@@ -11,8 +13,38 @@ const emit = defineEmits<{
     (e: 'import', base64Image: string): void;
 }>();
 
+const configStore = useConfigStore();
 const selectedImage = ref<string>('');
 const isDragOver = ref(false);
+const activeTab = ref<'upload' | 'history'>('upload');
+const generatedSheets = ref<{ url: string; timestamp: string; date: string }[]>([]);
+const isLoadingSheets = ref(false);
+
+const resolveImageUrl = (path: string | undefined | null): string => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) return path;
+    let resolved = path;
+    if (path.startsWith('/mascots/') && configStore.useServer) {
+        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
+    }
+    return resolved;
+};
+
+const fetchGeneratedSheets = async () => {
+    if (!props.mascotId) return;
+    isLoadingSheets.value = true;
+    try {
+        const response = await fetch(`/api/mascots/get-generated-spritesheets?mascotId=${props.mascotId}`);
+        const data = await response.json();
+        if (data.success && data.list) {
+            generatedSheets.value = data.list;
+        }
+    } catch (e) {
+        console.error('[SpriteImportModal] Failed to fetch generated sheets:', e);
+    } finally {
+        isLoadingSheets.value = false;
+    }
+};
 
 watch(
     () => props.visible,
@@ -20,6 +52,9 @@ watch(
         if (newVal) {
             selectedImage.value = '';
             isDragOver.value = false;
+            activeTab.value = 'upload';
+            generatedSheets.value = [];
+            fetchGeneratedSheets();
         }
     }
 );
@@ -73,6 +108,11 @@ const onDrop = (e: DragEvent) => {
     }
 };
 
+const selectGeneratedSheet = (url: string) => {
+    selectedImage.value = resolveImageUrl(url);
+    activeTab.value = 'upload'; // プレビュー確認のためアップロード/表示タブに戻す
+};
+
 const handleImport = () => {
     if (!selectedImage.value) return;
     emit('import', selectedImage.value);
@@ -91,9 +131,33 @@ const handleImport = () => {
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
             </div>
 
-            <div class="modal-body-container flex flex-column gap-3 mt-3 flex-1 overflow-hidden" style="min-height: 0;">
-                <!-- D&Dおよび画像表示エリア -->
+            <!-- タブ選択 -->
+            <div class="flex border-bottom border-gray-200 mt-2 mb-1">
+                <button 
+                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent"
+                    :class="activeTab === 'upload' ? 'border-purple-500 text-purple-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
+                    style="border-bottom-width: 2px;"
+                    @click="activeTab = 'upload'"
+                >
+                    ファイルをアップロード
+                </button>
+                <button 
+                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent flex align-items-center gap-1"
+                    :class="activeTab === 'history' ? 'border-purple-500 text-purple-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
+                    style="border-bottom-width: 2px;"
+                    @click="activeTab = 'history'"
+                >
+                    <span>生成履歴から選択</span>
+                    <span v-if="generatedSheets.length > 0" class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-xxs font-bold">
+                        {{ generatedSheets.length }}
+                    </span>
+                </button>
+            </div>
+
+            <div class="modal-body-container flex flex-column gap-3 mt-2 flex-1 overflow-hidden" style="min-height: 0;">
+                <!-- タブ1: ファイルアップロード -->
                 <div 
+                    v-if="activeTab === 'upload'"
                     class="flex-1 border-2 border-round flex flex-column align-items-center justify-content-center relative overflow-hidden transition-all"
                     :class="{
                         'border-purple-400 bg-purple-50/20': isDragOver,
@@ -103,7 +167,7 @@ const handleImport = () => {
                     @dragover="onDragOver"
                     @dragleave="onDragLeave"
                     @drop="onDrop"
-                    style="min-height: 300px;"
+                    style="min-height: 280px;"
                 >
                     <template v-if="selectedImage">
                         <img :src="selectedImage" class="max-w-full max-h-full object-contain p-2" />
@@ -113,6 +177,34 @@ const handleImport = () => {
                         <span class="text-xs font-bold text-slate-600">画像をここにドラッグ＆ドロップ</span>
                         <span class="text-xxs text-slate-400 mt-1">または 下記のボタンからファイルを選択してください</span>
                     </template>
+                </div>
+
+                <!-- タブ2: 生成履歴 -->
+                <div v-else-if="activeTab === 'history'" class="flex-1 overflow-y-auto min-h-0 bg-slate-50 border-round border-1 border-gray-200 p-3">
+                    <div v-if="isLoadingSheets" class="flex flex-column align-items-center justify-content-center py-5">
+                        <i class="pi pi-spin pi-spinner text-2xl text-purple-600 mb-2"></i>
+                        <span class="text-xs font-medium text-slate-500">履歴を取得中...</span>
+                    </div>
+                    <div v-else-if="generatedSheets.length === 0" class="flex flex-column align-items-center justify-content-center py-5 text-slate-400">
+                        <i class="pi pi-images text-4xl mb-2"></i>
+                        <span class="text-xs font-medium">過去に生成されたスプライトシートはありません。</span>
+                    </div>
+                    <div v-else class="sheets-grid">
+                        <div 
+                            v-for="sheet in generatedSheets" 
+                            :key="sheet.timestamp"
+                            class="sheet-card cursor-pointer"
+                            @click="selectGeneratedSheet(sheet.url)"
+                        >
+                            <div class="sheet-thumbnail-container checkerboard-bg">
+                                <img :src="resolveImageUrl(sheet.url)" class="sheet-thumbnail" />
+                            </div>
+                            <div class="sheet-info">
+                                <span class="sheet-name" :title="'spritesheet_' + sheet.timestamp">spritesheet_{{ sheet.timestamp }}</span>
+                                <span class="sheet-date">{{ sheet.date }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ボタンエリア -->
@@ -183,5 +275,57 @@ const handleImport = () => {
         linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
     background-size: 20px 20px;
     background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.sheets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+}
+.sheet-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.sheet-card:hover {
+    border-color: #9333ea;
+    box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1);
+}
+.sheet-thumbnail-container {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sheet-thumbnail {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.sheet-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 10px;
+    color: #64748b;
+    line-height: 1.25;
+}
+.sheet-name {
+    font-weight: 700;
+    color: #334155;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.sheet-date {
+    margin-top: 2px;
 }
 </style>

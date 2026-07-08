@@ -15,6 +15,17 @@ const emit = defineEmits<{
 
 const mascotStore = useMascotStore();
 const { isSecretMode } = storeToRefs(mascotStore);
+
+const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
+    let timeVal = timestamp;
+    if (!timeVal && sessionId) {
+        const parsed = parseInt(sessionId, 10);
+        if (!isNaN(parsed) && parsed > 1000000000000) {
+            timeVal = parsed;
+        }
+    }
+    return timeVal ? new Date(timeVal).toLocaleString() : '不明な日時';
+};
 </script>
 
 <template>
@@ -32,7 +43,7 @@ const { isSecretMode } = storeToRefs(mascotStore);
             >
                 <div class="history-item-content">
                     <span class="history-item-title">{{ session.title }}</span>
-                    <span class="history-item-time">{{ new Date(session.timestamp).toLocaleString() }}</span>
+                    <span class="history-item-time">{{ formatTimestamp(session.timestamp, session.id) }}</span>
                 </div>
                 <button class="delete-session-btn" @click="emit('delete-session', { sessionId: session.id, event: $event })" title="削除">
                     <i class="pi pi-trash"></i>

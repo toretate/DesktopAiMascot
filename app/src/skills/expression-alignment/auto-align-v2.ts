@@ -14,12 +14,14 @@ import {
     solveTransform,
     pixelTransformToEditor,
     createOpenCvRegistration,
+    ComfyLandmarkRegistrationProvider,
     clamp,
     ALIGNMENT_CONSTANTS,
     type SharedTransform,
     type AlignmentMethod,
     type RasterImage,
     type BoundingBox,
+    type ComfyFaceDetection,
 } from '@desktop-ai-mascot/expression-alignment';
 import { loadOpenCvBrowser } from '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser';
 
@@ -55,6 +57,32 @@ async function detectFaceRegionFromServer(baseImageUrl: string): Promise<Boundin
             left: Math.round(centerX - radiusX),
             right: Math.round(centerX + radiusX),
         };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * サーバから指定された画像の ComfyUI 検出結果 JSON を取得する。
+ */
+async function fetchComfyDetection(imageUrl: string): Promise<ComfyFaceDetection | null> {
+    try {
+        const url = new URL(imageUrl, window.location.origin);
+        const imagePath = url.pathname;
+        if (!imagePath.startsWith('/mascots/')) return null;
+
+        const response = await fetch(`${url.origin}/api/get-comfy-detection`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagePath }),
+        });
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (data.success && data.exists) {
+            return data.data;
+        }
+        return null;
     } catch {
         return null;
     }
@@ -136,10 +164,12 @@ export async function autoAlignSingle(
     sharedTransform?: SharedTransform,
 ): Promise<AutoAlignV2Result> {
     console.log('[autoAlignSingle] Started. Loading images...');
-    const [baseImage, sprite, faceRegion] = await Promise.all([
+    const [baseImage, sprite, faceRegion, baseComfy, spriteComfy] = await Promise.all([
         loadRasterImage(baseImageUrl),
         loadRasterImage(spriteUrl),
         detectFaceRegionFromServer(baseImageUrl),
+        fetchComfyDetection(baseImageUrl),
+        fetchComfyDetection(spriteUrl),
     ]);
     console.log('[autoAlignSingle] Images loaded. base w/h:', baseImage.width, baseImage.height, 'sprite w/h:', sprite.width, sprite.height);
 
@@ -147,11 +177,17 @@ export async function autoAlignSingle(
         console.log('[auto-align-v2] サーバー顔検出成功:', faceRegion);
     }
 
-    const cv = await loadOpenCvBrowser();
-    console.log('[autoAlignSingle] OpenCV loaded. Creating registration...');
-    const registration = createOpenCvRegistration(cv);
-    console.log('[autoAlignSingle] Registration created. Solving transform...');
+    let registration;
+    if (baseComfy && spriteComfy) {
+        console.log('[autoAlignSingle] ComfyUI detection JSON found. Using ComfyLandmarkRegistrationProvider');
+        registration = new ComfyLandmarkRegistrationProvider(baseComfy, spriteComfy);
+    } else {
+        console.log('[autoAlignSingle] ComfyUI detection JSON not found. Falling back to OpenCV');
+        const cv = await loadOpenCvBrowser();
+        registration = createOpenCvRegistration(cv);
+    }
 
+    console.log('[autoAlignSingle] Solving transform...');
     const result = await solveTransform({ baseImage, sprite, sharedTransform, faceRegion: faceRegion ?? undefined }, { registration });
     console.log('[autoAlignSingle] Transform solved. Confidence:', result.confidence);
 
@@ -193,33 +229,40 @@ export async function autoAlignBatch(
         return results;
     }
 
-    const [baseImage, faceRegion] = await Promise.all([
+    const [baseImage, faceRegion, baseComfy] = await Promise.all([
         loadRasterImage(baseImageUrl),
         detectFaceRegionFromServer(baseImageUrl),
+        fetchComfyDetection(baseImageUrl),
     ]);
     if (faceRegion) {
         console.log('[auto-align-v2] バッチ: サーバー顔検出成功:', faceRegion);
     }
-
-    const cv = await loadOpenCvBrowser();
-    console.log('[autoAlignBatch] OpenCV loaded successfully');
-
-    console.log('[autoAlignBatch] Creating registration...');
-    const registration = createOpenCvRegistration(cv);
-    console.log('[autoAlignBatch] Registration created successfully');
 
     const baseFitScale = Math.min(PREVIEW_W / baseImage.width, PREVIEW_H / baseImage.height);
 
     // 通常(neutral) スプライトで SharedTransform A を確立
     const neutral = sprites.find(s => s.isNeutral) ?? sprites[0];
     console.log('[autoAlignBatch] Neutral sprite chosen:', neutral.id, 'url:', neutral.url);
-    const neutralSprite = await loadRasterImage(neutral.url);
+    const [neutralSprite, neutralComfy] = await Promise.all([
+        loadRasterImage(neutral.url),
+        fetchComfyDetection(neutral.url),
+    ]);
     console.log('[autoAlignBatch] Neutral sprite loaded. w:', neutralSprite.width, 'h:', neutralSprite.height);
+
+    let neutralRegistration;
+    if (baseComfy && neutralComfy) {
+        console.log('[autoAlignBatch] Using ComfyLandmarkRegistrationProvider for Neutral sprite');
+        neutralRegistration = new ComfyLandmarkRegistrationProvider(baseComfy, neutralComfy);
+    } else {
+        console.log('[autoAlignBatch] ComfyUI detection not found. Using OpenCV for Neutral sprite');
+        const cv = await loadOpenCvBrowser();
+        neutralRegistration = createOpenCvRegistration(cv);
+    }
 
     console.log('[autoAlignBatch] Solving transform for Neutral sprite...');
     const neutralResult = await solveTransform(
         { baseImage, sprite: neutralSprite, faceRegion: faceRegion ?? undefined },
-        { registration },
+        { registration: neutralRegistration },
     );
     console.log('[autoAlignBatch] Neutral sprite transform solved. Confidence:', neutralResult.confidence);
     const sharedA = neutralResult.shared;
@@ -243,8 +286,22 @@ export async function autoAlignBatch(
         if (s.id === neutral.id) continue;
         try {
             console.log('[autoAlignBatch] Loading sprite:', s.id, 'url:', s.url);
-            const sprite = await loadRasterImage(s.url);
+            const [sprite, spriteComfy] = await Promise.all([
+                loadRasterImage(s.url),
+                fetchComfyDetection(s.url),
+            ]);
             console.log('[autoAlignBatch] Sprite loaded. Solving transform with sharedTransform...');
+
+            let registration;
+            if (baseComfy && spriteComfy) {
+                console.log(`[autoAlignBatch] Using ComfyLandmarkRegistrationProvider for sprite: ${s.id}`);
+                registration = new ComfyLandmarkRegistrationProvider(baseComfy, spriteComfy);
+            } else {
+                console.log(`[autoAlignBatch] Using OpenCV for sprite: ${s.id}`);
+                const cv = await loadOpenCvBrowser();
+                registration = createOpenCvRegistration(cv);
+            }
+
             const r = await solveTransform(
                 { baseImage, sprite, sharedTransform: sharedA },
                 { registration },

@@ -41,6 +41,8 @@ export interface IElectronAPI {
     getImagenModels: (apiKey: string) => Promise<string[]>;
     getGeminiModels: (apiKey: string) => Promise<{ success: boolean; models: string[]; error?: string }>;
     analyzeSpriteSheet: (base64Image: string, apiKey: string) => Promise<any>;
+    alignExpression?: (basePath: string, expressionPath: string, detectMode?: string) => Promise<{ success: boolean; offsetX: number; offsetY: number; scale: number; exprMidX: number; exprMidY: number; exprOvalCX: number; exprOvalCY: number; exprEyeDist: number; exprOvalW: number; baseWidth?: number; baseHeight?: number; exprWidth?: number; exprHeight?: number; error?: string }>;
+    detectBaseFace?: (imagePath: string, detectMode?: string) => Promise<{ success: boolean; fallback: boolean; faceX: number; faceY: number; faceWidth: number; faceHeight: number; baseWidth: number; baseHeight: number; candidates?: { faceX: number; faceY: number; faceWidth: number; faceHeight: number }[]; error?: string }>;
     selectLocalImage: () => Promise<{ success: boolean; path: string; name: string } | null>;
     saveMascotImage: (mascotId: string, filename: string, base64Data: string) => Promise<{ success: boolean; path?: string; error?: string }>;
     saveMascotVoice: (mascotId: string, base64Data: string, extension: string) => Promise<{ success: boolean; path?: string; error?: string }>;

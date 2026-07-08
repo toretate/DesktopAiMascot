@@ -89,7 +89,7 @@ export interface AppConfig {
     chatHeight?: number;
 
     // ツール使用設定 (ToolUse)
-    toolsCurrentTime: boolean;
+
     toolsGpsLocation: boolean;
     toolsWeather: boolean;
     toolsVolume: boolean;
@@ -190,7 +190,7 @@ export const useConfigStore = defineStore('config', () => {
 
     // TTS設定
     const useTts = ref(true);
-    const ttsReadNarrative = ref(true);
+    const ttsReadNarrative = ref(false);
 
     // ウィンドウモード
     const windowMode = ref<'split' | 'integrated' | 'compact'>('split');
@@ -212,7 +212,6 @@ export const useConfigStore = defineStore('config', () => {
     const activeMascotId = ref('');
 
     // ツール使用設定 (ToolUse)
-    const toolsCurrentTime = ref(true);
     const toolsGpsLocation = ref(true);
     const toolsWeather = ref(true);
     const toolsVolume = ref(true);
@@ -354,7 +353,7 @@ export const useConfigStore = defineStore('config', () => {
             serverPort.value = configData.serverPort !== undefined ? Number(configData.serverPort) : 3000;
             
             useTts.value = configData.useTts !== undefined ? !!configData.useTts : true;
-            ttsReadNarrative.value = configData.ttsReadNarrative !== undefined ? !!configData.ttsReadNarrative : true;
+            ttsReadNarrative.value = configData.ttsReadNarrative !== undefined ? !!configData.ttsReadNarrative : false;
             
             windowMode.value = (configData.windowMode as any) || 'split';
             
@@ -374,7 +373,6 @@ export const useConfigStore = defineStore('config', () => {
             }
             activeMascotId.value = configData.activeMascotId || '';
 
-            toolsCurrentTime.value = configData.toolsCurrentTime !== undefined ? !!configData.toolsCurrentTime : true;
             toolsGpsLocation.value = configData.toolsGpsLocation !== undefined ? !!configData.toolsGpsLocation : true;
             toolsWeather.value = configData.toolsWeather !== undefined ? !!configData.toolsWeather : true;
             toolsVolume.value = configData.toolsVolume !== undefined ? !!configData.toolsVolume : true;
@@ -487,7 +485,7 @@ export const useConfigStore = defineStore('config', () => {
             serverPort.value = savedServerPort ? parseInt(savedServerPort) : 3000;
             
             useTts.value = localStorage.getItem('useTts') !== 'false';
-            ttsReadNarrative.value = localStorage.getItem('ttsReadNarrative') !== 'false';
+            ttsReadNarrative.value = localStorage.getItem('ttsReadNarrative') === 'true';
 
             windowMode.value = (localStorage.getItem('windowMode') as any) || 'split';
 
@@ -506,7 +504,6 @@ export const useConfigStore = defineStore('config', () => {
             mascots.value = localMascots ? JSON.parse(localMascots) : [];
             activeMascotId.value = localStorage.getItem('activeMascotId') || '';
 
-            toolsCurrentTime.value = localStorage.getItem('toolsCurrentTime') !== 'false';
             toolsGpsLocation.value = localStorage.getItem('toolsGpsLocation') !== 'false';
             toolsWeather.value = localStorage.getItem('toolsWeather') !== 'false';
             toolsVolume.value = localStorage.getItem('toolsVolume') !== 'false';
@@ -624,7 +621,6 @@ export const useConfigStore = defineStore('config', () => {
             chatHeight: Number(chatHeight.value),
             mascots: JSON.parse(JSON.stringify(mascots.value)),
             activeMascotId: activeMascotId.value,
-            toolsCurrentTime: toolsCurrentTime.value,
             toolsGpsLocation: toolsGpsLocation.value,
             toolsWeather: toolsWeather.value,
             toolsVolume: toolsVolume.value,
@@ -758,7 +754,6 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('mascots', JSON.stringify(mascots.value));
         localStorage.setItem('activeMascotId', activeMascotId.value);
 
-        localStorage.setItem('toolsCurrentTime', toolsCurrentTime.value.toString());
         localStorage.setItem('toolsGpsLocation', toolsGpsLocation.value.toString());
         localStorage.setItem('toolsWeather', toolsWeather.value.toString());
         localStorage.setItem('toolsVolume', toolsVolume.value.toString());
@@ -876,7 +871,6 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.mascots !== undefined) mascots.value = newConfig.mascots;
         if (newConfig.activeMascotId !== undefined) activeMascotId.value = newConfig.activeMascotId;
 
-        if (newConfig.toolsCurrentTime !== undefined) toolsCurrentTime.value = !!newConfig.toolsCurrentTime;
         if (newConfig.toolsGpsLocation !== undefined) toolsGpsLocation.value = !!newConfig.toolsGpsLocation;
         if (newConfig.toolsWeather !== undefined) toolsWeather.value = !!newConfig.toolsWeather;
         if (newConfig.toolsVolume !== undefined) toolsVolume.value = !!newConfig.toolsVolume;
@@ -977,7 +971,6 @@ export const useConfigStore = defineStore('config', () => {
         summaryMaxCharLimit,
         activeMascotId,
         activeMascot,
-        toolsCurrentTime,
         toolsGpsLocation,
         toolsWeather,
         toolsVolume,

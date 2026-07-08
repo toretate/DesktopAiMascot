@@ -23,6 +23,7 @@ export interface AiExpressionPlatformAdapter {
     existsSync: (path: string) => boolean;
     pathJoin: (...args: string[]) => string;
     pathExtname: (path: string) => string;
+    resolveMascotPath?: (path: string) => string;
     cwd: () => string;
 }
 
@@ -93,7 +94,7 @@ export class AiExpressionService {
 
         // 表情プロンプトを作成
         const emotionsLabels = emotions.map(e => e.label).join(', ');
-        const labelInstruction = prompts.labels.replace("__EMOTION_LABELS", emotionsLabels);
+        const labelInstruction = prompts.labels.replace("__EMOTIONS_LABLE__", emotionsLabels);
 
         // プロンプト作成
         const finalPrompt = `${prompts.common} ${userPromptTemplate} ${labelInstruction}`;
@@ -144,7 +145,11 @@ export class AiExpressionService {
                     filePath = decodeURIComponent(filePath.replace('file:///', ''));
                 }
                 if (filePath.startsWith('/mascots/')) {
-                    filePath = this.adapter.pathJoin(this.adapter.cwd(), filePath);
+                    if (this.adapter.resolveMascotPath) {
+                        filePath = this.adapter.resolveMascotPath(filePath);
+                    } else {
+                        filePath = this.adapter.pathJoin(this.adapter.cwd(), filePath);
+                    }
                 }
                 if (this.adapter.existsSync(filePath)) {
                     const fileData = this.adapter.readFileSync(filePath);

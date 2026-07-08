@@ -258,9 +258,8 @@ const stopResize = () => {
 
 // 閉じるアクション
 const closeWidget = () => {
-    if (windowMode.value === 'integrated' || windowMode.value === 'compact') {
-        taskStore.showTaskWidget = false;
-    } else {
+    taskStore.showTaskWidget = false;
+    if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
         if (window.electronAPI && window.electronAPI.toggleTasks) {
             window.electronAPI.toggleTasks();
         }
@@ -714,9 +713,9 @@ const saveFullscreenCalendarDate = () => {
 
         <!-- 3. メインスクロールエリア -->
         <main class="main-scroll-area">
-            <div v-if="!showCategorySettings" style="height: 100%; display: flex; flex-direction: column;">
+            <div v-show="!showCategorySettings" style="height: 100%; display: flex; flex-direction: column;">
             <!-- (A) TODOビュー (タスクツリー) -->
-            <div class="todo-view" v-if="taskStore.currentView === 'todo'" ref="parentRef" @dragover.prevent @drop="onContainerDrop">
+            <div class="todo-view" v-show="taskStore.currentView === 'todo'" ref="parentRef" @dragover.prevent @drop="onContainerDrop">
                 <div 
                     v-for="task in localTasks" 
                     :key="task.id"
@@ -925,7 +924,7 @@ const saveFullscreenCalendarDate = () => {
             </div>
 
             <!-- (B) TIMELINEビュー (時系列フラットリスト) -->
-            <div class="timeline-view" v-else>
+            <div class="timeline-view" v-show="taskStore.currentView === 'timeline'">
                 <div 
                     v-for="task in taskStore.timelineTasks" 
                     :key="task.id"
@@ -953,7 +952,7 @@ const saveFullscreenCalendarDate = () => {
             </div>
 
             <!-- (C) インライン設定パネル -->
-            <div v-else class="inline-settings-panel">
+            <div v-show="showCategorySettings" class="inline-settings-panel">
                 <div class="settings-header">
                     <Button 
                         icon="pi pi-arrow-left" 
@@ -1040,6 +1039,33 @@ const saveFullscreenCalendarDate = () => {
                                 :step="0.05"
                                 class="opacity-slider"
                             />
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- お知らせ設定 -->
+                    <div class="settings-section">
+                        <span class="section-title">予定のお知らせ</span>
+                        <div class="notification-control">
+                            <label class="checkbox-label">
+                                <input 
+                                    type="checkbox" 
+                                    v-model="taskStore.enableNotification" 
+                                    class="p-checkbox-input"
+                                />
+                                <span class="label-text">音声でお知らせする</span>
+                            </label>
+                            <div class="minutes-input-row" v-if="taskStore.enableNotification">
+                                <InputText 
+                                    v-model.number="taskStore.notificationMinutes" 
+                                    type="number" 
+                                    min="0"
+                                    max="60"
+                                    class="p-inputtext-sm minutes-input"
+                                />
+                                <span class="minutes-text">分前にお知らせ</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2057,5 +2083,48 @@ const saveFullscreenCalendarDate = () => {
     padding: 10px 16px;
     border-top: 1px solid #f1f5f9;
     background: #f8fafc;
+}
+
+.notification-control {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    user-select: none;
+}
+
+.p-checkbox-input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.minutes-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 24px;
+}
+
+.minutes-input {
+    width: 60px !important;
+    text-align: center;
+    padding: 4px 8px !important;
+}
+
+.minutes-text {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
 }
 </style>
