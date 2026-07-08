@@ -224,17 +224,17 @@ export default defineWebSocketHandler({
                             }
                             return null;
                         },
-                        onToolResult: (toolName, args, result) => {
+                        onToolResult: (toolName, input, output) => {
                             const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
                             try {
-                                const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+                                const parsedOutput = typeof output === 'string' ? JSON.parse(output) : output;
                                 if (toolName === 'addTask' || toolName === 'addSchedule') {
-                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, input);
                                     const payload = {
-                                        title: args.title,
-                                        priority: args.priority,
-                                        categoryId: args.categoryId,
-                                        scheduledAt: toolName === 'addSchedule' ? (parsedResult?.schedule?.scheduledAt || args.scheduledAt) : undefined
+                                        title: input.title,
+                                        priority: input.priority,
+                                        categoryId: input.categoryId,
+                                        scheduledAt: toolName === 'addSchedule' ? (parsedOutput?.schedule?.scheduledAt || input.scheduledAt) : undefined
                                     };
                                     const saved = addTaskToDb(userId, payload);
                                     
@@ -247,9 +247,9 @@ export default defineWebSocketHandler({
                                         }
                                     }));
                                 } else if (toolName === 'updateTask') {
-                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
-                                    if (parsedResult && parsedResult.success) {
-                                        const saved = updateTaskInDb(userId, args.id, {});
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, input);
+                                    if (parsedOutput && parsedOutput.success) {
+                                        const saved = updateTaskInDb(userId, input.id, {});
                                         peer.send(JSON.stringify({
                                             event: 'task-action',
                                             data: {
@@ -260,13 +260,13 @@ export default defineWebSocketHandler({
                                         }));
                                     }
                                 } else if (toolName === 'deleteTask') {
-                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, args);
-                                    if (parsedResult && parsedResult.success) {
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName}`, input);
+                                    if (parsedOutput && parsedOutput.success) {
                                         peer.send(JSON.stringify({
                                             event: 'task-action',
                                             data: {
                                                 action: 'deleteTask',
-                                                taskId: args.id
+                                                taskId: input.id
                                             }
                                         }));
                                     }

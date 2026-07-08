@@ -1,5 +1,5 @@
 import { lmStudioTools } from '../skills/tool-use';
-import { generateText, CoreMessage } from 'ai';
+import { generateText, ModelMessage, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
@@ -10,7 +10,7 @@ function removeRepetitiveLoops(text: string): string {
 
     const sentences = text.split(/([。！？\n]+)/);
     const cleanedSentences: string[] = [];
-    
+
     for (let i = 0; i < sentences.length; i++) {
         const current = sentences[i].trim();
         if (!current) {
@@ -54,12 +54,12 @@ function decodeDataUrlAsText(dataUrl: string): string | null {
         if (!match) return null;
         const mimeType = match[1];
         const base64Data = match[2];
-        const isText = mimeType.startsWith('text/') || 
-                       mimeType.includes('json') || 
-                       mimeType.includes('javascript') ||
-                       mimeType.includes('xml') ||
-                       mimeType.includes('yaml') ||
-                       mimeType.includes('html');
+        const isText = mimeType.startsWith('text/') ||
+            mimeType.includes('json') ||
+            mimeType.includes('javascript') ||
+            mimeType.includes('xml') ||
+            mimeType.includes('yaml') ||
+            mimeType.includes('html');
         if (isText) {
             const buffer = Buffer.from(base64Data, 'base64');
             return buffer.toString('utf-8');
@@ -90,7 +90,7 @@ export class ChatAiService {
         history?: any[];
         attachments?: any[];
         tools?: any;
-        onToolResult?: (toolName: string, args: any, result: any) => void;
+        onToolResult?: (toolName: string, input: any, output: any) => void;
         onToolExecute?: (toolName: string, args: any) => Promise<any>;
     }): Promise<string> {
         const { message, apiKey, systemPrompt, model, engine, lmstudioEndpoint, temperature, frequencyPenalty, repetitionPenalty, maxOutputTokens, enableThinking, history, attachments, tools, onToolResult, onToolExecute } = params;
@@ -139,7 +139,7 @@ export class ChatAiService {
             const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}${toolUseGuideline}`;
 
             // 履歴のマッピング
-            const messages: CoreMessage[] = [];
+            const messages: ModelMessage[] = [];
             if (history && history.length > 0) {
                 // 最初のメッセージが user 以外（assistant など）の場合、APIの制約（最初が user でなければならない等）を回避するため、
                 // 先頭にダミーの user メッセージを挿入して履歴が切り捨てられるのを防ぐ
@@ -183,7 +183,7 @@ export class ChatAiService {
             }
 
             const userContent: any[] = [{ type: 'text', text: finalMessage.trim() || 'こんにちは' }];
-            
+
             // 画像の添付
             if (attachments && attachments.length > 0) {
                 for (const att of attachments) {
@@ -206,15 +206,15 @@ export class ChatAiService {
             });
 
             // ツール実行結果を確実に収集する一時配列
-            const executedTools: Array<{ toolName: string; args: any; result: any }> = [];
+            const executedTools: Array<{ toolName: string; input: any; output: any }> = [];
 
-            // Vercel AI SDK 形式のツール定義に変換
+            // Vercel AI SDK 形式 of ツール定義に変換
             const vercelTools: Record<string, any> = {};
             filteredTools.forEach(t => {
                 vercelTools[t.name] = convertLmStudioToolToVercel(
                     t,
-                    (args, result) => {
-                        executedTools.push({ toolName: t.name, args, result });
+                    (input, output) => {
+                        executedTools.push({ toolName: t.name, input, output });
                     },
                     async (args) => {
                         if (onToolExecute) {
@@ -236,7 +236,7 @@ export class ChatAiService {
                     finalEndpoint = finalEndpoint.endsWith('/') ? `${finalEndpoint}v1` : `${finalEndpoint}/v1`;
                 }
                 console.log(`[ChatAiService] Routing to LM Studio via Vercel AI SDK: ${finalEndpoint} (Model: ${model || 'unspecified'})`);
-                
+
                 const lmstudio = createOpenAI({
                     baseURL: finalEndpoint,
                     apiKey: 'not-needed',
@@ -257,7 +257,7 @@ export class ChatAiService {
             } else if (currentEngine === 'gemini') {
                 const targetModel = model || 'gemini-1.5-flash';
                 console.log(`[ChatAiService] Routing to Gemini via Vercel AI SDK (Model: ${targetModel})`);
-                
+
                 const googleInstance = createGoogleGenerativeAI({
                     apiKey: apiKey,
                 });
@@ -265,7 +265,7 @@ export class ChatAiService {
             } else if (currentEngine === 'openai') {
                 const targetModel = model || 'gpt-4o';
                 console.log(`[ChatAiService] Routing to OpenAI via Vercel AI SDK (Model: ${targetModel})`);
-                
+
                 const openaiInstance = createOpenAI({
                     apiKey: apiKey,
                 });
@@ -294,81 +294,13 @@ export class ChatAiService {
 
             if (hasTools) {
                 generateOptions.tools = vercelTools;
-                generateOptions.maxSteps = 5;
+                generateOptions.stopWhen = stepCountIs(5);
             }
 
             let response;
             try {
                 response = await generateText(generateOptions);
 
-                // 手動マルチステップのフォールバック
-                // もし自動マルチステップが動作せず、finishReason が tool-calls で終わっている場合、手動でループする
-                let currentResponse = response;
-                let stepsCount = currentResponse.steps.length;
-                const maxManualSteps = 5;
-
-                while (
-                    currentResponse.steps[currentResponse.steps.length - 1]?.finishReason === 'tool-calls' &&
-                    stepsCount < maxManualSteps
-                ) {
-                    const lastStep = currentResponse.steps[currentResponse.steps.length - 1];
-                    console.log(`[ChatAiService] Auto-multistep failed to proceed (finishReason is tool-calls). Proceeding with manual step ${stepsCount + 1}...`);
-                    
-                    // ツール実行結果のテキスト表現を構築
-                    const toolResultsText = lastStep.toolResults.map((tr: any) => {
-                        let resVal = tr.output !== undefined ? tr.output : tr.result;
-                        if (typeof resVal === 'string') {
-                            try {
-                                resVal = JSON.parse(resVal);
-                            } catch (e) {}
-                        }
-                        const resultStr = typeof resVal === 'object'
-                            ? (resVal.message || JSON.stringify(resVal))
-                            : String(resVal);
-                        return `[ツール ${tr.toolName} の実行結果]:\n${resultStr}`;
-                    }).join('\n\n');
-
-                    // 元の最後の user メッセージを取得し、ツール結果を結合する
-                    let lastUserMsgIndex = -1;
-                    for (let i = messages.length - 1; i >= 0; i--) {
-                        if (messages[i].role === 'user') {
-                            lastUserMsgIndex = i;
-                            break;
-                        }
-                    }
-
-                    if (lastUserMsgIndex !== -1) {
-                        const originalContent = messages[lastUserMsgIndex].content;
-                        if (typeof originalContent === 'string') {
-                            messages[lastUserMsgIndex].content = `${originalContent}\n\n(システム情報: ツールが実行されました)\n${toolResultsText}`;
-                        } else if (Array.isArray(originalContent)) {
-                            const textPart = originalContent.find((p: any) => p.type === 'text');
-                            if (textPart) {
-                                textPart.text = `${textPart.text}\n\n(システム情報: ツールが実行されました)\n${toolResultsText}`;
-                            } else {
-                                originalContent.push({ type: 'text', text: `\n\n(システム情報: ツールが実行されました)\n${toolResultsText}` });
-                            }
-                        }
-                    } else {
-                        messages.push({
-                            role: 'user',
-                            content: `(システム情報: ツールが実行されました)\n${toolResultsText}`
-                        });
-                    }
-
-                    // 再度 generateText を呼び出す (tools は削除して無限呼び出しを防ぐ)
-                    const nextOptions = { ...generateOptions, messages: messages };
-                    delete nextOptions.tools;
-                    
-                    const nextResponse = await generateText(nextOptions);
-
-                    // 新しい response で上書きし、ステップを追加
-                    const newSteps = [...currentResponse.steps, ...nextResponse.steps];
-                    currentResponse = nextResponse;
-                    currentResponse.steps = newSteps;
-                    stepsCount++;
-                }
-                response = currentResponse;
 
                 // ツール呼び出しの有無をログ出力
                 // Vercel AI SDK の toolResults の仕様不整合や undefined 化を回避するため、
@@ -377,7 +309,7 @@ export class ChatAiService {
                     console.log(`[ChatAiService] Dispatching ${executedTools.length} executed tools directly from cache`);
                     executedTools.forEach(et => {
                         if (onToolResult) {
-                            onToolResult(et.toolName, et.args, et.result);
+                            onToolResult(et.toolName, et.input, et.output);
                         }
                     });
                 }
@@ -385,7 +317,7 @@ export class ChatAiService {
                 const isLmStudio = currentEngine === 'lmstudio';
                 // 400 エラーかつ Jinja2 テンプレート関連のエラーと思われる文言が含まれる場合にフォールバック
                 const errorStr = (firstTryError.message || '') + (firstTryError.responseBody || '');
-                const isTemplateError = firstTryError.statusCode === 400 && 
+                const isTemplateError = firstTryError.statusCode === 400 &&
                     (errorStr.includes('template') || errorStr.includes('jinja') || errorStr.includes('UndefinedValue'));
 
                 if (isLmStudio && hasTools && isTemplateError) {
