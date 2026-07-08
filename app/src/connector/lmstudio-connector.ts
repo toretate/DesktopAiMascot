@@ -168,7 +168,6 @@ export class LmStudioConnector {
 
         // システムプロンプト内のツール使用ガイドラインを動的に構成
         const activeToolDescriptions: string[] = [];
-        if (tools ? tools.toolsCurrentTime !== false : true) activeToolDescriptions.push('current time');
         if (tools ? tools.toolsWeather !== false : true) activeToolDescriptions.push('weather');
         if (tools ? tools.toolsVolume !== false : true) activeToolDescriptions.push('volume');
         if (tools ? tools.toolsAppLauncher !== false : true) activeToolDescriptions.push('app launching');

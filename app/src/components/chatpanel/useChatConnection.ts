@@ -49,7 +49,6 @@ export function useChatConnection(params: {
         serverPort,
         useTts,
         ttsReadNarrative,
-        toolsCurrentTime,
         toolsGpsLocation,
         toolsWeather,
         toolsVolume,
@@ -417,7 +416,6 @@ export function useChatConnection(params: {
                 activeMascotId: activeMascot.value?.id || 'default',
                 attachments: attachments.length > 0 ? attachments : undefined,
                 tools: {
-                    toolsCurrentTime: toolsCurrentTime.value,
                     toolsGpsLocation: toolsGpsLocation.value,
                     toolsWeather: toolsWeather.value,
                     toolsVolume: toolsVolume.value,
