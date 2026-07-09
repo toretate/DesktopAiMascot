@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useTaskStore } from '../task';
 
@@ -62,9 +62,9 @@ describe('useTaskStore', () => {
     });
 
     describe('addTask - タスク追加機能', () => {
-        it('addTask_指定カテゴリに親タスクが追加されること', () => {
+        it('addTask_指定カテゴリに親タスクが追加されること', async () => {
             const store = useTaskStore();
-            store.loadFromLocalStorage();
+            await store.loadFromLocalStorage();
 
             const catId = store.categories[0].id;
             store.addTask(catId, 'テスト用親タスク');
@@ -77,9 +77,9 @@ describe('useTaskStore', () => {
     });
 
     describe('toggleTask - タスク完了トグル機能', () => {
-        it('toggleTask_タスクの完了状態が切り替わり配下のサブタスクも連動すること', () => {
+        it('toggleTask_タスクの完了状態が切り替わり配下のサブタスクも連動すること', async () => {
             const store = useTaskStore();
-            store.loadFromLocalStorage();
+            await store.loadFromLocalStorage();
 
             const catId = store.categories[0].id;
             store.addTask(catId, 'トグル親タスク');
@@ -102,9 +102,9 @@ describe('useTaskStore', () => {
     });
 
     describe('addSubTask / toggleSubTask - サブタスク追加とトグル自動完了機能', () => {
-        it('addSubTask_サブタスクが正常に追加されること', () => {
+        it('addSubTask_サブタスクが正常に追加されること', async () => {
             const store = useTaskStore();
-            store.loadFromLocalStorage();
+            await store.loadFromLocalStorage();
 
             const catId = store.categories[0].id;
             store.addTask(catId, '親タスク');
@@ -115,9 +115,9 @@ describe('useTaskStore', () => {
             expect(task.steps[0].title).toBe('新規サブタスク');
         });
 
-        it('toggleSubTask_すべてのサブタスクが完了になった時のみ親タスクが自動的に完了になること', () => {
+        it('toggleSubTask_すべてのサブタスクが完了になった時のみ親タスクが自動的に完了になること', async () => {
             const store = useTaskStore();
-            store.loadFromLocalStorage();
+            await store.loadFromLocalStorage();
 
             const catId = store.categories[0].id;
             store.addTask(catId, '親タスク');
@@ -147,9 +147,78 @@ describe('useTaskStore', () => {
         it('showTaskWidget_表示フラグの初期値がfalseであり変更可能なこと', () => {
             const store = useTaskStore();
             expect(store.showTaskWidget).toBe(false);
-            
+
             store.showTaskWidget = true;
             expect(store.showTaskWidget).toBe(true);
+        });
+    });
+
+    describe('loadFromLocalStorage - データ消失防止', () => {
+        const makeTask = (id: string, categoryId = 'c1') => ({
+            id, categoryId, title: id, completed: false, priority: 'normal',
+            steps: [], order: 0, createdAt: '2026-01-01T00:00:00.000Z'
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it('サーバーが空を返してもローカルの既存タスクを消さない（空上書き防止）', async () => {
+            localStorage.setItem('desktop-mascot-categories', JSON.stringify([{ id: 'c1', name: 'C1', order: 0 }]));
+            localStorage.setItem('desktop-mascot-tasks', JSON.stringify([makeTask('keep')]));
+
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({ success: true, categories: [], tasks: [] })
+            });
+            vi.stubGlobal('fetch', fetchMock);
+
+            const store = useTaskStore();
+            await store.loadFromLocalStorage();
+
+            expect(store.tasks.length).toBe(1);
+            expect(store.tasks[0].id).toBe('keep');
+            expect(store.categories.length).toBe(1);
+            // 修復のためサーバーへ書き戻す POST が行われること
+            const postCalled = fetchMock.mock.calls.some(c => c[1] && c[1].method === 'POST');
+            expect(postCalled).toBe(true);
+        });
+
+        it('サーバーが500(破損)を返してもローカルを保持する', async () => {
+            localStorage.setItem('desktop-mascot-categories', JSON.stringify([{ id: 'c1', name: 'C1', order: 0 }]));
+            localStorage.setItem('desktop-mascot-tasks', JSON.stringify([makeTask('keep')]));
+
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => ({})
+            });
+            vi.stubGlobal('fetch', fetchMock);
+
+            const store = useTaskStore();
+            await store.loadFromLocalStorage();
+
+            expect(store.tasks.length).toBe(1);
+            expect(store.tasks[0].id).toBe('keep');
+        });
+
+        it('サーバーにデータがあればサーバーを優先して反映する', async () => {
+            localStorage.setItem('desktop-mascot-tasks', JSON.stringify([makeTask('old')]));
+
+            const fetchMock = vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    categories: [{ id: 'c1', name: 'C1', order: 0 }],
+                    tasks: [makeTask('server')]
+                })
+            });
+            vi.stubGlobal('fetch', fetchMock);
+
+            const store = useTaskStore();
+            await store.loadFromLocalStorage();
+
+            expect(store.tasks.map(t => t.id)).toEqual(['server']);
         });
     });
 });

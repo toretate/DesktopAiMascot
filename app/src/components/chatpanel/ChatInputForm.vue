@@ -42,7 +42,93 @@ const handleAttachFiles = (event: Event) => {
 };
 
 const handleFormSubmit = () => {
+    if (isRecording.value) {
+        stopSpeech();
+    }
     emit('submit');
+};
+
+// --- 音声入力 (Speech-to-Text) 制御 ---
+const isRecording = ref(false);
+let recognition: any = null;
+let speechStartText = '';
+
+const initSpeechRecognition = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.warn('Speech recognition is not supported in this browser.');
+        return null;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = 'ja-JP';
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    rec.onstart = () => {
+        isRecording.value = true;
+        speechStartText = props.inputText;
+    };
+
+    rec.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+        
+        const currentSpeech = finalTranscript || interimTranscript;
+        const spacing = speechStartText && !speechStartText.endsWith(' ') ? ' ' : '';
+        emit('update:inputText', speechStartText + spacing + currentSpeech);
+    };
+
+    rec.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        stopSpeech();
+    };
+
+    rec.onend = () => {
+        isRecording.value = false;
+    };
+
+    return rec;
+};
+
+const toggleSpeech = () => {
+    if (isRecording.value) {
+        stopSpeech();
+    } else {
+        startSpeech();
+    }
+};
+
+const startSpeech = () => {
+    if (!recognition) {
+        recognition = initSpeechRecognition();
+    }
+    if (recognition) {
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error('Failed to start recognition:', e);
+        }
+    } else {
+        alert('お使いのブラウザは音声入力に対応していません。');
+    }
+};
+
+const stopSpeech = () => {
+    if (recognition) {
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.error('Failed to stop recognition:', e);
+        }
+    }
+    isRecording.value = false;
 };
 
 const onTextareaKeyDown = (event: KeyboardEvent) => {
@@ -96,6 +182,15 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
             />
             <button type="button" class="attach-btn" @click="triggerFileInput" title="ファイル・画像を添付">
                 <i class="pi pi-paperclip"></i>
+            </button>
+            <button 
+                type="button" 
+                class="mic-btn" 
+                :class="{ 'recording': isRecording, 'secret-mode': isSecretMode }" 
+                @click="toggleSpeech" 
+                :title="isRecording ? '音声入力を停止' : '音声入力を開始'"
+            >
+                <i class="pi" :class="isRecording ? 'pi-mic-slash' : 'pi-mic'"></i>
             </button>
             <textarea 
                 :value="inputText"
@@ -304,5 +399,57 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 .chat-footer.secret-mode .attach-btn:hover {
     color: #c084fc;
     background: rgba(168, 85, 247, 0.15);
+}
+
+/* 音声入力ボタン */
+.mic-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mic-btn:hover {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
+}
+
+.mic-btn.recording {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    animation: mic-pulse 1.5s infinite;
+}
+
+@keyframes mic-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.chat-footer.secret-mode .mic-btn {
+    color: #a78bfa;
+}
+
+.chat-footer.secret-mode .mic-btn:hover {
+    color: #c084fc;
+    background: rgba(168, 85, 247, 0.15);
+}
+
+.chat-footer.secret-mode .mic-btn.recording {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.2);
 }
 </style>

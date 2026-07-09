@@ -33,6 +33,7 @@ export interface Task {
     endedAt?: string;
     scheduledAt?: string;
     notified?: boolean;
+    memo?: string;
 }
 
 export const useTaskStore = defineStore('task', () => {
@@ -40,10 +41,12 @@ export const useTaskStore = defineStore('task', () => {
     const categories = ref<Category[]>([]);
     const tasks = ref<Task[]>([]);
     const activeCategoryId = ref<string>('default');
-    const currentView = ref<'todo' | 'timeline'>('todo');
+    const currentView = ref<'todo' | 'timeline' | 'completed'>('todo');
     const showTaskWidget = ref<boolean>(false);
     const enableNotification = ref<boolean>(true);
     const notificationMinutes = ref<number>(5);
+    // TODOでDONEにしてから実際に完了(COMPへ移動)するまでの猶予秒数
+    const completionGraceSeconds = ref<number>(5);
     const isLoaded = ref(false);
 
     // LocalStorage および サーバーからデータをロード
@@ -65,7 +68,7 @@ export const useTaskStore = defineStore('task', () => {
                 activeCategoryId.value = savedActiveId;
             }
             const savedView = localStorage.getItem('desktop-mascot-task-view');
-            if (savedView === 'todo' || savedView === 'timeline') {
+            if (savedView === 'todo' || savedView === 'timeline' || savedView === 'completed') {
                 currentView.value = savedView;
             }
             const savedShowWidget = localStorage.getItem('desktop-mascot-show-task-widget');
@@ -80,34 +83,62 @@ export const useTaskStore = defineStore('task', () => {
             if (savedNotifMin) {
                 notificationMinutes.value = parseInt(savedNotifMin, 10) || 5;
             }
+            const savedGrace = localStorage.getItem('desktop-mascot-completion-grace-seconds');
+            if (savedGrace !== null) {
+                const g = parseInt(savedGrace, 10);
+                completionGraceSeconds.value = isNaN(g) || g < 0 ? 5 : g;
+            }
         } catch (error) {
             console.warn('LocalStorageからの初期タスク読み込みエラー:', error);
         }
 
         // 2. 次にサーバー（API）から最新データをロードする
+        let recoveredFromLocal = false;
         try {
             const res = await fetch('/api/tasks', { credentials: 'include' });
             if (res.ok) {
                 const resJson = await res.json();
                 if (resJson.success) {
-                    if (Array.isArray(resJson.categories)) {
-                        categories.value = resJson.categories;
+                    // データ消失防止:
+                    // このアプリは変更のたびにローカルとサーバーへ同時保存するため、
+                    // 「ローカルに存在するのにサーバーが空」= サーバー側の欠落/破損とみなし、ローカルを優先する。
+                    // （サーバーが空を返した瞬間にローカルを空で上書き→初期化→空を保存、という消失連鎖を防ぐ）
+                    const serverCategories = Array.isArray(resJson.categories) ? resJson.categories : [];
+                    const serverTasks = Array.isArray(resJson.tasks) ? resJson.tasks : [];
+
+                    if (serverTasks.length > 0 || tasks.value.length === 0) {
+                        tasks.value = serverTasks;
+                    } else {
+                        recoveredFromLocal = true;
+                        console.warn('[TaskStore] サーバーのタスクが空のため、ローカルの既存データを保持しました（データ消失防止）。');
                     }
-                    if (Array.isArray(resJson.tasks)) {
-                        tasks.value = resJson.tasks;
+
+                    if (serverCategories.length > 0 || categories.value.length === 0) {
+                        categories.value = serverCategories;
+                    } else {
+                        recoveredFromLocal = true;
                     }
+
                     if (resJson.enableNotification !== undefined) {
                         enableNotification.value = resJson.enableNotification;
                     }
                     if (resJson.notificationMinutes !== undefined) {
                         notificationMinutes.value = resJson.notificationMinutes;
                     }
+                    if (resJson.completionGraceSeconds !== undefined) {
+                        completionGraceSeconds.value = resJson.completionGraceSeconds;
+                    }
                     // 同期のために LocalStorage にも書き込んでおく
                     localStorage.setItem('desktop-mascot-categories', JSON.stringify(categories.value));
                     localStorage.setItem('desktop-mascot-tasks', JSON.stringify(tasks.value));
                     localStorage.setItem('desktop-mascot-enable-notification', String(enableNotification.value));
                     localStorage.setItem('desktop-mascot-notification-minutes', String(notificationMinutes.value));
+                    localStorage.setItem('desktop-mascot-completion-grace-seconds', String(completionGraceSeconds.value));
                 }
+            } else if (tasks.value.length > 0) {
+                // サーバーがエラー（tasks.json 破損時の 500 など）を返した場合もローカルを保持し、修復を試みる
+                recoveredFromLocal = true;
+                console.warn('[TaskStore] サーバー応答が異常のため、ローカルデータを保持し修復します。');
             }
         } catch (error) {
             console.warn('サーバーからのタスクロードに失敗しました (LocalStorageを使用します):', error);
@@ -123,6 +154,10 @@ export const useTaskStore = defineStore('task', () => {
                 activeCategoryId.value = categories.value[0].id;
             }
             isLoaded.value = true;
+            // サーバー側が空/欠落でローカルを復旧した場合、正しいデータをサーバーへ書き戻して修復する
+            if (recoveredFromLocal) {
+                saveToLocalStorage();
+            }
             // 監視タイマーの開始
             startNotificationCheck();
         }
@@ -151,7 +186,8 @@ export const useTaskStore = defineStore('task', () => {
                     categories: categories.value,
                     tasks: tasks.value,
                     enableNotification: enableNotification.value,
-                    notificationMinutes: notificationMinutes.value
+                    notificationMinutes: notificationMinutes.value,
+                    completionGraceSeconds: completionGraceSeconds.value
                 }),
                 credentials: 'include'
             }).catch(err => {
@@ -171,7 +207,8 @@ export const useTaskStore = defineStore('task', () => {
             () => currentView.value,
             () => showTaskWidget.value,
             () => enableNotification.value,
-            () => notificationMinutes.value
+            () => notificationMinutes.value,
+            () => completionGraceSeconds.value
         ],
         () => {
             saveToLocalStorage();
@@ -179,16 +216,51 @@ export const useTaskStore = defineStore('task', () => {
         { deep: true }
     );
 
-    // ゲッター：アクティブなカテゴリに属するタスクを順序順に取得
+    // ゲッター：アクティブなカテゴリに属する未完了タスクを順序順に取得
+    // （完了済みタスクは COMP ビューにのみ表示するため TODO からは除外する）
     const filteredTasks = computed(() => {
         return tasks.value
-            .filter(t => t.categoryId === activeCategoryId.value)
+            .filter(t => (activeCategoryId.value === 'all' || t.categoryId === activeCategoryId.value) && !(t.completed || t.status === 'done'))
             .sort((a, b) => a.order - b.order);
     });
 
-    // ゲッター：時系列順のタスクリスト（タイムライン用）
+    // ゲッター：予定時刻順のタスクリスト（タイムライン用）
+    // DOM上は上から下へ「未来 → 現在 → 過去(期限切れ)」の順に並べ、
+    // 表示側で下詰めにすることで現在時刻の近いものが下部に集まるようにする。
     const timelineTasks = computed(() => {
-        return [...tasks.value].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const activeTasks = tasks.value.filter(t => !(t.completed || t.status === 'done'));
+        const scheduled = activeTasks.filter(t => t.scheduledAt);
+        const unscheduled = activeTasks.filter(t => !t.scheduledAt);
+        // 予定ありは予定時刻の降順（未来ほど上・過去ほど下）
+        scheduled.sort((a, b) => new Date(b.scheduledAt!).getTime() - new Date(a.scheduledAt!).getTime());
+        // 予定なしは期限の概念がないため、作成日時の降順で最上部にまとめる
+        unscheduled.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return [...unscheduled, ...scheduled];
+    });
+
+    // ゲッター：完了済みタスクのリスト（COMPビュー用・全カテゴリ横断、完了日時の新しい順）
+    const completedTasks = computed(() => {
+        return tasks.value
+            .filter(t => t.completed || t.status === 'done')
+            .sort((a, b) => {
+                const at = new Date(a.endedAt || a.createdAt).getTime();
+                const bt = new Date(b.endedAt || b.createdAt).getTime();
+                return bt - at;
+            });
+    });
+
+    // ゲッター：完了済みタスクを完了日ごとにグループ化（COMPビュー用・日付降順）
+    const completedTasksByDate = computed(() => {
+        const groups: Record<string, { key: string; label: string; tasks: Task[] }> = {};
+        for (const t of completedTasks.value) {
+            const d = new Date(t.endedAt || t.createdAt);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!groups[key]) {
+                groups[key] = { key, label: `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`, tasks: [] };
+            }
+            groups[key].tasks.push(t);
+        }
+        return Object.values(groups).sort((a, b) => b.key.localeCompare(a.key));
     });
 
     // ゲッター：アクティブなカテゴリの全体完了度（ゲージ用）
@@ -240,10 +312,14 @@ export const useTaskStore = defineStore('task', () => {
     // --- タスク操作 ---
     const addTask = (categoryId: string, title: string, priority: 'normal' | 'star' | 'thunder' = 'normal', scheduledAt?: string) => {
         const id = 'task_' + Math.random().toString(36).substring(2, 11);
-        const order = tasks.value.filter(t => t.categoryId === categoryId).length;
+        let targetCategoryId = categoryId;
+        if (categoryId === 'all') {
+            targetCategoryId = categories.value[0]?.id || 'default';
+        }
+        const order = tasks.value.filter(t => t.categoryId === targetCategoryId).length;
         tasks.value.push({
             id,
-            categoryId,
+            categoryId: targetCategoryId,
             title,
             completed: false,
             priority,
@@ -519,9 +595,12 @@ export const useTaskStore = defineStore('task', () => {
         showTaskWidget,
         enableNotification,
         notificationMinutes,
+        completionGraceSeconds,
         isLoaded,
         filteredTasks,
         timelineTasks,
+        completedTasks,
+        completedTasksByDate,
         activeCategoryCompletionRate,
         loadFromLocalStorage,
         saveToLocalStorage,

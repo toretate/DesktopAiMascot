@@ -77,6 +77,13 @@ export interface ConfigData {
     chatWidth?: number;
     chatHeight?: number;
 
+    // 統合ウィンドウでのチャット欄の幅比率 (0.2 - 0.8)
+    integratedChatRatio?: number;
+
+    // 統合ウィンドウ内でのマスコット表示位置 (マスコット表示エリアに対する縦横の比率 0.0 - 1.0)
+    integratedMascotXRatio?: number;
+    integratedMascotYRatio?: number;
+
     // ツール使用設定 (ToolUse)
     toolsCurrentTime: boolean;
     toolsGpsLocation: boolean;
@@ -175,6 +182,9 @@ export const defaultData: ConfigData = {
     compactY: -1,
     chatWidth: 350,
     chatHeight: 400,
+    integratedChatRatio: 0.6,
+    integratedMascotXRatio: 0.5,
+    integratedMascotYRatio: 0.5,
     toolsCurrentTime: true,
     toolsGpsLocation: true,
     toolsWeather: true,

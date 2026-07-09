@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import MascotViewer from '../MascotViewer.vue';
 import ChatPanel from '../ChatPanel.vue';
 import TaskManagement from '../TaskManagement.vue';
@@ -19,10 +19,46 @@ const {
     useServer,
     serverHost,
     serverPort,
-    configVersion
+    configVersion,
+    integratedChatRatio
 } = storeToRefs(configStore);
 
 const { showTaskWidget } = storeToRefs(taskStore);
+
+// チャット欄の幅比率の調整（スプリッターのドラッグ）
+const MIN_CHAT_RATIO = 0.2;
+const MAX_CHAT_RATIO = 0.8;
+const containerRef = ref<HTMLElement | null>(null);
+const isResizing = ref(false);
+
+const chatSectionStyle = computed(() => {
+    if (windowMode.value === 'compact') return {};
+    const ratio = Math.min(MAX_CHAT_RATIO, Math.max(MIN_CHAT_RATIO, integratedChatRatio.value ?? 0.6));
+    return { flex: `0 0 ${(ratio * 100).toFixed(2)}%` };
+});
+
+const onSplitterPointerDown = (event: PointerEvent) => {
+    const container = containerRef.value;
+    if (!container) return;
+    isResizing.value = true;
+    (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
+
+    const onMove = (e: PointerEvent) => {
+        const rect = container.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const ratio = (rect.right - e.clientX) / rect.width;
+        integratedChatRatio.value = Math.min(MAX_CHAT_RATIO, Math.max(MIN_CHAT_RATIO, ratio));
+    };
+    const onUp = (e: PointerEvent) => {
+        isResizing.value = false;
+        (event.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        configStore.saveConfig();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+};
 
 // アセットURLの解決
 const resolveImageUrl = (path: string | undefined | null): string => {
@@ -100,16 +136,22 @@ const integratedBackgroundStyle = computed(() => {
 </script>
 
 <template>
-    <div class="integrated-container">
+    <div ref="containerRef" class="integrated-container" :class="{ 'is-resizing': isResizing }">
         <!-- 背景レイヤー -->
         <div class="integrated-background" :style="integratedBackgroundStyle"></div>
-        
+
         <!-- マスコット表示エリア -->
         <div v-if="windowMode !== 'compact'" class="mascot-section">
             <MascotViewer />
         </div>
+        <!-- チャット欄の幅を調整するスプリッター -->
+        <div
+            v-if="windowMode !== 'compact'"
+            class="section-splitter"
+            @pointerdown="onSplitterPointerDown"
+        ></div>
         <!-- チャット表示エリア -->
-        <div class="chat-section" :class="{ 'is-compact': windowMode === 'compact' }">
+        <div class="chat-section" :class="{ 'is-compact': windowMode === 'compact' }" :style="chatSectionStyle">
             <ChatPanel />
         </div>
         
@@ -138,19 +180,45 @@ const integratedBackgroundStyle = computed(() => {
 }
 
 .mascot-section {
-    flex: 4;
+    flex: 1;
+    min-width: 0;
     height: 100%;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: flex-end;
     overflow: hidden;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 1;
+}
+
+.section-splitter {
+    flex: 0 0 6px;
+    height: 100%;
+    cursor: col-resize;
+    background: rgba(255, 255, 255, 0.1);
+    background-clip: content-box;
+    padding: 0 2px;
+    box-sizing: border-box;
+    z-index: 2;
+    touch-action: none;
+    transition: background-color 0.15s;
+}
+
+.section-splitter:hover,
+.integrated-container.is-resizing .section-splitter {
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ドラッグ中はマスコット/チャット内の canvas 等にイベントを奪われないようにする */
+.integrated-container.is-resizing .mascot-section,
+.integrated-container.is-resizing .chat-section {
+    pointer-events: none;
+    user-select: none;
 }
 
 .chat-section {
     flex: 6;
+    min-width: 0;
     height: 100%;
     position: relative;
     overflow: hidden;

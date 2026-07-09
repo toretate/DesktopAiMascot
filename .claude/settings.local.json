@@ -2,7 +2,30 @@
   "permissions": {
     "allow": [
       "Bash(npx vitest *)",
-      "Bash(npx vue-tsc *)"
+      "Bash(npx vue-tsc *)",
+      "Bash(node *)",
+      "Bash(curl -s -o /dev/null -w \"page: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"module: %{http_code}\\\\n\" \"http://localhost:3000/_nuxt/components/chatpanel/ChatInputForm.vue\")",
+      "Bash(npx nuxt *)",
+      "Bash(curl -s -o /dev/null -m 2 http://localhost:3000/)",
+      "Bash(npm view *)",
+      "Bash(npm install *)",
+      "Bash(gh api *)",
+      "Bash(npx patch-package *)",
+      "Bash(curl -s -o /dev/null \"http://localhost:3000/_nuxt/components/chatpanel/ChatInputForm.vue\")",
+      "Bash(curl -s \"https://api.github.com/repos/nuxt-modules/tailwindcss/branches?per_page=100\")",
+      "Bash(curl -s \"https://api.github.com/repos/nuxt-modules/tailwindcss/tags?per_page=10\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/nuxt-modules/tailwindcss/v6.14.0/src/internal-context/load.ts\")",
+      "Bash(curl -s \"https://api.github.com/repos/nuxt-modules/tailwindcss/commits?path=src/context.ts&sha=v6.12.0&per_page=50\")",
+      "Bash(curl -s \"https://api.github.com/repos/nuxt-modules/tailwindcss/commits/81595febd83f3a8148bfac55d2d31d8c86d6c6e8\" -H \"Accept: application/vnd.github.diff\")",
+      "Bash(grep -v \"module at\\\\|module\\\\`\")",
+      "Bash(grep -rn \"split\\('\\\\\\\\\\\\\\\\n'\\)\\\\[0\\\\]\\\\|readFirstLine\\\\|// generated\" dist/runtime dist/*.d.*)",
+      "Bash(wmux markdown *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "PowerShell(Receive-Job *)",
+      "Bash(curl -s --max-time 20 http://localhost:3000/api/tasks)",
+      "Bash(curl -s -w \"\\\\n[HTTP %{http_code}, time %{time_total}s]\\\\n\" --max-time 25 http://localhost:3000/api/tasks)",
+      "Bash(curl -s -w \"\\\\n[HTTP %{http_code}]\\\\n\" --max-time 15 http://localhost:3000/api/ping)"
     ]
   }
 }
