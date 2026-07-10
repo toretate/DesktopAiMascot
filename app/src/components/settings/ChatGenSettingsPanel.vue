@@ -23,6 +23,7 @@ const {
     repetitionPenalty,
     googleAiStudioApiKey: geminiApiKey,
     useExRadio,
+    radioActiveTalkInterval,
     summaryEngine,
     summaryGeminiModel,
     summaryOpenaiModel,
@@ -894,6 +895,16 @@ onMounted(async () => {
 
             <!-- ラジオ設定タブ -->
             <div v-else-if="activeTab === 'radio'" class="flex flex-column gap-4">
+                <div class="form-field">
+                    <label class="font-medium flex justify-content-between">
+                        <span>沈黙してから自動でお喋りを始めるまでの時間: {{ radioActiveTalkInterval }}秒</span>
+                    </label>
+                    <Slider v-model="radioActiveTalkInterval" :min="5" :max="300" :step="5" class="mt-2" />
+                    <small class="text-xs text-gray-500 mt-1">
+                        ※ ラジオモード中、ユーザーからの発話がないままこの秒数が経過すると、マスコットが自発的にフリートーク（アクティブトーク）を始めます。
+                    </small>
+                </div>
+
                 <div class="form-field">
                     <div class="flex justify-content-between align-items-center mb-1">
                         <label class="font-medium">ラジオパーソナリティ・システムプロンプト</label>

@@ -9,6 +9,7 @@ import useIrodoriEmotion from './use-irodori-emotion';
 import { splitSentences } from '../../utils/sentence-splitter';
 import { sanitizeForIrodoriTTS } from '../../utils/irodori-sanitizer';
 import { useTaskStore } from '../../store/task';
+import { useMemoStore } from '../../store/memo';
 
 export function useChatConnection(params: {
     messages: Ref<Message[]>;
@@ -34,6 +35,10 @@ export function useChatConnection(params: {
     const taskStore = useTaskStore();
     if (!taskStore.isLoaded) {
         taskStore.loadFromLocalStorage();
+    }
+    const memoStore = useMemoStore();
+    if (!memoStore.isLoaded) {
+        memoStore.loadFromLocalStorage();
     }
     let compactionTimer: any = null;
 
@@ -159,6 +164,31 @@ export function useChatConnection(params: {
                     } else if (task) {
                         taskStore.addTaskFromServer(task, categories);
                     }
+                } else if (wsEvent === 'memo-action') {
+                    const { action, memo, memoId } = data;
+                    console.log('[useChatConnection] Memo action received:', action, memo, memoId);
+                    const memoStore = useMemoStore();
+                    if (action === 'delete') {
+                        if (memoId) {
+                            memoStore.deleteMemo(memoId);
+                        }
+                    } else if (memo) {
+                        if (action === 'add') {
+                            const exists = memoStore.memos.findIndex(m => m.id === memo.id);
+                            if (exists >= 0) {
+                                memoStore.memos[exists] = memo;
+                            } else {
+                                memoStore.memos.push(memo);
+                            }
+                            memoStore.saveToLocalStorage();
+                        } else if (action === 'update') {
+                            const index = memoStore.memos.findIndex(m => m.id === memo.id);
+                            if (index >= 0) {
+                                memoStore.memos[index] = memo;
+                                memoStore.saveToLocalStorage();
+                            }
+                        }
+                    }
                 } else if (wsEvent === 'chat-error') {
                     updateLastMascotMessage(`接続エラー: ${data.message}`);
                     await saveHistory();
@@ -232,7 +262,11 @@ export function useChatConnection(params: {
 
         playlist.stop();
 
-        const userQuery = isActiveTalk ? '...' : inputText.value;
+        // アクティブトーク（沈黙時の自発発話）では、生の「...」を送るとモデルが
+        // 「リスナーが黙り込んでいる＝不機嫌／気まずい」と否定的に解釈し、マスコットが
+        // 不安がってしまう。そこで沈黙を咎めない前向きな進行キューを送る。
+        const ACTIVE_TALK_CUE = '（ラジオの生放送中です。今はリスナーからの投稿が届いていない静かな時間帯です。リスナーが黙っているのは番組を楽しく聴いてくれているからで、不機嫌でも気まずいわけでもありません。不安がらず、ラジオパーソナリティとして明るく前向きにトークを続けてください。）';
+        const userQuery = isActiveTalk ? ACTIVE_TALK_CUE : inputText.value;
         if (!isActiveTalk) {
             inputText.value = '';
         }
@@ -358,9 +392,9 @@ export function useChatConnection(params: {
         // 感情タグブロック(マスコットの表情向け)
         systemPrompt += "\n# System Instructions\n回答の最後に、自分の現在の感情に合わせて [happy], [sad], [angry], [surprised], [neutral] のいずれかの感情タグを必ず1つ含めて終了してください。例:「こんにちは！ [happy]」";
 
-        // タイマー指定ブロック
+        // タイマー指定ブロック（マスコットの一時的リマインド専用。ユーザーのタスク一覧には保存されない）
         if (!systemPrompt.includes('[TIMER:')) {
-            systemPrompt += "\n# Timer Instructions\nユーザーから「〇分後に教えて」「後でお知らせして」「カップラーメンにお湯を入れた」など、特定の時間経過後のお知らせやリマインドを求められた場合は、会話 of 応答テキストの末尾（感情タグの直前）に、必ず次のフォーマットでタイマー起動タグを付与してください。\n[TIMER:秒数,お知らせ内容]\n※秒数は半角数字で指定してください。お知らせ内容には具体的なリマインド内容を記述してください。例:「了解、3分測るね。[TIMER:180,カップラーメンができました！] [happy]」";
+            systemPrompt += "\n# Timer Instructions\nユーザーから「〇分後に教えて」「後でお知らせして」「カップラーメンにお湯を入れた（できたら教えて）」など、その場限りで一度だけ知らせればよい一時的なリマインドを求められた場合は、会話の応答テキストの末尾（感情タグの直前）に、必ず次のフォーマットでタイマー起動タグを付与してください。\n[TIMER:秒数,お知らせ内容]\n※秒数は半角数字で指定してください。お知らせ内容には具体的なリマインド内容を記述してください。例:「了解、3分測るね。[TIMER:180,カップラーメンができました！] [happy]」\n【重要な区別】このタイマーは一度きりの通知専用で、ユーザーのタスク一覧（TODO/予定）には保存されません。したがって『N分後に通知』などの一時的リマインドは manageTasks ツールでは登録しないでください。逆に、ユーザーが後から一覧で管理・確認したいTODOや予定（例:『明日15時に会議』『レポートを書く』）は、このタイマータグではなく必ず manageTasks ツールで登録してください。\n【履歴の扱い】会話履歴に含まれる過去のタイマー依頼は既に対応済みです。最新（今回）のメッセージで新たに『N分後に…』と頼まれたときだけタイマータグを付けてください。過去の履歴に依頼が残っていることを理由に、タイマーを再設定しないでください。";
         }
 
         const currentSession = sessions.value.find(s => s.id === activeSessionId.value);

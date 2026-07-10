@@ -9,6 +9,7 @@ import { filterDialogue } from '../utils/dialogue-filter';
 import { authenticateUserToken } from '../middleware/auth';
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
 import { addTaskToDb, searchTasksFromDb, updateTaskInDb, deleteTaskFromDb } from '../utils/tasks-service';
+import { addMemoToDb, searchMemosFromDb, updateMemoInDb, deleteMemoFromDb } from '../utils/memos-service';
 
 // ユーザーごとの接続管理（crosswsのPeerオブジェクトをSetに保存）
 const userConnections = new Map<string, Set<any>>();
@@ -182,10 +183,41 @@ export default defineWebSocketHandler({
                         onToolExecute: async (toolName, args) => {
                             const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
                             console.log(`[WS] Tool execution intercept: ${toolName}`, args);
-                            if (toolName !== 'manageTasks') {
+                            if (toolName !== 'manageTasks' && toolName !== 'manageMemos') {
                                 return null;
                             }
                             try {
+                                if (toolName === 'manageMemos') {
+                                    switch (args.action) {
+                                        case 'add': {
+                                            if (!args.content) return JSON.stringify({ success: false, error: 'add には content が必須です。' });
+                                            const saved = addMemoToDb(userId, {
+                                                content: args.content,
+                                                color: args.color,
+                                                pinned: args.pinned
+                                            });
+                                            return JSON.stringify({ success: true, action: 'add', id: saved.memo.id, memo: saved.memo });
+                                        }
+                                        case 'search': {
+                                            const memos = searchMemosFromDb(userId, args.query);
+                                            if (memos.length === 0) return JSON.stringify({ success: true, message: '該当するメモは見つかりませんでした。' });
+                                            const lines = memos.map(m => `- ${m.content}`);
+                                            return JSON.stringify({ success: true, message: `メモが ${memos.length} 件見つかりました：\n${lines.join('\n')}` });
+                                        }
+                                        case 'update': {
+                                            if (!args.id) return JSON.stringify({ success: false, error: 'update には id が必須です。' });
+                                            const saved = updateMemoInDb(userId, args.id, args);
+                                            return JSON.stringify({ success: true, action: 'update', id: args.id, memo: saved.memo });
+                                        }
+                                        case 'delete': {
+                                            if (!args.id) return JSON.stringify({ success: false, error: 'delete には id が必須です。' });
+                                            deleteMemoFromDb(userId, args.id);
+                                            return JSON.stringify({ success: true, action: 'delete', id: args.id });
+                                        }
+                                        default:
+                                            return JSON.stringify({ success: false, error: `不明な action: ${args.action}` });
+                                    }
+                                }
                                 switch (args.action) {
                                     case 'add': {
                                         if (!args.title) {
@@ -258,7 +290,25 @@ export default defineWebSocketHandler({
                         },
                         onToolResult: (toolName, input, output) => {
                             const userId = ((peer as any).ctx && (peer as any).ctx.userId) || 'anonymous';
-                            if (toolName !== 'manageTasks') {
+                            if (toolName !== 'manageTasks' && toolName !== 'manageMemos') {
+                                return;
+                            }
+                            if (toolName === 'manageMemos') {
+                                try {
+                                    const parsedOutput = typeof output === 'string' ? JSON.parse(output) : output;
+                                    if (!parsedOutput || !parsedOutput.success) return;
+                                    console.log(`[WS] Tool execution detected in ws.ts: ${toolName} (action: ${input.action})`, input);
+                                    peer.send(JSON.stringify({
+                                        event: 'memo-action',
+                                        data: {
+                                            action: input.action,
+                                            memoId: parsedOutput.id || input.id,
+                                            memo: parsedOutput.memo
+                                        }
+                                    }));
+                                } catch (e: any) {
+                                    console.error('[WS] Failed to sync tool memo action to client:', e.message);
+                                }
                                 return;
                             }
                             try {
@@ -294,9 +344,33 @@ export default defineWebSocketHandler({
                     });
                 } catch (aiError: any) {
                     console.error('[WS] AI Engine Error:', aiError.message);
+                    let detailMessage = aiError.message;
+                    const responseBodyStr = aiError.responseBody || '';
+                    const errorStr = (detailMessage + ' ' + responseBodyStr).toLowerCase();
+
+                    // コンテキスト制限エラーのときは分かりやすい日本語メッセージにする
+                    if (
+                        errorStr.includes('context size') ||
+                        errorStr.includes('context length') ||
+                        errorStr.includes('context_length_exceeded') ||
+                        errorStr.includes('context exceeded')
+                    ) {
+                        detailMessage = 'AIのコンテキスト長（一度に処理できる会話量）の上限を超えました。LM Studio等の設定画面で「Context Length」を 4096 や 8192 以上に引き上げてください。';
+                    } else if (aiError.responseBody) {
+                        try {
+                            const parsedBody = JSON.parse(aiError.responseBody);
+                            if (parsedBody.error) {
+                                detailMessage += ` (${parsedBody.error})`;
+                            } else {
+                                detailMessage += ` (${aiError.responseBody})`;
+                            }
+                        } catch {
+                            detailMessage += ` (${aiError.responseBody})`;
+                        }
+                    }
                     peer.send(JSON.stringify({
                         event: 'chat-error',
-                        data: { message: `AIサーバーとの通信エラー: ${aiError.message}` }
+                        data: { message: `AIサーバーとの通信エラー: ${detailMessage}` }
                     }));
                     return;
                 }

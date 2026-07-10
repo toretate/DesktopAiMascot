@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // タスクウィンドウの表示・非表示のトグルを送信
     toggleTasks: () => ipcRenderer.send('toggle-tasks-window'),
+
+    // メモウィンドウの表示・非表示のトグルを送信
+    toggleMemo: () => ipcRenderer.send('toggle-memo-window'),
     
     // チャットウィンドウのサイズ変更を送信
     resizeChatWindow: (size: { width: number; height: number }) => ipcRenderer.send('resize-chat-window', size),

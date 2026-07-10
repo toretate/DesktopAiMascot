@@ -6,8 +6,11 @@ import SettingsWindow from './components/settings/SettingsWindow.vue';
 import IntegratedLayout from './components/layouts/IntegratedLayout.vue';
 import CompactLayout from './components/layouts/CompactLayout.vue';
 import TaskManagement from './components/TaskManagement.vue';
+import MemoWidget from './components/MemoWidget.vue';
 
-const currentHash = ref(window.location.hash);
+// 起動時の初期ハッシュを即座に退避（Nuxtルーターによるハッシュ消去対策）
+const initialHash = typeof window !== 'undefined' ? window.location.hash : '';
+const currentHash = ref(initialHash);
 
 const updateHash = () => {
     currentHash.value = window.location.hash;
@@ -15,6 +18,10 @@ const updateHash = () => {
 
 onMounted(() => {
     window.addEventListener('hashchange', updateHash);
+    // 初期ハッシュが消去されていた場合は強制復元する
+    if (initialHash && window.location.hash !== initialHash) {
+        window.location.hash = initialHash;
+    }
 });
 
 onUnmounted(() => {
@@ -29,6 +36,7 @@ onUnmounted(() => {
         <ChatPanel v-else-if="currentHash === '#chat'" />
         <SettingsWindow v-else-if="currentHash === '#settings'" />
         <TaskManagement v-else-if="currentHash === '#tasks'" />
+        <MemoWidget v-else-if="currentHash === '#memo'" />
         <IntegratedLayout v-else-if="currentHash === '#integrated' || currentHash === '' || currentHash === '#/' || currentHash === '#web'" />
         <CompactLayout v-else-if="currentHash === '#compact'" />
         <div v-else class="fallback-view">

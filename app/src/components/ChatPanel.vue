@@ -17,14 +17,18 @@ import ChatInputForm from './chatpanel/ChatInputForm.vue';
 import { extractImagePrompt } from '../utils/png-metadata';
 import TaskManagement from './TaskManagement.vue';
 import { useTaskStore } from '../store/task';
+import MemoWidget from './MemoWidget.vue';
+import { useMemoStore } from '../store/memo';
 
 const inputText = ref('');
 const messageListRef = ref<any>(null);
 const showTaskManagement = ref(false);
+const showMemoManagement = ref(false);
 
 const configStore = useConfigStore();
 const mascotStore = useMascotStore();
 const taskStore = useTaskStore();
+const memoStore = useMemoStore();
 
 // タスク管理ウィジェット表示のトグル制御
 watch(showTaskManagement, (newVal) => {
@@ -42,6 +46,24 @@ watch(showTaskManagement, (newVal) => {
 watch(() => taskStore.showTaskWidget, (newVal) => {
     if (showTaskManagement.value !== newVal) {
         showTaskManagement.value = newVal;
+    }
+});
+
+// メモウィジェット表示のトグル制御
+watch(showMemoManagement, (newVal) => {
+    if (memoStore.showMemoWidget !== newVal) {
+        memoStore.showMemoWidget = newVal;
+    }
+    if (configStore.windowMode !== 'integrated' && configStore.windowMode !== 'compact') {
+        if (window.electronAPI && window.electronAPI.toggleMemo) {
+            window.electronAPI.toggleMemo();
+        }
+    }
+});
+
+watch(() => memoStore.showMemoWidget, (newVal) => {
+    if (showMemoManagement.value !== newVal) {
+        showMemoManagement.value = newVal;
     }
 });
 
@@ -188,7 +210,6 @@ const openImageModal = (url: string) => {
 
 
 // ---- 能動的発話（アクティブトーク）タイマー ----
-const ACTIVE_TALK_INTERVAL = 30000; // 30秒
 let activeTalkTimer: any = null;
 
 const startActiveTalkTimer = () => {
@@ -196,11 +217,14 @@ const startActiveTalkTimer = () => {
     if (!isRadioMode.value || isAiResponding.value || mascotStore.isSpeaking || inputText.value.trim() !== '') {
         return;
     }
+    // 沈黙からアクティブトークを発火するまでの待機時間（UIから設定可能／秒単位）。
+    // 発火のたびに最新の設定値を参照する。
+    const intervalMs = (Number(configStore.radioActiveTalkInterval) || 30) * 1000;
     activeTalkTimer = setTimeout(async () => {
         if (isRadioMode.value && !isAiResponding.value && !mascotStore.isSpeaking && inputText.value.trim() === '') {
             await sendMessage(true);
         }
-    }, ACTIVE_TALK_INTERVAL);
+    }, intervalMs);
 };
 
 const stopActiveTalkTimer = () => {
@@ -234,6 +258,13 @@ watch([() => isAiResponding.value, () => mascotStore.isSpeaking], ([responding, 
     }
 });
 
+// アクティブトークの待機時間を設定で変更したら、待機中のタイマーを新しい値で再スタートする
+watch(() => configStore.radioActiveTalkInterval, () => {
+    if (isRadioMode.value) {
+        startActiveTalkTimer();
+    }
+});
+
 let unsubscribeConfig: (() => void) | null = null;
 
 const handleChatMouseMove = () => {
@@ -251,6 +282,11 @@ onMounted(async () => {
     // ストアの設定データを読み込み
     if (!configStore.isLoaded) {
         await configStore.loadConfig();
+    }
+
+    // メモデータの読み込み
+    if (!memoStore.isLoaded) {
+        await memoStore.loadFromLocalStorage();
     }
 
     // 設定更新イベントの購読
@@ -491,6 +527,7 @@ const focusWindow = () => {
             v-model:imageGenMode="imageGenMode"
             v-model:showHistoryList="showHistoryList"
             v-model:showTaskManagement="showTaskManagement"
+            v-model:showMemoManagement="showMemoManagement"
             @clear-history="clearHistory"
             @open-image-gen-dialog="imageGenDialogVisible = true"
         />
@@ -498,6 +535,9 @@ const focusWindow = () => {
         <!-- コンパクト表示かつタスク表示ONのときは画面切り替え -->
         <div v-if="showTaskManagement && windowMode === 'compact'" class="task-management-section">
             <TaskManagement />
+        </div>
+        <div v-else-if="showMemoManagement && windowMode === 'compact'" class="task-management-section">
+            <MemoWidget />
         </div>
 
         <template v-else>

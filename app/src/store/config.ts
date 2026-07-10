@@ -103,6 +103,7 @@ export interface AppConfig {
     toolsAppLauncher: boolean;
     toolsWebSearch: boolean;
     useExRadio: boolean;
+    radioActiveTalkInterval: number;
     saveVoice?: boolean;
     showVoiceLog?: boolean;
     forgeEndpoint?: string;
@@ -232,6 +233,8 @@ export const useConfigStore = defineStore('config', () => {
     const toolsAppLauncher = ref(true);
     const toolsWebSearch = ref(true);
     const useExRadio = ref(false);
+    // ラジオモードで沈黙時に能動的トーク（アクティブトーク）を発火するまでの待機秒数
+    const radioActiveTalkInterval = ref(30);
     const saveVoice = ref(false);
     const showVoiceLog = ref(true);
     const forgeEndpoint = ref('http://127.0.0.1:5555');
@@ -396,6 +399,7 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = configData.toolsAppLauncher !== undefined ? !!configData.toolsAppLauncher : true;
             toolsWebSearch.value = configData.toolsWebSearch !== undefined ? !!configData.toolsWebSearch : true;
             useExRadio.value = configData.useExRadio !== undefined ? !!configData.useExRadio : false;
+            radioActiveTalkInterval.value = configData.radioActiveTalkInterval !== undefined ? Number(configData.radioActiveTalkInterval) : 30;
             saveVoice.value = configData.saveVoice !== undefined ? !!configData.saveVoice : false;
             showVoiceLog.value = configData.showVoiceLog !== undefined ? !!configData.showVoiceLog : true;
             forgeEndpoint.value = configData.forgeEndpoint || 'http://127.0.0.1:5555';
@@ -530,6 +534,8 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher.value = localStorage.getItem('toolsAppLauncher') !== 'false';
             toolsWebSearch.value = localStorage.getItem('toolsWebSearch') !== 'false';
             useExRadio.value = localStorage.getItem('useExRadio') === 'true';
+            const radioIntervalVal = localStorage.getItem('radioActiveTalkInterval');
+            radioActiveTalkInterval.value = radioIntervalVal ? Number(radioIntervalVal) : 30;
             saveVoice.value = localStorage.getItem('saveVoice') === 'true';
             showVoiceLog.value = localStorage.getItem('showVoiceLog') !== 'false';
             forgeEndpoint.value = localStorage.getItem('forgeEndpoint') || 'http://127.0.0.1:5555';
@@ -650,6 +656,7 @@ export const useConfigStore = defineStore('config', () => {
             toolsAppLauncher: toolsAppLauncher.value,
             toolsWebSearch: toolsWebSearch.value,
             useExRadio: useExRadio.value,
+            radioActiveTalkInterval: Number(radioActiveTalkInterval.value),
             saveVoice: saveVoice.value,
             showVoiceLog: showVoiceLog.value,
             forgeEndpoint: forgeEndpoint.value,
@@ -786,6 +793,7 @@ export const useConfigStore = defineStore('config', () => {
         localStorage.setItem('toolsAppLauncher', toolsAppLauncher.value.toString());
         localStorage.setItem('toolsWebSearch', toolsWebSearch.value.toString());
         localStorage.setItem('useExRadio', useExRadio.value.toString());
+        localStorage.setItem('radioActiveTalkInterval', radioActiveTalkInterval.value.toString());
         localStorage.setItem('saveVoice', saveVoice.value.toString());
         localStorage.setItem('showVoiceLog', showVoiceLog.value.toString());
         localStorage.setItem('forgeEndpoint', forgeEndpoint.value);
@@ -906,6 +914,7 @@ export const useConfigStore = defineStore('config', () => {
         if (newConfig.toolsAppLauncher !== undefined) toolsAppLauncher.value = !!newConfig.toolsAppLauncher;
         if (newConfig.toolsWebSearch !== undefined) toolsWebSearch.value = !!newConfig.toolsWebSearch;
         if (newConfig.useExRadio !== undefined) useExRadio.value = !!newConfig.useExRadio;
+        if (newConfig.radioActiveTalkInterval !== undefined) radioActiveTalkInterval.value = Number(newConfig.radioActiveTalkInterval);
         if (newConfig.saveVoice !== undefined) saveVoice.value = !!newConfig.saveVoice;
         if (newConfig.showVoiceLog !== undefined) showVoiceLog.value = !!newConfig.showVoiceLog;
         if (newConfig.forgeEndpoint !== undefined) forgeEndpoint.value = newConfig.forgeEndpoint;
@@ -1009,6 +1018,7 @@ export const useConfigStore = defineStore('config', () => {
         toolsAppLauncher,
         toolsWebSearch,
         useExRadio,
+        radioActiveTalkInterval,
         saveVoice,
         showVoiceLog,
         forgeEndpoint,

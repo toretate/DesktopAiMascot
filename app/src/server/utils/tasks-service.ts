@@ -58,6 +58,25 @@ export function addTaskToDb(userId: string, payload: TaskData) {
         categoryId = newCatId;
     }
 
+    // 冪等化ガード: 会話履歴のリプレイ等で同一の依頼が繰り返されても重複登録しない。
+    // 同一カテゴリ・同一タイトル・同一予定日時の未完了タスクが既にあれば、それを返して新規作成しない。
+    const normalizedTitle = (payload.title || '').trim();
+    const normalizedScheduledAt = payload.scheduledAt || undefined;
+    const duplicate = data.tasks.find((t: any) =>
+        !t.completed &&
+        t.categoryId === categoryId &&
+        (t.title || '').trim() === normalizedTitle &&
+        (t.scheduledAt || undefined) === normalizedScheduledAt
+    );
+    if (duplicate) {
+        console.log(`[TasksDB] Duplicate add ignored (idempotent): "${normalizedTitle}"`);
+        return {
+            categories: data.categories,
+            task: duplicate,
+            duplicate: true
+        };
+    }
+
     // 新しいタスクのオブジェクトを作成 (サーバー側で一意の ID や日時を付与)
     const newTask = {
         id: 'task_' + Math.random().toString(36).substring(2, 11),

@@ -12,6 +12,7 @@ export interface IElectronAPI {
     loginWithGoogle: () => void;
     toggleChat: () => void;
     toggleTasks: () => void;
+    toggleMemo: () => void;
     resizeChatWindow: (size: { width: number; height: number }) => void;
     resizeWindow: (size: { width: number; height: number }) => void;
     openSettings: () => void;

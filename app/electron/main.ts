@@ -22,6 +22,7 @@ import { initChatWindow, getChatWindow, createChatWindow, syncChatWindowPosition
 import { initIntegratedWindow, createIntegratedWindow, getIntegratedWindow } from './window/integrated-window';
 import { initCompactWindow, createCompactWindow, getCompactWindow } from './window/compact-window';
 import { initTasksWindow, toggleTasksWindow } from './window/task-window';
+import { initMemoWindow, toggleMemoWindow } from './window/memo-window';
 import { AppConfig, ConfigData } from './app-config';
 
 // AiExpressionService にプラットフォーム依存モジュールを注入
@@ -147,6 +148,7 @@ function createWindows() {
     initIntegratedWindow(config, isDev);
     initCompactWindow(config, isDev);
     initTasksWindow(config, isDev);
+    initMemoWindow();
     const configData = config.get();
 
     // 開発用：設定画面のみ直接起動するモードの処理
@@ -239,6 +241,10 @@ app.whenReady().then(async () => {
     // タスクウィンドウの表示・非表示切り替え
     ipcMain.on('toggle-tasks-window', () => {
         toggleTasksWindow();
+    });
+
+    ipcMain.on('toggle-memo-window', () => {
+        toggleMemoWindow();
     });
 
 
