@@ -274,7 +274,7 @@ describe('ChatAiService.generateResponse のテスト', () => {
         expect(reply).toContain('登録したよ');
     });
 
-    it('generateResponse_systemプロンプトにmanageMemosの個別ガイドラインが注入されること', async () => {
+    it('generateResponse_systemプロンプトにmanageMemosの個別ガイドラインが注入されないこと（Gemini）', async () => {
         vi.mocked(generateText)
             .mockReset()
             .mockResolvedValueOnce({
@@ -294,10 +294,107 @@ describe('ChatAiService.generateResponse のテスト', () => {
         });
 
         const options = vi.mocked(generateText).mock.calls[0][0] as any;
-        // ツール一覧とツール別ガイドラインの両方に manageMemos が含まれること
+        // ツール自体は登録され、ツール一覧には含まれるが、個別ガイドライン文面は含まれないこと
+        expect(Object.keys(options.tools)).toContain('manageMemos');
+        expect(options.system).toContain('manageMemos');
+        expect(options.system).not.toContain('期限のない自由メモ');
+    });
+
+    it('generateResponse_systemプロンプトにmanageMemosの個別ガイドラインが注入されること（LM Studio）', async () => {
+        vi.mocked(generateText)
+            .mockReset()
+            .mockResolvedValueOnce({
+                text: 'メモしたよ！',
+                finishReason: 'stop',
+                steps: [
+                    { text: 'メモしたよ！', toolCalls: [], toolResults: [], finishReason: 'stop' }
+                ]
+            } as any);
+
+        await ChatAiService.generateResponse({
+            message: '買い物メモに牛乳を追加して',
+            apiKey: 'mock-api-key',
+            systemPrompt: 'あなたはアシスタントです。',
+            model: 'local-model',
+            engine: 'lmstudio',
+            lmstudioEndpoint: 'http://localhost:1234/v1'
+        });
+
+        const options = vi.mocked(generateText).mock.calls[0][0] as any;
+        // ツール一覧と個別ガイドラインの両方が含まれること
         expect(Object.keys(options.tools)).toContain('manageMemos');
         expect(options.system).toContain('manageMemos');
         expect(options.system).toContain('期限のない自由メモ');
+    });
+
+    it('generateResponse_systemプロンプトにmanageMemosの個別ガイドラインが注入されないこと（OpenAI）', async () => {
+        vi.mocked(generateText)
+            .mockReset()
+            .mockResolvedValueOnce({
+                text: 'メモしたよ！',
+                finishReason: 'stop',
+                steps: [
+                    { text: 'メモしたよ！', toolCalls: [], toolResults: [], finishReason: 'stop' }
+                ]
+            } as any);
+
+        await ChatAiService.generateResponse({
+            message: '買い物メモに牛乳を追加して',
+            apiKey: 'mock-api-key',
+            systemPrompt: 'あなたはアシスタントです。',
+            model: 'gpt-4o',
+            engine: 'openai'
+        });
+
+        const options = vi.mocked(generateText).mock.calls[0][0] as any;
+        // ツール自体は登録され、ツール一覧には含まれるが、個別ガイドライン文面は含まれないこと
+        expect(Object.keys(options.tools)).toContain('manageMemos');
+        expect(options.system).toContain('manageMemos');
+        expect(options.system).not.toContain('期限のない自由メモ');
+    });
+
+    it('generateResponse_履歴再実行防止ルールがGeminiおよびLM Studio両方のシステムプロンプトに含まれること', async () => {
+        vi.mocked(generateText)
+            .mockReset()
+            .mockResolvedValue({
+                text: '了解！',
+                finishReason: 'stop',
+                steps: [
+                    { text: '了解！', toolCalls: [], toolResults: [], finishReason: 'stop' }
+                ]
+            } as any);
+
+        const historyRulePattern = '会話履歴中で既にツール実行または完了応答まで済んだ依頼を';
+
+        // 1. Gemini
+        await ChatAiService.generateResponse({
+            message: '今日の予定は？',
+            apiKey: 'mock-api-key',
+            systemPrompt: 'あなたはアシスタントです。',
+            model: 'gemini-1.5-flash',
+            engine: 'gemini'
+        });
+        const optionsGemini = vi.mocked(generateText).mock.calls[0][0] as any;
+        expect(optionsGemini.system).toContain(historyRulePattern);
+
+        // 2. LM Studio
+        vi.mocked(generateText).mockReset().mockResolvedValueOnce({
+            text: '了解！',
+            finishReason: 'stop',
+            steps: [
+                { text: '了解！', toolCalls: [], toolResults: [], finishReason: 'stop' }
+            ]
+        } as any);
+        await ChatAiService.generateResponse({
+            message: '今日の予定は？',
+            apiKey: 'mock-api-key',
+            systemPrompt: 'あなたはアシスタントです。',
+            model: 'local-model',
+            engine: 'lmstudio',
+            lmstudioEndpoint: 'http://localhost:1234/v1'
+        });
+        const optionsLm = vi.mocked(generateText).mock.calls[0][0] as any;
+        expect(optionsLm.system).toContain(historyRulePattern);
     });
 
     it('generateResponse_ツール有効時はtemperatureのデフォルトが低温になること', async () => {

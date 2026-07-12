@@ -182,6 +182,12 @@ export class ChatAiService {
             // ツール有効・無効に基づくフィルタリング
             const filteredTools = filterEnabledTools(tools);
 
+            const currentEngine = engine || 'gemini';
+            // native function-calling を信頼できるモデルか（cloud=true / ローカル弱モデル=false）。
+            // cloud は description + JSON スキーマで十分に誘導できるため、手書きの per-tool
+            // ガイドラインは注入しない。ローカル(lmstudio)は弱いため従来どおり注入する。
+            const preferNativeToolGuidance = currentEngine !== 'lmstudio';
+
             // ツール使用ガイドラインを動的に構成
             const activeToolDescriptions: string[] = [];
             const activeToolPrompts: string[] = [];
@@ -193,10 +199,25 @@ export class ChatAiService {
 
             const toolListStr = activeToolDescriptions.join(', ');
             let toolUseSection = '';
-            if (activeToolDescriptions.length > 0) {
-                toolUseSection = `- 以下のツールが使用可能です: ${toolListStr}\n` + activeToolPrompts.join('\n');
-            } else {
+            if (activeToolDescriptions.length === 0) {
                 toolUseSection = `- 利用可能なツールはありません。`;
+            } else {
+                const historyRule = `- 会話履歴中で既にツール実行または完了応答まで済んだ依頼を、重複して再実行しないでください。ただし、確認・追加情報の提示・承認など、最新のユーザーメッセージが未完了の依頼を継続する内容である場合は、履歴の文脈を踏まえて実行してください。`;
+
+                if (preferNativeToolGuidance) {
+                    // native モード（cloud）: 誘導は description + JSON スキーマに委ねる。
+                    // per-tool の日本語ガイドラインは注入しない。
+                    toolUseSection =
+                        `- 以下のツールが使用可能です: ${toolListStr}\n` +
+                        `- 適切な状況では推測で会話を完結させず、対応するツールを呼び出してください。\n` +
+                        historyRule;
+                } else {
+                    // prompted モード（ローカル弱モデル）: 従来どおり per-tool ガイドラインを連結
+                    toolUseSection =
+                        `- 以下のツールが使用可能です: ${toolListStr}\n` +
+                        activeToolPrompts.join('\n') + '\n' +
+                        historyRule;
+                }
             }
 
             // 置換値に $ が含まれても $& 等の特殊置換として解釈されないよう、関数形式で置換する
@@ -294,7 +315,6 @@ export class ChatAiService {
 
             // プロバイダーとモデルの設定
             let modelProvider: any;
-            const currentEngine = engine || 'gemini';
 
             if (currentEngine === 'lmstudio') {
                 const baseEndpoint = (lmstudioEndpoint || '').trim() || 'http://localhost:1234/v1';

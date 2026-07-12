@@ -16,6 +16,8 @@
 ### C. 🟡 ツール誘導が native function-calling ではなくプロンプト作文に依存
 標準では `description` + JSONスキーマがモデルを誘導し、system prompt で「〜のとき呼べ」とは基本書かない。本実装は手書きガイドラインが主役で、**同じ意図がツールの `description` とガイドライン prompt に二重化しドリフトし得る**。ローカルモデルの弱さを埋める必要悪だが、cloud モデルには過剰。
 
+> **改修プラン策定済み（2026-07-13）**: `plan_p5_native_tooling.md`（設計）／`fix_instructions_p5.md`（実装指示 for Codex/Gemini）。P5-A で cloud（gemini/openai）への per-tool ガイドライン注入を撤廃し native function-calling を主役化、P5-B で per-tool prompt を description の言い換えから補強へ純化。connector 経路は既に native-first のため対象外。
+
 ### D. 🟡 ツール結果を SDK ではなく副次キャッシュ（`executedTools`）で取得
 標準は `response.steps[].toolResults` を読む。本実装は execute コールバックで別配列に溜めるため、**通知が「execute が走ったか」に結びつき、モデルが結果を無視したケースと区別できない**。SDK更新時に見直す価値あり。
 
