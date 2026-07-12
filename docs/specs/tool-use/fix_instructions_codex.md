@@ -17,7 +17,7 @@ Codex 実行環境の不調（sandbox セットアップ不全で編集不可）
 | P1-2 二重ツリー統合 | ✅ 完了 | `src/skills/tool-use/` を正に統合。`src/server/skills/tool-use/` は re-export の index のみ |
 | P2-1 temperature 低減 | ✅ 完了 | ツール有効＋未指定時のみ 0.2（ユーザー指定優先） |
 | P2-2 timeInstruction | ✅ 完了 | 分単位化＋「ペルソナ→ガイドライン→時刻」順 |
-| P3 メタデータ統合 | ⬜ 未着手 | **本書の残タスク。別PRで対応** |
+| P3 メタデータ統合 | ✅ 完了 | Gemini 3.5 Flash が `walkthrough_opus.md` / `plan_opus.md` / `fix_instructions_opus.md` に基づき実装、Opus レビュー承認＋Claude 独立検証済み（27 passed、旧シンボル残存0、既存テスト無修正） |
 
 検証済みベースライン: 対象スイート **24 passed**（chat-ai-service 9 + tool-use 15）。フルスイートで失敗する5ファイル（connector / useChatConnection / useSettingsWindow / expression-alignment×2）は既存問題（ベースラインでも同一失敗を確認済み）。
 

@@ -1,28 +1,11 @@
-import { lmStudioTools } from '../skills/tool-use';
+import { filterEnabledTools } from '../skills/tool-use';
 import { generateText, ModelMessage, stepCountIs } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
 
-// 各ツール用プロンプトの読み込み
+// 共通ガイドラインテンプレートの読み込み
 import toolUseGuidelineTemplate from '@prompt/tool-use-guideline';
-import gpsLocationPrompt from '@prompt/getGPSLocation.prompt';
-import weatherPrompt from '@prompt/getWeather.prompt';
-import volumePrompt from '@prompt/adjustVolume.prompt';
-import launchAppPrompt from '@prompt/launchApp.prompt';
-import searchWebPrompt from '@prompt/searchWeb.prompt';
-import manageTasksPrompt from '@prompt/manageTasks.prompt';
-import manageMemosPrompt from '@prompt/manageMemos.prompt';
-
-const TOOL_PROMPTS: Record<string, string> = {
-    getGPSLocation: gpsLocationPrompt,
-    getWeather: weatherPrompt,
-    adjustVolume: volumePrompt,
-    launchApp: launchAppPrompt,
-    searchWeb: searchWebPrompt,
-    manageTasks: manageTasksPrompt,
-    manageMemos: manageMemosPrompt,
-};
 
 // 生成テキストのループ崩壊（リピート問題）を検知してカットするヘルパー
 function removeRepetitiveLoops(text: string): string {
@@ -197,36 +180,15 @@ export class ChatAiService {
             const timeInstruction = `\n\n[現在のシステム日時]\n${nowStr}`;
 
             // ツール有効・無効に基づくフィルタリング
-            const filteredTools = lmStudioTools.filter(tool => {
-                if (!tools) return true; // 設定がない場合はすべて有効
-
-                switch (tool.name) {
-                    case 'launchApp':
-                        return tools.toolsAppLauncher !== false;
-
-                    case 'getGPSLocation':
-                        return tools.toolsGpsLocation !== false;
-                    case 'adjustVolume':
-                        return tools.toolsVolume !== false;
-                    case 'getWeather':
-                        return tools.toolsWeather !== false;
-                    case 'searchWeb':
-                        return tools.toolsWebSearch !== false;
-                    default:
-                        return true;
-                }
-            });
+            const filteredTools = filterEnabledTools(tools);
 
             // ツール使用ガイドラインを動的に構成
             const activeToolDescriptions: string[] = [];
             const activeToolPrompts: string[] = [];
 
             filteredTools.forEach(t => {
-                activeToolDescriptions.push(t.name);
-                const p = TOOL_PROMPTS[t.name];
-                if (p) {
-                    activeToolPrompts.push(p.trim());
-                }
+                activeToolDescriptions.push(t.tool.name);
+                activeToolPrompts.push(t.prompt.trim());
             });
 
             const toolListStr = activeToolDescriptions.join(', ');
@@ -316,14 +278,14 @@ export class ChatAiService {
             // Vercel AI SDK 形式 of ツール定義に変換
             const vercelTools: Record<string, any> = {};
             filteredTools.forEach(t => {
-                vercelTools[t.name] = convertLmStudioToolToVercel(
-                    t,
+                vercelTools[t.tool.name] = convertLmStudioToolToVercel(
+                    t.tool,
                     (input, output) => {
-                        executedTools.push({ toolName: t.name, input, output });
+                        executedTools.push({ toolName: t.tool.name, input, output });
                     },
                     async (args) => {
                         if (onToolExecute) {
-                            return await onToolExecute(t.name, args);
+                            return await onToolExecute(t.tool.name, args);
                         }
                         return null;
                     }
@@ -476,7 +438,7 @@ export class ChatAiService {
 
             // 本文に紛れ込んだ擬似的なツール呼び出し記法を除去する（引数内の丸括弧にも対応。詳細は stripPseudoToolCalls）
             if (filteredTools.length > 0) {
-                cleanedContent = stripPseudoToolCalls(cleanedContent, filteredTools.map(t => t.name));
+                cleanedContent = stripPseudoToolCalls(cleanedContent, filteredTools.map(t => t.tool.name));
             }
 
             const finalReply = removeRepetitiveLoops(cleanedContent);

@@ -1,5 +1,5 @@
 import { LMStudioClient, Chat } from '@lmstudio/sdk';
-import { lmStudioTools } from '../skills/tool-use';
+import { filterEnabledTools } from '../skills/tool-use';
 
 // HTTPエンドポイントをLM Studio SDK用のWebSocket/TCP形式に変換するヘルパー
 export function getSdkEndpoint(httpEndpoint: string): string {
@@ -146,33 +146,10 @@ export class LmStudioConnector {
         finalSystemPrompt = finalSystemPrompt.trim();
 
         // ツール有効・無効に基づくフィルタリング
-        const filteredTools = lmStudioTools.filter(tool => {
-            if (!tools) return true; // 設定がない場合はすべて有効
-
-            switch (tool.name) {
-                case 'launchApp':
-                    return tools.toolsAppLauncher !== false;
-
-                case 'getGPSLocation':
-                    return tools.toolsGpsLocation !== false;
-                case 'adjustVolume':
-                    return tools.toolsVolume !== false;
-                case 'getWeather':
-                    return tools.toolsWeather !== false;
-                case 'searchWeb':
-                    return tools.toolsWebSearch !== false;
-                default:
-                    return true;
-            }
-        });
+        const filteredTools = filterEnabledTools(tools);
 
         // システムプロンプト内のツール使用ガイドラインを動的に構成
-        const activeToolDescriptions: string[] = [];
-        if (tools ? tools.toolsWeather !== false : true) activeToolDescriptions.push('weather');
-        if (tools ? tools.toolsVolume !== false : true) activeToolDescriptions.push('volume');
-        if (tools ? tools.toolsAppLauncher !== false : true) activeToolDescriptions.push('app launching');
-        if (tools ? tools.toolsWebSearch !== false : true) activeToolDescriptions.push('web search');
-        if (tools ? tools.toolsGpsLocation !== false : true) activeToolDescriptions.push('location');
+        const activeToolDescriptions = filteredTools.map(t => t.label);
 
         const toolListStr = activeToolDescriptions.join(', ');
         const toolUseSection = activeToolDescriptions.length > 0
@@ -186,7 +163,7 @@ export class LmStudioConnector {
         } else {
             chatInstance.replaceSystemPrompt(toolUseGuideline.trim());
         }
-        await llm.act(chatInstance, filteredTools, {
+        await llm.act(chatInstance, filteredTools.map(t => t.tool), {
             onMessage: (msg) => {
                 chatInstance.append(msg);
             }

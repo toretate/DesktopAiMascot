@@ -27,7 +27,7 @@ vi.mock('child_process', () => {
 });
 
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-
+import { mascotTools, filterEnabledTools } from '../index';
 import { gpsLocationTool } from '../gps-location-tool';
 import { weatherTool } from '../weather-tool';
 import { volumeTool } from '../volume-tool';
@@ -238,6 +238,43 @@ describe('Tool Use - 各ツールの挙動テスト', () => {
         expect(parsed.success).toBe(true);
         expect(parsed.action).toBe('delete');
         expect(parsed.id).toBe('task_123');
+    });
+
+    describe('MascotTool メタデータレジストリとフィルタのテスト', () => {
+        test('レジストリ整合性 - すべてのエントリで prompt/label が非空で tool.name が一意であること', () => {
+            expect(mascotTools.length).toBe(7);
+            const names = new Set<string>();
+            mascotTools.forEach(t => {
+                expect(t.prompt).toBeDefined();
+                expect(t.prompt.trim().length).toBeGreaterThan(0);
+                expect(t.label).toBeDefined();
+                expect(t.label.trim().length).toBeGreaterThan(0);
+                expect(t.tool).toBeDefined();
+                expect(t.tool.name).toBeDefined();
+                expect(names.has(t.tool.name)).toBe(false);
+                names.add(t.tool.name);
+            });
+        });
+
+        test('フィルタ挙動 - 引数なし/null の場合はすべてのツールが返ること', () => {
+            const allTools = filterEnabledTools();
+            expect(allTools.length).toBe(7);
+            const allToolsNull = filterEnabledTools(null);
+            expect(allToolsNull.length).toBe(7);
+        });
+
+        test('フィルタ挙動 - tools で無効にしたツールのみが除外され、トグル無しのツールは残ること', () => {
+            const filtered = filterEnabledTools({
+                toolsWeather: false,
+                toolsVolume: true
+            });
+            expect(filtered.length).toBe(6);
+            expect(filtered.some(t => t.tool.name === 'getWeather')).toBe(false);
+            expect(filtered.some(t => t.tool.name === 'adjustVolume')).toBe(true);
+            // トグルキーの無い manageTasks / manageMemos は常に残る
+            expect(filtered.some(t => t.tool.name === 'manageTasks')).toBe(true);
+            expect(filtered.some(t => t.tool.name === 'manageMemos')).toBe(true);
+        });
     });
 });
 
