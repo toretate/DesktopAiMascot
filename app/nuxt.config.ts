@@ -35,6 +35,7 @@ export default defineNuxtConfig({
     // ビルド設定とエイリアス
     alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@prompt': fileURLToPath(new URL('./src/skills/tool-use/prompts', import.meta.url)),
         '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser':
             path.resolve(pkgRoot, 'adapters/opencv-browser.ts'),
         '@desktop-ai-mascot/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),

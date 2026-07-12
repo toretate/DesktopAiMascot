@@ -20,6 +20,10 @@
 
 3. **ツール使用ガイドラインの結合**
     - システムプロンプトの最下部に、使用可能なツール一覧（`getCurrentTime`, `searchTasks`, `addTask` など）と、ツール使用の判断基準、および最終回答に出力すべきでない特殊タグ（Thinking Process や `<|channel>` タグなど）の制限ルールを定義した「ツール使用ガイドライン」を結合します。
+    - **プロンプトファイルの構造**:
+      ガイドライン定義は、コードの変更を伴わずに調整できるよう、[app/src/skills/tool-use/prompts/](file:///c:/workspace/workspace-win/DesktopAiMascot/app/src/skills/tool-use/prompts) ディレクトリ配下の独立した TypeScript モジュール（`*.prompt.ts`）に分割されています。エイリアス `@prompt/` を用いて、チャットAIサービスから読み込まれます。
+    - **動的組み立て**:
+      ユーザー設定でONになっている有効なツールに応じて、対応するツールの個別プロンプト（例: `getWeather.prompt.ts`, `manageTasks.prompt.ts` など）を動的に結合し、共通ガイドラインテンプレートである `tool-use-guideline.ts` の `{{toolUseSection}}` プレースホルダーを置換して完成させます。
     - 最終的なシステムプロンプト：
       `finalSystemPrompt = systemPrompt + 日時指示 + ツール使用ガイドライン`
 

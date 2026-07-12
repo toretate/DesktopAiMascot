@@ -4,6 +4,26 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
 
+// 各ツール用プロンプトの読み込み
+import toolUseGuidelineTemplate from '@prompt/tool-use-guideline';
+import gpsLocationPrompt from '@prompt/getGPSLocation.prompt';
+import weatherPrompt from '@prompt/getWeather.prompt';
+import volumePrompt from '@prompt/adjustVolume.prompt';
+import launchAppPrompt from '@prompt/launchApp.prompt';
+import searchWebPrompt from '@prompt/searchWeb.prompt';
+import manageTasksPrompt from '@prompt/manageTasks.prompt';
+import manageMemosPrompt from '@prompt/manageMemos.prompt';
+
+const TOOL_PROMPTS: Record<string, string> = {
+    getGPSLocation: gpsLocationPrompt,
+    getWeather: weatherPrompt,
+    adjustVolume: volumePrompt,
+    launchApp: launchAppPrompt,
+    searchWeb: searchWebPrompt,
+    manageTasks: manageTasksPrompt,
+    manageMemos: manageMemosPrompt,
+};
+
 // 生成テキストのループ崩壊（リピート問題）を検知してカットするヘルパー
 function removeRepetitiveLoops(text: string): string {
     if (!text) return text;
@@ -45,6 +65,75 @@ function removeRepetitiveLoops(text: string): string {
     result = result.replace(repeatRegex, '$1');
 
     return result.trim();
+}
+
+// モデルがツールを実行せず、本文中に擬似的なツール呼び出し記法
+// （例: [manageTasks(action="delete", ...)] や manageTasks(...)）を書いてしまうことがある。
+// これは実際には何も実行されていない上にユーザーには無意味なので除去する。
+// 正規表現ではなく括弧の対応を走査することで、引数値に丸括弧を含むケース
+// （例: title="会議(定例)"）でも末尾が本文に残らないようにする。
+// 感情タグ [happy] やタイマータグ [TIMER:...] は「ツール名(」の形にならないため影響を受けない。
+function stripPseudoToolCalls(text: string, toolNames: string[]): string {
+    if (!text || toolNames.length === 0) return text;
+
+    // 開始位置（ツール名の直後に '(' が続く箇所）を探す正規表現
+    const namePattern = toolNames
+        .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+    const startRegex = new RegExp(`(?:${namePattern})\\s*\\(`, 'gi');
+
+    // openIdx の '(' に対応する ')' の位置を返す（引用符内の括弧は無視）。見つからなければ -1
+    const findMatchingParen = (s: string, openIdx: number): number => {
+        let depth = 0;
+        let quote: string | null = null;
+        for (let i = openIdx; i < s.length; i++) {
+            const ch = s[i];
+            if (quote) {
+                if (ch === quote) quote = null;
+                continue;
+            }
+            if (ch === '"' || ch === "'") { quote = ch; continue; }
+            if (ch === '(') depth++;
+            else if (ch === ')') {
+                depth--;
+                if (depth === 0) return i;
+            }
+        }
+        return -1;
+    };
+
+    let out = '';
+    let lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = startRegex.exec(text)) !== null) {
+        const nameStart = m.index;
+        const parenStart = m.index + m[0].length - 1; // '(' の位置
+        const closeIdx = findMatchingParen(text, parenStart);
+        // 対応する ')' が無い場合は誤削除を避けてそのまま残す
+        if (closeIdx === -1) continue;
+
+        // 直前の空白と、それを跨いだ先頭の '[' を巻き込む
+        let from = nameStart;
+        let p = nameStart - 1;
+        while (p >= 0 && (text[p] === ' ' || text[p] === '\t')) p--;
+        if (p >= 0 && text[p] === '[') from = p;
+
+        // 末尾の空白と閉じ ']' を巻き込む
+        let to = closeIdx + 1;
+        while (to < text.length && (text[to] === ' ' || text[to] === '\t')) to++;
+        if (to < text.length && text[to] === ']') to++;
+        else to = closeIdx + 1; // ']' が無ければ空白は消さずに ')' の直後まで
+
+        out += text.slice(lastIndex, from);
+        lastIndex = to;
+        startRegex.lastIndex = to;
+    }
+    out += text.slice(lastIndex);
+
+    return out
+        .replace(/[ \t]+\n/g, '\n')   // 行末の余分な空白を除去
+        .replace(/\n{3,}/g, '\n\n')   // 除去後に生じる過剰な空行を2行までに圧縮
+        .trim();
 }
 
 // テキストファイルのデコード用ヘルパー
@@ -98,8 +187,13 @@ export class ChatAiService {
         const timeoutId = setTimeout(() => controller.abort(), 60000);
 
         try {
-            // システムプロンプトに現在のシステム日時を動的に注入する
-            const nowStr = new Date().toLocaleString('ja-JP');
+            // システムプロンプトに現在のシステム日時を動的に注入する。
+            // 秒を含めるとプロンプトキャッシュ（ローカルLLMのKVプレフィックスキャッシュ等）が
+            // 毎ターン無効化されるため、粒度は分単位に留める。
+            const nowStr = new Date().toLocaleString('ja-JP', {
+                year: 'numeric', month: 'numeric', day: 'numeric',
+                weekday: 'short', hour: '2-digit', minute: '2-digit'
+            });
             const timeInstruction = `\n\n[現在のシステム日時]\n${nowStr}`;
 
             // ツール有効・無効に基づくフィルタリング
@@ -125,17 +219,29 @@ export class ChatAiService {
 
             // ツール使用ガイドラインを動的に構成
             const activeToolDescriptions: string[] = [];
+            const activeToolPrompts: string[] = [];
+
             filteredTools.forEach(t => {
                 activeToolDescriptions.push(t.name);
+                const p = TOOL_PROMPTS[t.name];
+                if (p) {
+                    activeToolPrompts.push(p.trim());
+                }
             });
+
             const toolListStr = activeToolDescriptions.join(', ');
-            const toolUseSection = activeToolDescriptions.length > 0
-                ? `- 以下のツールが使用可能です: ${toolListStr}\n- 現在の情報や天気、時間、アプリの起動、音量の調整、および【ユーザーが一覧で管理するタスク／予定（スケジュール）の追加・登録・検索・更新・削除】について尋ねられたり依頼された場合は、絶対に自分で推測して会話だけで完了せず、必ず定義された対応するツール（manageTasks。追加時は action: "add" を指定し、期限付きの予定にする場合は scheduledAt も指定してください）を呼び出してください。\n- 【重要な区別】「〇分後に通知して」「後で教えて」「カップ麺ができたら知らせて」のような、その場限りで一覧に残さない一時的なリマインド（マスコットが一度だけ声かけするだけのもの）は、manageTasks では登録せず、後述のタイマー通知タグを使ってください。逆に、ユーザーが後から一覧で管理・確認したいTODOや予定は必ず manageTasks を使い、タイマータグでは扱わないでください。\n- 【履歴の扱い】会話履歴（過去のやり取り）は文脈把握のためだけに提供されています。履歴の中にある過去のタスク追加・予定登録・リマインドの依頼は既に対応済みです。最新（今回）のユーザーメッセージで新たに依頼された場合のみツールを呼び出し、履歴にある過去の依頼を蒸し返して再登録しないでください。`
-                : `- 利用可能なツールはありません。`;
+            let toolUseSection = '';
+            if (activeToolDescriptions.length > 0) {
+                toolUseSection = `- 以下のツールが使用可能です: ${toolListStr}\n` + activeToolPrompts.join('\n');
+            } else {
+                toolUseSection = `- 利用可能なツールはありません。`;
+            }
 
-            const toolUseGuideline = `\n\n# ツール使用ガイドライン\n${toolUseSection}\n- タスクやスケジュールの追加時には、ツールを呼び出した後に、ユーザーに「登録しました」と伝える応答を返してください。\n- 最終的な回答には、思考プロセス（Thinking Process）や、自己指示、"<|channel>thought" や "<|channel>" などの特殊なチャンネルタグ、メタコメント（"現在時刻を取得しました"、"ツールを実行します" など）を一切含めないでください。\n- 回答は日本語で、フレンドリーなマスコットキャラクターとしてユーザーに直接語りかけるように記述してください。出力するテキストは、自然なセリフ（発話内容）のみにしてください。`;
+            // 置換値に $ が含まれても $& 等の特殊置換として解釈されないよう、関数形式で置換する
+            const toolUseGuideline = toolUseGuidelineTemplate.replace('{{toolUseSection}}', () => toolUseSection);
 
-            const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}${toolUseGuideline}`;
+            // 変動する時刻は静的部分（ペルソナ＋ガイドライン）の後ろに置き、プレフィックスのキャッシュ効率を保つ
+            const finalSystemPrompt = `${systemPrompt || ''}\n\n${toolUseGuideline}${timeInstruction}`;
 
             // 履歴のマッピング
             const messages: ModelMessage[] = [];
@@ -284,7 +390,8 @@ export class ChatAiService {
                 model: modelProvider,
                 system: finalSystemPrompt,
                 messages: messages,
-                temperature: temperature !== undefined ? temperature : 0.7,
+                // ツール有効時は tool-calling の安定性を優先して低温をデフォルトにする（ユーザー指定は常に優先）
+                temperature: temperature !== undefined ? temperature : (hasTools ? 0.2 : 0.7),
                 frequencyPenalty: frequencyPenalty !== undefined ? frequencyPenalty : 0.0,
                 maxOutputTokens: maxOutputTokens !== undefined ? maxOutputTokens : 2048,
                 abortSignal: controller.signal
@@ -320,6 +427,11 @@ export class ChatAiService {
 
                 if (isLmStudio && hasTools && isTemplateError) {
                     console.warn('[ChatAiService] LM Studio のプロンプトテンプレートエラーを検知しました。ツール呼び出しを無効化して再試行します。', firstTryError.message);
+                    // jinja テンプレートエラーの具体的な原因を追えるよう、レスポンス本文をそのまま出力する。
+                    // （ツールを無効化するとタスク／予定の追加・削除が実行されないため、根本原因の特定が重要）
+                    if (firstTryError.responseBody) {
+                        console.warn('[ChatAiService] テンプレートエラーの詳細(responseBody):', firstTryError.responseBody);
+                    }
                     const retryOptions = { ...generateOptions };
                     delete retryOptions.tools;
                     delete retryOptions.stopWhen;
@@ -362,7 +474,27 @@ export class ChatAiService {
                 .replace(/^Thinking Process:[\s\S]*?(?=\n\n\S|$)/i, '')
                 .replace(/\nThinking Process:[\s\S]*?(?=\n\n\S|$)/g, '');
 
-            return removeRepetitiveLoops(cleanedContent);
+            // 本文に紛れ込んだ擬似的なツール呼び出し記法を除去する（引数内の丸括弧にも対応。詳細は stripPseudoToolCalls）
+            if (filteredTools.length > 0) {
+                cleanedContent = stripPseudoToolCalls(cleanedContent, filteredTools.map(t => t.name));
+            }
+
+            const finalReply = removeRepetitiveLoops(cleanedContent);
+
+            // 応答が空になるケースへのフォールバック。
+            // 特にローカルモデルが思考(<|channel>thought 等)だけで maxOutputTokens を使い切り
+            // finishReason が "length" で打ち切られると、思考クレンジング後に本文が空になり、
+            // ツール呼び出しも発火しないまま UI が無反応になる。必ず何か発話を返す。
+            if (!finalReply.trim()) {
+                const finishReason = response.finishReason;
+                console.warn(`[ChatAiService] クレンジング後の応答が空です (finishReason: ${finishReason})。フォールバック応答を返します。`);
+                if (finishReason === 'length') {
+                    return 'うーん、考えているうちに言葉が長くなりすぎちゃったみたい…！ごめんね、もう一度お願いできる？（応答長の上限を上げると安定するよ）';
+                }
+                return 'ごめんね、うまく応答を作れなかったみたい…。もう一度話しかけてくれる？';
+            }
+
+            return finalReply;
 
         } catch (aiError: any) {
             clearTimeout(timeoutId);

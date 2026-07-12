@@ -29,13 +29,35 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         return defaultData;
     };
 
+    // 埋め込み画像(data: URL)など巨大な文字列を取り除いた軽量コピーを生成する。
+    // localStorage は 5MB 程度の上限があり、マスコットの表情/衣装画像や背景画像を
+    // data URL で抱えると容易に超過するため、フォールバック保存時に使用する。
+    const stripHeavyDataUrls = (config: any) => {
+        return JSON.parse(JSON.stringify(config, (_key, value) => {
+            if (typeof value === 'string' && value.startsWith('data:') && value.length > 1024) {
+                return '';
+            }
+            return value;
+        }));
+    };
+
     const saveStoredConfig = (config: any) => {
         try {
             localStorage.setItem('desktop_ai_mascot_config', JSON.stringify(config));
             // 変更通知
             callbacks.configUpdated.forEach(cb => cb(config));
         } catch (e) {
-            console.error('[Polyfill] Failed to save config to localStorage:', e);
+            // quota 超過時は、埋め込み画像(data: URL)を除いた軽量版で再保存を試みる。
+            // フル版はサーバー(/api/config)が保持しているため、ここでは軽量設定の永続化を優先する。
+            try {
+                const slimConfig = stripHeavyDataUrls(config);
+                localStorage.setItem('desktop_ai_mascot_config', JSON.stringify(slimConfig));
+                console.warn('[Polyfill] localStorage の容量上限に達したため、埋め込み画像を除いた軽量版の設定のみを保存しました（フル設定はサーバーに保持されています）。');
+                // 実行中のアプリにはフル設定(画像込み)を通知する
+                callbacks.configUpdated.forEach(cb => cb(config));
+            } catch (e2) {
+                console.error('[Polyfill] Failed to save config to localStorage even after slimming:', e2);
+            }
         }
     };
 

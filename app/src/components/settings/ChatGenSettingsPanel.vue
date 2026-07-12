@@ -21,6 +21,8 @@ const {
     temperature,
     frequencyPenalty,
     repetitionPenalty,
+    maxOutputTokens,
+    enableThinking,
     googleAiStudioApiKey: geminiApiKey,
     useExRadio,
     radioActiveTalkInterval,

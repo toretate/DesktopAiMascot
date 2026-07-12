@@ -8,6 +8,12 @@ import { getSettingsWindow } from '../window/settings-window';
 import { getIntegratedWindow } from '../window/integrated-window';
 import { getCompactWindow } from '../window/compact-window';
 
+// デフォルトラジオプロンプトのインポート
+import radioModeDefault from '@prompt/radio/radio-mode.prompt';
+import activeTalkDefault from '@prompt/radio/active-radio-talk.prompt';
+import exRadioModeDefault from '@prompt/radio/ex-radio-mode.prompt';
+import exActiveTalkDefault from '@prompt/radio/ex-active-radio-talk.prompt';
+
 /**
  * プロジェクトの prompts/radio ディレクトリの絶対パスを探索して取得する
  */
@@ -239,13 +245,13 @@ export function registerConfigHandlers(config: AppConfig) {
     // ラジオモード用のプロンプト（通常・能動フリートーク・Ex）の読み込みハンドラー
     ipcMain.handle('get-radio-prompts', async () => {
         const radioDir = resolveRadioDir();
-        console.log(`[Config] Reading radio prompts from: ${radioDir} (cwd: ${process.cwd()})`);
+        console.log(`[Config] Reading radio prompts (cwd: ${process.cwd()})`);
 
         const result = {
-            radioMode: '',
-            activeTalk: '',
-            exRadioMode: '',
-            exActiveTalk: ''
+            radioMode: radioModeDefault,
+            activeTalk: activeTalkDefault,
+            exRadioMode: exRadioModeDefault,
+            exActiveTalk: exActiveTalkDefault
         };
 
         try {
@@ -257,25 +263,25 @@ export function registerConfigHandlers(config: AppConfig) {
 
                 if (fs.existsSync(radioModePath)) {
                     result.radioMode = fs.readFileSync(radioModePath, 'utf8');
-                    console.log(`[Config] Successfully loaded radio_mode_instructions.md (${result.radioMode.length} chars)`);
+                    console.log(`[Config] Successfully loaded custom radio_mode_instructions.md (${result.radioMode.length} chars)`);
                 }
                 if (fs.existsSync(activeTalkPath)) {
                     result.activeTalk = fs.readFileSync(activeTalkPath, 'utf8');
-                    console.log(`[Config] Successfully loaded active_radio_talk_instructions.md (${result.activeTalk.length} chars)`);
+                    console.log(`[Config] Successfully loaded custom active_radio_talk_instructions.md (${result.activeTalk.length} chars)`);
                 }
                 if (fs.existsSync(exRadioModePath)) {
                     result.exRadioMode = fs.readFileSync(exRadioModePath, 'utf8');
-                    console.log(`[Config] Successfully loaded ex_radio_mode_instructions.md (${result.exRadioMode.length} chars)`);
+                    console.log(`[Config] Successfully loaded custom ex_radio_mode_instructions.md (${result.exRadioMode.length} chars)`);
                 }
                 if (fs.existsSync(exActiveTalkPath)) {
                     result.exActiveTalk = fs.readFileSync(exActiveTalkPath, 'utf8');
-                    console.log(`[Config] Successfully loaded ex_active_radio_talk_instructions.md (${result.exActiveTalk.length} chars)`);
+                    console.log(`[Config] Successfully loaded custom ex_active_radio_talk_instructions.md (${result.exActiveTalk.length} chars)`);
                 }
             } else {
-                console.warn(`[Config] Radio directory not found: ${radioDir}`);
+                console.warn(`[Config] Radio directory not found: ${radioDir}, using built-in defaults`);
             }
         } catch (e: any) {
-            console.error('[Config] Error reading radio prompts:', e);
+            console.error('[Config] Error reading custom radio prompts, using built-in defaults:', e);
         }
         return result;
     });

@@ -4,6 +4,7 @@ import { volumeTool } from './volume-tool';
 import { appLauncherTool } from './app-launcher-tool';
 import { webSearchTool } from './web-search-tool';
 import { manageTasksTool } from './manage-tasks-tool';
+import { manageMemosTool } from './manage-memos-tool';
 
 export const lmStudioTools = [
     gpsLocationTool,
@@ -11,5 +12,6 @@ export const lmStudioTools = [
     volumeTool,
     appLauncherTool,
     webSearchTool,
-    manageTasksTool
+    manageTasksTool,
+    manageMemosTool
 ];

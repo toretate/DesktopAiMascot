@@ -20,6 +20,9 @@
             "@/*": [
                 "src/*"
             ],
+            "@prompt/*": [
+                "src/skills/tool-use/prompts/*"
+            ],
             "@desktop-ai-mascot/expression-alignment": [
                 "../packages/expression-alignment/src/index.ts"
             ],

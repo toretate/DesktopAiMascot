@@ -1,17 +1,3 @@
-import { gpsLocationTool } from './gps-location-tool';
-import { weatherTool } from './weather-tool';
-import { volumeTool } from './volume-tool';
-import { appLauncherTool } from './app-launcher-tool';
-import { webSearchTool } from './web-search-tool';
-import { manageTasksTool } from './manage-tasks-tool';
-import { manageMemosTool } from './manage-memos-tool';
-
-export const lmStudioTools = [
-    gpsLocationTool,
-    weatherTool,
-    volumeTool,
-    appLauncherTool,
-    webSearchTool,
-    manageTasksTool,
-    manageMemosTool
-];
+// ツール実装の実体は src/skills/tool-use/ に一本化されている。
+// server 側からの既存 import パス互換のため re-export のみ行う。
+export * from '../../../skills/tool-use';
