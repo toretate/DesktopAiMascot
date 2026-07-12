@@ -1,5 +1,5 @@
 import { filterEnabledTools } from '../skills/tool-use';
-import { generateText, ModelMessage, stepCountIs } from 'ai';
+import { generateText, ModelMessage, stepCountIs, ToolSet } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { convertLmStudioToolToVercel } from './tool-adapter';
@@ -273,10 +273,10 @@ export class ChatAiService {
             });
 
             // ツール実行結果を確実に収集する一時配列
-            const executedTools: Array<{ toolName: string; input: any; output: any }> = [];
+            const executedTools: Array<{ toolName: string; input: unknown; output: unknown }> = [];
 
             // Vercel AI SDK 形式 of ツール定義に変換
-            const vercelTools: Record<string, any> = {};
+            const vercelTools: ToolSet = {};
             filteredTools.forEach(t => {
                 vercelTools[t.tool.name] = convertLmStudioToolToVercel(
                     t.tool,

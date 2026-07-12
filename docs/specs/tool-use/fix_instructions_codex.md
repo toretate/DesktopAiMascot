@@ -18,6 +18,7 @@ Codex 実行環境の不調（sandbox セットアップ不全で編集不可）
 | P2-1 temperature 低減 | ✅ 完了 | ツール有効＋未指定時のみ 0.2（ユーザー指定優先） |
 | P2-2 timeInstruction | ✅ 完了 | 分単位化＋「ペルソナ→ガイドライン→時刻」順 |
 | P3 メタデータ統合 | ✅ 完了 | Gemini 3.5 Flash が `walkthrough_opus.md` / `plan_opus.md` / `fix_instructions_opus.md` に基づき実装、Opus レビュー承認＋Claude 独立検証済み（27 passed、旧シンボル残存0、既存テスト無修正） |
+| P4 アダプタ型付け | ✅ 完了 | Gemini 実装 → Claude 検証で **tsc の OOM リグレッション（TS2589）を検出し修正**（`zodSchema()` のジェネリック推論が型爆発 → 推論を回避する型表明 `as unknown as FlexibleSchema<unknown>` に変更）。最終: 32 passed、tsc デフォルトヒープ完走・新規エラー0。Gemini 報告の「tsc 0件」「zodSchema で OOM 回避を実証」は誤りだった点に留意 |
 
 検証済みベースライン: 対象スイート **24 passed**（chat-ai-service 9 + tool-use 15）。フルスイートで失敗する5ファイル（connector / useChatConnection / useSettingsWindow / expression-alignment×2）は既存問題（ベースラインでも同一失敗を確認済み）。
 
