@@ -19,6 +19,8 @@ vi.mock('pixi.js', () => {
         Sprite: class {
             texture = {};
             anchor = { set: () => {} };
+            scale = { set: () => {} };
+            rotation = 0;
         },
         Assets: {
             load: () => Promise.resolve({ width: 100, height: 100 })

@@ -1,3 +1,5 @@
+import { normalizeTextForTts, stripResidualAsterisks } from './tts-normalizer';
+
 let checkInterval: any = null;
 let playlistInstance: any = null;
 
@@ -8,19 +10,23 @@ export const playNotificationVoice = async (text: string) => {
     try {
         // configStore を動的インポートして現在の音声設定を取得
         const configStore = (await import('../store/config')).useConfigStore();
+
+        const dict = configStore.activeMascot?.aiConfig?.ttsDictionary;
+        const normalizedText = stripResidualAsterisks(normalizeTextForTts(text, dict));
+
         let base64Audio = '';
 
         const engine = configStore.selectedVoiceEngine || 'voicevox';
         if (engine === 'voicevox') {
             const speakerId = configStore.voicevoxSpeaker ?? 1;
             const endpoint = configStore.voicevoxEndpoint;
-            const res = await window.electronAPI.synthesizeVoicevox(text, speakerId, endpoint || undefined);
+            const res = await window.electronAPI.synthesizeVoicevox(normalizedText, speakerId, endpoint || undefined);
             base64Audio = res || '';
         } else if (engine === 'irodori') {
             const endpoint = configStore.irodoriEndpoint || 'http://localhost:5000';
             const model = configStore.irodoriModel || 'default';
             const voice = configStore.irodoriVoice || 'default';
-            const res = await window.electronAPI.synthesizeIrodori(text, endpoint, model, voice, 'neutral');
+            const res = await window.electronAPI.synthesizeIrodori(normalizedText, endpoint, model, voice, 'neutral');
             base64Audio = res || '';
         }
 

@@ -1,9 +1,10 @@
 import { defineEventHandler, readBody } from 'h3';
 import { VoiceAiService } from '../utils/voice-ai-service';
+import { normalizeTextForTts, stripResidualAsterisks } from '../utils/tts-normalizer';
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
-    const { action, engine, text, endpoint, model, voice, speakerId, emotion } = body;
+    const { action, engine, text, endpoint, model, voice, speakerId, emotion, ttsDictionary } = body;
 
     try {
         if (action === 'getIrodoriVoices') {
@@ -56,10 +57,11 @@ export default defineEventHandler(async (event) => {
 
         // デフォルト: 音声合成 (action === 'synthesize' もしくは未指定)
         let base64Audio: string | null = null;
+        const normalizedText = stripResidualAsterisks(normalizeTextForTts(text || '', ttsDictionary));
 
         if (engine === 'irodori') {
             base64Audio = await VoiceAiService.synthesizeIrodori(
-                text,
+                normalizedText,
                 endpoint,
                 model,
                 voice,
@@ -70,7 +72,7 @@ export default defineEventHandler(async (event) => {
             // デフォルトは VOICEVOX
             const targetSpeakerId = speakerId !== undefined ? Number(speakerId) : 1;
             base64Audio = await VoiceAiService.synthesize(
-                text,
+                normalizedText,
                 targetSpeakerId,
                 endpoint,
                 true

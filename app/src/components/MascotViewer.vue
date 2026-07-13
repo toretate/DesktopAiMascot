@@ -3,6 +3,7 @@ import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue';
 import { MascotImageSetBuilder } from '../mascots/MascotImageSetBuilder';
 import { useConfigStore } from '../store/config';
 import { useMascotStore } from '../store/mascot';
+import { normalizeTextForTts, stripResidualAsterisks } from '../utils/tts-normalizer';
 import { storeToRefs } from 'pinia';
 import { Application, Container, Sprite, Assets, Texture } from 'pixi.js';
 
@@ -382,6 +383,11 @@ const activeExpressionStyle = computed(() => {
     }
     
     return {};
+});
+
+// 既定の正面画像
+const defaultFrontAvatar = computed(() => {
+    return activeMascotImageSet.value?.getFrontImage() || null;
 });
 
 // 描画されるべき体の画像パスの解決
@@ -875,10 +881,7 @@ watch([
     applyExpressionTransform();
 }, { deep: true });
 
-// 既定の正面画像
-const defaultFrontAvatar = computed(() => {
-    return activeMascotImageSet.value?.getFrontImage() || null;
-});
+// 既定の正面画像は上に移動されました
 
 // トータルスケール値の計算 (余計な縮小スケールを廃止し、設定スライダーの scale 値を等倍基準としてそのまま適用。ただしコンパクトモード時は 0.5 固定とする)
 const totalMascotScale = computed(() => {
@@ -1238,11 +1241,13 @@ onMounted(async () => {
 
             if (window.electronAPI) {
                 try {
+                    const dict = activeMascot.value?.aiConfig?.ttsDictionary;
+                    const normalizedMemo = stripResidualAsterisks(normalizeTextForTts(memo, dict));
                     let base64Audio: string | null = null;
                     if (voiceEngine === 'irodori') {
-                        base64Audio = await window.electronAPI.synthesizeIrodori(memo, irodoriEndpointUrl, irodoriModelName, irodoriVoiceName, 'surprised');
+                        base64Audio = await window.electronAPI.synthesizeIrodori(normalizedMemo, irodoriEndpointUrl, irodoriModelName, irodoriVoiceName, 'surprised');
                     } else {
-                        base64Audio = await window.electronAPI.synthesizeVoicevox(memo, speakerId, voicevoxEndpointUrl);
+                        base64Audio = await window.electronAPI.synthesizeVoicevox(normalizedMemo, speakerId, voicevoxEndpointUrl);
                     }
                     if (base64Audio) {
                         playlist.stop();

@@ -18,6 +18,8 @@ interface MascotAiConfig {
         irodori_voice?: string;
         irodori_model?: string;
     };
+    /** TTS読み上げ用の個別読み辞書（英語表記→カタカナ読み） */
+    ttsDictionary?: Record<string, string>;
 };
 
 /**

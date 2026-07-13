@@ -37,6 +37,7 @@ export interface MascotData {
             irodori_voice?: string;
             irodori_model?: string;
         };
+        ttsDictionary?: Record<string, string>;
     };
     assets: {
         outfits: MascotAsset[];

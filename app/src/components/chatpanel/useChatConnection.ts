@@ -448,6 +448,7 @@ export function useChatConnection(params: {
                 saveVoice: saveVoice.value,
                 showVoiceLog: showVoiceLog.value,
                 activeMascotId: activeMascot.value?.id || 'default',
+                ttsDictionary: activeMascot.value?.aiConfig?.ttsDictionary,
                 attachments: attachments.length > 0 ? attachments : undefined,
                 tools: {
                     toolsGpsLocation: toolsGpsLocation.value,

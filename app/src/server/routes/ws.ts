@@ -7,6 +7,7 @@ import { splitSentences } from '../utils/sentence-splitter';
 import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
 import { filterDialogue } from '../utils/dialogue-filter';
 import { authenticateUserToken } from '../middleware/auth';
+import { normalizeTextForTts, stripResidualAsterisks } from '../utils/tts-normalizer';
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
 import { executeMemosTool, executeTasksTool } from '../utils/tool-executor';
 import { updateTaskInDb } from '../utils/tasks-service';
@@ -139,7 +140,8 @@ export default defineWebSocketHandler({
                     frequencyPenalty,
                     repetitionPenalty,
                     maxOutputTokens,
-                    enableThinking
+                    enableThinking,
+                    ttsDictionary
                 } = data;
 
                 console.log(`=========================================`);
@@ -335,7 +337,9 @@ export default defineWebSocketHandler({
                     const irodoriModelName = irodoriModel || 'irodori-tts-500m-v3';
                     const irodoriVoiceName = irodoriVoice || 'default';
 
-                    const targetSpeechText = ttsReadNarrative === false ? filterDialogue(speechText) : speechText;
+                    const normalized = normalizeTextForTts(speechText, ttsDictionary);
+                    const dialogueFiltered = ttsReadNarrative === false ? filterDialogue(normalized) : normalized;
+                    const targetSpeechText = stripResidualAsterisks(dialogueFiltered);
 
                     if (targetSpeechText.trim()) {
                         const processedSentences = splitSentences(targetSpeechText);
