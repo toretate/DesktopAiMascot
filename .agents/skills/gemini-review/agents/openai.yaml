@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gemini Review"
+  short_description: "Geminiで実装差分を独立レビューしCodexが検証"
+  default_prompt: "$gemini-review を使って、現在の実装差分を読み取り専用でレビューしてください。"

@@ -1,0 +1,31 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+    "files": {
+        "includes": [
+            "src/**/*.{js,jsx,ts,tsx,vue}",
+            "electron/**/*.{js,jsx,ts,tsx}",
+            "scripts/**/*.js",
+            "web/**/*.{js,jsx,ts,tsx,vue}",
+            "*.{js,ts}"
+        ]
+    },
+    "formatter": {
+        "enabled": false
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "security": {
+                "noGlobalEval": "warn"
+            },
+            "suspicious": {
+                "noAssignInExpressions": "warn",
+                "noControlCharactersInRegex": "warn",
+                "noImplicitAnyLet": "warn",
+                "noMisleadingCharacterClass": "warn",
+                "useIterableCallbackReturn": "warn"
+            }
+        }
+    }
+}

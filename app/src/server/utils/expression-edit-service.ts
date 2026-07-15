@@ -220,7 +220,7 @@ export async function alignExpression(
     basePath: string,
     expressionPath: string,
     detectMode = 'ai'
-): Promise<{ success: boolean; offsetX: number; offsetY: number; scale: number; exprMidX: number; exprMidY: number; exprOvalCX: number; exprOvalCY: number; exprEyeDist: number; exprOvalW: number; baseWidth?: number; baseHeight?: number; exprWidth?: number; exprHeight?: number; error?: string }> {
+): Promise<{ success: boolean; offsetX: number; offsetY: number; scale: number; exprMidX: number; exprMidY: number; exprOvalCX: number; exprOvalCY: number; exprEyeDist: number; exprOvalW: number; baseWidth?: number; baseHeight?: number; exprWidth?: number; exprHeight?: number; fallback?: boolean; method?: string; error?: string }> {
     const absBase = resolveImagePath(basePath);
     const absExpr = resolveImagePath(expressionPath);
 

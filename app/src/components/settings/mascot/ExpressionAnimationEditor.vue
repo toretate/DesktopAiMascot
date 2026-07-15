@@ -17,6 +17,7 @@ interface MascotAsset {
     offsetY?: number;
     scale?: number;
     rotation?: number;
+    expressions?: MascotAsset[];
 }
 
 interface MascotData {
