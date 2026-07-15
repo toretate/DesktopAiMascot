@@ -33,6 +33,20 @@ vi.mock('../routes/ws', () => {
 });
 
 describe('ChatAiService.generateResponse のテスト', () => {
+    it('generateResponse_Gemini API KEYが空の場合は外部APIを呼ばず設定エラーを返すこと', async () => {
+        vi.mocked(generateText).mockReset();
+
+        await expect(ChatAiService.generateResponse({
+            message: 'こんにちは',
+            apiKey: '   ',
+            systemPrompt: 'あなたは優秀なアシスタントです。',
+            model: 'gemini-1.5-flash',
+            engine: 'gemini'
+        })).rejects.toThrow('Gemini API KEYが設定されていません。設定画面の「APIキー」からGoogle AI Studio (Gemini) API KEYを設定してください。');
+
+        expect(generateText).not.toHaveBeenCalled();
+    });
+
     it('generateResponse_予定の問い合わせに対してsearchTasksツールが呼び出され正常に応答すること', async () => {
         // generateText のモック応答を設定
         // 実際の Vercel AI SDK の generateText は、マルチステップのシミュレーションにおいて

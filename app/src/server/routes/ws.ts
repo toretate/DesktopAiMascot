@@ -11,6 +11,7 @@ import { normalizeTextForTts, stripResidualAsterisks } from '../utils/tts-normal
 import { PROJECT_ROOT, USERS_DIR } from '../utils/paths';
 import { executeMemosTool, executeTasksTool } from '../utils/tool-executor';
 import { updateTaskInDb } from '../utils/tasks-service';
+import { isAuthBypassAllowed } from '../utils/auth-bypass';
 
 
 // ユーザーごとの接続管理（crosswsのPeerオブジェクトをSetに保存）
@@ -79,16 +80,11 @@ export default defineWebSocketHandler({
             token = cookies['session_token'] || '';
         }
 
-        const host = urlObj.hostname || '';
-        const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-
         let userId = 'anonymous';
         try {
-            if (isLocal) {
+            if (isAuthBypassAllowed()) {
                 userId = 'usr_local_dev_bypass';
-                console.log(`[WS] Local client connected via bypass. User ID set to: ${userId}`);
-            } else if (!process.env.GOOGLE_CLIENT_ID) {
-                console.warn('[WS] 警告: GOOGLE_CLIENT_ID が環境変数に設定されていません。認証なしで接続を許可します。');
+                console.warn(`[WS] ALLOW_AUTH_BYPASS=true のため認証をバイパスします。User ID: ${userId}`);
             } else {
                 if (!token) {
                     console.log('[WS] Authentication failed: No token provided');
