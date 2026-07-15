@@ -3,7 +3,7 @@ import './utils/browser-polyfill';
 import { createPinia } from 'pinia';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
-import App from './App.vue';
+import App from './app.vue';
 
 // グローバルスタイルの読み込み
 import './styles/main.css';
