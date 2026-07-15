@@ -882,8 +882,9 @@ onMounted(async () => {
                         <label class="font-medium flex justify-content-between">
                             <span>要約対象の最大総文字数</span>
                         </label>
-                        <InputText 
-                            v-model.number="summaryMaxCharLimit" 
+                        <InputText
+                            :model-value="String(summaryMaxCharLimit)"
+                            @update:model-value="value => summaryMaxCharLimit = Number(value)"
                             type="number"
                             placeholder="例: 2500" 
                             class="w-full" 

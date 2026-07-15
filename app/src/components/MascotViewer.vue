@@ -826,14 +826,15 @@ const applyExpressionTransform = () => {
 
     // previewStateがある場合でも、それが現在の衣装(outfit)および表情アセットのIDと一致する場合のみプレビューの調整値を適用する。
     // 衣装変更などでIDがずれている場合は、アセット本来の設定値（found.*）を優先する。
-    const isMatchingPreview = previewState.value && 
-                              previewState.value.outfitId === activeOutfit.value?.id &&
-                              previewState.value.expressionId === found.id;
+    const preview = previewState.value;
+    const isMatchingPreview = preview &&
+                              preview.outfitId === activeOutfit.value?.id &&
+                              preview.expressionId === found.id;
 
-    const ox = isMatchingPreview ? (previewState.value.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
-    const oy = isMatchingPreview ? (previewState.value.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
-    const sc = isMatchingPreview ? (previewState.value.expressionScale ?? 1) : (found.scale ?? 1);
-    const rot = isMatchingPreview ? (previewState.value.expressionRotation ?? 0) : (found.rotation ?? 0);
+    const ox = isMatchingPreview ? (preview?.expressionOffsetX ?? 0) : (found.offsetX ?? 0);
+    const oy = isMatchingPreview ? (preview?.expressionOffsetY ?? 0) : (found.offsetY ?? 0);
+    const sc = isMatchingPreview ? (preview?.expressionScale ?? 1) : (found.scale ?? 1);
+    const rot = isMatchingPreview ? (preview?.expressionRotation ?? 0) : (found.rotation ?? 0);
 
     // エディタが保存するオフセットは元衣装キャンバス上のピクセル値。
     // 固定UI幅ではなく、現在のnofaceテクスチャが実際に表示される倍率へ変換する。

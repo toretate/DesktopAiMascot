@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "tsBuildInfoFile": "./node_modules/.cache/typescript/electron.tsbuildinfo"
+    },
+    "include": [
+        "electron/**/*.ts"
+    ],
+    "exclude": [
+        "electron/**/__tests__/**",
+        "electron/**/*.test.ts"
+    ]
+}

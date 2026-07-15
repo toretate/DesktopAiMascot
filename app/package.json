@@ -7,10 +7,14 @@
         "dev": "nuxt dev",
         "dev:electron": "node scripts/dev-electron.js",
         "build": "tsup && nuxt build",
+        "lint": "biome lint . --diagnostic-level=error",
         "preview": "nuxt preview",
         "test": "vitest run",
         "test:browser": "vitest run --config vitest.browser.config.ts",
         "test:browser:watch": "vitest --config vitest.browser.config.ts",
+        "typecheck": "vue-tsc --project tsconfig.json --noEmit",
+        "typecheck:electron": "tsc --project tsconfig.electron.json --noEmit",
+        "typecheck:all": "npm run typecheck && npm run typecheck:electron",
         "kill": "taskkill /f /im node.exe /im electron.exe",
         "postinstall": "patch-package"
     },
@@ -39,6 +43,7 @@
         "zod-to-json-schema": "^3.25.2"
     },
     "devDependencies": {
+        "@biomejs/biome": "2.5.3",
         "@nuxtjs/tailwindcss": "6.14.0",
         "@pinia/nuxt": "^0.9.0",
         "@types/better-sqlite3": "^7.6.13",
@@ -58,6 +63,7 @@
         "tsup": "^8.0.2",
         "typescript": "^5.4.0",
         "vitest": "^4.1.9",
-        "vitest-browser-vue": "2.1.0"
+        "vitest-browser-vue": "2.1.0",
+        "vue-tsc": "2.1.10"
     }
 }

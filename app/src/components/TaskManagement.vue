@@ -66,13 +66,14 @@ useDraggable(parentRef, localTasks, {
     animation: 150,
     handle: '.drag-handle',
     onStart(evt) {
-        if (evt.originalEvent) {
-            dragStartX.value = evt.originalEvent.clientX;
+        const originalEvent = (evt as typeof evt & { originalEvent?: MouseEvent }).originalEvent;
+        if (originalEvent) {
+            dragStartX.value = originalEvent.clientX;
         }
         draggedNestTaskId.value = localTasks.value[evt.oldIndex!].id;
     },
     onMove(evt, originalEvent) {
-        if (originalEvent) {
+        if (originalEvent instanceof MouseEvent) {
             const deltaX = originalEvent.clientX - dragStartX.value;
             const threshold = 24; // 2文字分 (24px)
             if (deltaX >= threshold) {
@@ -842,7 +843,7 @@ const getClockHandStyle = () => {
     };
 };
 
-const getClockNumberStyle = (idx: number, isInner: boolean) => {
+const getClockNumberStyle = (idx: number, isInner = false) => {
     const angle = (idx * 30 - 90) * (Math.PI / 180);
     const radius = isInner ? 42 : 66;
     const x = Math.round(Math.cos(angle) * radius);
@@ -1488,7 +1489,8 @@ const saveTaskEditor = () => {
                             </label>
                             <div class="minutes-input-row" v-if="taskStore.enableNotification">
                                 <InputText
-                                    v-model.number="taskStore.notificationMinutes"
+                                    :model-value="String(taskStore.notificationMinutes)"
+                                    @update:model-value="value => taskStore.notificationMinutes = Number(value)"
                                     type="number"
                                     min="0"
                                     max="60"
@@ -1507,7 +1509,8 @@ const saveTaskEditor = () => {
                         <div class="notification-control">
                             <div class="minutes-input-row" style="padding-left: 0;">
                                 <InputText
-                                    v-model.number="taskStore.completionGraceSeconds"
+                                    :model-value="String(taskStore.completionGraceSeconds)"
+                                    @update:model-value="value => taskStore.completionGraceSeconds = Number(value)"
                                     type="number"
                                     min="0"
                                     max="120"

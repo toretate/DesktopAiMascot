@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ask Gemini"
+  short_description: "Geminiに仕様・設計のセカンドオピニオンを依頼"
+  default_prompt: "$ask-gemini を使って、この仕様・設計への読み取り専用のセカンドオピニオンを得てください。"
