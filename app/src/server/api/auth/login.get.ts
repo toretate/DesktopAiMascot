@@ -1,8 +1,9 @@
 import { defineEventHandler, sendRedirect, createError } from 'h3';
+import { resolveGoogleRedirectUri } from '../../utils/auth-redirect-uri';
 
 export default defineEventHandler((event) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/callback';
+    const redirectUri = resolveGoogleRedirectUri(event);
 
     if (!clientId) {
         throw createError({

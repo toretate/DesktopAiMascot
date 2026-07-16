@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
+import { resolveServerOrigin } from '../utils/mascot-image-url';
 import { useConfigStore } from './config';
 
 export interface User {
@@ -21,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // サーバーのベースURLを構築
     const serverBaseUrl = computed(() => {
-        return `http://${configStore.serverHost}:${configStore.serverPort}`;
+        return resolveServerOrigin(configStore.serverHost, configStore.serverPort);
     });
 
     // ---- Actions ----
@@ -54,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Googleログインプロセスの開始
     const login = () => {
-        if (window.electronAPI) {
+        if (window.electronAPI && !window.electronAPI.isWeb) {
             console.log('[AuthStore] Electron経由でGoogleログインを開始します');
             window.electronAPI.loginWithGoogle();
         } else {

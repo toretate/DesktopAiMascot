@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { verifyGoogleIdToken } from '../utils/auth-service';
 import { USERS_FILE_PATH } from '../utils/paths';
+import { isAuthBypassAllowed } from '../utils/auth-bypass';
 
 export interface Identity {
     provider: string;
@@ -135,23 +136,18 @@ export async function authenticateUserToken(token: string): Promise<User> {
 
 export default defineEventHandler(async (event) => {
     // リクエストURIを取得して、APIリクエストでなければスキップ（例: /_nuxt/ など静的ファイルやWEBフロントエンドページへのアクセス）
-    const url = event.path || '';
+    const url = (event.path || '').split('?')[0];
     if (!url.startsWith('/api/')) {
         return;
     }
 
-    // ping エンドポイントは認証スキップ
-    if (url === '/api/ping') {
+    // 認証開始・OAuthコールバック・pingは未認証でアクセスできる必要がある。
+    if (url === '/api/ping' || url === '/api/auth/login' || url === '/api/auth/callback') {
         return;
     }
 
-    // ローカルIPからのアクセスは認証を自動バイパスし、マスターデータを共有する
-    const req = event.node.req;
-    const ip = req.socket.remoteAddress || '';
-    const host = getHeader(event, 'host') || '';
-    const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || host.includes('localhost') || host.includes('127.0.0.1');
-
-    if (isLocal) {
+    // 開発・家庭内テスト用の認証バイパスは、明示的な環境変数がある場合だけ許可する。
+    if (isAuthBypassAllowed()) {
         event.context.user = {
             id: 'usr_local_dev_bypass',
             email: 'test-user@gmail.com',
@@ -176,7 +172,7 @@ export default defineEventHandler(async (event) => {
     if (!token) {
         throw createError({
             statusCode: 401,
-            statusMessage: '認証トークンが必要です。'
+            message: '未認証です。ログインしてからもう一度お試しください。'
         });
     }
 
@@ -196,18 +192,18 @@ export default defineEventHandler(async (event) => {
         if (error.message.includes('GOOGLE_CLIENT_ID')) {
             throw createError({
                 statusCode: 500,
-                statusMessage: 'サーバーの認証設定が未完了です。'
+                message: 'サーバーの認証設定が未完了です。'
             });
         }
         if (error.message.includes('許可されていません') || error.message.includes('確認されていない')) {
             throw createError({
                 statusCode: 403,
-                statusMessage: error.message
+                message: error.message
             });
         }
         throw createError({
             statusCode: 401,
-            statusMessage: `認証に失敗しました: ${error.message}`
+            message: `認証に失敗しました: ${error.message}`
         });
     }
 });

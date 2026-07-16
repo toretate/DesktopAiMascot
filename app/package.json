@@ -5,10 +5,12 @@
     "type": "module",
     "scripts": {
         "dev": "nuxt dev",
+        "dev:remote": "nuxt dev --host 0.0.0.0",
         "dev:electron": "node scripts/dev-electron.js",
         "build": "tsup && nuxt build",
         "lint": "biome lint . --diagnostic-level=error",
         "preview": "nuxt preview",
+        "preview:remote": "nuxt preview --host 0.0.0.0",
         "test": "vitest run",
         "test:browser": "vitest run --config vitest.browser.config.ts",
         "test:browser:watch": "vitest --config vitest.browser.config.ts",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     visible: boolean;
@@ -45,8 +45,8 @@ const resolveImageUrl = (url: string) => {
     if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
-    // APIサーバー経由
-    return `http://localhost:3000${url.startsWith('/') ? '' : '/'}${url}`;
+    // Web版では現在閲覧中のサーバーから取得する
+    return `${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const handleRemoveBackground = async () => {
@@ -62,7 +62,7 @@ const handleRemoveBackground = async () => {
 
     try {
         // バックエンドに背景削除リクエストを送信
-        const response = await fetch('http://localhost:3000/api/remove-background', {
+        const response = await fetch('/api/remove-background', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

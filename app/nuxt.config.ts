@@ -54,7 +54,6 @@ export default defineNuxtConfig({
         server: {
             hmr: {
                 protocol: 'ws',
-                host: 'localhost',
             },
             fs: {
                 // ワークスペース全体を dev server から参照できるように許可

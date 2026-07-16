@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { resolveMascotPath, USERS_DIR } from '../../utils/paths';
 import { authenticateUserToken } from '../../middleware/auth';
+import { isAuthBypassAllowed } from '../../utils/auth-bypass';
 
 const MIME_TYPES: Record<string, string> = {
     '.png': 'image/png',
@@ -71,13 +72,8 @@ export default defineEventHandler(async (event) => {
         // ログイン中のユーザー情報を取得
         let loginUserId = '';
         
-        // 1. ローカルアクセスの確認 (開発環境でのバイパス)
-        const req = event.node.req;
-        const ip = req.socket.remoteAddress || '';
-        const host = getHeader(event, 'host') || '';
-        const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || host.includes('localhost') || host.includes('127.0.0.1');
-
-        if (isLocal) {
+        // 開発・家庭内テスト用の認証バイパスは、明示的な環境変数がある場合だけ許可する。
+        if (isAuthBypassAllowed()) {
             loginUserId = 'usr_local_dev_bypass';
         } else {
             // 2. トークン認証
@@ -93,7 +89,7 @@ export default defineEventHandler(async (event) => {
             if (!token) {
                 throw createError({
                     statusCode: 401,
-                    statusMessage: '認証トークンが必要です。',
+                    message: '未認証です。ログインしてからもう一度お試しください。',
                 });
             }
 
@@ -103,7 +99,7 @@ export default defineEventHandler(async (event) => {
             } catch (authError: any) {
                 throw createError({
                     statusCode: 401,
-                    statusMessage: `認証に失敗しました: ${authError.message}`,
+                    message: `認証に失敗しました: ${authError.message}`,
                 });
             }
         }
@@ -112,7 +108,7 @@ export default defineEventHandler(async (event) => {
         if (ownerUserId !== loginUserId) {
             throw createError({
                 statusCode: 403,
-                statusMessage: 'このリソースへのアクセス権限がありません。',
+                message: 'このリソースへのアクセス権限がありません。',
             });
         }
     }

@@ -3,6 +3,7 @@
 
 import { defaultData } from '../config/config-data';
 import { IrodoriTtsConnector } from '../connector/irodori-tts-connector';
+import { getHttpErrorMessage } from './http-error-message';
 
 if (typeof window !== 'undefined' && !window.electronAPI) {
     console.log('[Polyfill] Running in Web Browser. Initializing browser-polyfill...');
@@ -64,7 +65,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
     window.electronAPI = {
         isWeb: true,
         loginWithGoogle: () => {
-            alert('GoogleログインはWeb版では現在サポートされていません。設定画面で直接APIキーをご登録ください。');
+            window.location.assign('/api/auth/login');
         },
         toggleChat: () => {
             console.log('[Polyfill] toggleChat triggered');
@@ -111,7 +112,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         },
         getAppConfig: async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/config');
+                const response = await fetch('/api/config');
                 if (response.ok) {
                     const resJson = await response.json();
                     if (resJson.success && resJson.config && Object.keys(resJson.config).length > 0) {
@@ -128,7 +129,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         },
         updateAppConfig: async (config: any) => {
             try {
-                const response = await fetch('http://localhost:3000/api/config', {
+                const response = await fetch('/api/config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -268,7 +269,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         },
         getChatHistory: async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/history');
+                const response = await fetch('/api/history');
                 if (response.ok) {
                     const resJson = await response.json();
                     if (resJson.success && resJson.history) {
@@ -291,7 +292,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         },
         saveChatHistory: async (history: any) => {
             try {
-                const response = await fetch('http://localhost:3000/api/history', {
+                const response = await fetch('/api/history', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -371,7 +372,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                     signal: controller.signal
                 });
                 clearTimeout(timeoutId);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 const data = await response.json();
                 return { success: true, models: data.data || [] };
             } catch (e: any) {
@@ -393,7 +394,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                         endpoint
                     })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 const data = await response.json();
                 return data.success ? data.audio : null;
             } catch (e) {
@@ -417,7 +418,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                         emotion
                     })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 const data = await response.json();
                 return data.success ? data.audio : null;
             } catch (e) {
@@ -437,7 +438,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                         endpoint
                     })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 const data = await response.json();
                 return data.success
                     ? { success: true, speakers: data.speakers }
@@ -458,7 +459,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                         endpoint
                     })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 const data = await response.json();
                 return data.success
                     ? { success: true, voices: data.voices }
@@ -490,7 +491,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                         history
                     })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 return await response.json();
             } catch (e: any) {
                 console.error('[Polyfill] generateMascotExpressions failed:', e);
@@ -504,7 +505,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imagePath, apiKey })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 return await response.json();
             } catch (e: any) {
                 console.error('[Polyfill] analyzeSpriteSheet failed:', e);
@@ -518,7 +519,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ basePath, expressionPath, detectMode })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 return await response.json();
             } catch (e: any) {
                 console.error('[Polyfill] alignExpression failed:', e);
@@ -532,7 +533,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ imagePath, detectMode })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 return await response.json();
             } catch (e: any) {
                 console.error('[Polyfill] detectBaseFace failed:', e);
@@ -598,7 +599,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ mascotId, filename, base64Data })
                 });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(getHttpErrorMessage(response.status));
                 return await response.json();
             } catch (e: any) {
                 console.error('[Polyfill] saveMascotImage failed:', e);

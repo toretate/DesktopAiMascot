@@ -93,6 +93,16 @@ npm run build
   npm run dev        # 開発サーバー (http://localhost:3000) をブラウザで開く
   ```
 
+- **LAN内の別端末からWeb版を利用する場合**:
+  ```bash
+  cd app
+  npm run dev:remote
+  # 別端末から http://<サーバーのLAN IP>:3000 を開く
+  ```
+
+  認証を省略する家庭内テストでは、公開範囲を信頼できるLANに限定したうえで
+  `ALLOW_AUTH_BYPASS=true` を設定してください。一般公開環境では使用しないでください。
+
 ### 3. テストの実行
 
 ```bash

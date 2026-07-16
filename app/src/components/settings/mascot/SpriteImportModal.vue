@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue';
 import Button from 'primevue/button';
+import { onBeforeUnmount, ref, watch } from 'vue';
 import { useConfigStore } from '@/store/config';
-import { MascotImageSource, selectMascotImage } from '../../../utils/mascot-image-upload';
+import { type MascotImageSource, selectMascotImage } from '../../../utils/mascot-image-upload';
+import { resolveMascotImageUrl } from '../../../utils/mascot-image-url';
 
 const props = defineProps<{
     visible: boolean;
@@ -31,13 +32,11 @@ const clearSelectedImage = () => {
 };
 
 const resolveImageUrl = (path: string | undefined | null): string => {
-    if (!path) return '';
-    if (path.startsWith('data:image/')) return path;
-    let resolved = path;
-    if (path.startsWith('/mascots/') && configStore.useServer) {
-        resolved = `http://${configStore.serverHost}:${configStore.serverPort}${path}`;
-    }
-    return resolved;
+    return resolveMascotImageUrl(path, {
+        serverHost: configStore.serverHost,
+        serverPort: configStore.serverPort,
+        absoluteMascotUrl: configStore.useServer
+    });
 };
 
 const fetchGeneratedSheets = async () => {

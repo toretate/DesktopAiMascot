@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import mascotRouteHandler, { createFileEtag, isRequestNotModified } from '../routes/mascots/[...path]';
 
 const {
@@ -58,8 +58,11 @@ const createRemoteEvent = () => ({
 }) as any;
 
 describe('マスコット画像配信キャッシュ', () => {
+    const originalAllowAuthBypass = process.env.ALLOW_AUTH_BYPASS;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        process.env.ALLOW_AUTH_BYPASS = 'false';
         mockGetCookie.mockReturnValue('');
         mockExistsSync.mockReturnValue(true);
         mockStatSync.mockReturnValue({
@@ -69,6 +72,14 @@ describe('マスコット画像配信キャッシュ', () => {
             mtime: new Date(1000)
         });
         mockSendNoContent.mockReturnValue({ statusCode: 304 });
+    });
+
+    afterAll(() => {
+        if (originalAllowAuthBypass === undefined) {
+            delete process.env.ALLOW_AUTH_BYPASS;
+        } else {
+            process.env.ALLOW_AUTH_BYPASS = originalAllowAuthBypass;
+        }
     });
 
     it('createFileEtag_サイズと更新時刻から弱いETagを生成すること', () => {

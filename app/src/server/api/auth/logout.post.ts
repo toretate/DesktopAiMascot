@@ -1,12 +1,12 @@
-import { defineEventHandler, deleteCookie } from 'h3';
+import { defineEventHandler, deleteCookie, getRequestURL } from 'h3';
 
 export default defineEventHandler((event) => {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isSecureRequest = getRequestURL(event).protocol === 'https:';
     
     deleteCookie(event, 'session_token', {
         path: '/',
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax'
+        secure: isSecureRequest,
+        sameSite: 'lax'
     });
 
     return {

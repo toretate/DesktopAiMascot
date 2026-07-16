@@ -237,6 +237,10 @@ export class ChatAiService {
             const filteredTools = filterEnabledTools(tools);
 
             const currentEngine = engine || 'gemini';
+            if (currentEngine === 'gemini' && !apiKey.trim()) {
+                throw new Error('Gemini API KEYが設定されていません。設定画面の「APIキー」からGoogle AI Studio (Gemini) API KEYを設定してください。');
+            }
+
             // native function-calling を信頼できるモデルか（cloud=true / ローカル弱モデル=false）。
             // cloud は description + JSON スキーマで十分に誘導できるため、手書きの per-tool
             // ガイドラインは注入しない。ローカル(lmstudio)は弱いため従来どおり注入する。
