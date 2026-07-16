@@ -10,6 +10,8 @@ import ProgressBar from 'primevue/progressbar';
 import SelectButton from 'primevue/selectbutton';
 import Slider from 'primevue/slider';
 import DatePicker from 'primevue/datepicker';
+import CircularClockPicker from './task-management/CircularClockPicker.vue';
+import DayTimelinePicker from './task-management/DayTimelinePicker.vue';
 
 const taskStore = useTaskStore();
 const configStore = useConfigStore();
@@ -532,7 +534,7 @@ const handleAddTask = () => {
         title,
         'normal',
         newTaskScheduledAt.value,
-        taskStore.activeCategoryId === MEETING_CATEGORY_ID ? newTaskScheduledEndAt.value : undefined
+        newTaskScheduledEndAt.value
     );
     newTaskTitle.value = '';
     newTaskScheduledAt.value = undefined;
@@ -755,19 +757,19 @@ const cycleTaskStatus = (task: Task) => {
 
 const tempCalendarDate = ref<Date | null>(null);
 const calendarStep = ref<'date' | 'time'>('date');
-const clockMode = ref<'hour' | 'minute'>('hour');
 const selectedHour24 = ref(12);
 const selectedMinuteVal = ref(0);
-const isDragging = ref(false);
+const timelineStartMinute = ref(12 * 60);
+const timelineEndMinute = ref(13 * 60);
 const meetingDateChoice = ref<'today' | 'tomorrow' | 'custom'>('today');
 const showMeetingCustomCalendar = ref(false);
-const calendarDurationHours = ref(1);
 const EDIT_START_CALENDAR_TARGET = '__edit_start__';
 const EDIT_END_CALENDAR_TARGET = '__edit_end__';
 
-const innerHourNumbers = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-const outerHourNumbers = [0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
-const minuteNumbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+const isSingleTimePicker = computed(() => {
+    return activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET ||
+        activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET;
+});
 
 const isMeetingSchedulePicker = computed(() => {
     if (!activeCalendarTaskId.value) return false;
@@ -783,12 +785,30 @@ const isMeetingSchedulePicker = computed(() => {
     return taskStore.tasks.find(task => task.id === activeCalendarTaskId.value)?.categoryId === MEETING_CATEGORY_ID;
 });
 
-const getDurationBetween = (startIso?: string, endIso?: string) => {
-    if (!startIso || !endIso) return taskStore.defaultDurationHours;
-    const duration = (new Date(endIso).getTime() - new Date(startIso).getTime()) / 3_600_000;
-    return Number.isFinite(duration) && duration > 0
-        ? Math.round(duration * 100) / 100
-        : taskStore.defaultDurationHours;
+const initializeTimelineRange = (start: Date, endIso?: string) => {
+    const stepMinutes = 15;
+    const maxStartMinute = 24 * 60 - stepMinutes;
+    const rawStartMinute = start.getHours() * 60 + start.getMinutes();
+    timelineStartMinute.value = Math.min(
+        maxStartMinute,
+        Math.round(rawStartMinute / stepMinutes) * stepMinutes
+    );
+
+    const end = endIso ? new Date(endIso) : null;
+    const storedDurationMinutes = end
+        ? (end.getTime() - start.getTime()) / 60_000
+        : Number.NaN;
+    const durationMinutes = Number.isFinite(storedDurationMinutes) && storedDurationMinutes > 0
+        ? storedDurationMinutes
+        : taskStore.defaultDurationHours * 60;
+
+    timelineEndMinute.value = Math.min(
+        24 * 60,
+        timelineStartMinute.value + Math.max(
+            stepMinutes,
+            Math.round(durationMinutes / stepMinutes) * stepMinutes
+        )
+    );
 };
 
 const getMeetingDateChoice = (date: Date) => {
@@ -806,13 +826,13 @@ const getMeetingDateChoice = (date: Date) => {
 const openDatePicker = (taskId: string | 'new_task') => {
     activeCalendarTaskId.value = taskId;
     calendarStep.value = 'date';
-    clockMode.value = 'hour';
     showMeetingCustomCalendar.value = false;
     
     let scheduledAt: string | undefined = undefined;
+    let scheduledEndAt: string | undefined = undefined;
     if (taskId === 'new_task') {
         scheduledAt = newTaskScheduledAt.value;
-        calendarDurationHours.value = getDurationBetween(newTaskScheduledAt.value, newTaskScheduledEndAt.value);
+        scheduledEndAt = newTaskScheduledEndAt.value;
     } else if (taskId === EDIT_START_CALENDAR_TARGET) {
         scheduledAt = editForm.value.scheduledAt?.toISOString();
     } else if (taskId === EDIT_END_CALENDAR_TARGET) {
@@ -820,7 +840,7 @@ const openDatePicker = (taskId: string | 'new_task') => {
     } else {
         const task = taskStore.tasks.find(t => t.id === taskId);
         scheduledAt = task?.scheduledAt;
-        calendarDurationHours.value = getDurationBetween(task?.scheduledAt, task?.scheduledEndAt);
+        scheduledEndAt = task?.scheduledEndAt;
     }
     
     if (scheduledAt) {
@@ -828,6 +848,7 @@ const openDatePicker = (taskId: string | 'new_task') => {
         tempCalendarDate.value = d;
         selectedHour24.value = d.getHours();
         selectedMinuteVal.value = d.getMinutes();
+        initializeTimelineRange(d, scheduledEndAt);
         meetingDateChoice.value = getMeetingDateChoice(d);
     } else {
         const d = new Date();
@@ -836,13 +857,13 @@ const openDatePicker = (taskId: string | 'new_task') => {
         tempCalendarDate.value = d;
         selectedHour24.value = d.getHours();
         selectedMinuteVal.value = d.getMinutes();
+        initializeTimelineRange(d);
         meetingDateChoice.value = 'today';
     }
 };
 
 const onDateSelect = () => {
     calendarStep.value = 'time';
-    clockMode.value = 'hour';
 };
 
 const selectMeetingDate = (choice: 'today' | 'tomorrow' | 'custom') => {
@@ -883,32 +904,29 @@ const getCalendarPanelTitle = () => {
 const saveFullscreenCalendarDate = () => {
     if (activeCalendarTaskId.value && tempCalendarDate.value) {
         const targetDate = new Date(tempCalendarDate.value);
-        targetDate.setHours(selectedHour24.value);
-        targetDate.setMinutes(selectedMinuteVal.value);
-        targetDate.setSeconds(0);
-        const meetingDurationHours = Number.isFinite(calendarDurationHours.value) && calendarDurationHours.value > 0
-            ? calendarDurationHours.value
-            : taskStore.defaultDurationHours;
-        
-        if (activeCalendarTaskId.value === 'new_task') {
-            newTaskScheduledAt.value = targetDate.toISOString();
-            if (isMeetingSchedulePicker.value) {
-                newTaskScheduledEndAt.value = new Date(
-                    targetDate.getTime() + meetingDurationHours * 3_600_000
-                ).toISOString();
-            }
-        } else if (activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET) {
+        if (isSingleTimePicker.value) {
+            targetDate.setHours(selectedHour24.value, selectedMinuteVal.value, 0, 0);
+        } else {
+            targetDate.setHours(0, timelineStartMinute.value, 0, 0);
+        }
+
+        if (activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET) {
             editForm.value.scheduledAt = targetDate;
         } else if (activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET) {
             editForm.value.scheduledEndAt = targetDate;
         } else {
-            const updates: Partial<Task> = { scheduledAt: targetDate.toISOString() };
-            if (isMeetingSchedulePicker.value) {
-                updates.scheduledEndAt = new Date(
-                    targetDate.getTime() + meetingDurationHours * 3_600_000
-                ).toISOString();
+            const targetEndDate = new Date(tempCalendarDate.value);
+            targetEndDate.setHours(0, timelineEndMinute.value, 0, 0);
+
+            if (activeCalendarTaskId.value === 'new_task') {
+                newTaskScheduledAt.value = targetDate.toISOString();
+                newTaskScheduledEndAt.value = targetEndDate.toISOString();
+            } else {
+                taskStore.updateTask(activeCalendarTaskId.value, {
+                    scheduledAt: targetDate.toISOString(),
+                    scheduledEndAt: targetEndDate.toISOString()
+                });
             }
-            taskStore.updateTask(activeCalendarTaskId.value, updates);
         }
     }
     activeCalendarTaskId.value = null;
@@ -926,141 +944,12 @@ const clearFullscreenCalendarDate = () => {
         } else {
             taskStore.updateTask(activeCalendarTaskId.value, {
                 scheduledAt: undefined,
-                ...(isMeetingSchedulePicker.value ? { scheduledEndAt: undefined } : {})
+                scheduledEndAt: undefined
             });
         }
     }
     activeCalendarTaskId.value = null;
 };
-
-const getClockHandStyle = () => {
-    let angle = 0;
-    let length = 66;
-    if (clockMode.value === 'hour') {
-        const h = selectedHour24.value;
-        const isInner = h >= 1 && h <= 12;
-        length = isInner ? 42 : 66;
-        angle = (h % 12) * 30;
-    } else {
-        angle = selectedMinuteVal.value * 6;
-    }
-    return {
-        transform: `rotate(${angle}deg)`,
-        height: `${length}px`,
-        transition: isDragging.value ? 'none' : 'transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), height 0.2s cubic-bezier(0.25, 1, 0.5, 1)'
-    };
-};
-
-const getClockNumberStyle = (idx: number, isInner = false) => {
-    const angle = (idx * 30 - 90) * (Math.PI / 180);
-    const radius = isInner ? 42 : 66;
-    const x = Math.round(Math.cos(angle) * radius);
-    const y = Math.round(Math.sin(angle) * radius);
-    return {
-        transform: `translate(${x}px, ${y}px)`
-    };
-};
-
-const handleNumberSelect = (val: number) => {
-    if (clockMode.value === 'hour') {
-        selectedHour24.value = val;
-        clockMode.value = 'minute';
-    } else {
-        selectedMinuteVal.value = val;
-    }
-};
-
-const adjustTime = (amount: number) => {
-    if (clockMode.value === 'hour') {
-        let h = selectedHour24.value + amount;
-        if (h > 23) h = 0;
-        if (h < 0) h = 23;
-        selectedHour24.value = h;
-    } else {
-        let m = selectedMinuteVal.value + amount;
-        if (m >= 60) {
-            selectedMinuteVal.value = 0;
-            adjustTime(1);
-        } else if (m < 0) {
-            selectedMinuteVal.value = 59;
-            adjustTime(-1);
-        } else {
-            selectedMinuteVal.value = m;
-        }
-    }
-};
-
-// クロック盤ドラッグ操作ハンドラ
-const handleClockStart = (e: MouseEvent | TouchEvent) => {
-    isDragging.value = true;
-    handleClockMove(e);
-    window.addEventListener('mousemove', handleClockMove);
-    window.addEventListener('mouseup', handleClockEnd);
-    window.addEventListener('touchmove', handleClockMove, { passive: false });
-    window.addEventListener('touchend', handleClockEnd);
-};
-
-const handleClockMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDragging.value) return;
-    const dial = document.querySelector('.clock-dial');
-    if (!dial) return;
-    
-    const rect = dial.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
-    const dx = clientX - cx;
-    const dy = clientY - cy;
-    
-    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    angle = angle + 90;
-    if (angle < 0) angle += 360;
-    
-    if (clockMode.value === 'hour') {
-        const d = Math.sqrt(dx * dx + dy * dy);
-        const isInner = d < 54;
-        let hIdx = Math.round(angle / 30);
-        if (hIdx === 12) hIdx = 0;
-        
-        if (isInner) {
-            selectedHour24.value = hIdx === 0 ? 12 : hIdx;
-        } else {
-            selectedHour24.value = hIdx === 0 ? 0 : hIdx + 12;
-        }
-    } else {
-        let m = Math.round(angle / 6);
-        if (m === 60) m = 0;
-        if (m > 59) m = 59;
-        selectedMinuteVal.value = m;
-    }
-    
-    if (e.cancelable) {
-        e.preventDefault();
-    }
-};
-
-const handleClockEnd = () => {
-    if (!isDragging.value) return;
-    isDragging.value = false;
-    window.removeEventListener('mousemove', handleClockMove);
-    window.removeEventListener('mouseup', handleClockEnd);
-    window.removeEventListener('touchmove', handleClockMove);
-    window.removeEventListener('touchend', handleClockEnd);
-    
-    if (clockMode.value === 'hour') {
-        clockMode.value = 'minute';
-    }
-};
-
-onUnmounted(() => {
-    window.removeEventListener('mousemove', handleClockMove);
-    window.removeEventListener('mouseup', handleClockEnd);
-    window.removeEventListener('touchmove', handleClockMove);
-    window.removeEventListener('touchend', handleClockEnd);
-});
 
 // --- タスク編集（ウィジェット全面パネル）---
 const editingFullTaskId = ref<string | null>(null);
@@ -1828,93 +1717,41 @@ const saveTaskEditor = () => {
                     />
                 </div>
                 
-                <!-- STEP 2: 時刻選択 (クロックウィジェット) -->
+                <!-- STEP 2: 時刻・時間帯選択 -->
                 <div v-else class="clockpicker-container">
-                    <div class="clockpicker-header">
-                        <button class="back-to-date-btn" @click="calendarStep = 'date'" title="日付選択に戻る" type="button">
-                            <i class="pi pi-angle-left"></i> 日付
-                        </button>
-                        <div class="digital-time-display">
-                            <span 
-                                class="time-part" 
-                                :class="{ active: clockMode === 'hour' }" 
-                                @click="clockMode = 'hour'"
+                    <CircularClockPicker
+                        v-if="isSingleTimePicker"
+                        v-model:hour="selectedHour24"
+                        v-model:minute="selectedMinuteVal"
+                    >
+                        <template #header-leading>
+                            <button
+                                class="back-to-date-btn"
+                                title="日付選択に戻る"
+                                type="button"
+                                @click="calendarStep = 'date'"
                             >
-                                {{ String(selectedHour24).padStart(2, '0') }}
-                            </span>
-                            <span class="colon">:</span>
-                            <span 
-                                class="time-part" 
-                                :class="{ active: clockMode === 'minute' }" 
-                                @click="clockMode = 'minute'"
+                                <i class="pi pi-angle-left"></i> 日付
+                            </button>
+                        </template>
+                    </CircularClockPicker>
+                    <DayTimelinePicker
+                        v-else
+                        v-model:start-minute="timelineStartMinute"
+                        v-model:end-minute="timelineEndMinute"
+                        :default-duration-minutes="taskStore.defaultDurationHours * 60"
+                    >
+                        <template #header-leading>
+                            <button
+                                class="back-to-date-btn"
+                                title="日付選択に戻る"
+                                type="button"
+                                @click="calendarStep = 'date'"
                             >
-                                {{ String(selectedMinuteVal).padStart(2, '0') }}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="clock-face-wrapper">
-                        <div 
-                            class="clock-dial"
-                            @mousedown="handleClockStart"
-                            @touchstart.prevent="handleClockStart"
-                        >
-                            <div class="clock-center-dot"></div>
-                            <div class="clock-hand-line" :style="getClockHandStyle()">
-                                <div class="clock-hand-pointer"></div>
-                            </div>
-                            
-                            <div v-if="clockMode === 'hour'">
-                                <button 
-                                    v-for="(h, idx) in innerHourNumbers" 
-                                    :key="'h-in-' + h"
-                                    class="clock-num-btn inner"
-                                    :class="{ active: selectedHour24 === h }"
-                                    :style="getClockNumberStyle(idx, true)"
-                                    type="button"
-                                >
-                                    {{ h }}
-                                </button>
-                                <button 
-                                    v-for="(h, idx) in outerHourNumbers" 
-                                    :key="'h-out-' + h"
-                                    class="clock-num-btn outer"
-                                    :class="{ active: selectedHour24 === h }"
-                                    :style="getClockNumberStyle(idx, false)"
-                                    type="button"
-                                >
-                                    {{ h }}
-                                </button>
-                            </div>
-                            <div v-else>
-                                <button 
-                                    v-for="(m, idx) in minuteNumbers" 
-                                    :key="'m-' + m"
-                                    class="clock-num-btn"
-                                    :class="{ active: selectedMinuteVal === m }"
-                                    :style="getClockNumberStyle(idx)"
-                                    @click="handleNumberSelect(m)"
-                                    type="button"
-                                >
-                                    {{ String(m).padStart(2, '0') }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <label v-if="isMeetingSchedulePicker" class="meeting-duration-control">
-                        <span class="meeting-duration-label">所要時間</span>
-                        <span class="duration-input-wrapper">
-                            <input
-                                v-model.number="calendarDurationHours"
-                                class="duration-input"
-                                type="number"
-                                min="0.25"
-                                step="0.25"
-                                inputmode="decimal"
-                            />
-                            <span class="duration-unit">時間</span>
-                        </span>
-                    </label>
+                                <i class="pi pi-angle-left"></i> 日付
+                            </button>
+                        </template>
+                    </DayTimelinePicker>
                 </div>
             </div>
             <div class="calendar-panel-footer">
@@ -2130,25 +1967,16 @@ const saveTaskEditor = () => {
     gap: 4px;
 }
 
-/* クロックピッカーUI */
+/* 時刻入力UI */
 .clockpicker-container {
+    width: 100%;
+    min-height: 0;
     display: flex;
+    flex: 1;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     padding: 4px 0;
-    flex-shrink: 0;
-}
-
-.clockpicker-header {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-    position: relative;
-    padding: 0 4px;
 }
 
 .back-to-date-btn {
@@ -2169,176 +1997,6 @@ const saveTaskEditor = () => {
 .back-to-date-btn:hover {
     color: #3b82f6;
     background: rgba(59, 130, 246, 0.05);
-}
-
-.digital-time-display {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f1f5f9;
-    border-radius: 6px;
-    padding: 2px 8px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #334155;
-    gap: 4px;
-}
-
-.digital-time-display .time-part {
-    cursor: pointer;
-    padding: 0 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.digital-time-display .time-part.active {
-    color: #3b82f6;
-    background: #eff6ff;
-}
-
-.digital-time-display .colon {
-    color: #94a3b8;
-    animation: blink-colon 1.5s infinite;
-}
-
-@keyframes blink-colon {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-.ampm-toggle {
-    display: flex;
-    background: #e2e8f0;
-    border-radius: 6px;
-    padding: 2px;
-}
-
-.ampm-btn {
-    border: none;
-    background: transparent;
-    font-size: 11px;
-    font-weight: 700;
-    color: #64748b;
-    padding: 4px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.ampm-btn.active {
-    background: #ffffff;
-    color: #3b82f6;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* クロック文字盤 */
-.clock-face-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.clock-mode-label {
-    font-size: 10px;
-    color: #94a3b8;
-    font-weight: 600;
-}
-
-.clock-dial {
-    position: relative;
-    width: 170px;
-    height: 170px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-    cursor: pointer;
-    user-select: none;
-}
-
-.clock-center-dot {
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    background: #3b82f6;
-    border-radius: 50%;
-    z-index: 10;
-}
-
-.clock-hand-line {
-    position: absolute;
-    bottom: 50%;
-    left: calc(50% - 1px);
-    width: 2px;
-    height: 64px;
-    background: #3b82f6;
-    transform-origin: bottom center;
-    z-index: 5;
-}
-
-.clock-hand-pointer {
-    position: absolute;
-    top: -12px;
-    left: -11px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: rgba(59, 130, 246, 0.18);
-    border: 1px solid #3b82f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.clock-hand-pointer::after {
-    content: '';
-    width: 6px;
-    height: 6px;
-    background: #3b82f6;
-    border-radius: 50%;
-}
-
-.clock-num-btn {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 8;
-    transition: all 0.2s ease;
-    top: calc(50% - 12px);
-    left: calc(50% - 12px);
-    pointer-events: none; /* ドラッグ操作を妨げないようにする */
-}
-
-.clock-num-btn.inner {
-    font-size: 8px;
-    color: #64748b;
-}
-
-.clock-num-btn.outer {
-    font-size: 10px;
-    color: #334155;
-}
-
-.clock-num-btn:hover {
-    background: rgba(59, 130, 246, 0.08);
-    color: #3b82f6;
-}
-
-.clock-num-btn.active {
-    background: #3b82f6;
-    color: #ffffff !important;
 }
 
 /* カレンダーのコンパクト化（DatePicker） */
@@ -2421,41 +2079,6 @@ const saveTaskEditor = () => {
 
 .meeting-custom-date .back-to-date-btn {
     align-self: flex-start;
-}
-
-.meeting-duration-control {
-    width: min(220px, 100%);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid #dbeafe;
-    border-radius: 8px;
-    background: #eff6ff;
-}
-
-.meeting-duration-label {
-    flex-shrink: 0;
-    color: #475569;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.meeting-duration-control .duration-input-wrapper {
-    min-width: 0;
-}
-
-.time-adjust-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-}
-
-.time-adjust-row .adjust-label {
-    font-size: 10px;
-    color: #64748b;
-    font-weight: 600;
 }
 
 .category-tabs::-webkit-scrollbar {

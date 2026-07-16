@@ -74,6 +74,20 @@ describe('useTaskStore', () => {
             expect(activeTasks[0].title).toBe('テスト用親タスク');
             expect(activeTasks[0].completed).toBe(false);
         });
+
+        it('addTask_通常カテゴリでも指定した予定終了日時が保存されること', () => {
+            const store = useTaskStore();
+            store.addCategory('時間帯テスト');
+
+            const categoryId = store.activeCategoryId;
+            const scheduledAt = '2026-07-16T08:00:00.000Z';
+            const scheduledEndAt = '2026-07-16T09:15:00.000Z';
+            store.addTask(categoryId, '時間帯付きタスク', 'normal', scheduledAt, scheduledEndAt);
+
+            const task = store.tasks.find(item => item.title === '時間帯付きタスク');
+            expect(task?.scheduledAt).toBe(scheduledAt);
+            expect(task?.scheduledEndAt).toBe(scheduledEndAt);
+        });
     });
 
     describe('toggleTask - タスク完了トグル機能', () => {
