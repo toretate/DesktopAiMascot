@@ -1,49 +1,40 @@
-import { normalizeTextForTts, stripResidualAsterisks } from './tts-normalizer';
-
 let checkInterval: any = null;
-let playlistInstance: any = null;
 
-// 音声を合成して再生するヘルパー
-export const playNotificationVoice = async (text: string) => {
-    if (typeof window === 'undefined' || !window.electronAPI) return;
+interface MeetingSchedule {
+    categoryId?: string;
+    completed?: boolean;
+    status?: string;
+    scheduledAt?: string;
+    scheduledEndAt?: string;
+}
 
-    try {
-        // configStore を動的インポートして現在の音声設定を取得
-        const configStore = (await import('../store/config')).useConfigStore();
-
-        const dict = configStore.activeMascot?.aiConfig?.ttsDictionary;
-        const normalizedText = stripResidualAsterisks(normalizeTextForTts(text, dict));
-
-        let base64Audio = '';
-
-        const engine = configStore.selectedVoiceEngine || 'voicevox';
-        if (engine === 'voicevox') {
-            const speakerId = configStore.voicevoxSpeaker ?? 1;
-            const endpoint = configStore.voicevoxEndpoint;
-            const res = await window.electronAPI.synthesizeVoicevox(normalizedText, speakerId, endpoint || undefined);
-            base64Audio = res || '';
-        } else if (engine === 'irodori') {
-            const endpoint = configStore.irodoriEndpoint || 'http://localhost:5000';
-            const model = configStore.irodoriModel || 'default';
-            const voice = configStore.irodoriVoice || 'default';
-            const res = await window.electronAPI.synthesizeIrodori(normalizedText, endpoint, model, voice, 'neutral');
-            base64Audio = res || '';
+export const isMeetingInProgress = (tasks: MeetingSchedule[], now = new Date()) => {
+    const nowTime = now.getTime();
+    return tasks.some(task => {
+        if (
+            task.categoryId !== 'meeting' ||
+            task.completed ||
+            task.status === 'done' ||
+            !task.scheduledAt ||
+            !task.scheduledEndAt
+        ) {
+            return false;
         }
 
-        if (base64Audio) {
-            if (!playlistInstance) {
-                const { AudioPlaylist } = await import('./AudioPlaylist');
-                const mascotStore = (await import('../store/mascot')).useMascotStore();
-                playlistInstance = new AudioPlaylist((speaking) => {
-                    mascotStore.setSpeaking(speaking);
-                });
-            }
-            playlistInstance.push(base64Audio);
-        }
-    } catch (e) {
-        console.error('[TaskNotification] 音声合成・再生に失敗しました:', e);
-    }
+        const startTime = new Date(task.scheduledAt).getTime();
+        const endTime = new Date(task.scheduledEndAt).getTime();
+        return Number.isFinite(startTime) &&
+            Number.isFinite(endTime) &&
+            startTime <= nowTime &&
+            nowTime < endTime;
+    });
 };
+
+export const shouldSpeakTaskNotification = (
+    muteNotificationsDuringMeetings: boolean,
+    tasks: MeetingSchedule[],
+    now = new Date()
+) => !muteNotificationsDuringMeetings || !isMeetingInProgress(tasks, now);
 
 // 定期監視関数
 export const startNotificationCheck = () => {
@@ -83,10 +74,15 @@ export const startNotificationCheck = () => {
             console.log(`[TaskNotification] Notifying task: ${task.title}`);
             
             if (window.electronAPI) {
-                window.electronAPI.triggerTimerNotification(text);
+                window.electronAPI.triggerTimerNotification(text, {
+                    notificationId: `task-reminder:${task.id}:${task.scheduledAt}`,
+                    speak: shouldSpeakTaskNotification(
+                        taskStore.muteNotificationsDuringMeetings,
+                        taskStore.tasks,
+                        now
+                    )
+                });
             }
-
-            await playNotificationVoice(text);
         }
     }, 10000); // 10秒に1回チェック
 };

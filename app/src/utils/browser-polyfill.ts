@@ -13,7 +13,7 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
         emotionChanged: [] as ((emotion: string) => void)[],
         chatToggled: [] as ((visible: boolean) => void)[],
         configUpdated: [] as ((config: any) => void)[],
-        timerTrigger: [] as ((memo: string) => void)[]
+        timerTrigger: [] as ((memo: string, options?: { notificationId?: string; speak?: boolean }) => void)[]
     };
 
     // ヘルパー: 設定データを localStorage から読み込み / 保存
@@ -648,10 +648,10 @@ if (typeof window !== 'undefined' && !window.electronAPI) {
                 callbacks.timerTrigger.forEach(cb => cb(memo));
             }, seconds * 1000);
         },
-        triggerTimerNotification: (memo: string) => {
-            callbacks.timerTrigger.forEach(cb => cb(memo));
+        triggerTimerNotification: (memo: string, options?: { notificationId?: string; speak?: boolean }) => {
+            callbacks.timerTrigger.forEach(cb => cb(memo, options));
         },
-        onTimerTrigger: (callback: (memo: string) => void) => {
+        onTimerTrigger: (callback: (memo: string, options?: { notificationId?: string; speak?: boolean }) => void) => {
             callbacks.timerTrigger.push(callback);
             return () => {
                 callbacks.timerTrigger = callbacks.timerTrigger.filter(cb => cb !== callback);

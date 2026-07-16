@@ -183,11 +183,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     startTimer: (seconds: number, memo: string) => ipcRenderer.send('start-timer', seconds, memo),
 
     // タイマー発火の通知をメインプロセスへ要求する
-    triggerTimerNotification: (memo: string) => ipcRenderer.send('trigger-timer-notification', memo),
+    triggerTimerNotification: (memo: string, options?: { notificationId?: string; speak?: boolean }) =>
+        ipcRenderer.send('trigger-timer-notification', memo, options),
 
     // タイマー満了イベントを購読する
-    onTimerTrigger: (callback: (memo: string) => void) => {
-        const listener = (_event: any, memo: string) => callback(memo);
+    onTimerTrigger: (callback: (memo: string, options?: { notificationId?: string; speak?: boolean }) => void) => {
+        const listener = (_event: any, memo: string, options?: { notificationId?: string; speak?: boolean }) => callback(memo, options);
         ipcRenderer.on('timer-trigger', listener);
         return () => {
             ipcRenderer.off('timer-trigger', listener);

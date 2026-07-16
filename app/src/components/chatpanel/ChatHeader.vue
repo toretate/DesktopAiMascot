@@ -144,7 +144,7 @@ onUnmounted(() => {
             <button class="icon-btn" @click="mascotStore.setSecretMode(!isSecretMode)" :class="{ 'active-secret-btn': isSecretMode, 'secret-mode': isSecretMode }" title="シークレットモード ON/OFF">
                 <i :class="isSecretMode ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </button>
-            <button class="icon-btn" @click="configStore.updateConfig({ useTts: !useTts }); configStore.saveConfig()" :class="{ 'active-btn': useTts, 'secret-mode': isSecretMode }" title="音声読み上げ (TTS) ON/OFF">
+            <button class="icon-btn" @click="configStore.updateConfig({ useTts: !useTts }); configStore.saveConfig()" :class="{ 'active-btn': useTts, 'secret-mode': isSecretMode }" title="アプリ全体の音声 ON/OFF">
                 <i :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
             </button>
             <!-- 画像生成・編集メニュー -->

@@ -38,9 +38,9 @@
 - `app/src/utils/task-notification.ts` の `startNotificationCheck()` が **10 秒間隔の `setInterval`**（`task-notification.ts:85`）で全タスクを走査。
 - 発火条件（`task-notification.ts:57-69`）: `scheduledAt` があり、未完了・未通知（`!notified`）で、`now` が「予定時刻 − `notificationMinutes` 分」〜「予定時刻 **+10 分**」の窓に入っているタスク。
 - ⚠️ **キャッチアップ打ち切り**: この「+10 分」カットオフのため、アプリが窓の間ずっと閉じていた予定は**一度も通知されない**。取りこぼしのバックフィル機構は無い。定期予定で長時間未起動だった場合の扱いは §5.3 の設計で考慮する。
-- ⚠️ **`notified` はリセットされない**: `updateTaskInDb`/store の `updateTask` は `scheduledAt` を変えても `notified` を戻さない。繰り返しで次回へ進める際は**必ず `notified=false` を明示リセット**すること（§5.1）。
-- 発火時（`task-notification.ts:71-84`）: **即座に `task.notified = true` にして保存**（二重通知防止）→ `window.electronAPI.triggerTimerNotification(text)` で OS 通知 + マスコット通知 → `playNotificationVoice` で TTS。
-- Electron 側（`app/electron/ipc-handlers/schedule-handler.ts`）は**通知の中継のみ**（`trigger-timer-notification` → `triggerTimerNotifications`）。スケジュール判定ロジックは持たない。
+- `scheduledAt` を変更した場合は、store / サーバーとも `notified=false` に戻し、変更後の予定を再通知可能にする。
+- 発火時は**即座に `task.notified = true` にして保存**し、`window.electronAPI.triggerTimerNotification` へ通知IDとTTS可否を渡します。OS通知・吹き出し・TTSの起点はこの経路へ一本化します。
+- Electron 側は同一通知IDを重複排除し、現在のウィンドウモードでマスコットを所有する1画面だけへ吹き出し・TTSイベントを配信します。
 - 通知の ON/OFF・何分前かは `enableNotification` / `notificationMinutes`（既定 5 分、store & tasks.json 両方に保持）。
 
 ### 2.3. 完了フロー

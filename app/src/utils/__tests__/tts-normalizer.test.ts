@@ -1,13 +1,10 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { normalizeTextForTts, createTtsNormalizer, stripResidualAsterisks } from '../tts-normalizer';
 import { filterDialogue } from '../dialogue-filter';
-import { playNotificationVoice } from '../task-notification';
 import ttsPostHandler from '../../server/api/tts.post';
 import { VoiceAiService } from '../../server/utils/voice-ai-service';
 import * as serverNormalizer from '../../server/utils/tts-normalizer';
 import * as h3 from 'h3';
-import { createPinia, setActivePinia } from 'pinia';
-import { useConfigStore } from '../../store/config';
 
 // h3 のモック
 vi.mock('h3', async () => {
@@ -26,16 +23,6 @@ vi.mock('../../server/utils/voice-ai-service', () => {
             synthesizeIrodori: vi.fn().mockResolvedValue('mock-audio-base64')
         }
     };
-});
-
-// window.electronAPI のモック
-const synthesizeVoicevoxMock = vi.fn().mockResolvedValue('mock-audio-base64');
-const synthesizeIrodoriMock = vi.fn().mockResolvedValue('mock-audio-base64');
-vi.stubGlobal('window', {
-    electronAPI: {
-        synthesizeVoicevox: synthesizeVoicevoxMock,
-        synthesizeIrodori: synthesizeIrodoriMock
-    }
 });
 
 describe('normalizeTextForTts のユニットテスト', () => {
@@ -251,10 +238,6 @@ describe('normalizeTextForTts のユニットテスト', () => {
 });
 
 describe('TTS正規化 統合・経路テスト', () => {
-    beforeEach(() => {
-        setActivePinia(createPinia());
-    });
-
     test('1. 経路1相当の結合テスト - filterDialogue と normalize, stripの適用順序の検証', () => {
         const text = '7/13 11:00 に **WakeUp Mtg** があります。 *手を振る*';
 
@@ -266,40 +249,6 @@ describe('TTS正規化 統合・経路テスト', () => {
 
         const finalSpeechNarrative = stripResidualAsterisks(normalized);
         expect(finalSpeechNarrative).toBe('7月13日 11時 に ウェイクアップ ミーティング があります。 手を振る');
-    });
-
-    test('2. 経路2相当のテスト - playNotificationVoice がテキストを正規化して音声合成を呼び出すこと', async () => {
-        // 本物の Pinia ストアに対して状態を流し込む
-        const configStore = useConfigStore();
-        configStore.selectedVoiceEngine = 'voicevox';
-        configStore.voicevoxSpeaker = 1;
-        configStore.voicevoxEndpoint = 'http://localhost:50021';
-        configStore.mascots = [
-            {
-                id: 'default',
-                name: 'テストマスコット',
-                avatar: '',
-                profile: '',
-                aiConfig: {
-                    chat: { engine: '', model: '', temperature: 0.7 },
-                    voice: { engine: 'voicevox', speaker_id: 1 },
-                    ttsDictionary: {
-                        'mtg': 'ミーティング'
-                    }
-                },
-                assets: { outfits: [], expressions: [], poses: [] }
-            }
-        ];
-        configStore.activeMascotId = 'default';
-
-        synthesizeVoicevoxMock.mockClear();
-        await playNotificationVoice('会議は 7/13 11:00 に Mtg。');
-        
-        expect(synthesizeVoicevoxMock).toHaveBeenCalledWith(
-            '会議は 7月13日 11時 に ミーティング。',
-            1,
-            'http://localhost:50021'
-        );
     });
 
     test('3. 経路4相当のテスト - tts.post API ハンドラがテキストを正規化して VoiceAiService を呼び出すこと', async () => {

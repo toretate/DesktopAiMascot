@@ -61,7 +61,8 @@ const {
     mascotBackgroundImageOpacity,
     mascotBackgroundImageFit,
     integratedMascotXRatio,
-    integratedMascotYRatio
+    integratedMascotYRatio,
+    useTts
 } = storeToRefs(configStore);
 
 const {
@@ -153,6 +154,10 @@ let balloonTimeoutId: NodeJS.Timeout | null = null;
 import { AudioPlaylist } from '../utils/AudioPlaylist';
 const playlist = new AudioPlaylist((speaking) => {
     mascotStore.setSpeaking(speaking);
+});
+
+watch(useTts, (enabled) => {
+    if (!enabled) playlist.stop();
 });
 
 const getMascotRgbaBackground = computed(() => {
@@ -1232,7 +1237,7 @@ onMounted(async () => {
         });
 
         // タイマー満了イベントの購読
-        unsubscribeTimer = window.electronAPI.onTimerTrigger(async (memo: string) => {
+        unsubscribeTimer = window.electronAPI.onTimerTrigger(async (memo: string, options) => {
             console.log('[MascotViewer] Timer triggered via IPC:', memo);
 
             // 表情を「surprised」に変更
@@ -1258,7 +1263,7 @@ onMounted(async () => {
             const irodoriModelName = activeMascot.value?.aiConfig?.voice?.irodori_model || irodoriModel.value || 'irodori-tts-500m-v3';
             const irodoriVoiceName = activeMascot.value?.aiConfig?.voice?.irodori_voice || irodoriVoice.value || 'default';
 
-            if (window.electronAPI) {
+            if (useTts.value && options?.speak !== false && window.electronAPI) {
                 try {
                     const dict = activeMascot.value?.aiConfig?.ttsDictionary;
                     const normalizedMemo = stripResidualAsterisks(normalizeTextForTts(memo, dict));

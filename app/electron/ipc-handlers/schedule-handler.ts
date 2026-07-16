@@ -1,19 +1,40 @@
 import { ipcMain, Notification } from 'electron';
 import { getMascotWindow } from '../window/mascot-window';
-import { getChatWindow } from '../window/chat-window';
+import { getIntegratedWindow } from '../window/integrated-window';
+import { getCompactWindow } from '../window/compact-window';
+
+interface TimerNotificationOptions {
+    notificationId?: string;
+    speak?: boolean;
+}
+
+const recentNotificationIds = new Map<string, number>();
+const NOTIFICATION_DEDUPLICATION_MS = 60_000;
 
 /**
- * タイマー通知のトリガー処理（OSの通知およびマスコットウィンドウ・チャットウィンドウへの配信）
+ * タイマー通知のトリガー処理（OS通知および現在のマスコット表示画面への配信）
  */
-function triggerTimerNotifications(memo: string) {
-    const mascotWin = getMascotWindow();
-    if (mascotWin && !mascotWin.isDestroyed()) {
-        mascotWin.webContents.send('timer-trigger', memo);
+function triggerTimerNotifications(memo: string, options: TimerNotificationOptions = {}) {
+    const now = Date.now();
+    if (options.notificationId) {
+        const lastTriggeredAt = recentNotificationIds.get(options.notificationId);
+        if (lastTriggeredAt !== undefined && now - lastTriggeredAt < NOTIFICATION_DEDUPLICATION_MS) {
+            console.log(`[Timer] Duplicate notification ignored: ${options.notificationId}`);
+            return;
+        }
+        recentNotificationIds.set(options.notificationId, now);
+        for (const [notificationId, triggeredAt] of recentNotificationIds) {
+            if (now - triggeredAt >= NOTIFICATION_DEDUPLICATION_MS) {
+                recentNotificationIds.delete(notificationId);
+            }
+        }
     }
 
-    const chatWin = getChatWindow();
-    if (chatWin && !chatWin.isDestroyed()) {
-        chatWin.webContents.send('timer-trigger', memo);
+    // TTSと吹き出しは、現在のウィンドウモードでマスコットを所有する1画面だけへ配信する。
+    const notificationWindow = [getMascotWindow(), getIntegratedWindow(), getCompactWindow()]
+        .find(window => window && !window.isDestroyed());
+    if (notificationWindow) {
+        notificationWindow.webContents.send('timer-trigger', memo, options);
     }
 
     if (Notification.isSupported()) {
@@ -42,8 +63,8 @@ export function registerScheduleHandlers() {
     });
 
     // タイマー発火の通知を要求する（サーバー側でのタイマー満了時など）
-    ipcMain.on('trigger-timer-notification', (event, memo: string) => {
+    ipcMain.on('trigger-timer-notification', (event, memo: string, options?: TimerNotificationOptions) => {
         console.log(`[Timer] Trigger timer notification requested. Memo: ${memo}`);
-        triggerTimerNotifications(memo);
+        triggerTimerNotifications(memo, options);
     });
 }

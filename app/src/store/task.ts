@@ -32,9 +32,12 @@ export interface Task {
     startedAt?: string;
     endedAt?: string;
     scheduledAt?: string;
+    scheduledEndAt?: string;
     notified?: boolean;
     memo?: string;
 }
+
+export const MEETING_CATEGORY_ID = 'meeting';
 
 export const useTaskStore = defineStore('task', () => {
     // 状態管理
@@ -47,6 +50,9 @@ export const useTaskStore = defineStore('task', () => {
     const notificationMinutes = ref<number>(5);
     // TODOでDONEにしてから実際に完了(COMPへ移動)するまでの猶予秒数
     const completionGraceSeconds = ref<number>(5);
+    // タスク詳細で所要時間を新規設定するときの既定値
+    const defaultDurationHours = ref<number>(1);
+    const muteNotificationsDuringMeetings = ref<boolean>(false);
     const isLoaded = ref(false);
 
     // LocalStorage および サーバーからデータをロード
@@ -88,12 +94,23 @@ export const useTaskStore = defineStore('task', () => {
                 const g = parseInt(savedGrace, 10);
                 completionGraceSeconds.value = isNaN(g) || g < 0 ? 5 : g;
             }
+            const savedDefaultDuration = localStorage.getItem('desktop-mascot-default-duration-hours');
+            if (savedDefaultDuration !== null) {
+                const duration = Number(savedDefaultDuration);
+                defaultDurationHours.value = Number.isFinite(duration) && duration > 0 ? duration : 1;
+            }
+            const savedMuteDuringMeetings = localStorage.getItem('desktop-mascot-mute-during-meetings');
+            if (savedMuteDuringMeetings !== null) {
+                muteNotificationsDuringMeetings.value = savedMuteDuringMeetings === 'true';
+            }
         } catch (error) {
             console.warn('LocalStorageからの初期タスク読み込みエラー:', error);
         }
 
         // 2. 次にサーバー（API）から最新データをロードする
         let recoveredFromLocal = false;
+        let addedMeetingCategory = false;
+        let migratedScheduledTimes = false;
         try {
             const res = await fetch('/api/tasks', { credentials: 'include' });
             if (res.ok) {
@@ -128,12 +145,21 @@ export const useTaskStore = defineStore('task', () => {
                     if (resJson.completionGraceSeconds !== undefined) {
                         completionGraceSeconds.value = resJson.completionGraceSeconds;
                     }
+                    if (resJson.defaultDurationHours !== undefined) {
+                        const duration = Number(resJson.defaultDurationHours);
+                        defaultDurationHours.value = Number.isFinite(duration) && duration > 0 ? duration : 1;
+                    }
+                    if (resJson.muteNotificationsDuringMeetings !== undefined) {
+                        muteNotificationsDuringMeetings.value = !!resJson.muteNotificationsDuringMeetings;
+                    }
                     // 同期のために LocalStorage にも書き込んでおく
                     localStorage.setItem('desktop-mascot-categories', JSON.stringify(categories.value));
                     localStorage.setItem('desktop-mascot-tasks', JSON.stringify(tasks.value));
                     localStorage.setItem('desktop-mascot-enable-notification', String(enableNotification.value));
                     localStorage.setItem('desktop-mascot-notification-minutes', String(notificationMinutes.value));
                     localStorage.setItem('desktop-mascot-completion-grace-seconds', String(completionGraceSeconds.value));
+                    localStorage.setItem('desktop-mascot-default-duration-hours', String(defaultDurationHours.value));
+                    localStorage.setItem('desktop-mascot-mute-during-meetings', String(muteNotificationsDuringMeetings.value));
                 }
             } else if (tasks.value.length > 0) {
                 // サーバーがエラー（tasks.json 破損時の 500 など）を返した場合もローカルを保持し、修復を試みる
@@ -147,15 +173,48 @@ export const useTaskStore = defineStore('task', () => {
             if (categories.value.length === 0) {
                 categories.value = [
                     { id: 'default', name: 'Work', order: 0 },
-                    { id: 'private', name: 'Private', order: 1 }
+                    { id: 'private', name: 'Private', order: 1 },
+                    { id: MEETING_CATEGORY_ID, name: '会議', order: 2 }
                 ];
             }
+            const meetingCategory = categories.value.find(category => category.id === MEETING_CATEGORY_ID);
+            if (meetingCategory) {
+                meetingCategory.name = '会議';
+            } else {
+                categories.value.push({
+                    id: MEETING_CATEGORY_ID,
+                    name: '会議',
+                    order: categories.value.length
+                });
+                addedMeetingCategory = true;
+            }
+            // 旧詳細画面で予定日時が実績フィールドへ保存された未着手タスクを移行する。
+            tasks.value.forEach(task => {
+                const isUnstartedTask = !task.completed && (task.status === 'todo' || !task.status);
+                if (isUnstartedTask && task.startedAt && task.endedAt && !task.scheduledEndAt) {
+                    task.scheduledAt = task.scheduledAt || task.startedAt;
+                    task.scheduledEndAt = task.endedAt;
+                    task.startedAt = undefined;
+                    task.endedAt = undefined;
+                    migratedScheduledTimes = true;
+                }
+
+                if (task.categoryId === MEETING_CATEGORY_ID && task.scheduledAt && !task.scheduledEndAt) {
+                    const startTime = new Date(task.scheduledAt).getTime();
+                    if (Number.isFinite(startTime)) {
+                        task.scheduledEndAt = new Date(
+                            startTime + defaultDurationHours.value * 3_600_000
+                        ).toISOString();
+                        migratedScheduledTimes = true;
+                    }
+                }
+            });
             if (!activeCategoryId.value && categories.value.length > 0) {
                 activeCategoryId.value = categories.value[0].id;
             }
             isLoaded.value = true;
             // サーバー側が空/欠落でローカルを復旧した場合、正しいデータをサーバーへ書き戻して修復する
-            if (recoveredFromLocal) {
+            if (recoveredFromLocal || addedMeetingCategory || migratedScheduledTimes) {
                 saveToLocalStorage();
             }
             // 監視タイマーの開始
@@ -175,6 +234,8 @@ export const useTaskStore = defineStore('task', () => {
             localStorage.setItem('desktop-mascot-show-task-widget', String(showTaskWidget.value));
             localStorage.setItem('desktop-mascot-enable-notification', String(enableNotification.value));
             localStorage.setItem('desktop-mascot-notification-minutes', String(notificationMinutes.value));
+            localStorage.setItem('desktop-mascot-default-duration-hours', String(defaultDurationHours.value));
+            localStorage.setItem('desktop-mascot-mute-during-meetings', String(muteNotificationsDuringMeetings.value));
 
             // サーバーへ同期保存 (非同期実行)
             fetch('/api/tasks', {
@@ -187,7 +248,9 @@ export const useTaskStore = defineStore('task', () => {
                     tasks: tasks.value,
                     enableNotification: enableNotification.value,
                     notificationMinutes: notificationMinutes.value,
-                    completionGraceSeconds: completionGraceSeconds.value
+                    completionGraceSeconds: completionGraceSeconds.value,
+                    defaultDurationHours: defaultDurationHours.value,
+                    muteNotificationsDuringMeetings: muteNotificationsDuringMeetings.value
                 }),
                 credentials: 'include'
             }).catch(err => {
@@ -208,7 +271,9 @@ export const useTaskStore = defineStore('task', () => {
             () => showTaskWidget.value,
             () => enableNotification.value,
             () => notificationMinutes.value,
-            () => completionGraceSeconds.value
+            () => completionGraceSeconds.value,
+            () => defaultDurationHours.value,
+            () => muteNotificationsDuringMeetings.value
         ],
         () => {
             saveToLocalStorage();
@@ -280,6 +345,7 @@ export const useTaskStore = defineStore('task', () => {
     };
 
     const updateCategory = (id: string, name: string) => {
+        if (id === MEETING_CATEGORY_ID) return;
         const cat = categories.value.find(c => c.id === id);
         if (cat) {
             cat.name = name;
@@ -287,6 +353,7 @@ export const useTaskStore = defineStore('task', () => {
     };
 
     const deleteCategory = (id: string) => {
+        if (id === MEETING_CATEGORY_ID) return;
         categories.value = categories.value.filter(c => c.id !== id);
         // カテゴリ削除に伴い、属するタスクも削除
         tasks.value = tasks.value.filter(t => t.categoryId !== id);
@@ -310,13 +377,24 @@ export const useTaskStore = defineStore('task', () => {
     };
 
     // --- タスク操作 ---
-    const addTask = (categoryId: string, title: string, priority: 'normal' | 'star' | 'thunder' = 'normal', scheduledAt?: string) => {
+    const addTask = (
+        categoryId: string,
+        title: string,
+        priority: 'normal' | 'star' | 'thunder' = 'normal',
+        scheduledAt?: string,
+        specifiedScheduledEndAt?: string
+    ) => {
         const id = 'task_' + Math.random().toString(36).substring(2, 11);
         let targetCategoryId = categoryId;
         if (categoryId === 'all') {
             targetCategoryId = categories.value[0]?.id || 'default';
         }
         const order = tasks.value.filter(t => t.categoryId === targetCategoryId).length;
+        const scheduledEndAt = specifiedScheduledEndAt || (
+            targetCategoryId === MEETING_CATEGORY_ID && scheduledAt
+                ? new Date(new Date(scheduledAt).getTime() + defaultDurationHours.value * 3_600_000).toISOString()
+                : undefined
+        );
         tasks.value.push({
             id,
             categoryId: targetCategoryId,
@@ -328,7 +406,8 @@ export const useTaskStore = defineStore('task', () => {
             order,
             createdAt: new Date().toISOString(),
             status: 'todo',
-            scheduledAt
+            scheduledAt,
+            scheduledEndAt
         });
     };
 
@@ -350,6 +429,26 @@ export const useTaskStore = defineStore('task', () => {
     const updateTask = (id: string, updates: Partial<Task>) => {
         const task = tasks.value.find(t => t.id === id);
         if (task) {
+            const hasScheduledAtUpdate = Object.prototype.hasOwnProperty.call(updates, 'scheduledAt');
+            const hasScheduledEndAtUpdate = Object.prototype.hasOwnProperty.call(updates, 'scheduledEndAt');
+            if (hasScheduledAtUpdate && updates.scheduledAt !== task.scheduledAt) {
+                task.notified = false;
+                if (!hasScheduledEndAtUpdate) {
+                    const oldStartTime = task.scheduledAt ? new Date(task.scheduledAt).getTime() : Number.NaN;
+                    const oldEndTime = task.scheduledEndAt ? new Date(task.scheduledEndAt).getTime() : Number.NaN;
+                    const newStartTime = updates.scheduledAt ? new Date(updates.scheduledAt).getTime() : Number.NaN;
+
+                    if (Number.isFinite(newStartTime) && Number.isFinite(oldStartTime) && Number.isFinite(oldEndTime)) {
+                        task.scheduledEndAt = new Date(newStartTime + oldEndTime - oldStartTime).toISOString();
+                    } else if (Number.isFinite(newStartTime) && task.categoryId === MEETING_CATEGORY_ID) {
+                        task.scheduledEndAt = new Date(
+                            newStartTime + defaultDurationHours.value * 3_600_000
+                        ).toISOString();
+                    } else if (!updates.scheduledAt) {
+                        task.scheduledEndAt = undefined;
+                    }
+                }
+            }
             Object.assign(task, updates);
         }
     };
@@ -578,7 +677,9 @@ export const useTaskStore = defineStore('task', () => {
                 e.key === 'desktop-mascot-active-category' ||
                 e.key === 'desktop-mascot-show-task-widget' ||
                 e.key === 'desktop-mascot-enable-notification' ||
-                e.key === 'desktop-mascot-notification-minutes'
+                e.key === 'desktop-mascot-notification-minutes' ||
+                e.key === 'desktop-mascot-default-duration-hours' ||
+                e.key === 'desktop-mascot-mute-during-meetings'
             ) {
                 console.log('[TaskStore] Detected storage change from another window, reloading...');
                 isLoaded.value = false;
@@ -596,6 +697,8 @@ export const useTaskStore = defineStore('task', () => {
         enableNotification,
         notificationMinutes,
         completionGraceSeconds,
+        defaultDurationHours,
+        muteNotificationsDuringMeetings,
         isLoaded,
         filteredTasks,
         timelineTasks,
