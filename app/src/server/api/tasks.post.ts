@@ -26,14 +26,27 @@ export default defineEventHandler(async (event) => {
         }
 
         const body = await readBody(event);
-        const { categories, tasks, enableNotification, notificationMinutes, completionGraceSeconds } = body;
+        const {
+            categories,
+            tasks,
+            enableNotification,
+            notificationMinutes,
+            completionGraceSeconds,
+            defaultDurationHours,
+            muteNotificationsDuringMeetings
+        } = body;
+        const parsedDefaultDurationHours = Number(defaultDurationHours);
 
         const dataToSave = {
             categories: categories || [],
             tasks: tasks || [],
             enableNotification: enableNotification !== undefined ? enableNotification : true,
             notificationMinutes: notificationMinutes !== undefined ? notificationMinutes : 5,
-            completionGraceSeconds: completionGraceSeconds !== undefined ? completionGraceSeconds : 5
+            completionGraceSeconds: completionGraceSeconds !== undefined ? completionGraceSeconds : 5,
+            defaultDurationHours: Number.isFinite(parsedDefaultDurationHours) && parsedDefaultDurationHours > 0
+                ? parsedDefaultDurationHours
+                : 1,
+            muteNotificationsDuringMeetings: !!muteNotificationsDuringMeetings
         };
 
         safeWriteFileSync(tasksPath, JSON.stringify(dataToSave, null, 4));

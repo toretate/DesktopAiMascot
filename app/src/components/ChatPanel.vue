@@ -89,6 +89,10 @@ const {
     useTts
 } = storeToRefs(configStore);
 
+watch(useTts, (enabled) => {
+    if (!enabled) playlist.stop();
+});
+
 const getRgbaBackground = computed(() => {
     const hex = chatBackgroundColor.value || '#ffffff';
     const opacity = chatOpacity.value !== undefined ? chatOpacity.value : 1.0;

@@ -70,6 +70,10 @@ export function useChatConnection(params: {
 
     const { isLoading: isAiResponding } = storeToRefs(mascotStore);
 
+    watch(useTts, (enabled) => {
+        if (!enabled) playlist.stop();
+    });
+
     let socket: WebSocket | null = null;
     const isWsConnected = ref(false);
     let pendingUserMessageId: number | null = null;

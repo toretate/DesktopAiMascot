@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { useDraggable } from 'vue-draggable-plus';
-import { useTaskStore, Task, SubTask } from '../store/task';
+import { useTaskStore, Task, SubTask, MEETING_CATEGORY_ID } from '../store/task';
 import { useConfigStore } from '../store/config';
 import { storeToRefs } from 'pinia';
 import Button from 'primevue/button';
@@ -24,6 +24,7 @@ const vFocus = {
 const showCategorySettings = ref(false); // インライン設定パネル表示トグル
 const newTaskTitle = ref('');
 const newTaskScheduledAt = ref<string | undefined>(undefined);
+const newTaskScheduledEndAt = ref<string | undefined>(undefined);
 const newSubTaskTitleMap = ref<Record<string, string>>({});
 
 // vue-draggable-plus用
@@ -526,9 +527,16 @@ const viewOptions = [
 const handleAddTask = () => {
     const title = newTaskTitle.value.trim();
     if (!title) return;
-    taskStore.addTask(taskStore.activeCategoryId, title, 'normal', newTaskScheduledAt.value);
+    taskStore.addTask(
+        taskStore.activeCategoryId,
+        title,
+        'normal',
+        newTaskScheduledAt.value,
+        taskStore.activeCategoryId === MEETING_CATEGORY_ID ? newTaskScheduledEndAt.value : undefined
+    );
     newTaskTitle.value = '';
     newTaskScheduledAt.value = undefined;
+    newTaskScheduledEndAt.value = undefined;
 };
 
 // サブタスク追加
@@ -751,22 +759,68 @@ const clockMode = ref<'hour' | 'minute'>('hour');
 const selectedHour24 = ref(12);
 const selectedMinuteVal = ref(0);
 const isDragging = ref(false);
+const meetingDateChoice = ref<'today' | 'tomorrow' | 'custom'>('today');
+const showMeetingCustomCalendar = ref(false);
+const calendarDurationHours = ref(1);
+const EDIT_START_CALENDAR_TARGET = '__edit_start__';
+const EDIT_END_CALENDAR_TARGET = '__edit_end__';
 
 const innerHourNumbers = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const outerHourNumbers = [0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 const minuteNumbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
+const isMeetingSchedulePicker = computed(() => {
+    if (!activeCalendarTaskId.value) return false;
+    if (activeCalendarTaskId.value === 'new_task') {
+        return taskStore.activeCategoryId === MEETING_CATEGORY_ID;
+    }
+    if (
+        activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET ||
+        activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET
+    ) {
+        return false;
+    }
+    return taskStore.tasks.find(task => task.id === activeCalendarTaskId.value)?.categoryId === MEETING_CATEGORY_ID;
+});
+
+const getDurationBetween = (startIso?: string, endIso?: string) => {
+    if (!startIso || !endIso) return taskStore.defaultDurationHours;
+    const duration = (new Date(endIso).getTime() - new Date(startIso).getTime()) / 3_600_000;
+    return Number.isFinite(duration) && duration > 0
+        ? Math.round(duration * 100) / 100
+        : taskStore.defaultDurationHours;
+};
+
+const getMeetingDateChoice = (date: Date) => {
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+    const tomorrowKey = `${tomorrow.getFullYear()}-${tomorrow.getMonth()}-${tomorrow.getDate()}`;
+    if (dateKey === todayKey) return 'today';
+    if (dateKey === tomorrowKey) return 'tomorrow';
+    return 'custom';
+};
+
 const openDatePicker = (taskId: string | 'new_task') => {
     activeCalendarTaskId.value = taskId;
     calendarStep.value = 'date';
     clockMode.value = 'hour';
+    showMeetingCustomCalendar.value = false;
     
     let scheduledAt: string | undefined = undefined;
     if (taskId === 'new_task') {
         scheduledAt = newTaskScheduledAt.value;
+        calendarDurationHours.value = getDurationBetween(newTaskScheduledAt.value, newTaskScheduledEndAt.value);
+    } else if (taskId === EDIT_START_CALENDAR_TARGET) {
+        scheduledAt = editForm.value.scheduledAt?.toISOString();
+    } else if (taskId === EDIT_END_CALENDAR_TARGET) {
+        scheduledAt = editForm.value.scheduledEndAt?.toISOString();
     } else {
         const task = taskStore.tasks.find(t => t.id === taskId);
         scheduledAt = task?.scheduledAt;
+        calendarDurationHours.value = getDurationBetween(task?.scheduledAt, task?.scheduledEndAt);
     }
     
     if (scheduledAt) {
@@ -774,6 +828,7 @@ const openDatePicker = (taskId: string | 'new_task') => {
         tempCalendarDate.value = d;
         selectedHour24.value = d.getHours();
         selectedMinuteVal.value = d.getMinutes();
+        meetingDateChoice.value = getMeetingDateChoice(d);
     } else {
         const d = new Date();
         d.setMinutes(d.getMinutes() >= 30 ? 30 : 0);
@@ -781,6 +836,7 @@ const openDatePicker = (taskId: string | 'new_task') => {
         tempCalendarDate.value = d;
         selectedHour24.value = d.getHours();
         selectedMinuteVal.value = d.getMinutes();
+        meetingDateChoice.value = 'today';
     }
 };
 
@@ -789,13 +845,39 @@ const onDateSelect = () => {
     clockMode.value = 'hour';
 };
 
+const selectMeetingDate = (choice: 'today' | 'tomorrow' | 'custom') => {
+    meetingDateChoice.value = choice;
+    if (choice === 'custom') {
+        showMeetingCustomCalendar.value = true;
+        return;
+    }
+
+    const selected = new Date();
+    if (choice === 'tomorrow') selected.setDate(selected.getDate() + 1);
+    selected.setHours(selectedHour24.value, selectedMinuteVal.value, 0, 0);
+    tempCalendarDate.value = selected;
+    onDateSelect();
+};
+
 const getActiveCalendarTaskTitle = () => {
     if (!activeCalendarTaskId.value) return '';
     if (activeCalendarTaskId.value === 'new_task') {
         return newTaskTitle.value.trim() || '新規タスク';
     }
+    if (
+        activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET ||
+        activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET
+    ) {
+        return editForm.value.title.trim() || '編集中のタスク';
+    }
     const task = taskStore.tasks.find(t => t.id === activeCalendarTaskId.value);
     return task ? task.title : '';
+};
+
+const getCalendarPanelTitle = () => {
+    if (activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET) return '開始日時の設定';
+    if (activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET) return '終了日時の設定';
+    return '予定日時の設定';
 };
 
 const saveFullscreenCalendarDate = () => {
@@ -804,11 +886,29 @@ const saveFullscreenCalendarDate = () => {
         targetDate.setHours(selectedHour24.value);
         targetDate.setMinutes(selectedMinuteVal.value);
         targetDate.setSeconds(0);
+        const meetingDurationHours = Number.isFinite(calendarDurationHours.value) && calendarDurationHours.value > 0
+            ? calendarDurationHours.value
+            : taskStore.defaultDurationHours;
         
         if (activeCalendarTaskId.value === 'new_task') {
             newTaskScheduledAt.value = targetDate.toISOString();
+            if (isMeetingSchedulePicker.value) {
+                newTaskScheduledEndAt.value = new Date(
+                    targetDate.getTime() + meetingDurationHours * 3_600_000
+                ).toISOString();
+            }
+        } else if (activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET) {
+            editForm.value.scheduledAt = targetDate;
+        } else if (activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET) {
+            editForm.value.scheduledEndAt = targetDate;
         } else {
-            taskStore.updateTask(activeCalendarTaskId.value, { scheduledAt: targetDate.toISOString() });
+            const updates: Partial<Task> = { scheduledAt: targetDate.toISOString() };
+            if (isMeetingSchedulePicker.value) {
+                updates.scheduledEndAt = new Date(
+                    targetDate.getTime() + meetingDurationHours * 3_600_000
+                ).toISOString();
+            }
+            taskStore.updateTask(activeCalendarTaskId.value, updates);
         }
     }
     activeCalendarTaskId.value = null;
@@ -818,8 +918,16 @@ const clearFullscreenCalendarDate = () => {
     if (activeCalendarTaskId.value) {
         if (activeCalendarTaskId.value === 'new_task') {
             newTaskScheduledAt.value = undefined;
+            newTaskScheduledEndAt.value = undefined;
+        } else if (activeCalendarTaskId.value === EDIT_START_CALENDAR_TARGET) {
+            editForm.value.scheduledAt = null;
+        } else if (activeCalendarTaskId.value === EDIT_END_CALENDAR_TARGET) {
+            editForm.value.scheduledEndAt = null;
         } else {
-            taskStore.updateTask(activeCalendarTaskId.value, { scheduledAt: undefined });
+            taskStore.updateTask(activeCalendarTaskId.value, {
+                scheduledAt: undefined,
+                ...(isMeetingSchedulePicker.value ? { scheduledEndAt: undefined } : {})
+            });
         }
     }
     activeCalendarTaskId.value = null;
@@ -960,9 +1068,28 @@ const editForm = ref<{
     title: string;
     memo: string;
     categoryId: string;
-    startedAt: Date | null;
-    endedAt: Date | null;
-}>({ title: '', memo: '', categoryId: '', startedAt: null, endedAt: null });
+    scheduledAt: Date | null;
+    durationHours: number;
+    scheduledEndAt: Date | null;
+    endMode: 'duration' | 'datetime';
+}>({
+    title: '',
+    memo: '',
+    categoryId: '',
+    scheduledAt: null,
+    durationHours: 1,
+    scheduledEndAt: null,
+    endMode: 'duration'
+});
+
+const getDurationHours = (task: Task) => {
+    if (!task.scheduledAt || !task.scheduledEndAt) return taskStore.defaultDurationHours;
+
+    const durationMs = new Date(task.scheduledEndAt).getTime() - new Date(task.scheduledAt).getTime();
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return taskStore.defaultDurationHours;
+
+    return Math.round((durationMs / 3_600_000) * 100) / 100;
+};
 
 const openTaskEditor = (task: Task) => {
     editingFullTaskId.value = task.id;
@@ -970,10 +1097,27 @@ const openTaskEditor = (task: Task) => {
         title: task.title || '',
         memo: task.memo || '',
         categoryId: task.categoryId || (taskStore.categories[0]?.id ?? ''),
-        startedAt: task.startedAt ? new Date(task.startedAt) : null,
-        endedAt: task.endedAt ? new Date(task.endedAt) : null
+        scheduledAt: task.scheduledAt ? new Date(task.scheduledAt) : null,
+        durationHours: getDurationHours(task),
+        scheduledEndAt: task.scheduledEndAt ? new Date(task.scheduledEndAt) : null,
+        endMode: 'duration'
     };
 };
+
+const setEditEndMode = (mode: 'duration' | 'datetime') => {
+    editForm.value.endMode = mode;
+    if (mode === 'datetime' && !editForm.value.scheduledEndAt && editForm.value.scheduledAt) {
+        editForm.value.scheduledEndAt = new Date(
+            editForm.value.scheduledAt.getTime() + editForm.value.durationHours * 3_600_000
+        );
+    }
+};
+
+const isTaskEditorTimeValid = computed(() => {
+    if (editForm.value.endMode !== 'datetime') return true;
+    if (!editForm.value.scheduledAt || !editForm.value.scheduledEndAt) return true;
+    return editForm.value.scheduledEndAt.getTime() > editForm.value.scheduledAt.getTime();
+});
 
 const closeTaskEditor = () => {
     editingFullTaskId.value = null;
@@ -983,12 +1127,20 @@ const saveTaskEditor = () => {
     if (!editingFullTaskId.value) return;
     const title = editForm.value.title.trim();
     if (!title) return; // タイトルは必須
+    const durationHours = Number.isFinite(editForm.value.durationHours) && editForm.value.durationHours > 0
+        ? editForm.value.durationHours
+        : taskStore.defaultDurationHours;
+    const scheduledEndAt = editForm.value.endMode === 'datetime'
+        ? editForm.value.scheduledEndAt
+        : editForm.value.scheduledAt
+            ? new Date(editForm.value.scheduledAt.getTime() + durationHours * 3_600_000)
+            : null;
     taskStore.updateTask(editingFullTaskId.value, {
         title,
         memo: editForm.value.memo,
         categoryId: editForm.value.categoryId,
-        startedAt: editForm.value.startedAt ? editForm.value.startedAt.toISOString() : undefined,
-        endedAt: editForm.value.endedAt ? editForm.value.endedAt.toISOString() : undefined
+        scheduledAt: editForm.value.scheduledAt ? editForm.value.scheduledAt.toISOString() : undefined,
+        scheduledEndAt: scheduledEndAt?.toISOString()
     });
     editingFullTaskId.value = null;
 };
@@ -1015,9 +1167,9 @@ const saveTaskEditor = () => {
             />
         </header>
 
-        <!-- 2. カスタムタブ列 ＋ タブ管理ボタン (TODO ビュー選択時のみ表示) -->
-        <div class="tab-navigation-bar" v-if="taskStore.currentView === 'todo' && !showCategorySettings">
-            <div class="category-tabs">
+        <!-- 2. カスタムタブ列 ＋ ウィジェット操作ボタン -->
+        <div class="tab-navigation-bar" v-if="!showCategorySettings">
+            <div v-if="taskStore.currentView === 'todo'" class="category-tabs">
                 <button
                     class="tab-btn"
                     :class="{ active: taskStore.activeCategoryId === 'all' }"
@@ -1035,7 +1187,7 @@ const saveTaskEditor = () => {
                     {{ cat.name }}
                 </button>
             </div>
-            <div class="tab-actions" style="display: flex; align-items: center; gap: 4px;">
+            <div class="tab-actions">
                 <Button
                     icon="pi pi-trash"
                     class="p-button-text tab-trash-btn"
@@ -1047,7 +1199,7 @@ const saveTaskEditor = () => {
                     icon="pi pi-cog"
                     class="p-button-text p-button-secondary tab-settings-btn"
                     @click="showCategorySettings = true"
-                    title="カテゴリ管理を開く"
+                    title="TODO Widgetの設定を開く"
                 />
             </div>
         </div>
@@ -1367,6 +1519,7 @@ const saveTaskEditor = () => {
                                 title="タスクを編集"
                             />
                             <Button
+                                v-if="showDeleteMode"
                                 icon="pi pi-trash"
                                 class="p-button-text p-button-danger p-button-sm task-delete-btn"
                                 @click.stop="taskStore.deleteTask(task.id)"
@@ -1423,6 +1576,7 @@ const saveTaskEditor = () => {
                                     <InputText 
                                         v-model="cat.name" 
                                         class="p-inputtext-sm cat-name-input"
+                                        :disabled="cat.id === MEETING_CATEGORY_ID"
                                         @blur="taskStore.updateCategory(cat.id, cat.name)"
                                         placeholder="カテゴリ名"
                                     />
@@ -1430,8 +1584,9 @@ const saveTaskEditor = () => {
                                 <Button 
                                     icon="pi pi-trash" 
                                     class="p-button-text p-button-danger p-button-sm delete-btn" 
+                                    :disabled="cat.id === MEETING_CATEGORY_ID"
                                     @click="handleDeleteCategory(cat.id)"
-                                    title="削除"
+                                    :title="cat.id === MEETING_CATEGORY_ID ? '会議は標準カテゴリのため削除できません' : '削除'"
                                 />
                             </div>
                             <div v-if="taskStore.categories.length === 0" class="empty-message">
@@ -1485,7 +1640,7 @@ const saveTaskEditor = () => {
                                     v-model="taskStore.enableNotification" 
                                     class="p-checkbox-input"
                                 />
-                                <span class="label-text">音声でお知らせする</span>
+                                <span class="label-text">予定を通知する</span>
                             </label>
                             <div class="minutes-input-row" v-if="taskStore.enableNotification">
                                 <InputText
@@ -1498,6 +1653,7 @@ const saveTaskEditor = () => {
                                 />
                                 <span class="minutes-text">分前にお知らせ</span>
                             </div>
+                            <span class="settings-help-text">通知音声はチャット上部の音声ボタンに連動します。</span>
                         </div>
                     </div>
 
@@ -1518,6 +1674,44 @@ const saveTaskEditor = () => {
                                 />
                                 <span class="minutes-text">秒後にCOMPへ移動 (0で即時)</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- 既定所要時間設定 -->
+                    <div class="settings-section">
+                        <span class="section-title">デフォルトの所要時間</span>
+                        <div class="notification-control">
+                            <div class="minutes-input-row" style="padding-left: 0;">
+                                <InputText
+                                    :model-value="String(taskStore.defaultDurationHours)"
+                                    @update:model-value="value => taskStore.defaultDurationHours = Math.max(0.25, Number(value) || 1)"
+                                    type="number"
+                                    min="0.25"
+                                    step="0.25"
+                                    class="p-inputtext-sm minutes-input"
+                                />
+                                <span class="minutes-text">時間</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- 会議中の音声通知設定 -->
+                    <div class="settings-section">
+                        <span class="section-title">会議中のお知らせ</span>
+                        <div class="notification-control">
+                            <label class="checkbox-label">
+                                <input
+                                    v-model="taskStore.muteNotificationsDuringMeetings"
+                                    type="checkbox"
+                                    class="p-checkbox-input"
+                                />
+                                <span class="label-text">会議中は音声をミュートする</span>
+                            </label>
+                            <span class="settings-help-text">OS通知と吹き出しは表示します。</span>
                         </div>
                     </div>
                 </div>
@@ -1566,7 +1760,7 @@ const saveTaskEditor = () => {
         <!-- 全面カレンダー設定パネル -->
         <div v-if="activeCalendarTaskId" class="fullscreen-calendar-panel">
             <div class="calendar-panel-header">
-                <span class="panel-title">予定日時の設定</span>
+                <span class="panel-title">{{ getCalendarPanelTitle() }}</span>
                 <Button 
                     icon="pi pi-times" 
                     class="p-button-text p-button-secondary close-btn" 
@@ -1581,7 +1775,52 @@ const saveTaskEditor = () => {
                 
                 <!-- STEP 1: 日付選択 -->
                 <div v-if="calendarStep === 'date'" class="datepicker-container">
-                    <DatePicker 
+                    <div v-if="isMeetingSchedulePicker && !showMeetingCustomCalendar" class="meeting-date-options">
+                        <button
+                            type="button"
+                            class="meeting-date-option"
+                            :class="{ active: meetingDateChoice === 'today' }"
+                            @click="selectMeetingDate('today')"
+                        >
+                            <i class="pi pi-calendar-clock"></i>
+                            <span>今日</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="meeting-date-option"
+                            :class="{ active: meetingDateChoice === 'tomorrow' }"
+                            @click="selectMeetingDate('tomorrow')"
+                        >
+                            <i class="pi pi-calendar-plus"></i>
+                            <span>明日</span>
+                        </button>
+                        <button
+                            type="button"
+                            class="meeting-date-option"
+                            :class="{ active: meetingDateChoice === 'custom' }"
+                            @click="selectMeetingDate('custom')"
+                        >
+                            <i class="pi pi-calendar"></i>
+                            <span>日付指定</span>
+                        </button>
+                    </div>
+                    <div v-else-if="isMeetingSchedulePicker" class="meeting-custom-date">
+                        <button
+                            type="button"
+                            class="back-to-date-btn"
+                            @click="showMeetingCustomCalendar = false"
+                        >
+                            <i class="pi pi-angle-left"></i> 選択肢へ戻る
+                        </button>
+                        <DatePicker
+                            v-model="tempCalendarDate"
+                            inline
+                            style="width: 100%; border: none;"
+                            @date-select="onDateSelect"
+                        />
+                    </div>
+                    <DatePicker
+                        v-else
                         v-model="tempCalendarDate"
                         inline
                         style="width: 100%; border: none;"
@@ -1662,6 +1901,20 @@ const saveTaskEditor = () => {
                             </div>
                         </div>
                     </div>
+                    <label v-if="isMeetingSchedulePicker" class="meeting-duration-control">
+                        <span class="meeting-duration-label">所要時間</span>
+                        <span class="duration-input-wrapper">
+                            <input
+                                v-model.number="calendarDurationHours"
+                                class="duration-input"
+                                type="number"
+                                min="0.25"
+                                step="0.25"
+                                inputmode="decimal"
+                            />
+                            <span class="duration-unit">時間</span>
+                        </span>
+                    </label>
                 </div>
             </div>
             <div class="calendar-panel-footer">
@@ -1708,30 +1961,66 @@ const saveTaskEditor = () => {
                         <option v-for="cat in taskStore.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                     </select>
                 </label>
-                <div class="edit-field-row">
+                <div class="edit-field-row edit-start-row">
                     <label class="edit-field">
-                        <span class="edit-label">開始</span>
-                        <DatePicker
-                            v-model="editForm.startedAt"
-                            showTime
-                            hourFormat="24"
-                            :stepMinute="5"
-                            showButtonBar
-                            placeholder="未設定"
-                        />
-                    </label>
-                    <label class="edit-field">
-                        <span class="edit-label">終了</span>
-                        <DatePicker
-                            v-model="editForm.endedAt"
-                            showTime
-                            hourFormat="24"
-                            :stepMinute="5"
-                            showButtonBar
-                            placeholder="未設定"
-                        />
+                        <span class="edit-label">開始日時</span>
+                        <button
+                            class="edit-date-picker-btn"
+                            type="button"
+                            @click="openDatePicker(EDIT_START_CALENDAR_TARGET)"
+                        >
+                            <i class="pi pi-calendar"></i>
+                            <span>{{ editForm.scheduledAt ? formatTime(editForm.scheduledAt.toISOString()) : '未設定' }}</span>
+                        </button>
                     </label>
                 </div>
+                <div class="end-mode-selector" role="group" aria-label="終了の設定方法">
+                    <button
+                        type="button"
+                        class="end-mode-btn"
+                        :class="{ active: editForm.endMode === 'duration' }"
+                        @click="setEditEndMode('duration')"
+                    >
+                        所要時間
+                    </button>
+                    <span class="end-mode-or">OR</span>
+                    <button
+                        type="button"
+                        class="end-mode-btn"
+                        :class="{ active: editForm.endMode === 'datetime' }"
+                        @click="setEditEndMode('datetime')"
+                    >
+                        終了日時
+                    </button>
+                </div>
+                <label v-if="editForm.endMode === 'duration'" class="edit-field">
+                    <span class="edit-label">所要時間</span>
+                    <span class="duration-input-wrapper">
+                        <input
+                            v-model.number="editForm.durationHours"
+                            class="duration-input"
+                            type="number"
+                            min="0.25"
+                            step="0.25"
+                            inputmode="decimal"
+                        />
+                        <span class="duration-unit">時間</span>
+                    </span>
+                </label>
+                <label v-else class="edit-field">
+                    <span class="edit-label">終了日時</span>
+                    <button
+                        class="edit-date-picker-btn"
+                        type="button"
+                        @click="openDatePicker(EDIT_END_CALENDAR_TARGET)"
+                    >
+                        <i class="pi pi-calendar"></i>
+                        <span>{{ editForm.scheduledEndAt ? formatTime(editForm.scheduledEndAt.toISOString()) : '未設定' }}</span>
+                    </button>
+                    <span v-if="!isTaskEditorTimeValid" class="edit-field-error">
+                        終了日時は開始日時より後に設定してください。
+                    </span>
+                </label>
             </div>
             <div class="calendar-panel-footer">
                 <Button
@@ -1742,7 +2031,7 @@ const saveTaskEditor = () => {
                 <Button
                     label="保存"
                     class="p-button-primary p-button-sm"
-                    :disabled="!editForm.title.trim()"
+                    :disabled="!editForm.title.trim() || !isTaskEditorTimeValid"
                     @click="saveTaskEditor"
                 />
             </div>
@@ -1832,6 +2121,13 @@ const saveTaskEditor = () => {
     gap: 4px;
     overflow-x: auto;
     scrollbar-width: none; /* Firefox */
+}
+
+.tab-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 /* クロックピッカーUI */
@@ -2080,6 +2376,73 @@ const saveTaskEditor = () => {
     height: 20px !important;
     line-height: 20px !important;
     font-size: 10px !important;
+}
+
+.meeting-date-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 16px 4px;
+}
+
+.meeting-date-option {
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #475569;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.meeting-date-option:hover,
+.meeting-date-option.active {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.meeting-date-option .pi {
+    font-size: 18px;
+}
+
+.meeting-custom-date {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.meeting-custom-date .back-to-date-btn {
+    align-self: flex-start;
+}
+
+.meeting-duration-control {
+    width: min(220px, 100%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #eff6ff;
+}
+
+.meeting-duration-label {
+    flex-shrink: 0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.meeting-duration-control .duration-input-wrapper {
+    min-width: 0;
 }
 
 .time-adjust-row {
@@ -2348,15 +2711,101 @@ const saveTaskEditor = () => {
     min-width: 0;
 }
 
-.edit-field-row :deep(.p-datepicker) {
-    width: 100%;
+.edit-start-row .edit-field {
+    max-width: 100%;
 }
 
-.edit-field-row :deep(.p-datepicker-input),
-.edit-field-row :deep(.p-inputtext) {
-    width: 100%;
+.end-mode-selector {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+}
+
+.end-mode-btn {
+    min-height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #64748b;
+    font-family: inherit;
     font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.end-mode-btn.active {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.end-mode-or {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.edit-field-error {
+    color: #dc2626;
+    font-size: 10px;
+}
+
+.edit-date-picker-btn {
+    width: 100%;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
     padding: 4px 8px;
+    background: #ffffff;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.edit-date-picker-btn:hover,
+.edit-date-picker-btn:focus-visible {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.edit-date-picker-btn .pi {
+    color: #3b82f6;
+}
+
+.duration-input-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.duration-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.duration-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.duration-unit {
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 12px;
 }
 
 /* サブタスクエリア */
@@ -3111,7 +3560,7 @@ const saveTaskEditor = () => {
     right: 0;
     bottom: 0;
     background: #ffffff;
-    z-index: 150;
+    z-index: 160;
     display: flex;
     flex-direction: column;
     animation: slideUp 0.2s ease-out;
@@ -3215,6 +3664,12 @@ const saveTaskEditor = () => {
     flex-direction: column;
     gap: 10px;
     margin-top: 8px;
+}
+
+.settings-help-text {
+    padding-left: 22px;
+    color: #94a3b8;
+    font-size: 10px;
 }
 
 .checkbox-label {

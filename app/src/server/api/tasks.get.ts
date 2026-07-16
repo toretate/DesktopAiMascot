@@ -24,7 +24,9 @@ export default defineEventHandler(async (event) => {
             tasks: [],
             enableNotification: true,
             notificationMinutes: 5,
-            completionGraceSeconds: 5
+            completionGraceSeconds: 5,
+            defaultDurationHours: 1,
+            muteNotificationsDuringMeetings: false
         };
 
         if (fs.existsSync(tasksPath)) {

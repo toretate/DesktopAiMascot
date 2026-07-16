@@ -57,8 +57,8 @@ export interface IElectronAPI {
     onChatToggled: (callback: (visible: boolean) => void) => () => void;
     onConfigUpdated: (callback: (config: any) => void) => () => void;
     startTimer: (seconds: number, memo: string) => void;
-    triggerTimerNotification: (memo: string) => void;
-    onTimerTrigger: (callback: (memo: string) => void) => () => void;
+    triggerTimerNotification: (memo: string, options?: { notificationId?: string; speak?: boolean }) => void;
+    onTimerTrigger: (callback: (memo: string, options?: { notificationId?: string; speak?: boolean }) => void) => () => void;
     getRadioPrompts: () => Promise<{ radioMode: string; activeTalk: string; exRadioMode?: string; exActiveTalk?: string }>;
     saveRadioPrompts: (prompts: { radioMode: string; activeTalk: string; exRadioMode?: string; exActiveTalk?: string }) => Promise<{ success: boolean; error?: string }>;
     forgeGenerateImage?: (params: any, host: string) => Promise<string>;

@@ -61,4 +61,16 @@ describe('tasks-service addTaskToDb - 冪等化ガード（履歴リプレイ対
         expect((second as any).duplicate).toBe(true);
         expect(readTasks().length).toBe(1);
     });
+
+    it('addTaskToDb - 標準の会議カテゴリが追加されること', () => {
+        const result = addTaskToDb(userId, {
+            title: '定例会議',
+            categoryId: 'meeting',
+            scheduledAt: '2026-07-16T10:00:00+09:00'
+        });
+
+        expect(result.task.categoryId).toBe('meeting');
+        expect(result.task.scheduledEndAt).toBe('2026-07-16T02:00:00.000Z');
+        expect(result.categories).toContainEqual({ id: 'meeting', name: '会議', order: 2 });
+    });
 });

@@ -12,6 +12,7 @@ export interface TaskData {
     priority?: 'normal' | 'star' | 'thunder';
     categoryId?: string;
     scheduledAt?: string;
+    scheduledEndAt?: string;
 }
 
 /**
@@ -28,11 +29,14 @@ export function addTaskToDb(userId: string, payload: TaskData) {
     let data = {
         categories: [
             { id: 'default', name: 'Work', order: 0 },
-            { id: 'private', name: 'Private', order: 1 }
+            { id: 'private', name: 'Private', order: 1 },
+            { id: 'meeting', name: '会議', order: 2 }
         ],
         tasks: [] as any[],
         enableNotification: true,
-        notificationMinutes: 5
+        notificationMinutes: 5,
+        defaultDurationHours: 1,
+        muteNotificationsDuringMeetings: false
     };
 
     if (fs.existsSync(tasksPath)) {
@@ -42,6 +46,13 @@ export function addTaskToDb(userId: string, payload: TaskData) {
         } catch (e) {
             console.error('[TasksDB] Failed to read tasks.json:', e);
         }
+    }
+
+    const meetingCategory = data.categories.find(category => category.id === 'meeting');
+    if (meetingCategory) {
+        meetingCategory.name = '会議';
+    } else {
+        data.categories.push({ id: 'meeting', name: '会議', order: data.categories.length });
     }
 
     // カテゴリIDの解決
@@ -89,6 +100,13 @@ export function addTaskToDb(userId: string, payload: TaskData) {
         createdAt: new Date().toISOString(),
         status: 'todo',
         scheduledAt: payload.scheduledAt,
+        scheduledEndAt: payload.scheduledEndAt || (
+            categoryId === 'meeting' && payload.scheduledAt
+                ? new Date(
+                    new Date(payload.scheduledAt).getTime() + data.defaultDurationHours * 3_600_000
+                ).toISOString()
+                : undefined
+        ),
         notified: false
     };
 
@@ -155,6 +173,7 @@ export function updateTaskInDb(
         priority?: 'normal' | 'star' | 'thunder';
         categoryId?: string;
         scheduledAt?: string | null;
+        scheduledEndAt?: string | null;
         completed?: boolean;
     }
 ) {
@@ -190,7 +209,25 @@ export function updateTaskInDb(
     }
 
     if (updates.scheduledAt !== undefined) {
+        const oldStartTime = task.scheduledAt ? new Date(task.scheduledAt).getTime() : Number.NaN;
+        const oldEndTime = task.scheduledEndAt ? new Date(task.scheduledEndAt).getTime() : Number.NaN;
         task.scheduledAt = updates.scheduledAt === null || updates.scheduledAt === '' ? undefined : updates.scheduledAt;
+        task.notified = false;
+        if (updates.scheduledEndAt === undefined) {
+            const newStartTime = task.scheduledAt ? new Date(task.scheduledAt).getTime() : Number.NaN;
+            if (Number.isFinite(newStartTime) && Number.isFinite(oldStartTime) && Number.isFinite(oldEndTime)) {
+                task.scheduledEndAt = new Date(newStartTime + oldEndTime - oldStartTime).toISOString();
+            } else if (Number.isFinite(newStartTime) && task.categoryId === 'meeting') {
+                task.scheduledEndAt = new Date(
+                    newStartTime + data.defaultDurationHours * 3_600_000
+                ).toISOString();
+            } else if (!task.scheduledAt) {
+                task.scheduledEndAt = undefined;
+            }
+        }
+    }
+    if (updates.scheduledEndAt !== undefined) {
+        task.scheduledEndAt = updates.scheduledEndAt === null || updates.scheduledEndAt === '' ? undefined : updates.scheduledEndAt;
     }
 
     if (updates.completed !== undefined) {
@@ -237,4 +274,3 @@ export function deleteTaskFromDb(userId: string, id: string) {
 
     safeWriteFileSync(tasksPath, JSON.stringify(data, null, 4));
 }
-
