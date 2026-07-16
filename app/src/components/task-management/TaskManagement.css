@@ -1,0 +1,1448 @@
+.task-widget-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    font-family: 'Outfit', 'Inter', sans-serif;
+    color: #1e293b;
+}
+
+/* 1. ヘッダー */
+.widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.widget-header:active {
+    cursor: grabbing;
+}
+
+.title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #475569;
+    margin: 0;
+}
+
+.progress-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 120px;
+}
+
+.completion-progress {
+    height: 6px !important;
+    background: #e2e8f0;
+    flex-grow: 1;
+}
+
+:deep(.p-progressbar-value) {
+    background: #3b82f6;
+}
+
+.progress-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    width: 28px;
+    text-align: right;
+}
+
+/* 2. カスタムタブ列 */
+.tab-navigation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 8px;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.category-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+.tab-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 時刻入力UI */
+.clockpicker-container {
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.back-to-date-btn {
+    align-self: center;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.back-to-date-btn:hover {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+/* カレンダーのコンパクト化（DatePicker） */
+.datepicker-container :deep(.p-datepicker) {
+    font-size: 11px !important;
+    padding: 2px !important;
+}
+
+.datepicker-container :deep(.p-datepicker-header) {
+    padding: 2px 4px !important;
+    font-size: 11px !important;
+}
+
+.datepicker-container :deep(.p-datepicker-title) {
+    line-height: 1.4 !important;
+}
+
+.datepicker-container :deep(.p-datepicker-prev-icon),
+.datepicker-container :deep(.p-datepicker-next-icon) {
+    width: 10px !important;
+    height: 10px !important;
+}
+
+.datepicker-container :deep(.p-datepicker-calendar th) {
+    padding: 2px !important;
+    font-size: 9px !important;
+}
+
+.datepicker-container :deep(.p-datepicker-calendar td) {
+    padding: 1px !important;
+}
+
+.datepicker-container :deep(.p-datepicker-calendar td > span) {
+    width: 20px !important;
+    height: 20px !important;
+    line-height: 20px !important;
+    font-size: 10px !important;
+}
+
+.meeting-date-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 16px 4px;
+}
+
+.meeting-date-option {
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #475569;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.meeting-date-option:hover,
+.meeting-date-option.active {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.meeting-date-option .pi {
+    font-size: 18px;
+}
+
+.meeting-custom-date {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.meeting-custom-date .back-to-date-btn {
+    align-self: flex-start;
+}
+
+.category-tabs::-webkit-scrollbar {
+    display: none; /* Safari, Chrome */
+}
+
+.tab-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    color: #1e293b;
+    background: #e2e8f0;
+}
+
+.tab-btn.active {
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.tab-settings-btn {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+}
+
+.tab-trash-btn {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    color: #94a3b8 !important;
+    transition: all 0.2s ease;
+}
+
+.tab-trash-btn:hover {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.tab-trash-btn.delete-mode-active {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+
+/* 3. メインスクロールエリア */
+.main-scroll-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 8px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.todo-view {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* タスクカード */
+.task-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    overflow: hidden;
+}
+
+.parent-task-row {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 6px;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #94a3b8;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.checkbox-wrapper {
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    color: #94a3b8;
+}
+
+.checkbox-wrapper i.checked {
+    color: #10b981;
+}
+
+.task-title {
+    flex-grow: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    user-select: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-title.completed {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+
+.steps-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.priority-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    color: #94a3b8;
+}
+
+.priority-btn.thunder {
+    color: #ef4444;
+}
+
+.priority-btn.star {
+    color: #eab308;
+}
+
+.expand-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 12px;
+    padding: 4px;
+}
+
+.task-delete-btn {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+}
+
+.task-edit-btn {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+}
+
+/* タスク編集パネル (ウィジェット全面) */
+.fullscreen-edit-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.2s ease-out;
+}
+
+.edit-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.edit-textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #334155;
+    background: #ffffff;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.edit-textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.edit-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #334155;
+    background: #ffffff;
+}
+
+.edit-select:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.edit-field-row {
+    display: flex;
+    gap: 12px;
+}
+
+.edit-field-row .edit-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.edit-start-row .edit-field {
+    max-width: 100%;
+}
+
+.end-mode-selector {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+}
+
+.end-mode-btn {
+    min-height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #64748b;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.end-mode-btn.active {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.end-mode-or {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.edit-field-error {
+    color: #dc2626;
+    font-size: 10px;
+}
+
+.edit-date-picker-btn {
+    width: 100%;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: #ffffff;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.edit-date-picker-btn:hover,
+.edit-date-picker-btn:focus-visible {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.edit-date-picker-btn .pi {
+    color: #3b82f6;
+}
+
+.duration-input-wrapper {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.duration-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #334155;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.duration-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.duration-unit {
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 12px;
+}
+
+/* サブタスクエリア */
+.subtasks-container {
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    padding: 8px 12px 12px 12px;
+}
+
+.subtask-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 20px;
+}
+
+.guide-line {
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 20px;
+    width: 1px;
+    background: #cbd5e1;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.status-badge {
+    font-size: 9px;
+    font-weight: 700;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 5px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.status-badge.todo {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.status-badge.doing {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.status-badge.done {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* DONE猶予中（クリックで取消） */
+.status-badge.pending-done {
+    background: #fef3c7;
+    color: #b45309;
+    animation: pendingPulse 1s ease-in-out infinite;
+}
+
+@keyframes pendingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.subtask-title {
+    flex-grow: 1;
+    font-size: 12px;
+    color: #475569;
+}
+
+.subtask-title.completed {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+
+.step-delete-btn {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+}
+
+.add-subtask-form {
+    display: flex;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+.subtask-input {
+    flex-grow: 1;
+    height: 26px;
+    font-size: 11px;
+    border-color: #e2e8f0;
+}
+
+.empty-state {
+    text-align: center;
+    color: #64748b;
+    padding: 24px 0;
+    font-size: 12px;
+}
+
+/* TIMELINEビュー */
+.timeline-view {
+    display: flex;
+    flex-direction: column;
+    padding-left: 6px;
+    flex-grow: 1;
+    justify-content: flex-end; /* 下詰め: 現在時刻に近いものを下部へ集める */
+}
+
+.timeline-item {
+    display: flex;
+    gap: 8px;
+    position: relative;
+}
+
+.timeline-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.timeline-marker i {
+    font-size: 12px;
+}
+
+.timeline-line {
+    width: 2px;
+    background: #e2e8f0;
+    flex-grow: 1;
+    min-height: 12px;
+}
+
+.timeline-item:last-child .timeline-line {
+    display: none;
+}
+
+/* 〇とタスクの間の予定(limit)時間 */
+.timeline-limit {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-top: 5px;
+    min-width: 52px;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: #3b82f6;
+    white-space: nowrap;
+}
+
+.timeline-limit .unscheduled {
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.timeline-limit.overdue {
+    color: #dc2626;
+}
+
+.timeline-content-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-bottom: 5px;
+    flex-grow: 1;
+    min-width: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.01);
+}
+
+/* 期限切れ（未完了で予定時刻超過）の警告表示 */
+.timeline-content-card.overdue {
+    background: #fef2f2;
+    border-color: #fecaca;
+    border-left: 3px solid #ef4444;
+}
+
+.timeline-content-card.completed {
+    background: #f8fafc;
+}
+
+.timeline-row-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.timeline-cat-badge {
+    font-size: 9px;
+    font-weight: 600;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.timeline-task-title {
+    flex-grow: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.timeline-task-title.completed {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+
+.timeline-marker i.overdue-icon {
+    color: #ef4444;
+}
+
+/* COMPビュー (完了済み一覧) */
+.completed-date-block {
+    margin-bottom: 12px;
+}
+
+.completed-date-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background-color: #f1f5f9;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.completed-date-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.completed-date-count {
+    font-size: 10px;
+    color: #64748b;
+    background-color: #e2e8f0;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.completed-view {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.completed-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 5px 8px;
+}
+
+.completed-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.completed-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-decoration: line-through;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.completed-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.completed-date {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* 4. ビュー切り替えタブ */
+.view-toggle-bar {
+    display: flex;
+    justify-content: center;
+    padding: 3px 12px;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
+}
+
+.view-selector {
+    transform: scale(0.8);
+}
+
+:deep(.p-selectbutton .p-button) {
+    font-size: 11px;
+    padding: 4px 16px;
+}
+
+/* 5. 最下部固定フォーム */
+.widget-footer-form {
+    display: flex;
+    padding: 8px;
+    gap: 8px;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+}
+
+.task-input-field {
+    border-color: #cbd5e1;
+    height: 30px;
+    font-size: 12px;
+}
+
+.task-input-field:focus {
+    border-color: #3b82f6;
+}
+
+.add-task-btn {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+
+.add-task-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.widget-close-btn {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+}
+
+/* リサイズハンドル */
+.resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 9999;
+}
+.resize-handle.right {
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: calc(100% - 10px);
+    cursor: e-resize;
+}
+.resize-handle.bottom {
+    bottom: 0;
+    left: 0;
+    width: calc(100% - 10px);
+    height: 6px;
+    cursor: s-resize;
+}
+.resize-handle.corner {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: se-resize;
+}
+
+/* インプレース編集インプット */
+.edit-title-input {
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+    height: 24px !important;
+    border-color: #3b82f6 !important;
+}
+
+/* インライン設定パネル */
+.inline-settings-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.settings-header .back-btn {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    height: 28px !important;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.category-list {
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 8px;
+    gap: 12px;
+}
+
+.cat-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1;
+}
+
+.order-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.move-btn {
+    width: 18px !important;
+    height: 18px !important;
+    padding: 0 !important;
+}
+
+.cat-name-input {
+    flex-grow: 1;
+    border-color: #cbd5e1;
+    background: #ffffff;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    height: 28px !important;
+}
+
+.cat-name-input:focus {
+    border-color: #3b82f6;
+}
+
+.delete-btn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+}
+
+.empty-message {
+    text-align: center;
+    color: #64748b;
+    padding: 12px 0;
+    font-size: 12px;
+}
+
+.add-category-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.add-btn {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #ffffff;
+    padding: 4px 12px !important;
+    height: 28px !important;
+}
+
+.add-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 4px 0;
+}
+
+.opacity-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.opacity-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    width: 36px;
+    text-align: right;
+}
+
+.opacity-slider {
+    flex-grow: 1;
+}
+
+/* 開始・終了・カレンダー関連 */
+.action-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 12px;
+    color: #64748b;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    width: 20px;
+    height: 20px;
+}
+
+.action-icon-btn:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.start-task-btn {
+    color: #10b981; /* 緑 */
+}
+.start-task-btn:hover {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.complete-task-btn {
+    color: #ef4444; /* 赤 */
+}
+.complete-task-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.calendar-set-btn {
+    color: #3b82f6; /* 青 */
+}
+.calendar-set-btn:hover {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+/* 進行中のタスクスタイル */
+.task-card.status-doing {
+    border-left: 3px solid #f59e0b; /* オレンジ色の左枠線 */
+    background: #fffbeb; /* 薄いオレンジの背景 */
+}
+
+/* 期限切れタスクのスタイル（警告色） */
+.task-card.overdue {
+    border-left: 3px solid #ef4444; /* 赤色の左枠線 */
+    background: #fef2f2; /* 薄い赤の背景 */
+    border-color: #fecaca;
+}
+
+.doing-badge-pill {
+    font-size: 9px;
+    font-weight: 600;
+    color: #d97706;
+    background: #fef3c7;
+    padding: 2px 5px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    border: 1px solid #fde68a;
+}
+
+/* 予定日時行 */
+.task-schedule-row {
+    padding: 2px 12px 6px 36px;
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+}
+
+.scheduled-display {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #3b82f6;
+    background: #eff6ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    border: 1px dashed #bfdbfe;
+}
+
+.scheduled-display:hover {
+    background: #dbeafe;
+}
+
+.icon-cal {
+    font-size: 10px;
+}
+
+.date-clear-btn {
+    width: 14px !important;
+    height: 14px !important;
+    padding: 0 !important;
+    font-size: 8px !important;
+}
+
+.scheduled-picker-wrapper {
+    width: 100%;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker) {
+    font-size: 11px;
+    padding: 4px;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-header) {
+    padding: 4px;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-title) {
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-calendar-container) {
+    padding: 0;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-calendar) {
+    font-size: 10px;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-day) {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    padding: 0;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-time-picker) {
+    padding: 4px 0 0 0;
+    gap: 2px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-time-picker button) {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+    padding: 0;
+}
+
+.scheduled-picker-wrapper :deep(.p-datepicker-time-picker span) {
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.datetime-picker-input {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: #334155;
+    background: #ffffff;
+    width: 170px;
+    height: 24px;
+}
+
+.datetime-picker-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+/* ネスト「子に追加」オーバーレイ */
+.task-card {
+    position: relative;
+}
+.nest-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.9); /* PrimeVue ブルー */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 8px;
+    animation: fadeInNest 0.15s ease-out;
+    pointer-events: none;
+}
+.nest-overlay-text {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+}
+/* 全面カレンダー設定パネル */
+.fullscreen-calendar-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 160;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.calendar-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.calendar-panel-header .panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.calendar-panel-header .close-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+}
+
+.calendar-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.task-title-summary {
+    background: #f8fafc;
+    border-left: 3px solid #3b82f6;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    flex-shrink: 0;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.task-title-summary .label {
+    color: #64748b;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.task-title-summary .task-name {
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.datepicker-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+/* 全面時もコンパクトに収まるようにスタイリング */
+.datepicker-container :deep(.p-datepicker) {
+    border: none;
+    width: 100%;
+}
+
+.datepicker-container :deep(.p-datepicker-calendar-container) {
+    padding: 0;
+}
+
+.datepicker-container :deep(.p-datepicker-time-picker) {
+    border-top: 1px solid #f1f5f9;
+    padding: 8px 0 0 0;
+}
+
+.calendar-panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc;
+}
+
+.notification-control {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.settings-help-text {
+    padding-left: 22px;
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    user-select: none;
+}
+
+.p-checkbox-input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.minutes-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 24px;
+}
+
+.minutes-input {
+    width: 60px !important;
+    text-align: center;
+    padding: 4px 8px !important;
+}
+
+.minutes-text {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
