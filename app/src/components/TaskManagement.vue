@@ -6,19 +6,16 @@ import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
 import SelectButton from 'primevue/selectbutton';
-import Slider from 'primevue/slider';
 import { useConfigStore } from '../store/config';
-import { MEETING_CATEGORY_ID, useTaskStore, type SubTask, type Task } from '../store/task';
+import { useTaskStore, type SubTask, type Task } from '../store/task';
 import CircularClockPicker from './task-management/CircularClockPicker.vue';
 import DayTimelinePicker from './task-management/DayTimelinePicker.vue';
+import TaskEditorPanel from './task-management/TaskEditorPanel.vue';
+import TaskSettingsPanel from './task-management/TaskSettingsPanel.vue';
 import { useTaskCompletionGrace } from './task-management/composables/useTaskCompletionGrace';
 import { useTaskEditor } from './task-management/composables/useTaskEditor';
 import { useTaskInlineEdit } from './task-management/composables/useTaskInlineEdit';
-import {
-    EDIT_END_CALENDAR_TARGET,
-    EDIT_START_CALENDAR_TARGET,
-    useTaskScheduleEditor
-} from './task-management/composables/useTaskScheduleEditor';
+import { useTaskScheduleEditor } from './task-management/composables/useTaskScheduleEditor';
 import { useTaskTreeDrag } from './task-management/composables/useTaskTreeDrag';
 import { useTaskWidgetWindow } from './task-management/composables/useTaskWidgetWindow';
 import {
@@ -42,7 +39,6 @@ const newTaskTitle = ref('');
 const newTaskScheduledAt = ref<string>();
 const newTaskScheduledEndAt = ref<string>();
 const newSubTaskTitleMap = ref<Record<string, string>>({});
-const newCategoryName = ref('');
 const showDeleteMode = ref(false);
 
 const {
@@ -139,38 +135,6 @@ const viewOptions = [
     { label: 'TIMELINE', value: 'timeline' },
     { label: 'COMP', value: 'completed' }
 ];
-
-const handleAddCategory = () => {
-    const name = newCategoryName.value.trim();
-    if (!name) return;
-    taskStore.addCategory(name);
-    newCategoryName.value = '';
-};
-
-const handleDeleteCategory = (id: string) => {
-    if (confirm('このカテゴリを削除しますか？配下のタスクもすべて削除されます。')) {
-        taskStore.deleteCategory(id);
-    }
-};
-
-const moveUp = (index: number) => {
-    if (index === 0) return;
-    const categories = [...taskStore.categories];
-    [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
-    taskStore.updateCategoriesOrder(categories);
-};
-
-const moveDown = (index: number) => {
-    if (index === taskStore.categories.length - 1) return;
-    const categories = [...taskStore.categories];
-    [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
-    taskStore.updateCategoriesOrder(categories);
-};
-
-const closeSettingsPanel = () => {
-    showCategorySettings.value = false;
-    configStore.saveConfig();
-};
 
 const handleAddTask = () => {
     const title = newTaskTitle.value.trim();
@@ -609,187 +573,10 @@ const getCategoryName = (categoryId: string) => {
             </div>
             </div>
 
-            <!-- (C) インライン設定パネル -->
-            <div v-show="showCategorySettings" class="inline-settings-panel">
-                <div class="settings-header">
-                    <Button 
-                        icon="pi pi-arrow-left" 
-                        class="p-button-text p-button-secondary p-button-sm back-btn" 
-                        @click="closeSettingsPanel" 
-                        label="戻る" 
-                    />
-                </div>
-
-                <div class="settings-content">
-                    <!-- カテゴリ管理 -->
-                    <div class="settings-section">
-                        <span class="section-title">カテゴリの管理</span>
-                        <div class="category-list">
-                            <div 
-                                v-for="(cat, idx) in taskStore.categories" 
-                                :key="cat.id" 
-                                class="category-item"
-                            >
-                                <div class="cat-left">
-                                    <div class="order-buttons">
-                                        <Button 
-                                            icon="pi pi-chevron-up" 
-                                            class="p-button-text p-button-sm p-button-secondary move-btn" 
-                                            :disabled="idx === 0"
-                                            @click="moveUp(idx)"
-                                            title="上へ移動"
-                                        />
-                                        <Button 
-                                            icon="pi pi-chevron-down" 
-                                            class="p-button-text p-button-sm p-button-secondary move-btn" 
-                                            :disabled="idx === taskStore.categories.length - 1"
-                                            @click="moveDown(idx)"
-                                            title="下へ移動"
-                                        />
-                                    </div>
-                                    <InputText 
-                                        v-model="cat.name" 
-                                        class="p-inputtext-sm cat-name-input"
-                                        :disabled="cat.id === MEETING_CATEGORY_ID"
-                                        @blur="taskStore.updateCategory(cat.id, cat.name)"
-                                        placeholder="カテゴリ名"
-                                    />
-                                </div>
-                                <Button 
-                                    icon="pi pi-trash" 
-                                    class="p-button-text p-button-danger p-button-sm delete-btn" 
-                                    :disabled="cat.id === MEETING_CATEGORY_ID"
-                                    @click="handleDeleteCategory(cat.id)"
-                                    :title="cat.id === MEETING_CATEGORY_ID ? '会議は標準カテゴリのため削除できません' : '削除'"
-                                />
-                            </div>
-                            <div v-if="taskStore.categories.length === 0" class="empty-message">
-                                カテゴリが登録されていません。
-                            </div>
-                        </div>
-
-                        <!-- カテゴリ追加 -->
-                        <div class="add-category-form">
-                            <InputText 
-                                v-model="newCategoryName" 
-                                placeholder="カテゴリを追加..."
-                                class="p-inputtext-sm flex-grow-1"
-                                @keyup.enter="handleAddCategory"
-                            />
-                            <Button 
-                                icon="pi pi-plus" 
-                                class="p-button-sm add-btn"
-                                @click="handleAddCategory"
-                                :disabled="!newCategoryName.trim()"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <!-- 不透明度設定 -->
-                    <div class="settings-section">
-                        <span class="section-title">不透明度 (透明度)</span>
-                        <div class="opacity-control">
-                            <span class="opacity-value">{{ Math.round(configStore.taskOpacity * 100) }}%</span>
-                            <Slider 
-                                v-model="configStore.taskOpacity" 
-                                :min="0.1" 
-                                :max="1.0" 
-                                :step="0.05"
-                                class="opacity-slider"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <!-- お知らせ設定 -->
-                    <div class="settings-section">
-                        <span class="section-title">予定のお知らせ</span>
-                        <div class="notification-control">
-                            <label class="checkbox-label">
-                                <input 
-                                    type="checkbox" 
-                                    v-model="taskStore.enableNotification" 
-                                    class="p-checkbox-input"
-                                />
-                                <span class="label-text">予定を通知する</span>
-                            </label>
-                            <div class="minutes-input-row" v-if="taskStore.enableNotification">
-                                <InputText
-                                    :model-value="String(taskStore.notificationMinutes)"
-                                    @update:model-value="value => taskStore.notificationMinutes = Number(value)"
-                                    type="number"
-                                    min="0"
-                                    max="60"
-                                    class="p-inputtext-sm minutes-input"
-                                />
-                                <span class="minutes-text">分前にお知らせ</span>
-                            </div>
-                            <span class="settings-help-text">通知音声はチャット上部の音声ボタンに連動します。</span>
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <!-- DONE猶予設定 -->
-                    <div class="settings-section">
-                        <span class="section-title">完了(DONE)の猶予</span>
-                        <div class="notification-control">
-                            <div class="minutes-input-row" style="padding-left: 0;">
-                                <InputText
-                                    :model-value="String(taskStore.completionGraceSeconds)"
-                                    @update:model-value="value => taskStore.completionGraceSeconds = Number(value)"
-                                    type="number"
-                                    min="0"
-                                    max="120"
-                                    class="p-inputtext-sm minutes-input"
-                                />
-                                <span class="minutes-text">秒後にCOMPへ移動 (0で即時)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <!-- 既定所要時間設定 -->
-                    <div class="settings-section">
-                        <span class="section-title">デフォルトの所要時間</span>
-                        <div class="notification-control">
-                            <div class="minutes-input-row" style="padding-left: 0;">
-                                <InputText
-                                    :model-value="String(taskStore.defaultDurationHours)"
-                                    @update:model-value="value => taskStore.defaultDurationHours = Math.max(0.25, Number(value) || 1)"
-                                    type="number"
-                                    min="0.25"
-                                    step="0.25"
-                                    class="p-inputtext-sm minutes-input"
-                                />
-                                <span class="minutes-text">時間</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <!-- 会議中の音声通知設定 -->
-                    <div class="settings-section">
-                        <span class="section-title">会議中のお知らせ</span>
-                        <div class="notification-control">
-                            <label class="checkbox-label">
-                                <input
-                                    v-model="taskStore.muteNotificationsDuringMeetings"
-                                    type="checkbox"
-                                    class="p-checkbox-input"
-                                />
-                                <span class="label-text">会議中は音声をミュートする</span>
-                            </label>
-                            <span class="settings-help-text">OS通知と吹き出しは表示します。</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <TaskSettingsPanel
+                v-show="showCategorySettings"
+                @close="showCategorySettings = false"
+            />
         </main>
 
         <!-- 4. ビュー切り替えタブ (TODO / TIMELINE) -->
@@ -958,106 +745,15 @@ const getCategoryName = (categoryId: string) => {
             </div>
         </div>
 
-        <!-- タスク編集パネル (ウィジェット全面) -->
-        <div v-if="editingFullTaskId" class="fullscreen-edit-panel">
-            <div class="calendar-panel-header">
-                <span class="panel-title">タスクの編集</span>
-                <Button
-                    icon="pi pi-times"
-                    class="p-button-text p-button-secondary close-btn"
-                    @click="closeTaskEditor"
-                />
-            </div>
-            <div class="edit-panel-content">
-                <label class="edit-field">
-                    <span class="edit-label">タイトル</span>
-                    <InputText v-model="editForm.title" class="p-inputtext-sm" placeholder="タイトル" />
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">メモ</span>
-                    <textarea v-model="editForm.memo" class="edit-textarea" rows="4" placeholder="メモ"></textarea>
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">カテゴリ</span>
-                    <select v-model="editForm.categoryId" class="edit-select">
-                        <option v-for="cat in taskStore.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                    </select>
-                </label>
-                <div class="edit-field-row edit-start-row">
-                    <label class="edit-field">
-                        <span class="edit-label">開始日時</span>
-                        <button
-                            class="edit-date-picker-btn"
-                            type="button"
-                            @click="openDatePicker(EDIT_START_CALENDAR_TARGET)"
-                        >
-                            <i class="pi pi-calendar"></i>
-                            <span>{{ editForm.scheduledAt ? formatTime(editForm.scheduledAt.toISOString()) : '未設定' }}</span>
-                        </button>
-                    </label>
-                </div>
-                <div class="end-mode-selector" role="group" aria-label="終了の設定方法">
-                    <button
-                        type="button"
-                        class="end-mode-btn"
-                        :class="{ active: editForm.endMode === 'duration' }"
-                        @click="setEditEndMode('duration')"
-                    >
-                        所要時間
-                    </button>
-                    <span class="end-mode-or">OR</span>
-                    <button
-                        type="button"
-                        class="end-mode-btn"
-                        :class="{ active: editForm.endMode === 'datetime' }"
-                        @click="setEditEndMode('datetime')"
-                    >
-                        終了日時
-                    </button>
-                </div>
-                <label v-if="editForm.endMode === 'duration'" class="edit-field">
-                    <span class="edit-label">所要時間</span>
-                    <span class="duration-input-wrapper">
-                        <input
-                            v-model.number="editForm.durationHours"
-                            class="duration-input"
-                            type="number"
-                            min="0.25"
-                            step="0.25"
-                            inputmode="decimal"
-                        />
-                        <span class="duration-unit">時間</span>
-                    </span>
-                </label>
-                <label v-else class="edit-field">
-                    <span class="edit-label">終了日時</span>
-                    <button
-                        class="edit-date-picker-btn"
-                        type="button"
-                        @click="openDatePicker(EDIT_END_CALENDAR_TARGET)"
-                    >
-                        <i class="pi pi-calendar"></i>
-                        <span>{{ editForm.scheduledEndAt ? formatTime(editForm.scheduledEndAt.toISOString()) : '未設定' }}</span>
-                    </button>
-                    <span v-if="!isTaskEditorTimeValid" class="edit-field-error">
-                        終了日時は開始日時より後に設定してください。
-                    </span>
-                </label>
-            </div>
-            <div class="calendar-panel-footer">
-                <Button
-                    label="キャンセル"
-                    class="p-button-outlined p-button-secondary p-button-sm"
-                    @click="closeTaskEditor"
-                />
-                <Button
-                    label="保存"
-                    class="p-button-primary p-button-sm"
-                    :disabled="!editForm.title.trim() || !isTaskEditorTimeValid"
-                    @click="saveTaskEditor"
-                />
-            </div>
-        </div>
+        <TaskEditorPanel
+            v-if="editingFullTaskId"
+            :edit-form="editForm"
+            :time-valid="isTaskEditorTimeValid"
+            @close="closeTaskEditor"
+            @save="saveTaskEditor"
+            @open-date-picker="openDatePicker"
+            @set-end-mode="setEditEndMode"
+        />
 
         <!-- リサイズ用ハンドル -->
         <div class="resize-handle right" @mousedown="initResize($event, 'right')"></div>
