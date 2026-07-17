@@ -2,20 +2,17 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import ProgressBar from 'primevue/progressbar';
 import SelectButton from 'primevue/selectbutton';
 import { useConfigStore } from '../store/config';
 import { useTaskStore, type SubTask, type Task } from '../store/task';
-import CircularClockPicker from './task-management/CircularClockPicker.vue';
-import DayTimelinePicker from './task-management/DayTimelinePicker.vue';
 import TaskEditorPanel from './task-management/TaskEditorPanel.vue';
+import TaskSchedulePanel from './task-management/TaskSchedulePanel.vue';
 import TaskSettingsPanel from './task-management/TaskSettingsPanel.vue';
 import { useTaskCompletionGrace } from './task-management/composables/useTaskCompletionGrace';
 import { useTaskEditor } from './task-management/composables/useTaskEditor';
 import { useTaskInlineEdit } from './task-management/composables/useTaskInlineEdit';
-import { useTaskScheduleEditor } from './task-management/composables/useTaskScheduleEditor';
 import { useTaskTreeDrag } from './task-management/composables/useTaskTreeDrag';
 import { useTaskWidgetWindow } from './task-management/composables/useTaskWidgetWindow';
 import {
@@ -90,31 +87,10 @@ const {
     saveTaskEditor
 } = useTaskEditor(taskStore);
 
-const {
-    activeCalendarTaskId,
-    tempCalendarDate,
-    calendarStep,
-    selectedHour24,
-    selectedMinuteVal,
-    timelineStartMinute,
-    timelineEndMinute,
-    meetingDateChoice,
-    showMeetingCustomCalendar,
-    isSingleTimePicker,
-    isMeetingSchedulePicker,
-    openDatePicker,
-    onDateSelect,
-    selectMeetingDate,
-    getActiveCalendarTaskTitle,
-    getCalendarPanelTitle,
-    saveFullscreenCalendarDate,
-    clearFullscreenCalendarDate
-} = useTaskScheduleEditor(taskStore, {
-    newTaskTitle,
-    newTaskScheduledAt,
-    newTaskScheduledEndAt,
-    editForm
-});
+const schedulePanelRef = ref<InstanceType<typeof TaskSchedulePanel> | null>(null);
+const openDatePicker = (taskId: string | 'new_task') => {
+    schedulePanelRef.value?.openDatePicker(taskId);
+};
 
 const nowTimestamp = ref(Date.now());
 let nowTimer: ReturnType<typeof setInterval> | null = null;
@@ -618,132 +594,13 @@ const getCategoryName = (categoryId: string) => {
             />
         </footer>
 
-        <!-- 全面カレンダー設定パネル -->
-        <div v-if="activeCalendarTaskId" class="fullscreen-calendar-panel">
-            <div class="calendar-panel-header">
-                <span class="panel-title">{{ getCalendarPanelTitle() }}</span>
-                <Button 
-                    icon="pi pi-times" 
-                    class="p-button-text p-button-secondary close-btn" 
-                    @click="activeCalendarTaskId = null" 
-                />
-            </div>
-            <div class="calendar-panel-content">
-                <div class="task-title-summary">
-                    <span class="label">タスク: </span>
-                    <span class="task-name">{{ getActiveCalendarTaskTitle() }}</span>
-                </div>
-                
-                <!-- STEP 1: 日付選択 -->
-                <div v-if="calendarStep === 'date'" class="datepicker-container">
-                    <div v-if="isMeetingSchedulePicker && !showMeetingCustomCalendar" class="meeting-date-options">
-                        <button
-                            type="button"
-                            class="meeting-date-option"
-                            :class="{ active: meetingDateChoice === 'today' }"
-                            @click="selectMeetingDate('today')"
-                        >
-                            <i class="pi pi-calendar-clock"></i>
-                            <span>今日</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="meeting-date-option"
-                            :class="{ active: meetingDateChoice === 'tomorrow' }"
-                            @click="selectMeetingDate('tomorrow')"
-                        >
-                            <i class="pi pi-calendar-plus"></i>
-                            <span>明日</span>
-                        </button>
-                        <button
-                            type="button"
-                            class="meeting-date-option"
-                            :class="{ active: meetingDateChoice === 'custom' }"
-                            @click="selectMeetingDate('custom')"
-                        >
-                            <i class="pi pi-calendar"></i>
-                            <span>日付指定</span>
-                        </button>
-                    </div>
-                    <div v-else-if="isMeetingSchedulePicker" class="meeting-custom-date">
-                        <button
-                            type="button"
-                            class="back-to-date-btn"
-                            @click="showMeetingCustomCalendar = false"
-                        >
-                            <i class="pi pi-angle-left"></i> 選択肢へ戻る
-                        </button>
-                        <DatePicker
-                            v-model="tempCalendarDate"
-                            inline
-                            style="width: 100%; border: none;"
-                            @date-select="onDateSelect"
-                        />
-                    </div>
-                    <DatePicker
-                        v-else
-                        v-model="tempCalendarDate"
-                        inline
-                        style="width: 100%; border: none;"
-                        @date-select="onDateSelect"
-                    />
-                </div>
-                
-                <!-- STEP 2: 時刻・時間帯選択 -->
-                <div v-else class="clockpicker-container">
-                    <CircularClockPicker
-                        v-if="isSingleTimePicker"
-                        v-model:hour="selectedHour24"
-                        v-model:minute="selectedMinuteVal"
-                    >
-                        <template #header-leading>
-                            <button
-                                class="back-to-date-btn"
-                                title="日付選択に戻る"
-                                type="button"
-                                @click="calendarStep = 'date'"
-                            >
-                                <i class="pi pi-angle-left"></i> 日付
-                            </button>
-                        </template>
-                    </CircularClockPicker>
-                    <DayTimelinePicker
-                        v-else
-                        v-model:start-minute="timelineStartMinute"
-                        v-model:end-minute="timelineEndMinute"
-                        :default-duration-minutes="taskStore.defaultDurationHours * 60"
-                    >
-                        <template #header-leading>
-                            <button
-                                class="back-to-date-btn"
-                                title="日付選択に戻る"
-                                type="button"
-                                @click="calendarStep = 'date'"
-                            >
-                                <i class="pi pi-angle-left"></i> 日付
-                            </button>
-                        </template>
-                    </DayTimelinePicker>
-                </div>
-            </div>
-            <div class="calendar-panel-footer">
-                <Button 
-                    label="クリア" 
-                    class="p-button-outlined p-button-danger p-button-sm mr-auto" 
-                    @click="clearFullscreenCalendarDate" 
-                />
-                <Button 
-                    label="キャンセル" 
-                    class="p-button-outlined p-button-secondary p-button-sm" 
-                    @click="activeCalendarTaskId = null" 
-                />
-                <Button 
-                    label="決定" 
-                    class="p-button-primary p-button-sm" 
-                    @click="saveFullscreenCalendarDate" 
-                />
-            </div>
-        </div>
+        <TaskSchedulePanel
+            ref="schedulePanelRef"
+            v-model:new-task-scheduled-at="newTaskScheduledAt"
+            v-model:new-task-scheduled-end-at="newTaskScheduledEndAt"
+            :new-task-title="newTaskTitle"
+            :edit-form="editForm"
+        />
 
         <TaskEditorPanel
             v-if="editingFullTaskId"
