@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useConfigStore } from '../store/config';
 import { useMusicStore } from '../store/music';
 import type { MusicRestoreMode } from '../store/music';
+import MusicWidgetSettingsPanel from './settings/MusicWidgetSettingsPanel.vue';
 import { formatPlaybackTime, getNextTrackIndex, parseMusicTrackLabel, shouldPersistPlaybackPosition } from '../utils/music-player';
 import {
     clearMusicDirectoryHandle,
@@ -59,6 +60,8 @@ const isPlaying = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
 const playbackError = ref('');
+const persistenceWarning = ref('');
+const showInlineSettings = ref(false);
 const restoreStatus = ref<RestoreStatus>('idle');
 const loadedFolderName = ref('');
 const loadedRestoreMode = ref<MusicRestoreMode>('none');
@@ -295,10 +298,12 @@ const openFolderPicker = async () => {
         try {
             const handle = await window.showDirectoryPicker?.({ id: 'music-library', mode: 'read' });
             if (!handle) return;
+            persistenceWarning.value = '';
             try {
                 await saveMusicDirectoryHandle(handle);
             } catch (error) {
                 console.warn('音楽フォルダのハンドルを保存できませんでした:', error);
+                persistenceWarning.value = 'このフォルダは再生できますが、次回起動時に自動復元できません。';
             }
             await applyDirectoryHandle(handle, true);
         } catch (error) {
@@ -529,7 +534,7 @@ const widgetStyle = computed(() => {
             bottom: '12px',
             top: 'auto',
             width: 'auto',
-            height: playlistExpanded.value ? '196px' : '76px'
+            height: playlistExpanded.value || showInlineSettings.value ? '196px' : '76px'
         };
     }
     if (isCompact.value) {
@@ -538,9 +543,8 @@ const widgetStyle = computed(() => {
     return { ...transparentStyle, left: '0', top: '0', width: '100%', height: '100%' };
 });
 
-const openMusicSettings = () => {
-    localStorage.setItem('desktop-mascot-settings-menu', 'music');
-    window.electronAPI?.openSettings?.();
+const toggleMusicSettings = () => {
+    showInlineSettings.value = !showInlineSettings.value;
 };
 
 onMounted(async () => {
@@ -592,12 +596,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <section class="music-widget" :class="{ integrated: isIntegrated, compact: isCompact, 'playlist-expanded': isIntegrated && playlistExpanded }" :style="widgetStyle">
+    <section class="music-widget" :class="{ integrated: isIntegrated, compact: isCompact, 'playlist-expanded': isIntegrated && playlistExpanded, 'settings-open': showInlineSettings }" :style="widgetStyle">
         <header v-if="!isCompact" class="widget-header" @mousedown="startWidgetDrag">
             <div class="widget-title"><i class="pi pi-headphones"></i><span>MUSIC PLAYER</span></div>
             <div class="header-actions">
                 <button type="button" title="フォルダを選択" @click="openFolderPicker"><i class="pi pi-folder-open"></i></button>
-                <button type="button" title="音楽ウィジェット設定" @click="openMusicSettings"><i class="pi pi-cog"></i></button>
+                <button
+                    type="button"
+                    :class="{ active: showInlineSettings }"
+                    :title="showInlineSettings ? '設定を閉じる' : '音楽ウィジェット設定'"
+                    :aria-expanded="showInlineSettings"
+                    @click="toggleMusicSettings"
+                ><i class="pi pi-cog"></i></button>
                 <button type="button" title="閉じる" @click="closeWidget"><i class="pi pi-times"></i></button>
             </div>
         </header>
@@ -622,6 +632,11 @@ onUnmounted(() => {
             @error="playbackError = currentTrack ? 'この音声ファイルを再生できませんでした。' : ''"
         ></audio>
 
+        <div v-if="showInlineSettings && !isCompact" class="inline-settings">
+            <MusicWidgetSettingsPanel embedded />
+        </div>
+
+        <template v-if="!showInlineSettings">
         <div v-if="isCompact" class="compact-player-row">
             <button
                 type="button"
@@ -682,6 +697,7 @@ onUnmounted(() => {
             <span>{{ Math.round(volume * 100) }}%</span>
         </div>
 
+        <p v-if="persistenceWarning && !isCompact" class="warning-message" role="status">{{ persistenceWarning }}</p>
         <p v-if="playbackError && !isCompact" class="error-message">{{ playbackError }}</p>
 
         <div v-if="!isCompact" class="playlist-header">
@@ -715,6 +731,7 @@ onUnmounted(() => {
                 <button type="button" class="remove-button" :title="`${track.title}を削除`" @click="removeTrack(index)"><i class="pi pi-times"></i></button>
             </li>
         </ol>
+        </template>
     </section>
 </template>
 
@@ -747,8 +764,9 @@ onUnmounted(() => {
 .header-actions { gap: 4px; }
 button { border: 0; color: inherit; cursor: pointer; }
 .header-actions button, .player-controls button { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: transparent; color: #64748b; }
-.header-actions button:hover, .player-controls button:hover:not(:disabled) { background: #f1f5f9; color: #334155; }
+.header-actions button:hover, .header-actions button.active, .player-controls button:hover:not(:disabled) { background: #f1f5f9; color: #334155; }
 .file-input, audio { display: none; }
+.inline-settings { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; background: rgba(248, 250, 252, 0.98); }
 .now-playing { gap: 12px; padding: 15px 16px 8px; }
 .cover { display: grid; place-items: center; flex: 0 0 54px; height: 54px; border-radius: 10px; background: linear-gradient(135deg, #dbeafe, #ede9fe); color: #7c3aed; font-size: 21px; }
 .track-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -773,6 +791,7 @@ button { border: 0; color: inherit; cursor: pointer; }
 .mute-button { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; padding: 0; border-radius: 6px; background: transparent; color: #94a3b8; }
 .mute-button:hover, .mute-button.active { background: #f3e8ff; color: #7c3aed; }
 .error-message { margin: 0 16px 6px; color: #e11d48; font-size: 11px; }
+.warning-message { margin: 0 16px 6px; color: #a16207; font-size: 11px; }
 .playlist-header { justify-content: space-between; padding: 8px 16px 5px; border-top: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; }
 .playlist-header small { padding: 1px 5px; border-radius: 999px; background: #e2e8f0; color: #64748b; }
 .playlist-header button { padding: 2px 0; background: transparent; color: #7c3aed; font-size: 10px; }
@@ -811,8 +830,31 @@ input[type="range"] { height: 4px; }
 
 .integrated .playlist-header,
 .integrated .playlist,
-.integrated .error-message {
+.integrated .error-message,
+.integrated .warning-message {
     grid-column: 1 / -1;
+}
+
+.integrated .inline-settings {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 30px 10px 8px;
+}
+
+.integrated .warning-message {
+    position: absolute;
+    z-index: 3;
+    right: 92px;
+    bottom: 21px;
+    left: 10px;
+    overflow: hidden;
+    margin: 0;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(254, 249, 195, 0.96);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .integrated .widget-header {

@@ -3,8 +3,12 @@ import { onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useMusicStore } from '../../store/music';
 
+withDefaults(defineProps<{ embedded?: boolean }>(), {
+    embedded: false
+});
+
 const musicStore = useMusicStore();
-const { opacity, volume, playlistExpanded } = storeToRefs(musicStore);
+const { opacity, playlistExpanded } = storeToRefs(musicStore);
 
 onMounted(() => {
     if (!musicStore.isLoaded) musicStore.loadFromLocalStorage();
@@ -12,8 +16,8 @@ onMounted(() => {
 </script>
 
 <template>
-    <section class="music-settings-panel">
-        <header class="panel-heading">
+    <section class="music-settings-panel" :class="{ embedded }">
+        <header v-if="!embedded" class="panel-heading">
             <div class="heading-icon"><i class="pi pi-headphones"></i></div>
             <div>
                 <h1>音楽ウィジェット</h1>
@@ -33,17 +37,6 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="setting-row">
-                <div class="setting-description">
-                    <label for="music-volume">初期音量</label>
-                    <span>音楽ウィジェットで使用する再生音量です。</span>
-                </div>
-                <div class="range-control">
-                    <input id="music-volume" v-model.number="volume" type="range" min="0" max="1" step="0.05" />
-                    <output>{{ Math.round(volume * 100) }}%</output>
-                </div>
-            </div>
-
             <label class="toggle-row">
                 <div class="setting-description">
                     <span class="toggle-title">プレイリストを展開して表示</span>
@@ -53,9 +46,9 @@ onMounted(() => {
             </label>
         </div>
 
-        <div class="notice-card">
+        <div v-if="!embedded" class="notice-card">
             <i class="pi pi-info-circle"></i>
-            <span>選択した音楽フォルダとプレイリストはアプリ終了後に保持されません。</span>
+            <span>音楽ファイル本体はコピーせず、対応ブラウザまたはElectronでフォルダと再生位置の復元情報だけを端末内に保存します。</span>
         </div>
     </section>
 </template>
@@ -171,5 +164,49 @@ onMounted(() => {
     background: #faf5ff;
     color: #6d28d9;
     font-size: 12px;
+}
+
+.music-settings-panel.embedded {
+    gap: 0;
+}
+
+.embedded .settings-card {
+    border-radius: 9px;
+    box-shadow: none;
+}
+
+.embedded .setting-row,
+.embedded .toggle-row {
+    min-height: 46px;
+    gap: 12px;
+    padding: 7px 10px;
+}
+
+.embedded .setting-description {
+    gap: 1px;
+}
+
+.embedded .setting-description > span:not(.toggle-title) {
+    display: none;
+}
+
+.embedded .range-control {
+    gap: 7px;
+    min-width: min(52%, 190px);
+}
+
+.embedded .range-control output {
+    width: 36px;
+    font-size: 11px;
+}
+
+.embedded .setting-description label,
+.embedded .toggle-title {
+    font-size: 12px !important;
+}
+
+.embedded .toggle-row input {
+    width: 17px;
+    height: 17px;
 }
 </style>

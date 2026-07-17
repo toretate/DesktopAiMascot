@@ -82,7 +82,6 @@ const loadFolder = (folderPath: string): MusicFolderResult => {
         return { success: false, error: '前回選択したフォルダが見つかりません。' };
     }
 
-    musicFiles.clear();
     const files = collectMusicFiles(folderPath).map(filePath => {
         // 同じフォルダを別ウィンドウが再読込しても、既存プレイヤーのURLを維持する。
         const id = createHash('sha256').update(filePath).digest('hex');
@@ -143,7 +142,8 @@ export function registerMusicFolderHandlers() {
     });
 
     ipcMain.handle('clear-last-music-folder', async () => {
-        musicFiles.clear();
+        // 別ウィンドウで再生中の local-music URL を無効化しないため、
+        // アプリ終了までURLとファイルの対応は保持する。音声本体はメモリへ読み込まない。
         clearSavedFolderPath();
         return { success: true };
     });

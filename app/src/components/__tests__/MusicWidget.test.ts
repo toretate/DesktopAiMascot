@@ -39,6 +39,7 @@ describe('MusicWidget', () => {
         directoryMocks.save.mockReset();
         directoryMocks.clear.mockReset();
         directoryMocks.scan.mockReset();
+        Reflect.deleteProperty(window, 'showDirectoryPicker');
         Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
         Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
         Object.defineProperty(HTMLMediaElement.prototype, 'load', { configurable: true, value: vi.fn() });
@@ -171,6 +172,26 @@ describe('MusicWidget', () => {
         wrapper.unmount();
     });
 
+    it('fileSystemAccess_ハンドルを保存できない場合はウィジェット上に警告すること', async () => {
+        const handle = { kind: 'directory', name: 'Music' };
+        const file = new File(['music'], 'Song.mp3', { type: 'audio/mpeg' });
+        directoryMocks.supports.mockReturnValue(true);
+        directoryMocks.save.mockRejectedValue(new Error('IndexedDB unavailable'));
+        directoryMocks.scan.mockResolvedValue([{ file, relativePath: 'Song.mp3' }]);
+        Object.defineProperty(window, 'showDirectoryPicker', {
+            configurable: true,
+            value: vi.fn().mockResolvedValue(handle)
+        });
+
+        const wrapper = mount(MusicWidget, { global: { plugins: [createPinia()] } });
+        await wrapper.get('button[title="フォルダを選択"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.get('.warning-message').text()).toContain('次回起動時に自動復元できません');
+        expect(wrapper.text()).toContain('Song');
+        wrapper.unmount();
+    });
+
     it('clearPlaylist_復元情報と保存済みディレクトリハンドルを削除すること', async () => {
         directoryMocks.clear.mockResolvedValue(undefined);
         Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: {} });
@@ -237,6 +258,25 @@ describe('MusicWidget', () => {
         expect(audio.muted).toBe(true);
         expect(muteButton.attributes('aria-pressed')).toBe('true');
         expect(muteButton.get('i').classes()).toContain('pi-volume-off');
+        wrapper.unmount();
+    });
+
+    it('settingsButton_ウィジェット内で設定を開閉すること', async () => {
+        const openSettings = vi.fn();
+        window.electronAPI = { isWeb: false, openSettings } as any;
+        const wrapper = mount(MusicWidget, { global: { plugins: [createPinia()] } });
+        const settingsButton = wrapper.get('button[title="音楽ウィジェット設定"]');
+
+        await settingsButton.trigger('click');
+
+        expect(wrapper.find('.inline-settings').exists()).toBe(true);
+        expect(wrapper.find('input#music-opacity').exists()).toBe(true);
+        expect(wrapper.find('input#music-volume').exists()).toBe(false);
+        expect(settingsButton.attributes('aria-expanded')).toBe('true');
+        expect(openSettings).not.toHaveBeenCalled();
+
+        await settingsButton.trigger('click');
+        expect(wrapper.find('.inline-settings').exists()).toBe(false);
         wrapper.unmount();
     });
 
