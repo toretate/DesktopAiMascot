@@ -109,13 +109,13 @@ const handleApply = () => {
                     <i class="pi pi-eraser text-brand-500"></i>
                     <span>立ち絵の背景削除</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" :disabled="isProcessing" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary modal-close-btn" @click="emit('close')" :disabled="isProcessing" />
             </div>
 
-            <div class="modal-body flex-1 flex flex-column gap-3 mt-3 overflow-hidden" style="min-height: 0;">
+            <div class="modal-body flex-1 flex flex-column gap-3 mt-3 overflow-hidden">
                 <div class="flex gap-3 h-full overflow-hidden">
                     <!-- 左半分: 設定とプレビュー -->
-                    <div class="flex flex-column gap-3 flex-1" style="max-width: 300px;">
+                    <div class="flex flex-column gap-3 flex-1 settings-column">
                         <div class="form-field flex flex-column gap-1">
                             <label class="text-xs font-bold text-gray-700">背景削除エンジン</label>
                             <Select 
@@ -193,6 +193,20 @@ const handleApply = () => {
 </template>
 
 <style scoped>
+.modal-close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.modal-body {
+    min-height: 0;
+}
+
+.settings-column {
+    max-width: 300px;
+}
+
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }

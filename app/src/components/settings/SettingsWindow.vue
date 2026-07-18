@@ -233,7 +233,7 @@ const {
     overflow-y: auto;
 }
 .main-content.mascot-active {
-    padding: 24px 48px 24px 24px !important; /* 閉じるボタンと重ならない適度な余白に最適化 */
+    padding: 24px 48px 24px 24px; /* 閉じるボタンと重ならない適度な余白に最適化 */
     overflow: hidden; /* マスコット設定時のみ個別内部スクロールにするため全体スクロールは非表示 */
 }
 
