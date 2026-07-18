@@ -113,12 +113,12 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                     <i class="pi pi-sparkles text-brand-500"></i>
                     <span>AI表情スプライト - 感情割り当て設定</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="close-btn p-button-rounded p-button-text p-button-secondary" @click="emit('close')" />
             </div>
 
-            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-hidden flex-1" style="min-height: 0;">
+            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-hidden flex-1">
                 <!-- 上部: 検出スプライトトレイ (明るいラベンダー色・薄い影) -->
-                <div class="scanned-sprites-section p-3 bg-brand-50 border-round border-1 border-brand-100 flex flex-column gap-2" style="max-height: 160px; min-height: 140px; flex-shrink: 0;">
+                <div class="scanned-sprites-section p-3 bg-brand-50 border-round border-1 border-brand-100 flex flex-column gap-2">
                     <div class="flex justify-content-between align-items-center mb-1">
                         <span class="text-xs font-bold text-brand-700 flex align-items-center gap-1 select-none">
                             <i class="pi pi-palette"></i>
@@ -136,7 +136,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             @dragstart="onSpriteDragStart($event, sprite)"
                             @click="selectScannedSprite(sprite)"
                         >
-                            <img :src="resolveImageUrl(sprite.path)" class="sprite-preview object-contain border-round bg-slate-200" style="width: 54px; height: 54px;" />
+                            <img :src="resolveImageUrl(sprite.path)" class="sprite-preview object-contain border-round bg-slate-200" />
                             <span class="text-xxs font-bold text-slate-600 text-ellipsis overflow-hidden w-full text-center">{{ sprite.name }}</span>
                         </div>
                         <div v-if="scannedSprites.length === 0" class="flex-1 flex align-items-center justify-content-center text-xs text-brand-600 font-semibold select-none">
@@ -160,9 +160,8 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             @click="assignSpriteToSlot(slot)"
                             @dragover.prevent
                             @drop="onSpriteDrop($event, slot)"
-                            style="width: calc(25% - 6px); min-width: 170px;"
                         >
-                            <div class="slot-thumbnail flex align-items-center justify-content-center border-round overflow-hidden bg-slate-100" style="width: 44px; height: 44px; flex-shrink: 0;">
+                            <div class="slot-thumbnail flex align-items-center justify-content-center border-round overflow-hidden bg-slate-100">
                                 <img v-if="slot.path" :src="resolveImageUrl(slot.path)" class="thumbnail-img object-contain w-full h-full" />
                                 <i v-else class="pi pi-image text-slate-400 text-sm"></i>
                             </div>
@@ -185,6 +184,16 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 
 <style scoped>
 /* 白基調の感情割り当てモーダル用CSS */
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -193,6 +202,9 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 }
 
 .scanned-sprites-section {
+    max-height: 160px;
+    min-height: 140px;
+    flex-shrink: 0;
     border: 1px solid var(--color-primary-alpha-20);
     box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
 }
@@ -233,8 +245,15 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
     box-shadow: 0 0 10px var(--color-primary-alpha-15);
 }
 
+.sprite-preview {
+    width: 54px;
+    height: 54px;
+}
+
 /* 感情スロット割り当てカード (ライトモード) */
 .assignment-slot-card {
+    width: calc(25% - 6px);
+    min-width: 170px;
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     transition: all 0.2s ease;
@@ -264,6 +283,9 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 }
 
 .slot-thumbnail {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
     border: 1px solid #e2e8f0;
 }
 .thumbnail-img {
