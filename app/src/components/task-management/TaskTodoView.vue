@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useTaskStore, type SubTask, type Task } from '../../store/task';
+import TaskActionButtons from './TaskActionButtons.vue';
 import { useTaskInlineEdit } from './composables/useTaskInlineEdit';
 import { useTaskTreeDrag } from './composables/useTaskTreeDrag';
 import { getScheduledDisplay, isTaskOverdue } from './taskDisplayUtils';
@@ -179,21 +180,12 @@ onUnmounted(() => {
                     {{ task.steps.filter(s => s.completed).length }}/{{ task.steps.length }}
                 </div>
 
-                <!-- 編集ボタン -->
-                <Button
-                    icon="pi pi-pencil"
-                    class="p-button-text p-button-secondary p-button-sm task-edit-btn"
-                    @click.stop="emit('editTask', task)"
-                    title="タスクを編集"
-                />
-
-                <!-- 削除ボタン (削除モード時のみ) -->
-                <Button
-                    v-if="showDeleteMode"
-                    icon="pi pi-trash"
-                    class="p-button-text p-button-danger p-button-sm task-delete-btn"
-                    @click.stop="taskStore.deleteTask(task.id)"
-                    title="タスクを削除"
+                <!-- 編集・削除ボタン群 -->
+                <TaskActionButtons
+                    :task="task"
+                    :show-delete-mode="showDeleteMode"
+                    @edit="emit('editTask', $event)"
+                    @delete="taskStore.deleteTask($event.id)"
                 />
             </div>
 

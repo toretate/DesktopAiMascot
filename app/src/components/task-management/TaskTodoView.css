@@ -100,18 +100,6 @@
     padding: 4px;
 }
 
-.task-delete-btn {
-    width: 20px !important;
-    height: 20px !important;
-    padding: 0 !important;
-}
-
-.task-edit-btn {
-    width: 20px !important;
-    height: 20px !important;
-    padding: 0 !important;
-}
-
 /* サブタスクエリア */
 .subtasks-container {
     background: #f8fafc;

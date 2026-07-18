@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import Button from 'primevue/button';
 import { useTaskStore, type Task } from '../../store/task';
+import TaskActionButtons from './TaskActionButtons.vue';
 import { getScheduledDisplay, isTaskOverdue } from './taskDisplayUtils';
 
 const props = defineProps<{
@@ -60,8 +60,12 @@ onUnmounted(() => {
                     </button>
                     <h4 class="timeline-task-title" :class="{ completed: task.completed }">{{ task.title }}</h4>
                     <span class="timeline-cat-badge">{{ getCategoryName(task.categoryId) }}</span>
-                    <Button icon="pi pi-pencil" class="p-button-text p-button-secondary p-button-sm task-action-btn" title="タスクを編集" @click.stop="emit('editTask', task)" />
-                    <Button v-if="showDeleteMode" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm task-action-btn" title="タスクを削除" @click.stop="taskStore.deleteTask(task.id)" />
+                    <TaskActionButtons
+                        :task="task"
+                        :show-delete-mode="showDeleteMode"
+                        @edit="emit('editTask', $event)"
+                        @delete="taskStore.deleteTask($event.id)"
+                    />
                 </div>
             </div>
         </div>
@@ -92,6 +96,5 @@ onUnmounted(() => {
 .status-badge.doing { color: #d97706; background: #fef3c7; }
 .status-badge.done { color: #059669; background: #d1fae5; }
 .status-badge.pending-done { color: #dc2626; background: #fee2e2; }
-.task-action-btn { width: 20px !important; height: 20px !important; padding: 0 !important; }
 .empty-state { text-align: center; color: #64748b; padding: 24px 0; font-size: 12px; }
 </style>
