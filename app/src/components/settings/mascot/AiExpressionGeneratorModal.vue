@@ -356,18 +356,18 @@ const importGeneratedSprite = () => {
                     <i class="pi pi-sparkles text-brand-600 text-sm animate-pulse"></i>
                     <span>AI表情スプライト自動生成 (Gemini Vision + Imagen 3)</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" :disabled="isGenerating" />
+                <Button icon="pi pi-times" class="modal-close-button p-button-rounded p-button-text p-button-secondary" @click="emit('close')" :disabled="isGenerating" />
             </div>
 
             <!-- モーダルボディ -->
-            <div class="modal-body-container flex gap-4 mt-3 overflow-hidden flex-1" style="min-height: 0;">
+            <div class="modal-body-container flex gap-4 mt-3 overflow-hidden flex-1">
                 
                 <!-- 左カラム: 表情選択 ＆ プロンプト設定 (幅 48%) -->
-                <div class="flex flex-column gap-3 overflow-y-auto pr-1" style="width: 48%; min-width: 320px;">
+                <div class="generator-left-column flex flex-column gap-3 overflow-y-auto pr-1">
                     
                     <!-- キャラクターベース画像プレビュー -->
                     <div class="base-image-preview-panel p-3 bg-slate-50 border-round border-1 border-gray-200 flex align-items-center gap-3">
-                        <div class="flex align-items-center justify-content-center border-round overflow-hidden bg-white border-1 border-slate-200" style="width: 64px; height: 64px; flex-shrink: 0; position: relative;">
+                        <div class="base-image-box flex align-items-center justify-content-center border-round overflow-hidden bg-white border-1 border-slate-200">
                             <img v-if="defaultFrontAvatar?.path" :src="defaultFrontAvatar.path" class="w-full h-full object-contain" />
                             <img v-else-if="editingMascot.avatar && editingMascot.avatar.startsWith('data:image/')" :src="editingMascot.avatar" class="w-full h-full object-contain" />
                             <span v-else class="text-4xl">🤖</span>
@@ -407,7 +407,7 @@ const importGeneratedSprite = () => {
                                 <div class="flex justify-content-between align-items-center">
                                     <span class="text-xxs font-bold text-slate-500">使用モデル / ワークフローID</span>
                                     <span v-if="isFetchingModels && selectedEngine === 'gemini'" class="text-xxs text-brand-600 flex align-items-center gap-1 select-none font-bold">
-                                        <i class="pi pi-spin pi-spinner" style="font-size: 8px;"></i>
+                                        <i class="pi pi-spin pi-spinner spinner-icon-sm"></i>
                                         <span>同期中...</span>
                                     </span>
                                 </div>
@@ -447,7 +447,7 @@ const importGeneratedSprite = () => {
                                 {{ selectedCount }} / 16 選択中
                             </span>
                         </div>
-                        <div class="emotions-cards-grid mt-1" style="max-height: 240px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; padding: 2px;">
+                        <div class="emotions-cards-grid mt-1">
                             <div 
                                 v-for="expr in currentExpressions" 
                                 :key="expr.id"
@@ -467,7 +467,7 @@ const importGeneratedSprite = () => {
                                 <!-- 画像表示エリア -->
                                 <div class="card-image-area flex-1 flex align-items-center justify-content-center bg-slate-50 overflow-hidden relative">
                                     <img v-if="expr.path && isImage(expr.path)" :src="resolveImageUrl(expr.path)" class="w-full h-full object-contain" />
-                                    <i v-else class="pi pi-image text-slate-300" style="font-size: 24px;"></i>
+                                    <i v-else class="pi pi-image text-slate-300 placeholder-icon"></i>
                                     
                                     <!-- 選択状態のオーバーレイ / アイコン -->
                                     <div v-if="selectedEmotions.includes(expr.name)" class="absolute inset-0 bg-theme-alpha-10 flex align-items-center justify-content-center">
@@ -475,13 +475,13 @@ const importGeneratedSprite = () => {
                                     </div>
                                     
                                     <!-- 作成済みバッジ (右上の小さな緑チェックマーク) -->
-                                    <div v-if="expr.path" class="absolute top-1 right-1 bg-green-500 text-white rounded-full flex align-items-center justify-content-center" style="width: 14px; height: 14px;" title="作成済み">
-                                        <i class="pi pi-check" style="font-size: 8px;"></i>
+                                    <div v-if="expr.path" class="created-badge absolute top-1 right-1 bg-green-500 text-white rounded-full flex align-items-center justify-content-center" title="作成済み">
+                                        <i class="pi pi-check created-check-icon"></i>
                                     </div>
                                 </div>
                                 
                                 <!-- ラベルエリア -->
-                                <div class="card-label-area p-1 text-center border-top border-slate-100 flex align-items-center justify-content-center bg-white" style="height: 24px;">
+                                <div class="card-label-area p-1 text-center border-top border-slate-100 flex align-items-center justify-content-center bg-white">
                                     <span class="text-xxs font-bold text-slate-700 text-ellipsis overflow-hidden whitespace-nowrap w-full">{{ expr.name }}</span>
                                 </div>
                             </div>
@@ -499,9 +499,8 @@ const importGeneratedSprite = () => {
                         </span>
                         <textarea 
                             v-model="userPrompt"
-                            class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none transition-all font-sans leading-relaxed"
+                            class="prompt-textarea w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none transition-all font-sans leading-relaxed"
                             rows="7"
-                            style="resize: none;"
                             placeholder="プロンプトを入力してください..."
                             :disabled="isGenerating"
                         ></textarea>
@@ -510,10 +509,10 @@ const importGeneratedSprite = () => {
                 </div>
 
                 <!-- 右カラム: 生成プレビュー ＆ インポート領域 (幅 52%) -->
-                <div class="flex-1 flex flex-column gap-3 overflow-hidden" style="width: 52%; min-height: 0;">
+                <div class="generator-right-column flex-1 flex flex-column gap-3 overflow-hidden">
                     
                     <!-- プレビュープレースホルダー / 実画像表示 -->
-                    <div class="flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden" style="min-height: 300px;">
+                    <div class="preview-container flex-1 border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden">
                         
                         <!-- 生成中のインジケーター -->
                         <div v-if="isGenerating" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex flex-column align-items-center justify-content-center gap-3 z-20 w-full h-full">
@@ -606,6 +605,71 @@ const importGeneratedSprite = () => {
 
 <style scoped>
 /* モーダル用CSS */
+.modal-close-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
+.generator-left-column {
+    width: 48%;
+    min-width: 320px;
+}
+
+.generator-right-column {
+    width: 52%;
+    min-height: 0;
+}
+
+.base-image-box {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.spinner-icon-sm {
+    font-size: 8px;
+}
+
+.emotions-cards-grid {
+    max-height: 240px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+    padding: 2px;
+}
+
+.placeholder-icon {
+    font-size: 24px;
+}
+
+.created-badge {
+    width: 14px;
+    height: 14px;
+}
+
+.created-check-icon {
+    font-size: 8px;
+}
+
+.card-label-area {
+    height: 24px;
+}
+
+.prompt-textarea {
+    resize: none;
+}
+
+.preview-container {
+    min-height: 300px;
+}
+
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
