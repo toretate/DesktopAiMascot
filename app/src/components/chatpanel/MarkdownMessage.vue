@@ -118,7 +118,7 @@ pre code {
 }
 
 :deep(a) {
-    color: #6d28d9;
+    color: var(--color-primary-active);
     text-decoration: underline;
     text-underline-offset: 2px;
 }

@@ -417,7 +417,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
             </div>
             <div class="flex justify-content-between align-items-center">
                 <h3 class="m-0 text-gray-800 font-bold flex align-items-center gap-2">
-                    <i class="pi pi-cog text-purple-400"></i>
+                    <i class="pi pi-cog text-brand-400"></i>
                     <span>マスコット詳細設定</span>
                 </h3>
             </div>
@@ -532,7 +532,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
                     <!-- 表情アセットグリッド -->
                     <div class="form-field p-3 bg-white border-round border-1 border-gray-200 mt-2 flex flex-column gap-2">
                         <label class="font-bold text-xs text-gray-700 flex align-items-center gap-1 select-none">
-                            <i class="pi pi-images text-purple-500"></i>
+                            <i class="pi pi-images text-brand-500"></i>
                             <span>表情グリッド ({{ registeredExpressions.length }} / 28 登録済み)</span>
                         </label>
                         
@@ -721,9 +721,9 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
     opacity: 1;
 }
 .mascot-item.active {
-    border-color: #a855f7;
-    background: #f5f3ff;
-    box-shadow: 0 0 0 1px #a855f7, 0 4px 6px -1px rgba(168, 85, 247, 0.1);
+    border-color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10);
 }
 .mascot-item .name {
     font-weight: bold;
@@ -745,9 +745,9 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .outfit-grid-cell.is-active-outfit {
-    border: 2px solid #a855f7 !important;
-    background-color: #f5f3ff !important;
-    box-shadow: 0 0 0 1px #a855f7, 0 4px 6px -1px rgba(168, 85, 247, 0.1) !important;
+    border: 2px solid var(--color-primary) !important;
+    background-color: var(--color-primary-subtle) !important;
+    box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10) !important;
 }
 
 .outfit-grid-container {

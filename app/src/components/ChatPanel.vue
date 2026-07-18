@@ -21,6 +21,7 @@ import MemoWidget from './MemoWidget.vue';
 import { useMemoStore } from '../store/memo';
 import MusicWidget from './MusicWidget.vue';
 import { useMusicStore } from '../store/music';
+import { DEFAULT_ACCENT_COLOR } from '../config/theme';
 
 const inputText = ref('');
 const messageListRef = ref<any>(null);
@@ -139,7 +140,7 @@ const getBorderStyle = computed(() => {
         return 'none';
     }
     const width = chatBorderWidth.value !== undefined ? chatBorderWidth.value : 1;
-    const color = chatBorderColor.value || '#a855f7';
+    const color = chatBorderColor.value || DEFAULT_ACCENT_COLOR;
     return `${width}px solid ${color}`;
 });
 
@@ -848,7 +849,7 @@ const focusWindow = () => {
 /* シークレットモードのスタイル定義 */
 .chat-wrapper.secret-mode {
     background: rgba(26, 21, 44, 0.75) !important; /* グラスモーフィズム調のダークパープル */
-    box-shadow: 0 8px 32px 0 rgba(168, 85, 247, 0.15) !important;
+    box-shadow: 0 8px 32px 0 var(--color-primary-alpha-15) !important;
 }
 
 /* シークレットモード中の背景レイヤー調整 */

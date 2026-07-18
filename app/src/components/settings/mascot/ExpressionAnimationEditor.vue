@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppModalShell from '@/components/common/AppModalShell.vue';
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue';
 import { useConfigStore } from '../../../store/config';
 import Button from 'primevue/button';
@@ -258,12 +259,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay animation-edit-modal-overlay">
-        <div class="custom-modal-card animation-edit-modal-card">
+    <AppModalShell :visible="visible" title-id="expression-animation-title" backdrop="dark" :z-index="2000" width="820px" max-width="90vw" height="600px" max-height="90dvh" padding="20px" @close="emit('close')">
             <!-- ヘッダー -->
             <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-video text-purple-500 text-sm"></i>
+                <h2 id="expression-animation-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-video text-brand-500 text-sm"></i>
                     <span>表情アニメーション編集 & アトラス作成</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -493,7 +493,7 @@ onUnmounted(() => {
                     <!-- 4. アトラス生成・保存 -->
                     <div class="bg-slate-50 border-1 border-gray-200 border-round p-3 flex flex-column gap-2">
                         <span class="text-xs font-bold text-slate-700 flex align-items-center gap-1 select-none">
-                            <i class="pi pi-box text-purple-500"></i>
+                            <i class="pi pi-box text-brand-500"></i>
                             <span>4.4 テクスチャアトラスのビルド</span>
                         </span>
                         <p class="text-xxs text-slate-500 leading-normal m-0">
@@ -515,35 +515,10 @@ onUnmounted(() => {
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-.custom-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-.custom-modal-card {
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    width: 820px;
-    max-width: 90vw;
-    height: 600px;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-}
 .border-bottom {
     border-bottom: 1px solid #e2e8f0;
 }

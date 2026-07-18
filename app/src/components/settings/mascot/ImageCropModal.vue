@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppModalShell from '@/components/common/AppModalShell.vue';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Button from 'primevue/button';
 import { useConfigStore } from '../../../store/config';
@@ -352,11 +353,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay crop-modal-overlay" @mousemove="onCropMouseMove" @mouseup="onCropMouseUp">
-        <div class="custom-modal-card crop-modal-card">
+    <AppModalShell :visible="visible" title-id="image-crop-title" backdrop="light" :z-index="3000" width="520px" max-width="90vw" height="520px" max-height="90dvh" padding="16px" @close="emit('close')" @mousemove="onCropMouseMove" @mouseup="onCropMouseUp">
             <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-scissors text-purple-500"></i>
+                <h2 id="image-crop-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-scissors text-brand-500"></i>
                     <span>表情画像のトリミング・切り抜き</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
                         <!-- 切り出し枠 (基準が画像の実表示領域になるため完全に一致します) -->
                         <div 
                             v-if="cropImageWidth > 0 && cropImageRef"
-                            class="crop-box absolute border-2 border-purple-500 cursor-move"
+                            class="crop-box absolute border-2 border-brand-500 cursor-move"
                             :style="{
                                 width: ((cropWidth / cropImageWidth) * 100) + '%',
                                 height: ((cropHeight / cropImageHeight) * 100) + '%',
@@ -426,38 +426,10 @@ onBeforeUnmount(() => {
                     <Button label="この範囲で切り抜く" icon="pi pi-check" class="p-button-primary p-button-sm px-4" style="font-size: 11px;" @click="executeCrop" />
                 </div>
             </div>
-        </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-/* 白基調のライトモードオーバーレイ */
-.crop-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important; /* ライトグレー半透明 */
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 3000;
-}
-
-.crop-modal-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 520px !important;
-    height: 520px !important;
-    display: flex;
-    flex-direction: column;
-    padding: 16px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -504,7 +476,7 @@ onBeforeUnmount(() => {
     position: absolute;
     width: 10px;
     height: 10px;
-    background: #a855f7;
+    background: var(--color-primary);
     border: 1px solid white;
     z-index: 10;
 }

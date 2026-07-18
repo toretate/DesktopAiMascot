@@ -54,7 +54,7 @@ const saveSettings = async () => {
                             type="checkbox" 
                             id="toolsGpsLocation" 
                             v-model="toolsGpsLocation" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
                         />
                         <label for="toolsGpsLocation" class="font-medium cursor-pointer">
                             位置情報の取得 (getGPSLocation)
@@ -70,7 +70,7 @@ const saveSettings = async () => {
                             type="checkbox" 
                             id="toolsWeather" 
                             v-model="toolsWeather" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
                         />
                         <label for="toolsWeather" class="font-medium cursor-pointer">
                             天気情報の取得 (getWeather)
@@ -86,7 +86,7 @@ const saveSettings = async () => {
                             type="checkbox" 
                             id="toolsVolume" 
                             v-model="toolsVolume" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
                         />
                         <label for="toolsVolume" class="font-medium cursor-pointer">
                             音量調節 (adjustVolume)
@@ -102,7 +102,7 @@ const saveSettings = async () => {
                             type="checkbox" 
                             id="toolsAppLauncher" 
                             v-model="toolsAppLauncher" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
                         />
                         <label for="toolsAppLauncher" class="font-medium cursor-pointer">
                             アプリケーション起動 (launchApp)
@@ -118,7 +118,7 @@ const saveSettings = async () => {
                             type="checkbox" 
                             id="toolsWebSearch" 
                             v-model="toolsWebSearch" 
-                            class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" 
+                            class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
                         />
                         <label for="toolsWebSearch" class="font-medium cursor-pointer">
                             Web検索 (searchWeb)

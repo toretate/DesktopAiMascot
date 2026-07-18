@@ -56,8 +56,8 @@ const cancelMode = () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(168, 85, 247, 0.06);
-    border: 1px solid rgba(168, 85, 247, 0.15);
+    background: var(--color-primary-alpha-06);
+    border: 1px solid var(--color-primary-alpha-15);
     border-radius: 8px;
     padding: 6px 12px;
     margin-bottom: 8px;
@@ -71,7 +71,7 @@ const cancelMode = () => {
     gap: 6px;
     font-size: 11px;
     font-weight: 600;
-    color: #7c3aed;
+    color: var(--color-primary-hover);
 }
 
 .cancel-mode-btn {
@@ -113,7 +113,7 @@ const cancelMode = () => {
     justify-content: space-between;
     gap: 12px;
     padding-top: 6px;
-    border-top: 1px dashed rgba(168, 85, 247, 0.15);
+    border-top: 1px dashed var(--color-primary-alpha-15);
 }
 
 .denoise-label {
@@ -127,14 +127,14 @@ const cancelMode = () => {
 .denoise-val {
     font-family: monospace;
     font-weight: bold;
-    color: #7c3aed;
+    color: var(--color-primary-hover);
 }
 
 .denoise-slider {
     flex: 1;
     height: 4px;
     border-radius: 2px;
-    background: rgba(168, 85, 247, 0.15);
+    background: var(--color-primary-alpha-15);
     outline: none;
     -webkit-appearance: none;
     cursor: pointer;
@@ -152,7 +152,7 @@ const cancelMode = () => {
     height: 12px;
     width: 12px;
     border-radius: 50%;
-    background: #a855f7;
+    background: var(--color-primary);
     cursor: pointer;
     -webkit-appearance: none;
     margin-top: -4px;
@@ -165,12 +165,12 @@ const cancelMode = () => {
 
 /* シークレットモードスタイル */
 .image-gen-indicator.secret-mode {
-    background: rgba(168, 85, 247, 0.12);
-    border-color: rgba(168, 85, 247, 0.3);
+    background: var(--color-primary-alpha-12);
+    border-color: var(--color-primary-alpha-30);
 }
 
 .image-gen-indicator.secret-mode .indicator-text {
-    color: #d8b4fe;
+    color: var(--theme-accent-300);
 }
 
 .image-gen-indicator.secret-mode .cancel-mode-btn {
@@ -183,7 +183,7 @@ const cancelMode = () => {
 }
 
 .image-gen-indicator.secret-mode .denoise-slider-box {
-    border-top-color: rgba(168, 85, 247, 0.25);
+    border-top-color: var(--color-primary-alpha-25);
 }
 
 .image-gen-indicator.secret-mode .denoise-label {
@@ -191,11 +191,11 @@ const cancelMode = () => {
 }
 
 .image-gen-indicator.secret-mode .denoise-val {
-    color: #d8b4fe;
+    color: var(--theme-accent-300);
 }
 
 .image-gen-indicator.secret-mode .denoise-slider::-webkit-slider-thumb {
-    background: #c084fc;
+    background: var(--theme-accent-400);
 }
 
 @keyframes slideDown {

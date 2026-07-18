@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { DEFAULT_ACCENT_COLOR } from '../config/theme';
 
 // アプリケーション全体の共通設定インターフェース
 export interface AppConfig {
@@ -169,7 +170,7 @@ export const useConfigStore = defineStore('config', () => {
     const chatSendKey = ref('enter');
     const chatFontFamily = ref('sans-serif');
     const chatBorderShow = ref(true);
-    const chatBorderColor = ref('#a855f7');
+    const chatBorderColor = ref(DEFAULT_ACCENT_COLOR);
     const chatBorderWidth = ref(1);
     const chatBackgroundColor = ref('#ffffff');
     const chatBackgroundImage = ref('');
@@ -344,7 +345,7 @@ export const useConfigStore = defineStore('config', () => {
             chatSendKey.value = configData.chatSendKey || 'enter';
             chatFontFamily.value = configData.chatFontFamily || 'sans-serif';
             chatBorderShow.value = configData.chatBorderShow !== undefined ? !!configData.chatBorderShow : true;
-            chatBorderColor.value = configData.chatBorderColor || '#a855f7';
+            chatBorderColor.value = configData.chatBorderColor || DEFAULT_ACCENT_COLOR;
             chatBorderWidth.value = configData.chatBorderWidth !== undefined ? Number(configData.chatBorderWidth) : 1;
             chatBackgroundColor.value = configData.chatBackgroundColor || '#ffffff';
             chatBackgroundImage.value = configData.chatBackgroundImage || '';
@@ -472,7 +473,7 @@ export const useConfigStore = defineStore('config', () => {
             chatSendKey.value = localStorage.getItem('chatSendKey') || 'enter';
             chatFontFamily.value = localStorage.getItem('chatFontFamily') || 'sans-serif';
             chatBorderShow.value = localStorage.getItem('chatBorderShow') !== 'false';
-            chatBorderColor.value = localStorage.getItem('chatBorderColor') || '#a855f7';
+            chatBorderColor.value = localStorage.getItem('chatBorderColor') || DEFAULT_ACCENT_COLOR;
             const savedBorderWidth = localStorage.getItem('chatBorderWidth');
             chatBorderWidth.value = savedBorderWidth ? parseInt(savedBorderWidth) : 1;
             chatBackgroundColor.value = localStorage.getItem('chatBackgroundColor') || '#ffffff';

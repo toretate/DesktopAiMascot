@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppModalShell from '@/components/common/AppModalShell.vue';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import { computed, ref } from 'vue';
@@ -102,11 +103,10 @@ const handleApply = () => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay remove-bg-overlay">
-        <div class="custom-modal-card remove-bg-card">
+    <AppModalShell :visible="visible" title-id="bg-removal-title" backdrop="light" :z-index="3000" width="800px" max-width="90vw" height="500px" max-height="90dvh" padding="16px" :close-disabled="isProcessing" @close="emit('close')">
             <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-eraser text-purple-500"></i>
+                <h2 id="bg-removal-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-eraser text-brand-500"></i>
                     <span>立ち絵の背景削除</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" :disabled="isProcessing" />
@@ -189,37 +189,10 @@ const handleApply = () => {
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm px-3" @click="emit('close')" :disabled="isProcessing" />
                 <Button label="適用して保存" icon="pi pi-check" class="p-button-primary p-button-sm px-4" :disabled="!resultImage || isProcessing" @click="handleApply" />
             </div>
-        </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-.remove-bg-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 3000;
-}
-
-.remove-bg-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 800px !important;
-    height: 500px !important;
-    display: flex;
-    flex-direction: column;
-    padding: 16px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
 import { onBeforeUnmount, ref, watch } from 'vue';
+import AppModalShell from '../../common/AppModalShell.vue';
 import { useConfigStore } from '@/store/config';
 import { type MascotImageSource, selectMascotImage } from '../../../utils/mascot-image-upload';
 import { resolveMascotImageUrl } from '../../../utils/mascot-image-url';
@@ -120,11 +121,21 @@ onBeforeUnmount(clearSelectedImage);
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay sprite-import-overlay">
-        <div class="custom-modal-card sprite-import-card">
-            <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-file-import text-purple-600 text-sm"></i>
+    <AppModalShell
+        :visible="visible"
+        title-id="sprite-import-modal-title"
+        backdrop="light"
+        :z-index="2000"
+        width="60vw"
+        max-width="680px"
+        height="70vh"
+        max-height="540px"
+        padding="10px 20px 16px"
+        @close="emit('close')"
+    >
+        <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
+            <h2 id="sprite-import-modal-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-file-import text-brand-600 text-sm"></i>
                     <span>AIスプライトインポート (スプライトシートから切り出し)</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -134,7 +145,7 @@ onBeforeUnmount(clearSelectedImage);
             <div class="flex border-bottom border-gray-200 mt-2 mb-1">
                 <button 
                     class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent"
-                    :class="activeTab === 'upload' ? 'border-purple-500 text-purple-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
+                    :class="activeTab === 'upload' ? 'border-brand-500 text-brand-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
                     style="border-bottom-width: 2px;"
                     @click="activeTab = 'upload'"
                 >
@@ -142,12 +153,12 @@ onBeforeUnmount(clearSelectedImage);
                 </button>
                 <button 
                     class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent flex align-items-center gap-1"
-                    :class="activeTab === 'history' ? 'border-purple-500 text-purple-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
+                    :class="activeTab === 'history' ? 'border-brand-500 text-brand-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
                     style="border-bottom-width: 2px;"
                     @click="activeTab = 'history'"
                 >
                     <span>生成履歴から選択</span>
-                    <span v-if="generatedSheets.length > 0" class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-xxs font-bold">
+                    <span v-if="generatedSheets.length > 0" class="bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full text-xxs font-bold">
                         {{ generatedSheets.length }}
                     </span>
                 </button>
@@ -159,7 +170,7 @@ onBeforeUnmount(clearSelectedImage);
                     v-if="activeTab === 'upload'"
                     class="flex-1 border-2 border-round flex flex-column align-items-center justify-content-center relative overflow-hidden transition-all"
                     :class="{
-                        'border-purple-400 bg-purple-50/20': isDragOver,
+                        'border-brand-400 bg-theme-alpha-05': isDragOver,
                         'border-dashed border-gray-300 bg-slate-50 hover:bg-slate-100/50': !isDragOver && !selectedImage,
                         'border-solid border-gray-200 checkerboard-bg': selectedImage
                     }"
@@ -181,7 +192,7 @@ onBeforeUnmount(clearSelectedImage);
                 <!-- タブ2: 生成履歴 -->
                 <div v-else-if="activeTab === 'history'" class="flex-1 overflow-y-auto min-h-0 bg-slate-50 border-round border-1 border-gray-200 p-3">
                     <div v-if="isLoadingSheets" class="flex flex-column align-items-center justify-content-center py-5">
-                        <i class="pi pi-spin pi-spinner text-2xl text-purple-600 mb-2"></i>
+                        <i class="pi pi-spin pi-spinner text-2xl text-brand-600 mb-2"></i>
                         <span class="text-xs font-medium text-slate-500">履歴を取得中...</span>
                     </div>
                     <div v-else-if="generatedSheets.length === 0" class="flex flex-column align-items-center justify-content-center py-5 text-slate-400">
@@ -226,41 +237,10 @@ onBeforeUnmount(clearSelectedImage);
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-.sprite-import-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.sprite-import-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 60vw !important;
-    max-width: 680px !important;
-    height: 70vh !important;
-    max-height: 540px !important;
-    display: flex;
-    flex-direction: column;
-    color: #1e293b;
-    overflow: hidden !important;
-    padding: 10px 20px 16px 20px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -292,7 +272,7 @@ onBeforeUnmount(clearSelectedImage);
     gap: 8px;
 }
 .sheet-card:hover {
-    border-color: #9333ea;
+    border-color: var(--color-primary-hover);
     box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.1);
 }
 .sheet-thumbnail-container {

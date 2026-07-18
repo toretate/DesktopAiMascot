@@ -411,9 +411,9 @@ const computedExpressionStyle = computed(() => {
     opacity: 1;
 }
 .mascot-item.active {
-    border-color: #a855f7;
-    background: #f5f3ff;
-    box-shadow: 0 0 0 1px #a855f7, 0 4px 6px -1px rgba(168, 85, 247, 0.1);
+    border-color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10);
 }
 .mascot-item .name {
     font-weight: bold;

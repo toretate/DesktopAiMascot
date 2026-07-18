@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import Button from 'primevue/button';
+import AppModalShell from '../../common/AppModalShell.vue';
 import { useConfigStore } from '../../../store/config';
 import { resolveMascotImageUrl } from '../../../utils/mascot-image-url';
 
@@ -95,11 +96,21 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay expression-edit-modal-overlay">
-        <div class="custom-modal-card expression-edit-modal-card max-width-lg">
-            <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-sparkles text-purple-500"></i>
+    <AppModalShell
+        :visible="visible"
+        title-id="emotion-assignment-modal-title"
+        backdrop="light"
+        :z-index="2000"
+        width="90vw"
+        max-width="960px"
+        height="90vh"
+        max-height="680px"
+        padding="10px 20px 16px"
+        @close="emit('close')"
+    >
+        <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
+            <h2 id="emotion-assignment-modal-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-sparkles text-brand-500"></i>
                     <span>AI表情スプライト - 感情割り当て設定</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -107,13 +118,13 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 
             <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-hidden flex-1" style="min-height: 0;">
                 <!-- 上部: 検出スプライトトレイ (明るいラベンダー色・薄い影) -->
-                <div class="scanned-sprites-section p-3 bg-purple-50 border-round border-1 border-purple-100 flex flex-column gap-2" style="max-height: 160px; min-height: 140px; flex-shrink: 0;">
+                <div class="scanned-sprites-section p-3 bg-brand-50 border-round border-1 border-brand-100 flex flex-column gap-2" style="max-height: 160px; min-height: 140px; flex-shrink: 0;">
                     <div class="flex justify-content-between align-items-center mb-1">
-                        <span class="text-xs font-bold text-purple-700 flex align-items-center gap-1 select-none">
+                        <span class="text-xs font-bold text-brand-700 flex align-items-center gap-1 select-none">
                             <i class="pi pi-palette"></i>
                             <span>検出された表情パーツ（スロットをクリック、またはドラッグして感情をマッピングしてください）</span>
                         </span>
-                        <span class="text-xxs text-purple-500 font-mono font-bold">残り {{ scannedSprites.length }} 個の表情スプライト</span>
+                        <span class="text-xxs text-brand-500 font-mono font-bold">残り {{ scannedSprites.length }} 個の表情スプライト</span>
                     </div>
                     <div class="flex gap-3 overflow-x-auto pb-2 scanned-sprites-tray">
                         <div 
@@ -128,7 +139,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                             <img :src="resolveImageUrl(sprite.path)" class="sprite-preview object-contain border-round bg-slate-200" style="width: 54px; height: 54px;" />
                             <span class="text-xxs font-bold text-slate-600 text-ellipsis overflow-hidden w-full text-center">{{ sprite.name }}</span>
                         </div>
-                        <div v-if="scannedSprites.length === 0" class="flex-1 flex align-items-center justify-content-center text-xs text-purple-600 font-semibold select-none">
+                        <div v-if="scannedSprites.length === 0" class="flex-1 flex align-items-center justify-content-center text-xs text-brand-600 font-semibold select-none">
                             全てのスプライトをスロットに割り当て完了しました！
                         </div>
                     </div>
@@ -166,50 +177,14 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
                 </div>
             </div>
 
-            <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3">
-                <Button label="割り当てを完了する" icon="pi pi-check" class="p-button-primary px-4 p-button-sm" @click="emit('close')" />
-            </div>
+        <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3">
+            <Button label="割り当てを完了する" icon="pi pi-check" class="p-button-primary px-4 p-button-sm" @click="emit('close')" />
         </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
 /* 白基調の感情割り当てモーダル用CSS */
-.expression-edit-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.expression-edit-modal-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 90vw !important;
-    max-width: 1040px !important;
-    height: 90vh !important;
-    max-height: 780px !important;
-    display: flex;
-    flex-direction: column;
-    color: #1e293b;
-    overflow: hidden !important;
-    padding: 10px 20px 16px 20px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.max-width-lg {
-    max-width: 960px !important;
-    max-height: 680px !important;
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -218,7 +193,7 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 }
 
 .scanned-sprites-section {
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    border: 1px solid var(--color-primary-alpha-20);
     box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
 }
 
@@ -229,13 +204,13 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
     white-space: nowrap;
     padding-bottom: 8px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(168, 85, 247, 0.3) transparent;
+    scrollbar-color: var(--color-primary-alpha-30) transparent;
 }
 .scanned-sprites-tray::-webkit-scrollbar {
     height: 6px;
 }
 .scanned-sprites-tray::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.3);
+    background: var(--color-primary-alpha-30);
     border-radius: 3px;
 }
 
@@ -248,14 +223,14 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 }
 .scanned-sprite-item:hover {
     background: #f8fafc;
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: var(--color-primary-alpha-30);
     transform: translateY(-2px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .scanned-sprite-item.active {
-    background: #f5f3ff !important;
-    border-color: #a855f7 !important;
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+    background: var(--color-primary-subtle) !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 10px var(--color-primary-alpha-15);
 }
 
 /* 感情スロット割り当てカード (ライトモード) */
@@ -278,14 +253,14 @@ const onSpriteDrop = (event: DragEvent, slot: MascotAsset) => {
 }
 .assignment-slot-card.hover-assign {
     border-style: dashed !important;
-    border-color: #a855f7 !important;
+    border-color: var(--color-primary) !important;
     animation: pulseBorder 1.5s infinite;
 }
 
 @keyframes pulseBorder {
-    0% { border-color: rgba(168, 85, 247, 0.3); }
-    50% { border-color: rgba(168, 85, 247, 0.8); }
-    100% { border-color: rgba(168, 85, 247, 0.3); }
+    0% { border-color: var(--color-primary-alpha-30); }
+    50% { border-color: var(--color-primary-alpha-80); }
+    100% { border-color: var(--color-primary-alpha-30); }
 }
 
 .slot-thumbnail {

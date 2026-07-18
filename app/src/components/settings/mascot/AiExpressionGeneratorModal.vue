@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { useConfigStore } from '@/store/config';
 import Button from 'primevue/button';
+import AppModalShell from '../../common/AppModalShell.vue';
 import { resolveMascotImageUrl } from '../../../utils/mascot-image-url';
 import { saveMascotImageSource } from '../../../utils/mascot-image-upload';
 
@@ -336,12 +337,23 @@ const importGeneratedSprite = () => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay ai-generator-overlay">
-        <div class="custom-modal-card ai-generator-card">
-            <!-- 高級感のあるヘッダー -->
-            <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-sparkles text-purple-600 text-sm animate-pulse"></i>
+    <AppModalShell
+        :visible="visible"
+        title-id="ai-expression-generator-modal-title"
+        :close-disabled="isGenerating"
+        backdrop="light"
+        :z-index="2000"
+        width="90vw"
+        max-width="1040px"
+        height="90vh"
+        max-height="780px"
+        padding="10px 20px 16px"
+        @close="emit('close')"
+    >
+        <!-- 高級感のあるヘッダー -->
+        <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
+            <h2 id="ai-expression-generator-modal-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-sparkles text-brand-600 text-sm animate-pulse"></i>
                     <span>AI表情スプライト自動生成 (Gemini Vision + Imagen 3)</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" :disabled="isGenerating" />
@@ -369,7 +381,7 @@ const importGeneratedSprite = () => {
                     <!-- 生成エンジン ＆ モデル設定 -->
                     <div class="engine-model-settings-panel p-3 bg-white border-round border-1 border-gray-200 flex flex-column gap-2">
                         <label class="font-bold text-xs text-slate-700 flex align-items-center gap-1 select-none">
-                            <i class="pi pi-cog text-purple-500"></i>
+                            <i class="pi pi-cog text-brand-500"></i>
                             <span>生成AIエンジン ＆ モデル設定</span>
                         </label>
                         
@@ -379,7 +391,7 @@ const importGeneratedSprite = () => {
                                 <span class="text-xxs font-bold text-slate-500">生成エンジン</span>
                                 <select 
                                     v-model="selectedEngine" 
-                                    class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                                    class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                                     @change="onEngineChange"
                                     :disabled="isGenerating"
                                 >
@@ -394,7 +406,7 @@ const importGeneratedSprite = () => {
                             <div class="flex-1 flex flex-column gap-1">
                                 <div class="flex justify-content-between align-items-center">
                                     <span class="text-xxs font-bold text-slate-500">使用モデル / ワークフローID</span>
-                                    <span v-if="isFetchingModels && selectedEngine === 'gemini'" class="text-xxs text-purple-600 flex align-items-center gap-1 select-none font-bold">
+                                    <span v-if="isFetchingModels && selectedEngine === 'gemini'" class="text-xxs text-brand-600 flex align-items-center gap-1 select-none font-bold">
                                         <i class="pi pi-spin pi-spinner" style="font-size: 8px;"></i>
                                         <span>同期中...</span>
                                     </span>
@@ -403,7 +415,7 @@ const importGeneratedSprite = () => {
                                     <select 
                                         v-if="hasModelPresets"
                                         v-model="selectedModel"
-                                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                                         :disabled="isGenerating"
                                     >
                                         <option v-for="m in modelPresets" :key="m" :value="m">{{ getModelDisplayName(m) }}</option>
@@ -415,7 +427,7 @@ const importGeneratedSprite = () => {
                                         v-model="customModel"
                                         type="text"
                                         placeholder="モデル名またはIDを入力..."
-                                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none"
+                                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none"
                                         :class="{ 'mt-1.5': hasModelPresets }"
                                         :disabled="isGenerating"
                                     />
@@ -428,10 +440,10 @@ const importGeneratedSprite = () => {
                     <div class="emotions-selection-panel p-3 bg-white border-round border-1 border-gray-200 flex flex-column gap-2">
                         <div class="flex justify-content-between align-items-center">
                             <label class="font-bold text-xs text-slate-700 flex align-items-center gap-1 select-none">
-                                <i class="pi pi-check-square text-purple-500"></i>
+                                <i class="pi pi-check-square text-brand-500"></i>
                                 <span>生成する表情を選択してください (最大16個)</span>
                             </label>
-                            <span class="text-xxs font-mono font-bold" :class="selectedCount > 16 ? 'text-rose-500' : 'text-purple-600'">
+                            <span class="text-xxs font-mono font-bold" :class="selectedCount > 16 ? 'text-rose-500' : 'text-brand-600'">
                                 {{ selectedCount }} / 16 選択中
                             </span>
                         </div>
@@ -445,7 +457,7 @@ const importGeneratedSprite = () => {
                                     height: '108px'
                                 }"
                                 :class="{
-                                    'active border-purple-500 shadow-sm': selectedEmotions.includes(expr.name),
+                                    'active border-brand-500 shadow-sm': selectedEmotions.includes(expr.name),
                                     'border-slate-200 bg-white hover:bg-slate-50': !selectedEmotions.includes(expr.name),
                                     'opacity-50 cursor-not-allowed': selectedCount >= 16 && !selectedEmotions.includes(expr.name),
                                     'border-dashed opacity-75': !expr.path
@@ -458,8 +470,8 @@ const importGeneratedSprite = () => {
                                     <i v-else class="pi pi-image text-slate-300" style="font-size: 24px;"></i>
                                     
                                     <!-- 選択状態のオーバーレイ / アイコン -->
-                                    <div v-if="selectedEmotions.includes(expr.name)" class="absolute inset-0 bg-purple-500/10 flex align-items-center justify-content-center">
-                                        <i class="pi pi-check-circle text-purple-600 bg-white rounded-full text-base shadow-sm"></i>
+                                    <div v-if="selectedEmotions.includes(expr.name)" class="absolute inset-0 bg-theme-alpha-10 flex align-items-center justify-content-center">
+                                        <i class="pi pi-check-circle text-brand-600 bg-white rounded-full text-base shadow-sm"></i>
                                     </div>
                                     
                                     <!-- 作成済みバッジ (右上の小さな緑チェックマーク) -->
@@ -479,7 +491,7 @@ const importGeneratedSprite = () => {
                     <!-- プロンプト入力欄 -->
                     <div class="prompt-panel p-3 bg-white border-round border-1 border-gray-200 flex flex-column gap-2">
                         <label class="font-bold text-xs text-slate-700 flex align-items-center gap-1 select-none">
-                            <i class="pi pi-pencil text-purple-500"></i>
+                            <i class="pi pi-pencil text-brand-500"></i>
                             <span>画像生成プロンプトの調整</span>
                         </label>
                         <span class="text-xxs text-slate-400 leading-normal mb-1">
@@ -487,7 +499,7 @@ const importGeneratedSprite = () => {
                         </span>
                         <textarea 
                             v-model="userPrompt"
-                            class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none transition-all font-sans leading-relaxed"
+                            class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none transition-all font-sans leading-relaxed"
                             rows="7"
                             style="resize: none;"
                             placeholder="プロンプトを入力してください..."
@@ -505,7 +517,7 @@ const importGeneratedSprite = () => {
                         
                         <!-- 生成中のインジケーター -->
                         <div v-if="isGenerating" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex flex-column align-items-center justify-content-center gap-3 z-20 w-full h-full">
-                            <i class="pi pi-spin pi-spinner text-purple-400 text-4xl"></i>
+                            <i class="pi pi-spin pi-spinner text-brand-400 text-4xl"></i>
                             <div class="flex flex-column align-items-center gap-1.5 text-center px-4">
                                 <span class="text-sm font-bold text-white">AI表情スプライト生成中...</span>
                                 <span class="text-xxs text-slate-200">これには30秒から1分程度かかる場合があります。画面を閉じずにお待ちください。</span>
@@ -585,46 +597,15 @@ const importGeneratedSprite = () => {
 
             </div>
 
-            <!-- フッター -->
-            <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3 no-drag">
-                <Button label="閉じる" icon="pi pi-times" class="p-button-secondary px-4 p-button-sm" @click="emit('close')" :disabled="isGenerating" />
-            </div>
+        <!-- フッター -->
+        <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3 no-drag">
+            <Button label="閉じる" icon="pi pi-times" class="p-button-secondary px-4 p-button-sm" @click="emit('close')" :disabled="isGenerating" />
         </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
 /* モーダル用CSS */
-.ai-generator-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.ai-generator-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 90vw !important;
-    max-width: 1040px !important;
-    height: 90vh !important;
-    max-height: 780px !important;
-    display: flex;
-    flex-direction: column;
-    color: #1e293b;
-    overflow: hidden !important;
-    padding: 10px 20px 16px 20px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }
@@ -652,7 +633,7 @@ const importGeneratedSprite = () => {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 .emotion-card.active {
-    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha-20);
 }
 
 .text-xxs {

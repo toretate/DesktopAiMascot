@@ -175,9 +175,9 @@ const {
     color: #ffffff;
 }
 .menu-item.active {
-    background: #a855f7;
+    background: var(--color-primary);
     color: #ffffff;
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+    box-shadow: 0 4px 12px var(--color-primary-alpha-25);
 }
 
 .sidebar-footer {

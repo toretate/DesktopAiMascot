@@ -289,7 +289,7 @@ const handleSave = async () => {
             <!-- ヘッダー -->
             <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
                 <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-cog text-purple-600 text-sm"></i>
+                    <i class="pi pi-cog text-brand-600 text-sm"></i>
                     <span>画像生成・編集パラメータ設定</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -298,9 +298,9 @@ const handleSave = async () => {
             <!-- モーダルボディ -->
             <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-y-auto flex-1 pr-1" style="min-height: 0;">
                 <!-- 0. プリセット機能 (共通・最上部) -->
-                <div class="form-field flex flex-column gap-2 border-1 border-slate-100 border-round p-2 bg-purple-50/20 mb-2">
-                    <label class="font-bold text-xs text-purple-700 select-none flex align-items-center gap-1">
-                        <i class="pi pi-bookmark text-purple-600"></i>
+                <div class="form-field flex flex-column gap-2 border-1 border-slate-100 border-round p-2 bg-theme-alpha-05 mb-2">
+                    <label class="font-bold text-xs text-brand-700 select-none flex align-items-center gap-1">
+                        <i class="pi pi-bookmark text-brand-600"></i>
                         パラメータプリセット
                     </label>
                     <div class="flex flex-column gap-2">
@@ -308,7 +308,7 @@ const handleSave = async () => {
                         <div class="flex gap-2">
                             <select 
                                 v-model="selectedPresetName" 
-                                class="flex-1 p-2 bg-white border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                                class="flex-1 p-2 bg-white border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                                 @change="applyPreset(selectedPresetName)"
                             >
                                 <option value="">-- プリセットを選択 --</option>
@@ -329,7 +329,7 @@ const handleSave = async () => {
                                 type="text" 
                                 v-model="newPresetName" 
                                 placeholder="プリセット名を入力して保存" 
-                                class="flex-1 p-2 bg-white border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none"
+                                class="flex-1 p-2 bg-white border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none"
                             />
                             <Button 
                                 label="保存" 
@@ -347,7 +347,7 @@ const handleSave = async () => {
                     <label class="font-bold text-xs text-slate-700 select-none">画像生成エンジン</label>
                     <select 
                         v-model="localEngine" 
-                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                     >
                         <option v-for="eng in engines" :key="eng.value" :value="eng.value">{{ eng.name }}</option>
                     </select>
@@ -369,14 +369,14 @@ const handleSave = async () => {
                 <div v-if="localEngine === 'sd_forge'" class="form-field flex flex-column gap-2 border-1 border-slate-100 border-round p-2 bg-slate-50/50">
                     <div class="flex justify-content-between align-items-center mb-1">
                         <label class="font-bold text-xs text-slate-700 select-none flex align-items-center gap-1">
-                            <i class="pi pi-sliders-h text-purple-500"></i>
+                            <i class="pi pi-sliders-h text-brand-500"></i>
                             使用 LoRA (複数追加・個別強度調整)
                         </label>
                         <div class="flex gap-1 align-items-center">
                             <!-- フォルダフィルタ -->
                             <select 
                                 v-model="selectedFolder" 
-                                class="p-1 border-1 border-gray-200 border-round text-slate-700 text-xxs focus:border-purple-400 focus:outline-none cursor-pointer bg-white"
+                                class="p-1 border-1 border-gray-200 border-round text-slate-700 text-xxs focus:border-brand-400 focus:outline-none cursor-pointer bg-white"
                                 style="max-width: 100px;"
                             >
                                 <option value="">(すべて)</option>
@@ -413,7 +413,7 @@ const handleSave = async () => {
                             <div class="flex flex-column gap-1 flex-1" style="min-width: 100px;">
                                 <div class="flex justify-content-between align-items-center text-xxs text-slate-500 select-none">
                                     <span>強度 (Weight)</span>
-                                    <span class="font-mono font-bold text-purple-600">{{ lora.weight.toFixed(2) }}</span>
+                                    <span class="font-mono font-bold text-brand-600">{{ lora.weight.toFixed(2) }}</span>
                                 </div>
                                 <Slider v-model="lora.weight" :min="-2.0" :max="2.0" :step="0.05" class="py-1" />
                             </div>
@@ -438,7 +438,7 @@ const handleSave = async () => {
                     <textarea 
                         v-model="localPrompt" 
                         rows="3" 
-                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none resize-y"
+                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none resize-y"
                         placeholder="生成時に常に適用される基本プロンプト（例: masterpiece, best quality）。空欄時はチャット入力のみを使用。"
                     ></textarea>
                 </div>
@@ -449,7 +449,7 @@ const handleSave = async () => {
                     <textarea 
                         v-model="localNegativePrompt" 
                         rows="2" 
-                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none resize-y"
+                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none resize-y"
                         placeholder="生成から除外したい要素（例: nsfw, low quality, deformed 等）"
                     ></textarea>
                 </div>
@@ -459,7 +459,7 @@ const handleSave = async () => {
                     <label class="font-bold text-xs text-slate-700 select-none">画像解像度</label>
                     <select 
                         v-model="resolution" 
-                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                     >
                         <option v-for="res in resolutions" :key="res.value" :value="res.value">{{ res.name }}</option>
                     </select>
@@ -470,7 +470,7 @@ const handleSave = async () => {
                     <label class="font-bold text-xs text-slate-700 select-none">Sampler</label>
                     <select 
                         v-model="localSampler" 
-                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-purple-400 focus:outline-none cursor-pointer"
+                        class="w-full p-2 bg-slate-50 border-1 border-gray-200 border-round text-slate-800 text-xs focus:border-brand-400 focus:outline-none cursor-pointer"
                     >
                         <option v-for="samp in samplers" :key="samp.value" :value="samp.value">{{ samp.name }}</option>
                     </select>
@@ -480,7 +480,7 @@ const handleSave = async () => {
                 <div v-if="localEngine === 'sd_forge'" class="form-field flex flex-column gap-1">
                     <div class="flex justify-content-between align-items-center">
                         <label class="font-bold text-xs text-slate-700 select-none">Sampling Steps</label>
-                        <span class="text-xxs font-mono font-bold text-purple-600">{{ localSteps }}</span>
+                        <span class="text-xxs font-mono font-bold text-brand-600">{{ localSteps }}</span>
                     </div>
                     <Slider v-model="localSteps" :min="1" :max="100" :step="1" class="mt-1" />
                 </div>
@@ -489,7 +489,7 @@ const handleSave = async () => {
                 <div v-if="localEngine === 'sd_forge'" class="form-field flex flex-column gap-1">
                     <div class="flex justify-content-between align-items-center">
                         <label class="font-bold text-xs text-slate-700 select-none">CFG Scale</label>
-                        <span class="text-xxs font-mono font-bold text-purple-600">{{ localCfgScale.toFixed(1) }}</span>
+                        <span class="text-xxs font-mono font-bold text-brand-600">{{ localCfgScale.toFixed(1) }}</span>
                     </div>
                     <Slider v-model="localCfgScale" :min="1.0" :max="20.0" :step="0.5" class="mt-1" />
                 </div>

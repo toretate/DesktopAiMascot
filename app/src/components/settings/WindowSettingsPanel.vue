@@ -9,6 +9,7 @@ import { useConfigStore } from '@/store/config';
 import { useAuthStore } from '@/store/auth';
 import { storeToRefs } from 'pinia';
 import { resolveMascotImageUrl as resolveImageAssetUrl } from '@/utils/mascot-image-url';
+import { DEFAULT_ACCENT_COLOR } from '@/config/theme';
 
 const configStore = useConfigStore();
 const authStore = useAuthStore();
@@ -394,7 +395,7 @@ const getPreviewBorderStyle = computed(() => {
         return 'none';
     }
     const width = chatBorderWidth.value !== undefined ? chatBorderWidth.value : 1;
-    const color = chatBorderColor.value || '#a855f7';
+    const color = chatBorderColor.value || DEFAULT_ACCENT_COLOR;
     return `${width}px solid ${color}`;
 });
 
@@ -446,8 +447,8 @@ onMounted(async () => {
         <template #content>
             <div class="flex flex-column gap-4">
                 <!-- ウィンドウモード設定 -->
-                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
-                    <i class="pi pi-th-large text-purple-500"></i>
+                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-brand-600 flex align-items-center gap-2">
+                    <i class="pi pi-th-large text-brand-500"></i>
                     <span>ウィンドウモード設定</span>
                 </div>
 
@@ -470,8 +471,8 @@ onMounted(async () => {
 
                 <!-- 統合ウィンドウ設定（統合モード時のみ表示） -->
                 <div v-if="windowMode === 'integrated'" class="flex flex-column gap-3 mt-2">
-                    <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
-                        <i class="pi pi-clone text-purple-500"></i>
+                    <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-brand-600 flex align-items-center gap-2">
+                        <i class="pi pi-clone text-brand-500"></i>
                         <span>統合ウィンドウ設定</span>
                     </div>
 
@@ -547,7 +548,7 @@ onMounted(async () => {
 
                         <!-- 右ペイン: 統合ウィンドウプレビュー -->
                         <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
-                            <label class="font-medium mb-2 align-self-start text-sm text-purple-600 flex align-items-center gap-2">
+                            <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                                 <i class="pi pi-eye"></i>プレビュー（統合ウィンドウ）
                             </label>
                             <div class="integrated-preview-box border-round shadow-2 p-2 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex gap-2" style="height: 240px;">
@@ -570,12 +571,12 @@ onMounted(async () => {
                                 <div class="flex-1 flex flex-column justify-content-between p-1 relative" style="z-index: 1; background: rgba(255,255,255,0.1); border-radius: 4px; backdrop-filter: blur(2px);">
                                     <div class="text-xs text-gray-500 font-bold border-bottom pb-1 mb-1" style="font-size: 10px;">Chat</div>
                                     <div class="flex-1 flex flex-column gap-1 overflow-hidden" style="max-height: 120px;">
-                                        <div class="bg-purple-100 text-purple-900 border-round p-1" style="font-size: 8px; width: fit-content; max-width: 90%;">Hello!</div>
+                                        <div class="bg-brand-100 text-brand-900 border-round p-1" style="font-size: 8px; width: fit-content; max-width: 90%;">Hello!</div>
                                         <div class="bg-white text-gray-800 border-round p-1 align-self-end" style="font-size: 8px; width: fit-content; max-width: 90%;">こんにちは</div>
                                     </div>
                                     <div class="border-top pt-1 mt-1 flex gap-1">
                                         <div class="bg-white border-1 border-300 border-round w-full" style="height: 12px;"></div>
-                                        <div class="bg-purple-500 text-white border-round" style="width: 12px; height: 12px;"></div>
+                                        <div class="bg-brand-500 text-white border-round" style="width: 12px; height: 12px;"></div>
                                     </div>
                                 </div>
                             </div>
@@ -584,8 +585,8 @@ onMounted(async () => {
                 </div>
 
                 <!-- マスコットウィンドウ設定 -->
-                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-purple-600 flex align-items-center gap-2">
-                    <i class="pi pi-user text-purple-500"></i>
+                <div class="form-field-header font-bold text-base border-bottom pb-2 mb-2 text-brand-600 flex align-items-center gap-2">
+                    <i class="pi pi-user text-brand-500"></i>
                     <span>マスコットウィンドウ設定</span>
                 </div>
 
@@ -693,15 +694,15 @@ onMounted(async () => {
 
                     <!-- 右ペイン: マスコットプレビュー -->
                     <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
-                        <label class="font-medium mb-2 align-self-start text-sm text-purple-600 flex align-items-center gap-2">
+                        <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                             <i class="pi pi-eye"></i>プレビュー（サイズ・背景連動）
                         </label>
                         <div class="mascot-preview-box border-round shadow-2 p-0 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex flex-column justify-content-center align-items-center" style="height: 240px;">
                             <!-- 背景：デスクトップを模したグラデーション背景 -->
-                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%); opacity: 0.8; z-index: 0;"></div>
+                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background: linear-gradient(135deg, var(--color-primary-soft) 0%, #e0e7ff 100%); opacity: 0.8; z-index: 0;"></div>
                             
                             <!-- グリッド模様 (透過) -->
-                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background-image: radial-gradient(rgba(168, 85, 247, 0.1) 1.5px, transparent 1.5px); background-size: 16px 16px; z-index: 1;"></div>
+                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background-image: radial-gradient(var(--color-primary-alpha-10) 1.5px, transparent 1.5px); background-size: 16px 16px; z-index: 1;"></div>
                             
                             <!-- マスコットウィンドウの背景レイヤー -->
                             <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" :style="mascotPreviewBackgroundStyle"></div>
@@ -734,8 +735,8 @@ onMounted(async () => {
                 </div>
 
                 <!-- チャットウィンドウ設定 -->
-                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-purple-600 flex align-items-center gap-2">
-                    <i class="pi pi-comments text-purple-500"></i>
+                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-brand-600 flex align-items-center gap-2">
+                    <i class="pi pi-comments text-brand-500"></i>
                     <span>チャットウィンドウ設定</span>
                 </div>
 
@@ -813,16 +814,16 @@ onMounted(async () => {
 
                         <!-- 境界線（枠）設定（グループボックス表示） -->
                         <fieldset class="border-round p-3" style="border: 1px solid rgba(0, 0, 0, 0.12);">
-                            <legend class="px-2 text-sm font-semibold text-purple-600">枠</legend>
+                            <legend class="px-2 text-sm font-semibold text-brand-600">枠</legend>
                             <div class="flex align-items-center gap-3">
                                 <div class="flex align-items-center gap-2">
-                                    <input type="checkbox" id="chatBorderShow" v-model="chatBorderShow" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                                    <input type="checkbox" id="chatBorderShow" v-model="chatBorderShow" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" />
                                     <label for="chatBorderShow" class="cursor-pointer text-sm font-medium">表示</label>
                                 </div>
                                 
                                 <div v-if="chatBorderShow" class="flex align-items-center gap-2">
                                     <input type="color" v-model="chatBorderColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
-                                    <InputText v-model="chatBorderColor" placeholder="#a855f7" style="width: 80px; height: 32px;" />
+                                    <InputText v-model="chatBorderColor" :placeholder="DEFAULT_ACCENT_COLOR" style="width: 80px; height: 32px;" />
                                 </div>
                                 
                                 <div v-if="chatBorderShow" class="flex align-items-center gap-2">
@@ -873,7 +874,7 @@ onMounted(async () => {
 
                     <!-- 右ペイン: プレビュー -->
                     <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
-                        <label class="font-medium mb-2 align-self-start text-sm text-purple-600 flex align-items-center gap-2">
+                        <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                             <i class="pi pi-eye"></i>プレビュー（リアルタイム）
                         </label>
                         <div class="chat-preview-box border-round shadow-2 p-0 overflow-hidden w-full relative border-1 border-300" :style="{ fontFamily: chatFontFamily, border: getPreviewBorderStyle, height: '380px', display: 'flex', flexDirection: 'column', background: 'transparent' }">
@@ -897,7 +898,7 @@ onMounted(async () => {
                                     </div>
                                 </div>
                                 <div class="flex justify-content-end w-full">
-                                    <div class="p-2 border-round text-xs max-w-80 shadow-1 text-white" style="background: #a855f7; border-radius: 12px 12px 0px 12px; line-height: 1.4;">
+                                    <div class="p-2 border-round text-xs max-w-80 shadow-1 text-white" style="background: var(--color-primary); border-radius: 12px 12px 0px 12px; line-height: 1.4;">
                                         背景やフォントが変わるんだね！
                                     </div>
                                 </div>
@@ -907,7 +908,7 @@ onMounted(async () => {
                             <div class="chat-preview-footer p-2 flex align-items-center gap-2" style="border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3); z-index: 1; position: relative;">
                                 <div class="flex-1 border-1 border-300 border-round bg-white px-2 py-1 text-xs text-gray-400 flex align-items-center justify-content-between">
                                     <span>メッセージを入力...</span>
-                                    <i class="pi pi-send text-xs text-purple-500"></i>
+                                    <i class="pi pi-send text-xs text-brand-500"></i>
                                 </div>
                             </div>
                         </div>
@@ -917,8 +918,8 @@ onMounted(async () => {
 
 
                 <!-- サーバー連携設定 -->
-                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-purple-600 flex align-items-center gap-2">
-                    <i class="pi pi-server text-purple-500"></i>
+                <div class="form-field-header font-bold text-base border-bottom pb-2 mt-4 mb-2 text-brand-600 flex align-items-center gap-2">
+                    <i class="pi pi-server text-brand-500"></i>
                     <span>サーバー連携設定 (マルチデバイス)</span>
                 </div>
 
@@ -953,7 +954,7 @@ onMounted(async () => {
                      <div class="auth-section mt-3 p-3 border-round bg-gray-50 border-1 border-300">
                          <div class="flex align-items-center justify-content-between">
                              <div class="flex align-items-center gap-2">
-                                 <i class="pi pi-user text-purple-500"></i>
+                                 <i class="pi pi-user text-brand-500"></i>
                                  <span class="font-bold">ログイン状態:</span>
                                  <span v-if="isAuthenticated" class="text-green-600 font-semibold">{{ user?.email }}</span>
                                  <span v-else class="text-red-500 font-semibold">未ログイン</span>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import Button from 'primevue/button';
+import AppModalShell from '../../common/AppModalShell.vue';
 
 const props = defineProps<{
     visible: boolean;
@@ -82,11 +83,21 @@ const handleSave = async () => {
 </script>
 
 <template>
-    <div v-if="visible" class="custom-modal-overlay prompt-edit-modal-overlay">
-        <div class="custom-modal-card prompt-edit-modal-card">
-            <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
-                <h2 class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
-                    <i class="pi pi-user-edit text-purple-500 text-sm"></i>
+    <AppModalShell
+        :visible="visible"
+        title-id="prompt-editor-modal-title"
+        backdrop="light"
+        :z-index="2000"
+        width="90vw"
+        max-width="800px"
+        height="90vh"
+        max-height="750px"
+        padding="16px 24px"
+        @close="emit('close')"
+    >
+        <div class="modal-header flex justify-content-between align-items-center pb-2 border-bottom border-gray-200">
+            <h2 id="prompt-editor-modal-title" class="text-base font-bold flex align-items-center gap-2 m-0 text-slate-800">
+                    <i class="pi pi-user-edit text-brand-500 text-sm"></i>
                     <span>詳細プロンプト設定 (OpenClawフォーマット)</span>
                 </h2>
                 <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
@@ -107,7 +118,7 @@ const handleSave = async () => {
                         v-model="identity" 
                         placeholder="# Mascot Identity&#10;- 名前: ココ&#10;- 種族: 電子の妖精&#10;- 目的: マスターの作業をサポートすること。" 
                         rows="4" 
-                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none font-mono"
+                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-brand-400 focus:outline-none font-mono"
                     ></textarea>
                 </div>
 
@@ -124,7 +135,7 @@ const handleSave = async () => {
                         v-model="soul" 
                         placeholder="# Mascot Soul&#10;- 口調: 少し甘えん坊で親しみやすい口調。&#10;- 語尾: 「〜だよ」「〜だね」を多く使う。&#10;- 一人称: 「わたし」" 
                         rows="4" 
-                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none font-mono"
+                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-brand-400 focus:outline-none font-mono"
                     ></textarea>
                 </div>
 
@@ -141,7 +152,7 @@ const handleSave = async () => {
                         v-model="userPrompt" 
                         placeholder="# User Context&#10;- ユーザーの呼び方: 「マスター」&#10;- 関係性: 常にマスターに懐いており、役に立ちたいと思っている。" 
                         rows="4" 
-                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none font-mono"
+                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-brand-400 focus:outline-none font-mono"
                     ></textarea>
                 </div>
 
@@ -158,7 +169,7 @@ const handleSave = async () => {
                         v-model="agents" 
                         placeholder="# Mascot Agents & Rules&#10;- ルール: 暴力的、または公序良俗に反する発言は避ける。&#10;- 判断基準: 常にマスターの味方として肯定的に接すること。" 
                         rows="4" 
-                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none font-mono"
+                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-brand-400 focus:outline-none font-mono"
                     ></textarea>
                 </div>
 
@@ -175,51 +186,20 @@ const handleSave = async () => {
                         v-model="memory" 
                         placeholder="# Mascot Long-term Memory&#10;- 合意事項: 毎週土曜日はマスターと一緒にゲームをする約束をした。&#10;- マスターの情報: コーヒーはブラック派。" 
                         rows="4" 
-                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-purple-400 focus:outline-none font-mono"
+                        class="w-full p-2 bg-white border-1 border-gray-300 border-round text-gray-800 text-sm focus:border-brand-400 focus:outline-none font-mono"
                     ></textarea>
                 </div>
 
             </div>
 
-            <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3">
-                <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm" @click="emit('close')" :disabled="isSaving" />
-                <Button label="保存する" icon="pi pi-save" class="p-button-primary p-button-sm px-4" @click="handleSave" :loading="isSaving" />
-            </div>
+        <div class="modal-footer flex justify-content-end gap-2 pt-3 border-top border-gray-200 mt-3">
+            <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm" @click="emit('close')" :disabled="isSaving" />
+            <Button label="保存する" icon="pi pi-save" class="p-button-primary p-button-sm px-4" @click="handleSave" :loading="isSaving" />
         </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-.prompt-edit-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(241, 245, 249, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.prompt-edit-modal-card {
-    background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    width: 90vw !important;
-    max-width: 800px !important;
-    height: 90vh !important;
-    max-height: 750px !important;
-    display: flex;
-    flex-direction: column;
-    color: #1e293b;
-    overflow: hidden !important;
-    padding: 16px 24px !important;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }

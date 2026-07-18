@@ -237,9 +237,9 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .message-input:focus {
-    border-color: #a855f7;
+    border-color: var(--color-primary);
     background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.1);
+    box-shadow: 0 0 0 2px var(--color-primary-alpha-10);
 }
 
 .message-input::placeholder {
@@ -247,7 +247,7 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .send-btn {
-    background: #c084fc;
+    background: var(--theme-accent-400);
     border: none;
     color: #fff;
     width: 34px;
@@ -261,7 +261,7 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .send-btn:hover:not(:disabled) {
-    background: #a855f7;
+    background: var(--color-primary);
 }
 
 .send-btn:disabled {
@@ -314,7 +314,7 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 
 .preview-file-icon i {
     font-size: 20px;
-    color: #a855f7;
+    color: var(--color-primary);
 }
 
 .preview-file-name {
@@ -363,42 +363,42 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .attach-btn:hover {
-    color: #a855f7;
-    background: rgba(168, 85, 247, 0.08);
+    color: var(--color-primary);
+    background: var(--color-primary-alpha-08);
 }
 
 /* シークレットモードスタイル */
 .chat-footer.secret-mode {
     background: rgba(30, 27, 75, 0.4);
-    border-top: 1px solid rgba(168, 85, 247, 0.15);
+    border-top: 1px solid var(--color-primary-alpha-15);
 }
 
 .message-input.secret-mode {
-    color: #f3e8ff;
+    color: var(--color-primary-soft);
 }
 
 .message-input.secret-mode::placeholder {
-    color: #7c3aed;
+    color: var(--color-primary-hover);
     opacity: 0.6;
 }
 
 .send-btn.secret-mode {
     color: #ffffff;
-    background: #8b5cf6;
+    background: var(--color-primary);
 }
 
 .send-btn.secret-mode:hover:not(:disabled) {
-    background: #a78bfa;
-    box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+    background: var(--theme-accent-400);
+    box-shadow: 0 0 8px var(--color-primary-alpha-40);
 }
 
 .chat-footer.secret-mode .attach-btn {
-    color: #a78bfa;
+    color: var(--theme-accent-400);
 }
 
 .chat-footer.secret-mode .attach-btn:hover {
-    color: #c084fc;
-    background: rgba(168, 85, 247, 0.15);
+    color: var(--theme-accent-400);
+    background: var(--color-primary-alpha-15);
 }
 
 /* 音声入力ボタン */
@@ -417,8 +417,8 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .mic-btn:hover {
-    color: #a855f7;
-    background: rgba(168, 85, 247, 0.08);
+    color: var(--color-primary);
+    background: var(--color-primary-alpha-08);
 }
 
 .mic-btn.recording {
@@ -440,12 +440,12 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 }
 
 .chat-footer.secret-mode .mic-btn {
-    color: #a78bfa;
+    color: var(--theme-accent-400);
 }
 
 .chat-footer.secret-mode .mic-btn:hover {
-    color: #c084fc;
-    background: rgba(168, 85, 247, 0.15);
+    color: var(--theme-accent-400);
+    background: var(--color-primary-alpha-15);
 }
 
 .chat-footer.secret-mode .mic-btn.recording {

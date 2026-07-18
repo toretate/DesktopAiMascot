@@ -189,11 +189,11 @@ watch(() => props.url, (newUrl) => {
 }
 
 .modal-action-btn.i2i-btn {
-    background: #8b5cf6;
+    background: var(--color-primary);
 }
 
 .modal-action-btn.i2i-btn:hover {
-    background: #7c3aed;
+    background: var(--color-primary-hover);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
 }

@@ -83,13 +83,13 @@ const getVoiceEngineName = (engine?: string) => {
         <!-- 音声設定の表示セクション -->
         <div class="border-top border-gray-200 pt-3 mt-1 flex flex-column gap-2">
             <label class="text-xs font-bold text-gray-700 flex align-items-center gap-1 select-none">
-                <i class="pi pi-volume-up text-purple-500"></i>
+                <i class="pi pi-volume-up text-brand-500"></i>
                 <span>音声（ボイス）設定</span>
             </label>
             <div class="bg-gray-50 dark:bg-gray-800 p-2.5 border-round border-1 border-gray-150 flex flex-column gap-2 text-xs text-gray-600 dark:text-gray-300">
                 <div class="flex justify-content-between align-items-center">
                     <span class="font-medium text-gray-500">音声エンジン:</span>
-                    <span class="font-bold text-purple-600 dark:text-purple-400">
+                    <span class="font-bold text-brand-600 dark:text-brand-400">
                         {{ getVoiceEngineName(props.editingMascot.aiConfig?.voice?.engine) }}
                     </span>
                 </div>
@@ -123,7 +123,7 @@ const getVoiceEngineName = (engine?: string) => {
         <div class="border-top border-gray-200 pt-3 mt-1 flex flex-column gap-2">
             <div class="flex justify-content-between align-items-center">
                 <label class="text-xs font-bold text-gray-700 flex align-items-center gap-1 select-none">
-                    <i class="pi pi-file text-purple-500"></i>
+                    <i class="pi pi-file text-brand-500"></i>
                     <span>詳細プロンプト設定 (外部ファイル)</span>
                 </label>
                 <Button 

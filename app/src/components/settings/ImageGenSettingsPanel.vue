@@ -132,7 +132,7 @@ const saveSettings = async () => {
                             <input 
                                 v-model="forgeEndpoint" 
                                 type="text" 
-                                class="flex-1 p-2 border-round border-1 border-gray-300 text-sm focus:outline-none focus:border-purple-400" 
+                                class="flex-1 p-2 border-round border-1 border-gray-300 text-sm focus:outline-none focus:border-brand-400"
                                 placeholder="http://127.0.0.1:5555"
                             />
                             <Button 

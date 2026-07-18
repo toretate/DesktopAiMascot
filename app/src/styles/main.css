@@ -5,8 +5,71 @@
 @tailwind utilities;
 
 
-/* グローバルフォントおよび基本変数の定義 */
+/*
+ * アプリ共通デザイントークン
+ *
+ * 既定テーマは Purple。将来別テーマを追加する場合は、
+ * :root[data-theme="テーマ名"] でセマンティックトークンを上書きする。
+ */
 :root {
+    /* Tier 1: Purple パレット */
+    --palette-purple-50: #faf5ff;
+    --palette-purple-100: #f3e8ff;
+    --palette-purple-200: #e9d5ff;
+    --palette-purple-300: #d8b4fe;
+    --palette-purple-400: #c084fc;
+    --palette-purple-500: #8b5cf6;
+    --palette-purple-600: #7c3aed;
+    --palette-purple-700: #6d28d9;
+    --palette-purple-800: #5b21b6;
+    --palette-purple-900: #4c1d95;
+
+    /* Tier 2: テーマ差し替え用のアクセントスケール */
+    --theme-accent-50: var(--palette-purple-50);
+    --theme-accent-100: var(--palette-purple-100);
+    --theme-accent-200: var(--palette-purple-200);
+    --theme-accent-300: var(--palette-purple-300);
+    --theme-accent-400: var(--palette-purple-400);
+    --theme-accent-500: var(--palette-purple-500);
+    --theme-accent-600: var(--palette-purple-600);
+    --theme-accent-700: var(--palette-purple-700);
+    --theme-accent-800: var(--palette-purple-800);
+    --theme-accent-900: var(--palette-purple-900);
+
+    /* Tier 3: コンポーネントが参照するセマンティックトークン */
+    --color-primary: var(--theme-accent-500);
+    --color-primary-hover: var(--theme-accent-600);
+    --color-primary-active: var(--theme-accent-700);
+    --color-primary-strong: var(--theme-accent-800);
+    --color-primary-subtle: var(--theme-accent-50);
+    --color-primary-soft: var(--theme-accent-100);
+    --color-primary-border: var(--theme-accent-200);
+    --color-focus-ring: var(--theme-accent-300);
+    --color-on-primary: #ffffff;
+
+    /* 半透明表現。テーマ色を変更すると自動的に追従する */
+    --color-primary-alpha-05: color-mix(in oklab, var(--color-primary) 5%, transparent);
+    --color-primary-alpha-06: color-mix(in oklab, var(--color-primary) 6%, transparent);
+    --color-primary-alpha-08: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    --color-primary-alpha-10: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    --color-primary-alpha-12: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    --color-primary-alpha-15: color-mix(in oklab, var(--color-primary) 15%, transparent);
+    --color-primary-alpha-20: color-mix(in oklab, var(--color-primary) 20%, transparent);
+    --color-primary-alpha-25: color-mix(in oklab, var(--color-primary) 25%, transparent);
+    --color-primary-alpha-30: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    --color-primary-alpha-40: color-mix(in oklab, var(--color-primary) 40%, transparent);
+    --color-primary-alpha-45: color-mix(in oklab, var(--color-primary) 45%, transparent);
+    --color-primary-alpha-50: color-mix(in oklab, var(--color-primary) 50%, transparent);
+    --color-primary-alpha-60: color-mix(in oklab, var(--color-primary) 60%, transparent);
+    --color-primary-alpha-70: color-mix(in oklab, var(--color-primary) 70%, transparent);
+    --color-primary-alpha-80: color-mix(in oklab, var(--color-primary) 80%, transparent);
+
+    /* Tier 4: 共通コンポーネントトークン */
+    --control-focus-color: var(--color-focus-ring);
+    --selection-background: var(--color-primary-subtle);
+    --selection-border-color: var(--color-primary);
+    --selection-text-color: var(--color-primary-strong);
+
     font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
     line-height: 1.5;
     font-weight: 400;
@@ -19,6 +82,31 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* 既定テーマを明示指定した場合も同じ値を利用する */
+:root[data-theme="purple"] {
+    --theme-accent-50: var(--palette-purple-50);
+    --theme-accent-100: var(--palette-purple-100);
+    --theme-accent-200: var(--palette-purple-200);
+    --theme-accent-300: var(--palette-purple-300);
+    --theme-accent-400: var(--palette-purple-400);
+    --theme-accent-500: var(--palette-purple-500);
+    --theme-accent-600: var(--palette-purple-600);
+    --theme-accent-700: var(--palette-purple-700);
+    --theme-accent-800: var(--palette-purple-800);
+    --theme-accent-900: var(--palette-purple-900);
+    --color-on-primary: #ffffff;
+}
+
+@layer utilities {
+    .bg-theme-alpha-05 {
+        background-color: var(--color-primary-alpha-05);
+    }
+
+    .bg-theme-alpha-10 {
+        background-color: var(--color-primary-alpha-10);
+    }
 }
 
 body {

@@ -152,9 +152,9 @@ const gridStyle = computed(() => {
 }
 .expression-grid-cell:hover {
     background-color: #ffffff !important;
-    border: 1.5px dashed #a855f7 !important;
+    border: 1.5px dashed var(--color-primary) !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.08) !important;
+    box-shadow: 0 4px 12px var(--color-primary-alpha-08) !important;
 }
 .expression-grid-cell.has-image {
     border-style: solid !important;
@@ -169,11 +169,11 @@ const gridStyle = computed(() => {
     box-shadow: 0 4px 12px rgba(234, 179, 8, 0.12) !important;
 }
 .expression-grid-cell.is-previewing {
-    border: 1.5px solid #a855f7 !important;
-    background-color: #f5f3ff !important;
+    border: 1.5px solid var(--color-primary) !important;
+    background-color: var(--color-primary-subtle) !important;
 }
 .expression-grid-cell.is-previewing:hover {
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.12) !important;
+    box-shadow: 0 4px 12px var(--color-primary-alpha-12) !important;
 }
 
 /* 通常表示の星ボタン・バッジ */

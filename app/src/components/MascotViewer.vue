@@ -1336,7 +1336,7 @@ onUnmounted(() => {
         <div class="mascot-background" :style="mascotBackgroundStyle"></div>
         <!-- ローディングインジケーター -->
         <div v-if="isAssetsLoading || !isReady" class="mascot-loading-overlay">
-            <i class="pi pi-spin pi-spinner text-4xl text-purple-500"></i>
+            <i class="pi pi-spin pi-spinner text-4xl text-brand-500"></i>
         </div>
         <!-- マスコットのキャラクター描画部分 (トータルスケールで拡大縮小。統合モードでは比率位置に絶対配置) -->
         <div
@@ -1391,7 +1391,7 @@ onUnmounted(() => {
     left: 50%;
     transform: translateX(-50%) translateY(-10px);
     background: rgba(255, 255, 255, 0.95);
-    border: 2px solid #a855f7;
+    border: 2px solid var(--color-primary);
     border-radius: 16px;
     padding: 10px 16px;
     width: max-content;
@@ -1426,7 +1426,7 @@ onUnmounted(() => {
     transform: translateX(-50%);
     border-width: 12px 10px 0;
     border-style: solid;
-    border-color: #a855f7 transparent transparent;
+    border-color: var(--color-primary) transparent transparent;
     display: block;
     width: 0;
     z-index: -1;
@@ -1593,8 +1593,8 @@ onUnmounted(() => {
 }
 
 .control-btn.active {
-    color: #a855f7; /* パープルのアクセント */
-    background: rgba(168, 85, 247, 0.15);
+    color: var(--color-primary); /* パープルのアクセント */
+    background: var(--color-primary-alpha-15);
 }
 
 .mascot-visual.emotion-pop {

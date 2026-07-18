@@ -73,8 +73,8 @@ onMounted(() => {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: #f3e8ff;
-    color: #7c3aed;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-hover);
     font-size: 20px;
 }
 
@@ -137,12 +137,12 @@ onMounted(() => {
 
 .range-control input {
     flex: 1;
-    accent-color: #8b5cf6;
+    accent-color: var(--color-primary);
 }
 
 .range-control output {
     width: 42px;
-    color: #7c3aed;
+    color: var(--color-primary-hover);
     font-size: 13px;
     font-weight: 700;
     text-align: right;
@@ -151,7 +151,7 @@ onMounted(() => {
 .toggle-row input {
     width: 20px;
     height: 20px;
-    accent-color: #8b5cf6;
+    accent-color: var(--color-primary);
 }
 
 .notice-card {
@@ -159,10 +159,10 @@ onMounted(() => {
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    border: 1px solid #ddd6fe;
+    border: 1px solid var(--color-primary-border);
     border-radius: 10px;
-    background: #faf5ff;
-    color: #6d28d9;
+    background: var(--color-primary-subtle);
+    color: var(--color-primary-active);
     font-size: 12px;
 }
 

@@ -234,8 +234,8 @@ onUnmounted(() => {
 }
 
 .active-btn {
-    color: #a855f7 !important;
-    background: rgba(168, 85, 247, 0.1) !important;
+    color: var(--color-primary) !important;
+    background: var(--color-primary-alpha-10) !important;
 }
 
 .active-radio-btn {
@@ -288,7 +288,7 @@ onUnmounted(() => {
     width: 200px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    border: 1px solid var(--color-primary-alpha-20);
     border-radius: 12px;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     padding: 6px;
@@ -313,8 +313,8 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-    background: rgba(168, 85, 247, 0.08);
-    color: #8b5cf6;
+    background: var(--color-primary-alpha-08);
+    color: var(--color-primary);
 }
 
 .menu-item i:first-child {
@@ -326,7 +326,7 @@ onUnmounted(() => {
 .active-check {
     position: absolute;
     right: 12px;
-    color: #a855f7;
+    color: var(--color-primary);
     font-size: 12px;
 }
 
@@ -339,52 +339,52 @@ onUnmounted(() => {
 /* シークレットモードスタイル */
 .chat-header.secret-mode {
     background: rgba(30, 27, 75, 0.4);
-    border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+    border-bottom: 1px solid var(--color-primary-alpha-15);
 }
 
 .chat-title.secret-mode {
-    color: #e9d5ff; /* 淡い紫 */
+    color: var(--theme-accent-200); /* 淡い紫 */
     font-weight: 600;
-    text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
+    text-shadow: 0 0 8px var(--color-primary-alpha-30);
 }
 
 .secret-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: rgba(168, 85, 247, 0.2);
-    color: #e9d5ff;
+    background: var(--color-primary-alpha-20);
+    color: var(--theme-accent-200);
     padding: 2px 8px;
     border-radius: 9999px;
     font-size: 10px;
-    border: 1px solid rgba(168, 85, 247, 0.3);
+    border: 1px solid var(--color-primary-alpha-30);
     margin-left: 8px;
 }
 
 .icon-btn.secret-mode {
-    color: #a78bfa;
+    color: var(--theme-accent-400);
 }
 
 .icon-btn.secret-mode:hover {
-    color: #c084fc;
-    background: rgba(168, 85, 247, 0.2);
+    color: var(--theme-accent-400);
+    background: var(--color-primary-alpha-20);
 }
 
 .icon-btn.secret-mode.active-btn {
     color: #fff;
-    background: rgba(168, 85, 247, 0.4);
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+    background: var(--color-primary-alpha-40);
+    box-shadow: 0 0 10px var(--color-primary-alpha-40);
 }
 
 .icon-btn.secret-mode.active-secret-btn {
     color: #fff;
-    background: rgba(168, 85, 247, 0.5);
-    box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+    background: var(--color-primary-alpha-50);
+    box-shadow: 0 0 12px var(--color-primary-alpha-60);
 }
 
 .image-dropdown-menu.secret-mode {
     background: rgba(30, 27, 75, 0.95);
-    border-color: rgba(168, 85, 247, 0.4);
+    border-color: var(--color-primary-alpha-40);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
@@ -393,12 +393,12 @@ onUnmounted(() => {
 }
 
 .menu-item.secret-mode:hover {
-    background: rgba(168, 85, 247, 0.2);
-    color: #f3e8ff;
+    background: var(--color-primary-alpha-20);
+    color: var(--color-primary-soft);
 }
 
 .active-check.secret-mode {
-    color: #c084fc;
+    color: var(--theme-accent-400);
 }
 
 .menu-divider.secret-mode {

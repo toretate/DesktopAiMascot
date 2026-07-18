@@ -562,7 +562,7 @@ onMounted(async () => {
                                     <div class="flex align-items-center justify-content-between w-full">
                                         <span>{{ slotProps.option }}</span>
                                         <div class="flex gap-1">
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
                                             <i v-if="getModelCapabilities('gemini', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
                                             <i v-if="getModelCapabilities('gemini', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
                                             <i v-if="getModelCapabilities('gemini', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
@@ -604,7 +604,7 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option.id }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
@@ -637,7 +637,7 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('openai', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('openai', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('openai', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
@@ -664,7 +664,7 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isThought" class="pi pi-lightbulb text-purple-500" title="Thought" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('anthropic', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('anthropic', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
                                     <i v-if="getModelCapabilities('anthropic', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
@@ -683,7 +683,7 @@ onMounted(async () => {
                         <div 
                             v-if="currentModelCapabilities.isThought" 
                             class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(168, 85, 247, 0.08); border-color: rgba(168, 85, 247, 0.3); color: #7c3aed;"
+                            style="background: var(--color-primary-alpha-08); border-color: var(--color-primary-alpha-30); color: var(--color-primary-hover);"
                             title="思考プロセスを出力できるモデル（Reasoning/Thinking）"
                         >
                             <i class="pi pi-lightbulb"></i>
@@ -793,7 +793,7 @@ onMounted(async () => {
                 </div>
 
                 <div class="form-field mt-3 flex align-items-center gap-2">
-                    <input type="checkbox" id="enableThinking" v-model="enableThinking" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500" />
+                    <input type="checkbox" id="enableThinking" v-model="enableThinking" class="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500" />
                     <label for="enableThinking" class="font-medium cursor-pointer">
                         思考機能を有効にする (Enable Thinking / Reasoning)
                     </label>
@@ -805,7 +805,7 @@ onMounted(async () => {
                 <!-- 要約用AI設定セクション -->
                 <div class="flex flex-column gap-3">
                     <h3 class="text-base font-semibold m-0 flex align-items-center gap-2">
-                        <i class="pi pi-file-edit text-purple-500"></i>
+                        <i class="pi pi-file-edit text-brand-500"></i>
                         <span>メッセージ履歴の要約設定</span>
                     </h3>
                     <p class="text-xs text-gray-500 m-0">
@@ -1112,12 +1112,12 @@ onMounted(async () => {
 }
 
 .tab-btn:hover {
-    color: #a855f7;
+    color: var(--color-primary);
 }
 
 .tab-btn.active {
-    color: #a855f7;
-    border-bottom-color: #a855f7;
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
 }
 
 .tab-radio-icon {

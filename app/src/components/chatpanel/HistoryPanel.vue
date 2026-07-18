@@ -94,13 +94,13 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
 }
 
 .history-item:hover {
-    background: rgba(168, 85, 247, 0.05);
-    border-color: rgba(168, 85, 247, 0.2);
+    background: var(--color-primary-alpha-05);
+    border-color: var(--color-primary-alpha-20);
 }
 
 .history-item.active {
-    background: rgba(168, 85, 247, 0.1);
-    border-color: rgba(168, 85, 247, 0.3);
+    background: var(--color-primary-alpha-10);
+    border-color: var(--color-primary-alpha-30);
 }
 
 .history-item-content {
@@ -165,13 +165,13 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
 }
 
 .history-container.secret-history .history-item:hover {
-    background: rgba(168, 85, 247, 0.15);
-    border-color: rgba(168, 85, 247, 0.3);
+    background: var(--color-primary-alpha-15);
+    border-color: var(--color-primary-alpha-30);
 }
 
 .history-container.secret-history .history-item.active {
-    background: rgba(168, 85, 247, 0.25);
-    border-color: rgba(168, 85, 247, 0.45);
+    background: var(--color-primary-alpha-25);
+    border-color: var(--color-primary-alpha-45);
 }
 
 .history-container.secret-history .history-item-title {

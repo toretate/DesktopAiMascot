@@ -381,7 +381,7 @@ const registerTtsReadings = () => {
 
 .replay-tts-btn:hover {
     background: rgba(124, 58, 237, 0.1);
-    color: #7c3aed;
+    color: var(--color-primary-hover);
 }
 
 .retry-message-btn {
@@ -421,10 +421,10 @@ const registerTtsReadings = () => {
 }
 
 .user .bubble {
-    background: #e9d5ff;
-    color: #581c87;
+    background: var(--theme-accent-200);
+    color: var(--color-primary-strong);
     border-bottom-right-radius: 2px;
-    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.08);
+    box-shadow: 0 2px 8px var(--color-primary-alpha-08);
 }
 
 .message-row.user.delivery-failed .bubble {
@@ -442,7 +442,7 @@ const registerTtsReadings = () => {
     background: rgba(243, 232, 255, 0.7);
     color: #4a2c7a;
     border-bottom-left-radius: 2px;
-    border: 1px solid rgba(168, 85, 247, 0.1);
+    border: 1px solid var(--color-primary-alpha-10);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
@@ -495,11 +495,11 @@ const registerTtsReadings = () => {
 
 .attachment-file-box:hover {
     background: rgba(255, 255, 255, 0.8);
-    border-color: #a855f7;
+    border-color: var(--color-primary);
 }
 
 .attachment-file-box i {
-    color: #a855f7;
+    color: var(--color-primary);
     font-size: 14px;
 }
 
@@ -558,7 +558,7 @@ const registerTtsReadings = () => {
 }
 
 .message-container.secret-mode .message-row.user .bubble {
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
     color: #ffffff;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
 }
@@ -572,8 +572,8 @@ const registerTtsReadings = () => {
 
 .message-container.secret-mode .message-row.mascot .bubble {
     background: rgba(46, 37, 84, 0.8);
-    color: #e9d5ff;
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    color: var(--theme-accent-200);
+    border: 1px solid var(--color-primary-alpha-20);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -604,7 +604,7 @@ const registerTtsReadings = () => {
 
 .custom-context-menu .menu-item:hover {
     background: #f1f5f9;
-    color: #7c3aed;
+    color: var(--color-primary-hover);
 }
 
 .custom-context-menu .menu-item i {
@@ -624,6 +624,6 @@ const registerTtsReadings = () => {
 
 .custom-context-menu.secret-mode .menu-item:hover {
     background: #2d2d3f;
-    color: #a78bfa;
+    color: var(--theme-accent-400);
 }
 </style>

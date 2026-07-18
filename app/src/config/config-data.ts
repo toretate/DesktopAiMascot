@@ -1,5 +1,6 @@
 import MascotData from '../mascots/mascot-data';
 import defaultMascotJson from '../mascots/default-mascot.json';
+import { DEFAULT_ACCENT_COLOR } from './theme';
 
 export interface ConfigData {
     mascotX: number;
@@ -143,7 +144,7 @@ export const defaultData: ConfigData = {
     chatSendKey: 'enter',
     chatFontFamily: 'sans-serif',
     chatBorderShow: true,
-    chatBorderColor: '#a855f7',
+    chatBorderColor: DEFAULT_ACCENT_COLOR,
     chatBorderWidth: 1,
     chatBackgroundColor: '#ffffff',
     chatBackgroundImage: '',

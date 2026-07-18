@@ -90,7 +90,7 @@ const resolveImageUrl = (path: string | undefined | null): string => {
 
         <div class="form-field p-3 bg-white border-round border-1 border-gray-200 mt-2 flex flex-column gap-2">
             <label class="font-bold text-xs text-gray-700 flex align-items-center gap-1 select-none">
-                <i class="pi pi-image text-purple-500"></i>
+                <i class="pi pi-image text-brand-500"></i>
                 <span>登録済みの立ち絵 (全身像)</span>
             </label>
 
@@ -138,9 +138,9 @@ const resolveImageUrl = (path: string | undefined | null): string => {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 .outfit-grid-cell.is-active-outfit {
-    border: 2px solid #a855f7 !important;
-    background-color: #f5f3ff !important;
-    box-shadow: 0 0 0 1px #a855f7, 0 4px 6px -1px rgba(168, 85, 247, 0.1) !important;
+    border: 2px solid var(--color-primary) !important;
+    background-color: var(--color-primary-subtle) !important;
+    box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10) !important;
 }
 
 .outfit-grid-container {
