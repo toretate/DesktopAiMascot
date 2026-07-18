@@ -209,34 +209,6 @@
     padding: 0 !important;
 }
 
-/* リサイズハンドル */
-.resize-handle {
-    position: absolute;
-    background: transparent;
-    z-index: 9999;
-}
-.resize-handle.right {
-    top: 0;
-    right: 0;
-    width: 6px;
-    height: calc(100% - 10px);
-    cursor: e-resize;
-}
-.resize-handle.bottom {
-    bottom: 0;
-    left: 0;
-    width: calc(100% - 10px);
-    height: 6px;
-    cursor: s-resize;
-}
-.resize-handle.corner {
-    bottom: 0;
-    right: 0;
-    width: 10px;
-    height: 10px;
-    cursor: se-resize;
-}
-
 /* 開始・終了・カレンダー関連 */
 .action-icon-btn {
     background: transparent;

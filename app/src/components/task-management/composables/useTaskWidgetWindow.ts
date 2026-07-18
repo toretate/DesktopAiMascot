@@ -1,6 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue';
 import { useConfigStore } from '../../../store/config';
 import { useTaskStore } from '../../../store/task';
+import { useResizableFrame } from '../../../composables/useResizableFrame';
 
 export const useTaskWidgetWindow = (
     taskStore: ReturnType<typeof useTaskStore>,
@@ -18,12 +19,19 @@ export const useTaskWidgetWindow = (
     let isElectronDragging = false;
     let electronDragStartX = 0;
     let electronDragStartY = 0;
-    let isResizing = false;
-    let resizeDirection = '';
-    let startWidth = 0;
-    let startHeight = 0;
-    let startMouseX = 0;
-    let startMouseY = 0;
+
+    const { initResize } = useResizableFrame({
+        minWidth: 300,
+        minHeight: 350,
+        getStartSize: () => ({ width: width.value, height: height.value }),
+        onResizeApply: (nextWidth, nextHeight) => {
+            width.value = nextWidth;
+            height.value = nextHeight;
+            if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
+                window.electronAPI?.resizeWindow?.({ width: nextWidth, height: nextHeight });
+            }
+        }
+    });
 
     const onLocalMouseMove = (event: MouseEvent) => {
         if (!isLocalDragging.value) return;
@@ -94,46 +102,6 @@ export const useTaskWidgetWindow = (
         }
     };
 
-    const handleResizeMove = (event: MouseEvent) => {
-        if (!isResizing) return;
-        const deltaX = event.clientX - startMouseX;
-        const deltaY = event.clientY - startMouseY;
-        let nextWidth = startWidth;
-        let nextHeight = startHeight;
-
-        if (resizeDirection === 'right' || resizeDirection === 'corner') {
-            nextWidth = Math.max(300, startWidth + deltaX);
-        }
-        if (resizeDirection === 'bottom' || resizeDirection === 'corner') {
-            nextHeight = Math.max(350, startHeight + deltaY);
-        }
-
-        width.value = nextWidth;
-        height.value = nextHeight;
-        if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
-            window.electronAPI?.resizeWindow?.({ width: nextWidth, height: nextHeight });
-        }
-    };
-
-    const stopResize = () => {
-        isResizing = false;
-        window.removeEventListener('mousemove', handleResizeMove);
-        window.removeEventListener('mouseup', stopResize);
-    };
-
-    const initResize = (event: MouseEvent, direction: string) => {
-        event.preventDefault();
-        event.stopPropagation();
-        isResizing = true;
-        resizeDirection = direction;
-        startWidth = width.value;
-        startHeight = height.value;
-        startMouseX = event.clientX;
-        startMouseY = event.clientY;
-        window.addEventListener('mousemove', handleResizeMove);
-        window.addEventListener('mouseup', stopResize);
-    };
-
     const closeWidget = () => {
         taskStore.showTaskWidget = false;
         if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
@@ -172,7 +140,6 @@ export const useTaskWidgetWindow = (
     onUnmounted(() => {
         onLocalMouseUp();
         onElectronMouseUp();
-        stopResize();
     });
 
     return {

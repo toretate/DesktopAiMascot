@@ -6,6 +6,8 @@ import { storeToRefs } from 'pinia';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
+import { useResizableFrame } from '../composables/useResizableFrame';
+import WidgetFrame from './common/WidgetFrame.vue';
 
 const memoStore = useMemoStore();
 const configStore = useConfigStore();
@@ -59,57 +61,20 @@ const isLocalDragging = ref(false);
 let localDragStartX = 0;
 let localDragStartY = 0;
 
-let isResizing = false;
-let resizeDirection = '';
-let startWidth = 0;
-let startHeight = 0;
-let startMouseX = 0;
-let startMouseY = 0;
-
-const initResize = (e: MouseEvent, direction: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    isResizing = true;
-    resizeDirection = direction;
-    startWidth = width.value;
-    startHeight = height.value;
-    startMouseX = e.clientX;
-    startMouseY = e.clientY;
-
-    window.addEventListener('mousemove', handleResizeMove);
-    window.addEventListener('mouseup', stopResize);
-};
-
-const handleResizeMove = (e: MouseEvent) => {
-    if (!isResizing) return;
-    const dx = e.clientX - startMouseX;
-    const dy = e.clientY - startMouseY;
-
-    let newWidth = startWidth;
-    let newHeight = startHeight;
-
-    if (resizeDirection === 'right' || resizeDirection === 'corner') {
-        newWidth = Math.max(300, startWidth + dx);
-    }
-    if (resizeDirection === 'bottom' || resizeDirection === 'corner') {
-        newHeight = Math.max(350, startHeight + dy);
-    }
-
-    width.value = newWidth;
-    height.value = newHeight;
-
-    if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
-        if (window.electronAPI && window.electronAPI.resizeWindow) {
-            window.electronAPI.resizeWindow({ width: newWidth, height: newHeight });
+const { initResize } = useResizableFrame({
+    minWidth: 300,
+    minHeight: 350,
+    getStartSize: () => ({ width: width.value, height: height.value }),
+    onResizeApply: (newWidth, newHeight) => {
+        width.value = newWidth;
+        height.value = newHeight;
+        if (windowMode.value !== 'integrated' && windowMode.value !== 'compact') {
+            if (window.electronAPI && window.electronAPI.resizeWindow) {
+                window.electronAPI.resizeWindow({ width: newWidth, height: newHeight });
+            }
         }
     }
-};
-
-const stopResize = () => {
-    isResizing = false;
-    window.removeEventListener('mousemove', handleResizeMove);
-    window.removeEventListener('mouseup', stopResize);
-};
+});
 
 let isElectronDragging = false;
 let electronDragStartX = 0;
@@ -254,9 +219,11 @@ onMounted(() => {
 </script>
 
 <template>
-    <div 
+    <WidgetFrame
         class="memo-widget-container shadow-sm relative overflow-hidden" 
         :style="widgetStyle"
+        :show-handles="!isCompactView"
+        @init-resize="initResize"
     >
         <!-- Header / Drag Handle -->
         <header class="widget-header" @mousedown="startWidgetDrag">
@@ -303,14 +270,7 @@ onMounted(() => {
             />
             <Button icon="pi pi-plus" class="add-task-btn p-button-sm flex-shrink-0" @click="handleAddMemo" :disabled="!newMemoContent.trim()" />
         </div>
-
-        <!-- Resize Handles -->
-        <template v-if="!isCompactView">
-            <div class="resize-handle right" @mousedown="initResize($event, 'right')"></div>
-            <div class="resize-handle bottom" @mousedown="initResize($event, 'bottom')"></div>
-            <div class="resize-handle corner" @mousedown="initResize($event, 'corner')"></div>
-        </template>
-    </div>
+    </WidgetFrame>
 </template>
 
 <style scoped>
@@ -441,33 +401,5 @@ onMounted(() => {
 .edit-textarea:focus {
     border-color: #3b82f6;
     outline: none;
-}
-
-/* リサイズハンドル */
-.resize-handle {
-    position: absolute;
-    background: transparent;
-    z-index: 9999;
-}
-.resize-handle.right {
-    top: 0;
-    right: 0;
-    width: 6px;
-    height: calc(100% - 10px);
-    cursor: e-resize;
-}
-.resize-handle.bottom {
-    bottom: 0;
-    left: 0;
-    width: calc(100% - 10px);
-    height: 6px;
-    cursor: s-resize;
-}
-.resize-handle.corner {
-    bottom: 0;
-    right: 0;
-    width: 10px;
-    height: 10px;
-    cursor: se-resize;
 }
 </style>

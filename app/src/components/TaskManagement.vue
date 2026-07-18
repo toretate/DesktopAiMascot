@@ -16,6 +16,7 @@ import TaskTodoView from './task-management/TaskTodoView.vue';
 import { useTaskCompletionGrace } from './task-management/composables/useTaskCompletionGrace';
 import { useTaskEditor } from './task-management/composables/useTaskEditor';
 import { useTaskWidgetWindow } from './task-management/composables/useTaskWidgetWindow';
+import WidgetFrame from './common/WidgetFrame.vue';
 
 const taskStore = useTaskStore();
 const configStore = useConfigStore();
@@ -82,7 +83,7 @@ const handleAddTask = () => {
 </script>
 
 <template>
-    <div class="task-widget-container shadow-sm" :style="widgetStyle">
+    <WidgetFrame class="task-widget-container shadow-sm" :style="widgetStyle" :show-handles="true" @init-resize="initResize">
         <!-- 1. ヘッダー：タイトル ＆ 水平進捗バー -->
         <header class="widget-header" @mousedown="startWidgetDrag">
             <h2 class="title">TODO LIST</h2>
@@ -229,12 +230,7 @@ const handleAddTask = () => {
             @open-date-picker="openDatePicker"
             @set-end-mode="setEditEndMode"
         />
-
-        <!-- リサイズ用ハンドル -->
-        <div class="resize-handle right" @mousedown="initResize($event, 'right')"></div>
-        <div class="resize-handle bottom" @mousedown="initResize($event, 'bottom')"></div>
-        <div class="resize-handle corner" @mousedown="initResize($event, 'corner')"></div>
-    </div>
+    </WidgetFrame>
 </template>
 
 <style scoped src="./task-management/TaskManagement.css"></style>
