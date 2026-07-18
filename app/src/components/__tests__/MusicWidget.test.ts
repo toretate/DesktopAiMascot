@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import MusicWidget from '../MusicWidget.vue';
 import { useConfigStore } from '../../store/config';
 import { useMusicStore } from '../../store/music';
+import { AMBIENT_SOUNDS } from '../music-widget/ambient-sounds';
 
 const directoryMocks = vi.hoisted(() => ({
     supports: vi.fn(() => false),
@@ -32,6 +33,7 @@ describe('MusicWidget', () => {
         window.electronAPI = undefined;
         localStorage.clear();
         window.location.hash = '#music';
+        for (const sound of AMBIENT_SOUNDS) sound.source = null;
         createObjectURL.mockClear();
         revokeObjectURL.mockClear();
         directoryMocks.supports.mockReturnValue(false);
@@ -280,6 +282,30 @@ describe('MusicWidget', () => {
         wrapper.unmount();
     });
 
+    it('ambientButton_環境音ミキサーをウィジェット内で開閉すること', async () => {
+        const pinia = createPinia();
+        setActivePinia(pinia);
+        useConfigStore().windowMode = 'integrated';
+        window.location.hash = '#integrated';
+        const wrapper = mount(MusicWidget, { global: { plugins: [pinia] } });
+        const ambientButton = wrapper.get('button[title="環境音ミキサー"]');
+
+        await ambientButton.trigger('click');
+
+        expect(wrapper.find('.ambient-mixer').exists()).toBe(true);
+        expect(wrapper.text()).toContain('AMBIENT MIXER');
+        expect(wrapper.find('.now-playing').exists()).toBe(false);
+        expect(ambientButton.attributes('aria-expanded')).toBe('true');
+        expect(wrapper.get<HTMLElement>('.music-widget').element.style.height).toBe('196px');
+        expect(useMusicStore(pinia).contentPanelExpanded).toBe(true);
+
+        await ambientButton.trigger('click');
+        expect(wrapper.find('.ambient-mixer').exists()).toBe(false);
+        expect(wrapper.get<HTMLElement>('.music-widget').element.style.height).toBe('76px');
+        expect(useMusicStore(pinia).contentPanelExpanded).toBe(false);
+        wrapper.unmount();
+    });
+
     it('compactPlayer_コンパクトモードでは1行の操作だけを表示すること', () => {
         const pinia = createPinia();
         setActivePinia(pinia);
@@ -290,7 +316,8 @@ describe('MusicWidget', () => {
 
         expect(wrapper.find('.compact-player-row').exists()).toBe(true);
         expect(wrapper.find('.widget-header').exists()).toBe(false);
-        expect(wrapper.findAll('.compact-control')).toHaveLength(2);
+        expect(wrapper.findAll('.compact-control')).toHaveLength(3);
+        expect(wrapper.get('.ambient-compact-control').attributes('disabled')).toBeDefined();
         wrapper.unmount();
     });
 });

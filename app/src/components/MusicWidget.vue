@@ -1,597 +1,105 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useConfigStore } from '../store/config';
 import { useMusicStore } from '../store/music';
-import type { MusicRestoreMode } from '../store/music';
 import MusicWidgetSettingsPanel from './settings/MusicWidgetSettingsPanel.vue';
-import { formatPlaybackTime, getNextTrackIndex, parseMusicTrackLabel, shouldPersistPlaybackPosition } from '../utils/music-player';
-import {
-    clearMusicDirectoryHandle,
-    loadMusicDirectoryHandle,
-    saveMusicDirectoryHandle,
-    scanMusicDirectory,
-    supportsMusicDirectoryPicker,
-    type MusicDirectoryHandle
-} from '../utils/music-directory-handle';
+import { formatPlaybackTime } from '../utils/music-player';
+import { useMusicLibrary } from './music-widget/useMusicLibrary';
+import { useMusicPlayback } from './music-widget/useMusicPlayback';
+import { useMusicWidgetLayout } from './music-widget/useMusicWidgetLayout';
+import { useAmbientSoundMixer } from './music-widget/useAmbientSoundMixer';
+import AmbientSoundMixer from './music-widget/AmbientSoundMixer.vue';
 
-interface MusicTrack {
-    id: string;
-    url: string;
-    title: string;
-    artist: string;
-    key: string;
-    size: number;
-    lastModified: number;
-}
-
-interface ElectronMusicFolderResult {
-    success: boolean;
-    folderPath?: string;
-    files?: Array<{ name: string; relativePath: string; size: number; lastModified: number; url: string }>;
-    error?: string;
-}
-
-type RestoreStatus = 'idle' | 'checking' | 'permission-required' | 'reselect-required';
-
-const configStore = useConfigStore();
 const musicStore = useMusicStore();
-const { windowMode } = storeToRefs(configStore);
+const { opacity, contentPanelExpanded } = storeToRefs(musicStore);
+const showAmbientMixer = ref(false);
+const playback = useMusicPlayback();
+const ambientMixer = useAmbientSoundMixer();
 const {
+    audioRef,
+    tracks,
+    currentIndex,
+    isPlaying,
+    currentTime,
+    duration,
+    playbackError,
+    currentTrack,
+    repeatTitle,
+    progressPercentage,
     volume,
     repeatMode,
     shuffle,
-    opacity,
     playlistExpanded,
     muted,
-    restoreMode,
-    folderName,
-    trackKey,
-    trackSize,
-    trackLastModified,
-    playbackPosition
-} = storeToRefs(musicStore);
+    handleLoadedMetadata,
+    selectTrack,
+    moveTrack,
+    togglePlayback,
+    removeTrack,
+    handleEnded,
+    seek,
+    toggleMute,
+    handleTimeUpdate,
+    handlePause,
+    initializePlayback,
+    disposePlayback
+} = playback;
 
-const audioRef = ref<HTMLAudioElement | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const tracks = ref<MusicTrack[]>([]);
-const currentIndex = ref(-1);
-const isPlaying = ref(false);
-const currentTime = ref(0);
-const duration = ref(0);
-const playbackError = ref('');
-const persistenceWarning = ref('');
-const showInlineSettings = ref(false);
-const restoreStatus = ref<RestoreStatus>('idle');
-const loadedFolderName = ref('');
-const loadedRestoreMode = ref<MusicRestoreMode>('none');
-let shouldAutoplayAfterLoad = false;
-let pendingSeekTime: number | null = null;
-let lastPositionSavedAt = 0;
-let activeDirectoryHandle: MusicDirectoryHandle | null = null;
+const {
+    fileInputRef,
+    persistenceWarning,
+    restoreStatus,
+    restoreActionLabel,
+    handleFiles,
+    openFolderPicker,
+    handleEmptyAction,
+    clearPlaylist,
+    initializeLibrary
+} = useMusicLibrary(playback);
 
-const AUDIO_FILE_PATTERN = /\.(mp3|m4a|aac|wav|ogg|oga|flac|opus|webm)$/i;
-
-const currentTrack = computed(() => tracks.value[currentIndex.value] ?? null);
-const isStandalone = computed(() => window.location.hash === '#music');
-const isIntegrated = computed(() => !isStandalone.value && windowMode.value === 'integrated');
-const isCompact = computed(() => !isStandalone.value && windowMode.value === 'compact');
-const repeatTitle = computed(() => ({
-    off: 'リピートなし',
-    all: '全曲リピート',
-    one: '1曲リピート'
-}[repeatMode.value]));
-const progressPercentage = computed(() => {
-    if (!duration.value || !Number.isFinite(duration.value)) return 0;
-    return Math.min(100, Math.max(0, (currentTime.value / duration.value) * 100));
-});
-const restoreActionLabel = computed(() => {
-    if (restoreStatus.value === 'checking') return '前回のフォルダを確認中...';
-    if (restoreStatus.value === 'permission-required') return '前回のフォルダを再開';
-    if (restoreStatus.value === 'reselect-required') return `前回のフォルダ「${folderName.value}」を再選択`;
-    return 'フォルダを選択';
+const {
+    isIntegrated,
+    isCompact,
+    showInlineSettings,
+    widgetStyle,
+    startWidgetDrag,
+    toggleMusicSettings,
+    closeWidget,
+    disposeLayout
+} = useMusicWidgetLayout({
+    opacity,
+    playlistExpanded,
+    secondaryPanelExpanded: contentPanelExpanded,
+    pausePlayback: () => {
+        audioRef.value?.pause();
+        ambientMixer.disposeMixer();
+    }
 });
 
-const persistCurrentTrack = (position = currentTime.value) => {
-    const track = currentTrack.value;
-    if (!track || loadedRestoreMode.value === 'none') return;
-    musicStore.setRestoreTarget({
-        mode: loadedRestoreMode.value,
-        folderName: loadedFolderName.value,
-        trackKey: track.key,
-        size: track.size,
-        lastModified: track.lastModified,
-        position
-    });
+const toggleSettingsPanel = () => {
+    showAmbientMixer.value = false;
+    toggleMusicSettings();
+    contentPanelExpanded.value = showInlineSettings.value;
 };
 
-const setMediaSessionMetadata = () => {
-    if (!currentTrack.value || !('mediaSession' in navigator) || !('MediaMetadata' in window)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.value.title,
-        artist: currentTrack.value.artist || 'ローカル音源'
-    });
-};
-
-const handleLoadedMetadata = () => {
-    const loadedDuration = audioRef.value?.duration ?? 0;
-    duration.value = Number.isFinite(loadedDuration) ? loadedDuration : 0;
-    if (pendingSeekTime !== null && audioRef.value) {
-        const restoredTime = Math.min(Math.max(0, pendingSeekTime), duration.value || pendingSeekTime);
-        audioRef.value.currentTime = restoredTime;
-        currentTime.value = restoredTime;
-        pendingSeekTime = null;
-        persistCurrentTrack(restoredTime);
-    }
-    setMediaSessionMetadata();
-    if (shouldAutoplayAfterLoad) {
-        shouldAutoplayAfterLoad = false;
-        void play();
-    }
-};
-
-const play = async () => {
-    const audio = audioRef.value;
-    if (!audio || !currentTrack.value) return;
-
-    try {
-        playbackError.value = '';
-        await audio.play();
-    } catch (error) {
-        console.warn('ローカル音楽の再生に失敗しました:', error);
-        playbackError.value = 'この音声ファイルを再生できませんでした。';
-    }
-};
-
-const selectTrack = async (index: number, autoplay = true, restoreTime = 0) => {
-    if (index < 0 || index >= tracks.value.length) return;
-    shouldAutoplayAfterLoad = autoplay;
-    pendingSeekTime = restoreTime;
-    currentTime.value = restoreTime;
-    duration.value = 0;
-
-    if (currentIndex.value === index) {
-        const audio = audioRef.value;
-        if (audio) audio.currentTime = restoreTime;
-        pendingSeekTime = null;
-        persistCurrentTrack(restoreTime);
-        if (autoplay) await play();
-        return;
-    }
-
-    currentIndex.value = index;
-    persistCurrentTrack(restoreTime);
-    await nextTick();
-    audioRef.value?.load();
-};
-
-const moveTrack = (direction: 1 | -1, autoplay = isPlaying.value) => {
-    const nextIndex = getNextTrackIndex(currentIndex.value, tracks.value.length, {
-        direction,
-        shuffle: shuffle.value
-    });
-    if (nextIndex >= 0) void selectTrack(nextIndex, autoplay);
-};
-
-const togglePlayback = () => {
-    const audio = audioRef.value;
-    if (!audio) return;
-    if (isPlaying.value) audio.pause();
-    else void play();
-};
-
-const releaseTrackUrl = (url: string) => {
-    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-};
-
-const resetPlaylist = () => {
-    audioRef.value?.pause();
-    tracks.value.forEach(track => releaseTrackUrl(track.url));
-    tracks.value = [];
-    currentIndex.value = -1;
-    isPlaying.value = false;
-    currentTime.value = 0;
-    duration.value = 0;
-    pendingSeekTime = null;
-    playbackError.value = '';
-};
-
-const restoreOrSelectFirstTrack = (autoplayForNewFolder: boolean) => {
-    if (tracks.value.length === 0) {
-        playbackError.value = '選択したフォルダに対応する音声ファイルがありません。';
-        return;
-    }
-
-    const isSameFolder = folderName.value === loadedFolderName.value && restoreMode.value === loadedRestoreMode.value;
-    const restoredIndex = isSameFolder && trackKey.value
-        ? tracks.value.findIndex(track => track.key === trackKey.value)
-        : -1;
-    if (restoredIndex >= 0) {
-        const restoredTrack = tracks.value[restoredIndex];
-        const fileUnchanged = restoredTrack.size === trackSize.value && restoredTrack.lastModified === trackLastModified.value;
-        void selectTrack(restoredIndex, false, fileUnchanged ? playbackPosition.value : 0);
-        return;
-    }
-    void selectTrack(0, isSameFolder ? false : autoplayForNewFolder, 0);
-};
-
-const createBrowserTrack = (file: File, key: string, index: number): MusicTrack => ({
-    id: `${key}-${file.size}-${file.lastModified}-${index}`,
-    key,
-    size: file.size,
-    lastModified: file.lastModified,
-    url: URL.createObjectURL(file),
-    ...parseMusicTrackLabel(file.name)
-});
-
-const applyBrowserFiles = (
-    files: Array<{ file: File; relativePath: string }>,
-    selectedFolderName: string,
-    mode: Extract<MusicRestoreMode, 'file-system-access' | 'directory-input'>,
-    autoplayForNewFolder: boolean
-) => {
-    resetPlaylist();
-    loadedFolderName.value = selectedFolderName;
-    loadedRestoreMode.value = mode;
-    tracks.value = files
-        .filter(({ file }) => file.type.startsWith('audio/') || AUDIO_FILE_PATTERN.test(file.name))
-        .sort((left, right) => left.relativePath.localeCompare(right.relativePath, 'ja', { numeric: true, sensitivity: 'base' }))
-        .map(({ file, relativePath }, index) => createBrowserTrack(file, relativePath, index));
-    restoreStatus.value = 'idle';
-    restoreOrSelectFirstTrack(autoplayForNewFolder);
-};
-
-const handleFiles = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    const selectedFiles = Array.from(input.files ?? []).filter(file => file.type.startsWith('audio/') || AUDIO_FILE_PATTERN.test(file.name));
-    if (selectedFiles.length === 0) return;
-
-    const firstRelativePath = (selectedFiles[0] as File & { webkitRelativePath?: string }).webkitRelativePath || selectedFiles[0].name;
-    const firstParts = firstRelativePath.split('/').filter(Boolean);
-    const selectedFolderName = firstParts.length > 1 ? firstParts[0] : '選択した音楽';
-    const files = selectedFiles.map(file => {
-        const webkitRelativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
-        const parts = webkitRelativePath.split('/').filter(Boolean);
-        return { file, relativePath: parts.length > 1 ? parts.slice(1).join('/') : file.name };
-    });
-    input.value = '';
-    applyBrowserFiles(files, selectedFolderName, 'directory-input', true);
-};
-
-const applyElectronFolder = (result: ElectronMusicFolderResult, autoplay: boolean) => {
-    if (!result.success) {
-        playbackError.value = result.error || '音楽フォルダの読み込みに失敗しました。';
-        return;
-    }
-
-    resetPlaylist();
-    const selectedFolderName = result.folderPath?.split(/[\\/]/).filter(Boolean).at(-1) || '音楽フォルダ';
-    loadedFolderName.value = selectedFolderName;
-    loadedRestoreMode.value = 'electron';
-    const loadedTracks = (result.files ?? []).map((file, index) => ({
-        id: `${file.relativePath || file.name}-${file.size}-${file.lastModified}-${index}`,
-        key: file.relativePath || file.name,
-        size: file.size,
-        lastModified: file.lastModified,
-        url: file.url,
-        ...parseMusicTrackLabel(file.name)
-    }));
-    tracks.value.push(...loadedTracks);
-    restoreStatus.value = 'idle';
-    restoreOrSelectFirstTrack(autoplay);
-};
-
-const applyDirectoryHandle = async (handle: MusicDirectoryHandle, autoplayForNewFolder: boolean) => {
-    restoreStatus.value = 'checking';
-    const files = await scanMusicDirectory(handle);
-    activeDirectoryHandle = handle;
-    applyBrowserFiles(files, handle.name, 'file-system-access', autoplayForNewFolder);
-};
-
-const openFolderPicker = async () => {
-    if (window.electronAPI?.selectMusicFolder && !window.electronAPI.isWeb) {
-        const result = await window.electronAPI.selectMusicFolder();
-        if (result) applyElectronFolder(result, true);
-        return;
-    }
-    if (supportsMusicDirectoryPicker()) {
-        try {
-            const handle = await window.showDirectoryPicker?.({ id: 'music-library', mode: 'read' });
-            if (!handle) return;
-            persistenceWarning.value = '';
-            try {
-                await saveMusicDirectoryHandle(handle);
-            } catch (error) {
-                console.warn('音楽フォルダのハンドルを保存できませんでした:', error);
-                persistenceWarning.value = 'このフォルダは再生できますが、次回起動時に自動復元できません。';
-            }
-            await applyDirectoryHandle(handle, true);
-        } catch (error) {
-            if ((error as DOMException).name !== 'AbortError') {
-                console.warn('音楽フォルダを選択できませんでした:', error);
-                playbackError.value = 'フォルダを選択できませんでした。';
-            }
-        }
-        return;
-    }
-    fileInputRef.value?.click();
-};
-
-const resumePreviousFolder = async () => {
-    if (!supportsMusicDirectoryPicker()) {
-        fileInputRef.value?.click();
-        return;
-    }
-
-    try {
-        const handle = activeDirectoryHandle ?? await loadMusicDirectoryHandle();
-        if (!handle) {
-            restoreStatus.value = 'idle';
-            playbackError.value = '前回選択したフォルダ情報が見つかりません。';
-            return;
-        }
-        activeDirectoryHandle = handle;
-        const permission = handle.queryPermission ? await handle.queryPermission({ mode: 'read' }) : 'prompt';
-        const granted = permission === 'granted'
-            || (handle.requestPermission && await handle.requestPermission({ mode: 'read' }) === 'granted');
-        if (!granted) {
-            restoreStatus.value = 'permission-required';
-            playbackError.value = '前回のフォルダを開く権限がありません。';
-            return;
-        }
-        await applyDirectoryHandle(handle, false);
-    } catch (error) {
-        console.warn('前回の音楽フォルダを再開できませんでした:', error);
-        restoreStatus.value = 'idle';
-        playbackError.value = '前回のフォルダを再開できませんでした。';
-    }
-};
-
-const handleEmptyAction = () => {
-    if (restoreStatus.value === 'permission-required') {
-        void resumePreviousFolder();
-    } else if (restoreStatus.value !== 'checking') {
-        void openFolderPicker();
-    }
-};
-
-const initializeWebRestore = async () => {
-    if (!folderName.value || restoreMode.value === 'none' || restoreMode.value === 'electron') return;
-
-    if (restoreMode.value === 'file-system-access' && supportsMusicDirectoryPicker()) {
-        restoreStatus.value = 'checking';
-        try {
-            const handle = await loadMusicDirectoryHandle();
-            if (!handle) {
-                restoreStatus.value = 'idle';
-                playbackError.value = '前回選択したフォルダ情報が見つかりません。';
-                return;
-            }
-            activeDirectoryHandle = handle;
-            const permission = handle.queryPermission ? await handle.queryPermission({ mode: 'read' }) : 'prompt';
-            if (permission === 'granted') {
-                await applyDirectoryHandle(handle, false);
-            } else {
-                restoreStatus.value = 'permission-required';
-            }
-        } catch (error) {
-            console.warn('保存した音楽フォルダを確認できませんでした:', error);
-            restoreStatus.value = 'idle';
-            playbackError.value = '前回のフォルダ情報を読み込めませんでした。';
-        }
-        return;
-    }
-
-    restoreStatus.value = 'reselect-required';
-};
-
-const removeTrack = (index: number) => {
-    const track = tracks.value[index];
-    if (!track) return;
-    releaseTrackUrl(track.url);
-
-    const removingCurrent = index === currentIndex.value;
-    const resumePlayback = removingCurrent && isPlaying.value;
-    tracks.value.splice(index, 1);
-
-    if (tracks.value.length === 0) {
-        currentIndex.value = -1;
-        isPlaying.value = false;
-        currentTime.value = 0;
-        duration.value = 0;
-    } else if (index < currentIndex.value) {
-        currentIndex.value -= 1;
-    } else if (removingCurrent) {
-        currentIndex.value = Math.min(index, tracks.value.length - 1);
-        shouldAutoplayAfterLoad = resumePlayback;
-        void nextTick(() => audioRef.value?.load());
-    }
-};
-
-const clearPlaylist = () => {
-    resetPlaylist();
-    loadedFolderName.value = '';
-    loadedRestoreMode.value = 'none';
-    activeDirectoryHandle = null;
-    restoreStatus.value = 'idle';
-    musicStore.clearRestoreState();
-    if (window.electronAPI?.clearLastMusicFolder && !window.electronAPI.isWeb) {
-        void window.electronAPI.clearLastMusicFolder();
-    }
-    if (typeof indexedDB !== 'undefined') {
-        void clearMusicDirectoryHandle().catch(error => console.warn('音楽フォルダの保存情報を削除できませんでした:', error));
-    }
-};
-
-const handleEnded = () => {
-    if (repeatMode.value === 'one') {
-        if (audioRef.value) audioRef.value.currentTime = 0;
-        void play();
-        return;
-    }
-
-    const isLastTrack = currentIndex.value === tracks.value.length - 1;
-    if (isLastTrack && repeatMode.value === 'off' && !shuffle.value) {
-        isPlaying.value = false;
-        return;
-    }
-    moveTrack(1, true);
-};
-
-const seek = (event: Event) => {
-    const audio = audioRef.value;
-    if (!audio) return;
-    const nextTime = Number((event.target as HTMLInputElement).value);
-    audio.currentTime = nextTime;
-    currentTime.value = nextTime;
-    persistCurrentTrack(nextTime);
-};
-
-const toggleMute = () => {
-    muted.value = !muted.value;
-    if (audioRef.value) audioRef.value.muted = muted.value;
-};
-
-const handleTimeUpdate = () => {
-    currentTime.value = audioRef.value?.currentTime ?? 0;
-    const now = Date.now();
-    if (shouldPersistPlaybackPosition(lastPositionSavedAt, now)) {
-        lastPositionSavedAt = now;
-        persistCurrentTrack();
-    }
-};
-
-const handlePause = () => {
-    isPlaying.value = false;
-    persistCurrentTrack();
-};
-
-const handleBeforeUnload = () => persistCurrentTrack();
-
-watch(volume, value => {
-    if (audioRef.value) audioRef.value.volume = value;
-});
-
-watch(muted, value => {
-    if (audioRef.value) audioRef.value.muted = value;
-});
-
-const closeWidget = () => {
-    musicStore.showMusicWidget = false;
-    audioRef.value?.pause();
-    if (isStandalone.value) {
-        window.electronAPI?.toggleMusic?.();
-    }
-};
-
-let isElectronDragging = false;
-let electronDragX = 0;
-let electronDragY = 0;
-
-const startWidgetDrag = (event: MouseEvent) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest('button, input')) return;
-    if (!isStandalone.value) return;
-    event.preventDefault();
-    isElectronDragging = true;
-    electronDragX = event.screenX;
-    electronDragY = event.screenY;
-    window.electronAPI?.dragWindow?.({ dx: 0, dy: 0, isStart: true });
-    window.addEventListener('mousemove', handleElectronDrag);
-    window.addEventListener('mouseup', stopElectronDrag);
-};
-
-const handleElectronDrag = (event: MouseEvent) => {
-    if (!isElectronDragging) return;
-    if (event.buttons !== 1) {
-        stopElectronDrag();
-        return;
-    }
-
-    const dx = event.screenX - electronDragX;
-    const dy = event.screenY - electronDragY;
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-        window.electronAPI?.dragWindow?.({ dx, dy });
-        electronDragX = event.screenX;
-        electronDragY = event.screenY;
-    }
-};
-
-const stopElectronDrag = () => {
-    if (!isElectronDragging) return;
-    isElectronDragging = false;
-    window.electronAPI?.dragWindow?.({ dx: 0, dy: 0, isEnd: true });
-    window.removeEventListener('mousemove', handleElectronDrag);
-    window.removeEventListener('mouseup', stopElectronDrag);
-};
-
-const widgetStyle = computed(() => {
-    const transparentStyle = { opacity: String(opacity.value) };
-    if (isIntegrated.value) {
-        return {
-            ...transparentStyle,
-            left: '12px',
-            right: '12px',
-            bottom: '12px',
-            top: 'auto',
-            width: 'auto',
-            height: playlistExpanded.value || showInlineSettings.value ? '196px' : '76px'
-        };
-    }
-    if (isCompact.value) {
-        return { ...transparentStyle, left: '8px', right: '8px', top: '52px', width: 'auto', height: '38px' };
-    }
-    return { ...transparentStyle, left: '0', top: '0', width: '100%', height: '100%' };
-});
-
-const toggleMusicSettings = () => {
-    showInlineSettings.value = !showInlineSettings.value;
+const toggleAmbientPanel = () => {
+    if (!showAmbientMixer.value && showInlineSettings.value) toggleMusicSettings();
+    showAmbientMixer.value = !showAmbientMixer.value;
+    contentPanelExpanded.value = showAmbientMixer.value;
 };
 
 onMounted(async () => {
-    if (!musicStore.isLoaded) musicStore.loadFromLocalStorage();
-    if (audioRef.value) {
-        audioRef.value.volume = volume.value;
-        audioRef.value.muted = muted.value;
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    if (window.electronAPI?.loadLastMusicFolder && !window.electronAPI.isWeb) {
-        const result = await window.electronAPI.loadLastMusicFolder();
-        if (result) applyElectronFolder(result, false);
-    } else {
-        await initializeWebRestore();
-    }
-
-    if ('mediaSession' in navigator) {
-        try {
-            navigator.mediaSession.setActionHandler('play', () => void play());
-            navigator.mediaSession.setActionHandler('pause', () => audioRef.value?.pause());
-            navigator.mediaSession.setActionHandler('previoustrack', () => moveTrack(-1));
-            navigator.mediaSession.setActionHandler('nexttrack', () => moveTrack(1));
-        } catch (error) {
-            console.warn('メディアキー操作の登録に失敗しました:', error);
-        }
-    }
+    contentPanelExpanded.value = false;
+    initializePlayback();
+    ambientMixer.initializeMixer();
+    await initializeLibrary();
 });
 
 onUnmounted(() => {
-    persistCurrentTrack();
-    audioRef.value?.pause();
-    tracks.value.forEach(track => releaseTrackUrl(track.url));
-    window.removeEventListener('mousemove', handleElectronDrag);
-    window.removeEventListener('mouseup', stopElectronDrag);
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    stopElectronDrag();
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = null;
-        for (const action of ['play', 'pause', 'previoustrack', 'nexttrack'] as MediaSessionAction[]) {
-            try {
-                navigator.mediaSession.setActionHandler(action, null);
-            } catch {
-                // 未対応のアクションは解除不要です。
-            }
-        }
-    }
+    contentPanelExpanded.value = false;
+    disposeLayout();
+    disposePlayback();
+    ambientMixer.disposeMixer();
 });
 </script>
 
@@ -603,10 +111,17 @@ onUnmounted(() => {
                 <button type="button" title="フォルダを選択" @click="openFolderPicker"><i class="pi pi-folder-open"></i></button>
                 <button
                     type="button"
+                    :class="{ active: showAmbientMixer || ambientMixer.isRunning.value }"
+                    :title="showAmbientMixer ? '環境音ミキサーを閉じる' : '環境音ミキサー'"
+                    :aria-expanded="showAmbientMixer"
+                    @click="toggleAmbientPanel"
+                ><i class="pi pi-sliders-h"></i></button>
+                <button
+                    type="button"
                     :class="{ active: showInlineSettings }"
                     :title="showInlineSettings ? '設定を閉じる' : '音楽ウィジェット設定'"
                     :aria-expanded="showInlineSettings"
-                    @click="toggleMusicSettings"
+                    @click="toggleSettingsPanel"
                 ><i class="pi pi-cog"></i></button>
                 <button type="button" title="閉じる" @click="closeWidget"><i class="pi pi-times"></i></button>
             </div>
@@ -636,7 +151,21 @@ onUnmounted(() => {
             <MusicWidgetSettingsPanel embedded />
         </div>
 
-        <template v-if="!showInlineSettings">
+        <AmbientSoundMixer
+            v-if="showAmbientMixer && !isCompact"
+            v-model:master-volume="ambientMixer.masterVolume.value"
+            v-model:muted="ambientMixer.muted.value"
+            :selected-channels="ambientMixer.selectedChannels.value"
+            :channel-volumes="ambientMixer.channelVolumes.value"
+            :is-running="ambientMixer.isRunning.value"
+            :available-count="ambientMixer.availableCount.value"
+            :playback-error="ambientMixer.playbackError.value"
+            @select-channel="ambientMixer.setChannelSelected"
+            @update-channel-volume="ambientMixer.setChannelVolume"
+            @toggle-running="ambientMixer.toggleRunning"
+        />
+
+        <template v-if="!showInlineSettings && !showAmbientMixer">
         <div v-if="isCompact" class="compact-player-row">
             <button
                 type="button"
@@ -652,6 +181,16 @@ onUnmounted(() => {
             </button>
             <button type="button" class="compact-control" title="次の曲" :disabled="!currentTrack" @click="moveTrack(1)">
                 <i class="pi pi-step-forward"></i>
+            </button>
+            <button
+                type="button"
+                class="compact-control ambient-compact-control"
+                :class="{ active: ambientMixer.isRunning.value }"
+                :title="ambientMixer.isRunning.value ? '環境音を停止' : '環境音を再生'"
+                :disabled="ambientMixer.playableSelectionCount.value === 0"
+                @click="ambientMixer.toggleRunning"
+            >
+                <i class="pi pi-sliders-h"></i>
             </button>
         </div>
 
@@ -842,6 +381,12 @@ input[type="range"] { height: 4px; }
     padding: 30px 10px 8px;
 }
 
+.integrated :deep(.ambient-mixer) {
+    position: absolute;
+    inset: 28px 0 0;
+    z-index: 2;
+}
+
 .integrated .warning-message {
     position: absolute;
     z-index: 3;
@@ -1026,7 +571,7 @@ input[type="range"] { height: 4px; }
 
 .compact-player-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 34px 34px;
+    grid-template-columns: minmax(0, 1fr) 34px 34px 34px;
     align-items: center;
     height: 100%;
     padding: 2px 5px 2px 10px;
@@ -1072,6 +617,12 @@ input[type="range"] { height: 4px; }
 .compact-control:hover:not(:disabled) {
     background: #f3e8ff;
     color: #7c3aed;
+}
+
+.compact-control.active,
+.ambient-compact-control.active {
+    background: #e0f2fe;
+    color: #0284c7;
 }
 
 .compact-control:disabled {

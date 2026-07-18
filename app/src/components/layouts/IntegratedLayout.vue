@@ -31,7 +31,7 @@ const {
 
 const { showTaskWidget } = storeToRefs(taskStore);
 const { showMemoWidget } = storeToRefs(memoStore);
-const { showMusicWidget, playlistExpanded } = storeToRefs(musicStore);
+const { showMusicWidget, playlistExpanded, contentPanelExpanded } = storeToRefs(musicStore);
 
 // チャット欄の幅比率の調整（スプリッターのドラッグ）
 const MIN_CHAT_RATIO = 0.2;
@@ -156,7 +156,7 @@ const integratedBackgroundStyle = computed(() => {
             :class="{
                 'is-compact': windowMode === 'compact',
                 'has-music-widget': showMusicWidget,
-                'has-expanded-music-playlist': showMusicWidget && playlistExpanded
+                'has-expanded-music-widget': showMusicWidget && (playlistExpanded || contentPanelExpanded)
             }"
             :style="chatSectionStyle"
         >
@@ -254,7 +254,7 @@ const integratedBackgroundStyle = computed(() => {
     padding-bottom: 100px;
 }
 
-.chat-section.has-expanded-music-playlist:not(.is-compact) {
+.chat-section.has-expanded-music-widget:not(.is-compact) {
     padding-bottom: 220px;
 }
 

@@ -29,6 +29,7 @@ export const useMusicStore = defineStore('music', () => {
     const shuffle = ref(false);
     const opacity = ref(0.92);
     const playlistExpanded = ref(false);
+    const contentPanelExpanded = ref(false);
     const muted = ref(false);
     const restoreMode = ref<MusicRestoreMode>('none');
     const folderName = ref('');
@@ -165,6 +166,7 @@ export const useMusicStore = defineStore('music', () => {
         shuffle,
         opacity,
         playlistExpanded,
+        contentPanelExpanded,
         muted,
         restoreMode,
         folderName,

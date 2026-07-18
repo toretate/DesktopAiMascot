@@ -131,11 +131,16 @@ describe('IntegratedLayout.vue - 統合ウィンドウのテスト', () => {
         const chatSection = wrapper.get('.chat-section');
 
         expect(chatSection.classes()).toContain('has-music-widget');
-        expect(chatSection.classes()).not.toContain('has-expanded-music-playlist');
+        expect(chatSection.classes()).not.toContain('has-expanded-music-widget');
 
         musicStore.playlistExpanded = true;
         await wrapper.vm.$nextTick();
-        expect(chatSection.classes()).toContain('has-expanded-music-playlist');
+        expect(chatSection.classes()).toContain('has-expanded-music-widget');
+
+        musicStore.playlistExpanded = false;
+        musicStore.contentPanelExpanded = true;
+        await wrapper.vm.$nextTick();
+        expect(chatSection.classes()).toContain('has-expanded-music-widget');
     });
 
     describe('チャット欄の幅調整スプリッター', () => {
