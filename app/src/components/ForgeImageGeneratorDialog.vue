@@ -292,11 +292,11 @@ const handleSave = async () => {
                     <i class="pi pi-cog text-brand-600 text-sm"></i>
                     <span>画像生成・編集パラメータ設定</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary icon-btn-28" @click="emit('close')" />
             </div>
 
             <!-- モーダルボディ -->
-            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-y-auto flex-1 pr-1" style="min-height: 0;">
+            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-y-auto flex-1 pr-1">
                 <!-- 0. プリセット機能 (共通・最上部) -->
                 <div class="form-field flex flex-column gap-2 border-1 border-slate-100 border-round p-2 bg-theme-alpha-05 mb-2">
                     <label class="font-bold text-xs text-brand-700 select-none flex align-items-center gap-1">
@@ -316,8 +316,7 @@ const handleSave = async () => {
                             </select>
                             <Button 
                                 icon="pi pi-trash" 
-                                class="p-button-danger p-button-outlined p-button-sm text-red-500 hover:bg-red-50" 
-                                style="width: 32px; height: 32px; padding: 0;"
+                                class="p-button-danger p-button-outlined p-button-sm text-red-500 hover:bg-red-50 preset-delete-btn"
                                 :disabled="!selectedPresetName"
                                 @click="deletePreset(selectedPresetName)"
                                 title="選択中のプリセットを削除"
@@ -334,8 +333,7 @@ const handleSave = async () => {
                             <Button 
                                 label="保存" 
                                 icon="pi pi-save" 
-                                class="p-button-primary p-button-sm py-1 px-3 text-xs" 
-                                style="height: 32px;"
+                                class="p-button-primary p-button-sm py-1 px-3 text-xs preset-save-btn"
                                 @click="savePreset"
                             />
                         </div>
@@ -376,8 +374,7 @@ const handleSave = async () => {
                             <!-- フォルダフィルタ -->
                             <select 
                                 v-model="selectedFolder" 
-                                class="p-1 border-1 border-gray-200 border-round text-slate-700 text-xxs focus:border-brand-400 focus:outline-none cursor-pointer bg-white"
-                                style="max-width: 100px;"
+                                class="p-1 border-1 border-gray-200 border-round text-slate-700 text-xxs focus:border-brand-400 focus:outline-none cursor-pointer bg-white folder-select"
                             >
                                 <option value="">(すべて)</option>
                                 <option v-for="f in loraFolders" :key="f" :value="f">{{ f }}</option>
@@ -386,8 +383,7 @@ const handleSave = async () => {
                             <Button 
                                 icon="pi pi-plus" 
                                 label="LoRAを追加" 
-                                class="p-button-outlined p-button-secondary p-button-xs py-1 text-xxs font-bold animate-pulse" 
-                                style="padding: 2px 6px; font-size: 9px;"
+                                class="p-button-outlined p-button-secondary p-button-xs py-1 text-xxs font-bold animate-pulse add-lora-btn"
                                 @click="addLora" 
                             />
                         </div>
@@ -410,7 +406,7 @@ const handleSave = async () => {
                             />
                             
                             <!-- 強度スライダー -->
-                            <div class="flex flex-column gap-1 flex-1" style="min-width: 100px;">
+                            <div class="flex flex-column gap-1 flex-1 weight-container">
                                 <div class="flex justify-content-between align-items-center text-xxs text-slate-500 select-none">
                                     <span>強度 (Weight)</span>
                                     <span class="font-mono font-bold text-brand-600">{{ lora.weight.toFixed(2) }}</span>
@@ -421,8 +417,7 @@ const handleSave = async () => {
                             <!-- 削除ボタン -->
                             <Button 
                                 icon="pi pi-trash" 
-                                class="p-button-rounded p-button-danger p-button-text p-button-sm text-red-500 hover:bg-red-50" 
-                                style="width: 28px; height: 28px; padding: 0;"
+                                class="p-button-rounded p-button-danger p-button-text p-button-sm text-red-500 hover:bg-red-50 icon-btn-28"
                                 @click="removeLora(idx)" 
                             />
                         </div>
@@ -536,6 +531,39 @@ const handleSave = async () => {
     border-radius: 16px;
     box-shadow: none !important;
     box-sizing: border-box;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
+.icon-btn-28 {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.preset-delete-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.preset-save-btn {
+    height: 32px;
+}
+
+.folder-select {
+    max-width: 100px;
+}
+
+.add-lora-btn {
+    padding: 2px 6px;
+    font-size: 9px;
+}
+
+.weight-container {
+    min-width: 100px;
 }
 
 .border-bottom {
