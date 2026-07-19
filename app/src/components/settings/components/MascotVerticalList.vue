@@ -353,27 +353,27 @@ const computedExpressionStyle = computed(() => {
 
 <style scoped>
 .mascot-list-container {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    height: 100% !important;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    min-width: 240px;
+    height: 100%;
 }
 
 .mascot-items-scroll-area {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-    flex-grow: 1 !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+    overflow-y: auto;
     scrollbar-width: thin;
-    padding: 4px !important;
-    margin: -4px !important;
+    padding: 4px;
+    margin: -4px;
 }
 
 /* マスコット選択アイテムのスタイル */
 .mascot-item {
-    position: relative !important;
+    position: relative;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 8px;
