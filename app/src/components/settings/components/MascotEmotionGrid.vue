@@ -114,18 +114,17 @@ const gridStyle = computed(() => {
                 <i class="pi pi-trash"></i>
             </div>
 
-            <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden" style="width: 52px; height: 52px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0; position: relative;">
+            <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden expression-thumbnail-container">
                 <img
                     v-if="expr.path && isImage(expr.path)"
                     :src="resolveImageUrl(expr.path)"
-                    class="w-full h-full object-contain"
-                    style="width: 52px !important; height: 52px !important; max-width: 52px !important; max-height: 52px !important; object-fit: contain !important; position: static !important;"
+                    class="w-full h-full object-contain expression-thumbnail-img"
                 />
-                <span v-else-if="expr.path" class="text-xs" style="position: absolute;">{{ expr.path }}</span>
-                <i v-else class="pi pi-plus text-gray-300 hover-text-gray-400" style="font-size: 12px;" title="表情を追加"></i>
+                <span v-else-if="expr.path" class="text-xs expression-path-fallback">{{ expr.path }}</span>
+                <i v-else class="pi pi-plus text-gray-300 hover-text-gray-400 expression-plus-icon" title="表情を追加"></i>
             </div>
 
-            <span class="text-xxs font-bold text-gray-600 text-center w-full text-ellipsis overflow-hidden mt-2 select-none flex align-items-center justify-content-center" style="height: 20px; line-height: 1; text-align: center; justify-content: center; align-items: center;">
+            <span class="text-xxs font-bold text-gray-600 text-center w-full text-ellipsis overflow-hidden mt-2 select-none flex align-items-center justify-content-center expression-name-label">
                 {{ expr.name }}
             </span>
         </div>
@@ -233,5 +232,38 @@ const gridStyle = computed(() => {
 .expression-clear-btn:hover {
     background-color: #fee2e2 !important;
     color: #ef4444 !important;
+}
+
+.expression-thumbnail-container {
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.expression-thumbnail-img {
+    width: 52px;
+    height: 52px;
+    max-width: 52px;
+    max-height: 52px;
+    object-fit: contain;
+    position: static;
+}
+
+.expression-path-fallback {
+    position: absolute;
+}
+
+.expression-plus-icon {
+    font-size: 12px;
+}
+
+.expression-name-label {
+    height: 20px;
+    line-height: 1;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
 }
 </style>
