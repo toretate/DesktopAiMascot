@@ -176,7 +176,7 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
             <input 
                 type="file" 
                 ref="fileInput" 
-                style="display: none" 
+                class="file-input"
                 multiple 
                 @change="handleAttachFiles" 
             />
@@ -209,6 +209,10 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 </template>
 
 <style scoped>
+.file-input {
+    display: none;
+}
+
 .chat-footer {
     padding: 12px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);

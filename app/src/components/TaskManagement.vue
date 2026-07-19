@@ -142,7 +142,7 @@ const handleAddTask = () => {
 
         <!-- 3. メインスクロールエリア -->
         <main class="main-scroll-area">
-            <div v-show="!showCategorySettings" style="height: 100%; display: flex; flex-direction: column;">
+            <div v-show="!showCategorySettings" class="task-views-container">
             <TaskTodoView
                 v-show="taskStore.currentView === 'todo'"
                 :pending-complete="pendingComplete"
@@ -187,19 +187,17 @@ const handleAddTask = () => {
 
         <!-- 5. 最下部固定フォーム -->
         <footer class="widget-footer-form" v-if="!showCategorySettings">
-            <div class="add-task-input-wrapper" style="position: relative; display: flex; align-items: center; flex-grow: 1; min-width: 0;">
+            <div class="add-task-input-wrapper">
                 <InputText 
                     v-model="newTaskTitle" 
                     placeholder="新しいタスクを追加..." 
                     class="p-inputtext-sm w-full task-input-field"
                     @keyup.enter="handleAddTask"
-                    style="padding-right: 32px;"
                 />
                 <button 
                     class="action-icon-btn calendar-set-btn" 
                     @click.stop="openDatePicker('new_task')"
                     :title="newTaskScheduledAt ? '予定日時を変更' : '予定日時を設定'"
-                    style="position: absolute; right: 6px; padding: 4px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer;"
                     type="button"
                 >
                     <i class="pi pi-calendar" :style="{ color: newTaskScheduledAt ? '#3b82f6' : '#94a3b8' }"></i>

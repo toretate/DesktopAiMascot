@@ -142,8 +142,7 @@ const getVoiceEngineName = (engine?: string) => {
                         :value="mascotPrompts.identity" 
                         readonly 
                         rows="2"
-                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
-                        style="resize: none;"
+                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono no-resize"
                     ></textarea>
                 </div>
                 <!-- Soul -->
@@ -153,8 +152,7 @@ const getVoiceEngineName = (engine?: string) => {
                         :value="mascotPrompts.soul" 
                         readonly 
                         rows="2"
-                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
-                        style="resize: none;"
+                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono no-resize"
                     ></textarea>
                 </div>
                 <!-- User -->
@@ -164,8 +162,7 @@ const getVoiceEngineName = (engine?: string) => {
                         :value="mascotPrompts.user" 
                         readonly 
                         rows="2"
-                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
-                        style="resize: none;"
+                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono no-resize"
                     ></textarea>
                 </div>
                 <!-- Agents -->
@@ -175,8 +172,7 @@ const getVoiceEngineName = (engine?: string) => {
                         :value="mascotPrompts.agents" 
                         readonly 
                         rows="2"
-                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
-                        style="resize: none;"
+                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono no-resize"
                     ></textarea>
                 </div>
                 <!-- Memory -->
@@ -186,11 +182,16 @@ const getVoiceEngineName = (engine?: string) => {
                         :value="mascotPrompts.memory" 
                         readonly 
                         rows="2"
-                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono"
-                        style="resize: none;"
+                        class="w-full p-2 bg-gray-100 border-1 border-gray-200 border-round text-gray-500 text-xs font-mono no-resize"
                     ></textarea>
                 </div>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.no-resize {
+    resize: none;
+}
+</style>

@@ -100,13 +100,12 @@ const resolveImageUrl = (path: string | undefined | null): string => {
                     :key="outfit.id"
                     class="outfit-grid-cell relative flex flex-column align-items-center justify-content-center border-round border-1 border-gray-200 bg-white p-2"
                     :class="{ 'is-active-outfit': editingMascot.currentOutfitId === outfit.id }"
-                    style="height: 160px; min-width: 0;"
                 >
-                    <div v-if="editingMascot.currentOutfitId === outfit.id" class="absolute" style="top: 6px; right: 6px; z-index: 2;" title="現在使用中">
-                        <i class="pi pi-check-circle text-green-500" style="font-size: 14px;"></i>
+                    <div v-if="editingMascot.currentOutfitId === outfit.id" class="active-outfit-badge absolute" title="現在使用中">
+                        <i class="pi pi-check-circle text-green-500 active-outfit-badge-icon"></i>
                     </div>
 
-                    <div class="flex align-items-center justify-content-center border-round bg-white overflow-hidden cursor-pointer" style="width: 70px; height: 100px; border: 1px solid rgba(0,0,0,0.03); flex-shrink: 0;" @click="emit('set-main-outfit', outfit)" title="クリックしてデフォルトの立ち絵に設定">
+                    <div class="outfit-thumbnail flex align-items-center justify-content-center border-round bg-white overflow-hidden cursor-pointer" @click="emit('set-main-outfit', outfit)" title="クリックしてデフォルトの立ち絵に設定">
                         <img v-if="isImage(outfit.path)" :src="resolveImageUrl(outfit.path)" class="w-full h-full object-contain" />
                         <span v-else class="text-xs">{{ outfit.path }}</span>
                     </div>
@@ -128,6 +127,8 @@ const resolveImageUrl = (path: string | undefined | null): string => {
 <style scoped>
 /* 立ち絵全身像グリッドセル */
 .outfit-grid-cell {
+    height: 160px;
+    min-width: 0;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     transition: all 0.2s ease;
@@ -141,6 +142,23 @@ const resolveImageUrl = (path: string | undefined | null): string => {
     border: 2px solid var(--color-primary) !important;
     background-color: var(--color-primary-subtle) !important;
     box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10) !important;
+}
+
+.active-outfit-badge {
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+}
+
+.active-outfit-badge-icon {
+    font-size: 14px;
+}
+
+.outfit-thumbnail {
+    width: 70px;
+    height: 100px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    flex-shrink: 0;
 }
 
 .outfit-grid-container {

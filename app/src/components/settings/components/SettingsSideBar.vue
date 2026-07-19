@@ -57,7 +57,7 @@ const goBack = () => {
                 <i class="pi pi-arrow-left"></i>
                 <span v-if="!isSidebarCollapsed">設定を閉じる</span>
             </button>
-            <div class="menu-divider" style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 0.5rem 0;"></div>
+            <div class="menu-divider"></div>
             <button 
                 v-for="item in menuItems"
                 :key="item.value"
@@ -88,5 +88,11 @@ const goBack = () => {
 /* ブランドロゴは削除したので margin-top不要 */
 .menu {
     margin-top: 0px;
+}
+
+.menu-divider {
+    height: 1px;
+    margin: 0.5rem 0;
+    background: rgba(255, 255, 255, 0.1);
 }
 </style>

@@ -270,7 +270,7 @@ const computedExpressionStyle = computed(() => {
             v-if="activeOutfit" 
             data-testid="active-outfit-size-probe"
             :src="resolveImageUrl(activeOutfit.path)" 
-            style="display: none;" 
+            class="size-probe-image"
             @load="onOutfitImageLoad" 
         />
         <div class="mascot-items-scroll-area">
@@ -288,9 +288,9 @@ const computedExpressionStyle = computed(() => {
                     @click.stop="emit('delete-mascot', mascot.id)"
                     title="マスコットを削除"
                 />
-                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden" style="width: 150px; height: 200px; font-size: 64px; flex-shrink: 0; border: 1px solid rgba(0, 0, 0, 0.04); position: relative;">
+                <div class="avatar-container flex align-items-center justify-content-center bg-slate-50 border-round overflow-hidden">
                     <!-- 大画面プレビュー（420x560）とアスペクト比を完全に一致させるための 140x186.66px ラッパー -->
-                    <div class="mascot-composite-preview relative flex align-items-center justify-content-center" style="width: 140px; height: 186.66px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <div class="mascot-composite-preview relative flex align-items-center justify-content-center">
                         <!-- 1. ベースキャラクターアバターの優先度表示 -->
                         <template v-if="activeMascotId === mascot.id">
                             <!-- のっぺらぼう画像（表情プレビュー中でエラーがない場合） -->
@@ -299,24 +299,24 @@ const computedExpressionStyle = computed(() => {
                                 :key="`active-noface-${activeOutfit?.id}`"
                                 data-testid="active-noface-preview"
                                 :src="resolveImageUrl(activeOutfit.nofacePath)"
-                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" 
+                                class="preview-image"
                                 @load="onBaseImageLoad"
                                 @error="handleNofaceError(mascot.id)"
                             />
                             <!-- 衣装画像優先 -->
-                            <img v-else-if="activeOutfit && isImage(activeOutfit.path)" :key="`active-outfit-${activeOutfit.id}`" data-testid="active-outfit-preview" :src="resolveImageUrl(activeOutfit.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <img v-else-if="activeOutfit && isImage(activeOutfit.path)" :key="`active-outfit-${activeOutfit.id}`" data-testid="active-outfit-preview" :src="resolveImageUrl(activeOutfit.path)" class="preview-image" />
                             <!-- 衣装がない場合のみポーズ画像へフォールバック -->
-                            <img v-else-if="activePose && isImage(activePose.path)" key="active-pose" :src="resolveImageUrl(activePose.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <img v-else-if="activePose && isImage(activePose.path)" key="active-pose" :src="resolveImageUrl(activePose.path)" class="preview-image" />
                             <!-- フロント画像優先 -->
-                            <img v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" key="active-front" :src="resolveImageUrl(defaultFrontAvatar.path)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
+                            <img v-else-if="defaultFrontAvatar && isImage(defaultFrontAvatar.path)" key="active-front" :src="resolveImageUrl(defaultFrontAvatar.path)" class="preview-image" />
                             <!-- ベースアバター優先 -->
-                            <img v-else-if="mascot.avatar && isImage(mascot.avatar)" key="active-avatar" :src="resolveImageUrl(mascot.avatar)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            <span v-else key="active-emoji" class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
+                            <img v-else-if="mascot.avatar && isImage(mascot.avatar)" key="active-avatar" :src="resolveImageUrl(mascot.avatar)" class="preview-image" />
+                            <span v-else key="active-emoji" class="avatar">{{ mascot.avatar || '🤖' }}</span>
                         </template>
                         <template v-else>
                             <!-- 非アクティブなマスコットは最適なカバー画像を表示 -->
-                            <img v-if="getMascotCoverImage(mascot)" key="inactive-cover" :src="getMascotCoverImage(mascot)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1;" />
-                            <span v-else key="inactive-emoji" class="avatar" style="position: absolute; z-index: 1;">{{ mascot.avatar || '🤖' }}</span>
+                            <img v-if="getMascotCoverImage(mascot)" key="inactive-cover" :src="getMascotCoverImage(mascot)" class="preview-image" />
+                            <span v-else key="inactive-emoji" class="avatar">{{ mascot.avatar || '🤖' }}</span>
                         </template>
     
                         <!-- 2. 表情画像の重ね合わせプレビュー (アクティブマスコットかつ表情プレビュー中) -->
@@ -353,27 +353,27 @@ const computedExpressionStyle = computed(() => {
 
 <style scoped>
 .mascot-list-container {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    height: 100% !important;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    min-width: 240px;
+    height: 100%;
 }
 
 .mascot-items-scroll-area {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-    flex-grow: 1 !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+    overflow-y: auto;
     scrollbar-width: thin;
-    padding: 4px !important;
-    margin: -4px !important;
+    padding: 4px;
+    margin: -4px;
 }
 
 /* マスコット選択アイテムのスタイル */
 .mascot-item {
-    position: relative !important;
+    position: relative;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 8px;
@@ -414,6 +414,39 @@ const computedExpressionStyle = computed(() => {
     border-color: var(--color-primary);
     background: var(--color-primary-subtle);
     box-shadow: 0 0 0 1px var(--color-primary), 0 4px 6px -1px var(--color-primary-alpha-10);
+}
+.avatar-container {
+    width: 150px;
+    height: 200px;
+    font-size: 64px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    position: relative;
+}
+.mascot-composite-preview {
+    width: 140px;
+    height: 186.66px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.preview-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 1;
+}
+.avatar {
+    position: absolute;
+    z-index: 1;
+}
+.size-probe-image {
+    display: none;
 }
 .mascot-item .name {
     font-weight: bold;

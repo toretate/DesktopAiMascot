@@ -104,7 +104,7 @@ const {
     </div>
 </template>
 
-<style>
+<style scoped>
 /* --- 全体レイアウト & ライトテーマ調プレミアムCSS --- */
 .settings-layout {
     display: flex;
@@ -116,7 +116,7 @@ const {
 }
 
 /* 左サイドバー */
-.sidebar {
+:where(.settings-layout) :deep(.sidebar) {
     position: absolute;
     top: 0;
     left: 0;
@@ -130,24 +130,24 @@ const {
     z-index: 1000;
     box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
 }
-.sidebar.collapsed {
+:where(.settings-layout) :deep(.sidebar.collapsed) {
     width: 72px;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
 }
 
-.brand h2 {
+:where(.settings-layout) :deep(.brand h2) {
     font-size: 16px;
     font-weight: 800;
     margin: 0;
     color: #ffffff;
 }
-.brand p {
+:where(.settings-layout) :deep(.brand p) {
     font-size: 10px;
     margin: 0;
     color: #64748b;
 }
 
-.menu {
+:where(.settings-layout) :deep(.menu) {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -155,7 +155,7 @@ const {
     flex-grow: 1;
 }
 
-.menu-item {
+:where(.settings-layout) :deep(.menu-item) {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -170,23 +170,23 @@ const {
     transition: all 0.2s ease;
     width: 100%;
 }
-.menu-item:hover {
+:where(.settings-layout) :deep(.menu-item:hover) {
     background: rgba(255, 255, 255, 0.05);
     color: #ffffff;
 }
-.menu-item.active {
+:where(.settings-layout) :deep(.menu-item.active) {
     background: var(--color-primary);
     color: #ffffff;
     box-shadow: 0 4px 12px var(--color-primary-alpha-25);
 }
 
-.sidebar-footer {
+:where(.settings-layout) :deep(.sidebar-footer) {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.relaunch-btn {
+:where(.settings-layout) :deep(.relaunch-btn) {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -200,11 +200,11 @@ const {
     font-weight: 600;
     transition: all 0.2s ease;
 }
-.relaunch-btn:hover {
+:where(.settings-layout) :deep(.relaunch-btn:hover) {
     background: rgba(234, 179, 8, 0.1);
 }
 
-.quit-btn {
+:where(.settings-layout) :deep(.quit-btn) {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -217,7 +217,7 @@ const {
     width: 100%;
     font-weight: 600;
 }
-.quit-btn:hover {
+:where(.settings-layout) :deep(.quit-btn:hover) {
     background: rgba(239, 68, 68, 0.1);
 }
 
@@ -233,7 +233,7 @@ const {
     overflow-y: auto;
 }
 .main-content.mascot-active {
-    padding: 24px 48px 24px 24px !important; /* 閉じるボタンと重ならない適度な余白に最適化 */
+    padding: 24px 48px 24px 24px; /* 閉じるボタンと重ならない適度な余白に最適化 */
     overflow: hidden; /* マスコット設定時のみ個別内部スクロールにするため全体スクロールは非表示 */
 }
 
@@ -255,7 +255,7 @@ const {
     flex-direction: column;
 }
 
-.premium-card {
+:where(.settings-layout) :deep(.premium-card) {
     background: #ffffff !important;
     border: 1px solid rgba(0, 0, 0, 0.06) !important;
     border-radius: 16px !important;
@@ -264,12 +264,12 @@ const {
 }
 
 /* 各フォーム項目 */
-.form-field {
+:where(.settings-layout) :deep(.form-field) {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
-.form-field label {
+:where(.settings-layout) :deep(.form-field label) {
     font-size: 13px;
     font-weight: 600;
     color: #475569;

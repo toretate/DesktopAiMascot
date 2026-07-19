@@ -743,7 +743,7 @@ onUnmounted(clearExtractedPartsObjectUrl);
                             {{ selectedExpression.name }} (切り出しモード: {{ extractionMode === 'xor' ? '差分抽出 (XOR)' : 'ComfyUIパーツ検出' }})
                         </span>
                     </div>
-                    <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="isCompareModalVisible = false" />
+                    <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary compare-modal-close-btn" @click="isCompareModalVisible = false" />
                 </div>
 
                 <!-- ボディ (三連並列プレビュー) -->
@@ -803,3 +803,11 @@ onUnmounted(clearExtractedPartsObjectUrl);
         </div>
     </div>
 </template>
+
+<style scoped>
+.compare-modal-close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+</style>

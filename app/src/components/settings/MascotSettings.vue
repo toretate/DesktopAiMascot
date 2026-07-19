@@ -430,7 +430,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
                     @click="activeMascotSubTab = 'expression'"
                     title="表情"
                 >
-                    <img :src="mascotEmotionIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <img :src="mascotEmotionIcon" class="subtab-icon" />
                     <span class="subtab-label">表情</span>
                 </Button>
                 <Button 
@@ -439,7 +439,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
                     @click="activeMascotSubTab = 'outfit'"
                     title="立ち絵"
                 >
-                    <img :src="mascotOutfitIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <img :src="mascotOutfitIcon" class="subtab-icon" />
                     <span class="subtab-label">立ち絵</span>
                 </Button>
                 <Button 
@@ -448,7 +448,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
                     @click="activeMascotSubTab = 'profile'"
                     title="プロフィール"
                 >
-                    <img :src="mascotProfileIcon" class="subtab-icon" style="margin-right: 4px; object-fit: contain; border-radius: 2px;" />
+                    <img :src="mascotProfileIcon" class="subtab-icon" />
                     <span class="subtab-label">プロフィール</span>
                 </Button>
             </div>
@@ -641,40 +641,40 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
 
 <style scoped>
 .mascot-settings-container {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 24px !important;
-    width: 100% !important;
-    height: 100% !important;
-    align-items: stretch !important;
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    width: 100%;
+    height: 100%;
+    align-items: stretch;
 }
 
 
 .mascot-detail-panel {
-    flex: 1 !important;
-    min-width: 0 !important; /* グリッドのはみ出しと巨大化を完璧に防止 */
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 16px !important;
-    background: #f8fafc !important; /* bg-slate-50 と同等 */
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
-    padding: 16px !important;
-    height: 100% !important;
-    box-sizing: border-box !important;
+    flex: 1;
+    min-width: 0; /* グリッドのはみ出しと巨大化を完璧に防止 */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f8fafc; /* bg-slate-50 と同等 */
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .detail-tab-content {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 16px !important;
-    padding-right: 4px !important;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 4px;
 }
 
 .border-bottom {
-    border-bottom: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 /* マスコット選択アイテムのスタイル */
@@ -683,7 +683,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
 }
 
 .mascot-item {
-    position: relative !important;
+    position: relative;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 8px;
@@ -762,6 +762,9 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
 .subtab-icon {
     width: 48px !important;
     height: 48px !important;
+    margin-right: 4px;
+    object-fit: contain;
+    border-radius: 2px;
 }
 
 .mobile-text {

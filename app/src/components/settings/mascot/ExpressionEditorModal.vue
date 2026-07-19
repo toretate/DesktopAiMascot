@@ -538,7 +538,6 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                     <Button 
                         icon="pi pi-bars" 
                         class="p-button-rounded p-button-text p-button-secondary sidebar-toggle-btn" 
-                        style="width: 28px; height: 28px; padding: 0; display: none;" 
                         @click="isSidebarOpen = !isSidebarOpen"
                         title="表情一覧を開く"
                     />
@@ -547,10 +546,10 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                         <span>表情エディタ & 位置調整</span>
                     </h2>
                 </div>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary close-btn" @click="emit('close')" />
             </div>
 
-            <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1 relative" style="min-height: 0;">
+            <div class="modal-body-container flex gap-4 mt-2 overflow-hidden flex-1 relative">
                 <!-- モバイル用サイドバー背景オーバーレイ -->
                 <div 
                     v-if="isSidebarOpen" 
@@ -562,7 +561,6 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                 <div 
                     class="flex flex-column expression-sidebar-panel" 
                     :class="{ 'open': isSidebarOpen }"
-                    style="height: 570px; overflow: hidden !important;"
                 >
                     <div class="pr-1 expression-vertical-list">
                         <div 
@@ -598,8 +596,8 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                     <!-- プレビューと縦スライダーのコンテナ -->
                     <div class="flex-1 gap-3 overflow-hidden preview-slider-wrapper">
                         <!-- プレビューカード (白飛びを防ぐための高級感のある市松模様背景) -->
-                        <div class="border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden preview-container" style="height: 570px;">
-                            <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center" style="width: 420px; height: 560px;">
+                        <div class="border-1 border-gray-200 border-round checkerboard-bg flex align-items-center justify-content-center relative overflow-hidden preview-container">
+                            <div class="mascot-composite-preview large-preview relative flex align-items-center justify-content-center">
                                 <!-- ポーズ/服装ベースアバター（画像アセット優先解決） -->
                                 <template v-if="activePose && isImage(activePose.path)">
                                     <img :src="resolveImageUrl(activePose.path)" class="preview-full-img w-full h-full object-contain" />
@@ -658,9 +656,9 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                         </div>
 
                         <!-- 縦スライダー (Y方向オフセット) -->
-                        <div class="flex flex-column align-items-center gap-2 vertical-slider-container" style="width: 40px;">
+                        <div class="flex flex-column align-items-center gap-2 vertical-slider-container">
                             <span class="text-xxs text-slate-500 select-none font-bold">上 (Y-)</span>
-                            <div class="vertical-slider-wrapper flex justify-content-center py-2" style="height: 450px;">
+                            <div class="vertical-slider-wrapper flex justify-content-center py-2">
                                 <Slider 
                                     v-model="selectedModalExpression.offsetY" 
                                     :min="-250" 
@@ -693,16 +691,14 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                                     <label class="text-xs font-semibold text-slate-700 select-none">拡大率 / スケール (S)</label>
                                     <div class="flex align-items-center gap-1 bg-brand-50 border-round px-2 py-0.5 border-1 border-brand-200 select-none">
                                         <span class="text-xxs text-brand-600 font-mono font-bold">{{ (selectedModalExpression.scale || 1.0).toFixed(2) }}倍</span>
-                                        <div class="flex flex-column gap-0" style="line-height: 0.8;">
+                                        <div class="flex flex-column gap-0 stepper-controls">
                                             <i
-                                                class="pi pi-chevron-up text-brand-400 hover:text-brand-600 cursor-pointer"
-                                                style="font-size: 8px; padding: 1px;"
+                                                class="pi pi-chevron-up text-brand-400 hover:text-brand-600 cursor-pointer stepper-icon"
                                                 @click="adjustScale(0.01)"
                                                 title="拡大率を0.01増やす"
                                             ></i>
                                             <i
-                                                class="pi pi-chevron-down text-brand-400 hover:text-brand-600 cursor-pointer"
-                                                style="font-size: 8px; padding: 1px;"
+                                                class="pi pi-chevron-down text-brand-400 hover:text-brand-600 cursor-pointer stepper-icon"
                                                 @click="adjustScale(-0.01)"
                                                 title="拡大率を0.01減らす"
                                             ></i>
@@ -718,16 +714,14 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                                     <label class="text-xs font-semibold text-slate-700 select-none">回転 (R)</label>
                                     <div class="flex align-items-center gap-1 bg-blue-50 border-round px-2 py-0.5 border-1 border-blue-200 select-none">
                                         <span class="text-xxs text-blue-600 font-mono font-bold">{{ (selectedModalExpression.rotation || 0) }}°</span>
-                                        <div class="flex flex-column gap-0" style="line-height: 0.8;">
+                                        <div class="flex flex-column gap-0 stepper-controls">
                                             <i
-                                                class="pi pi-chevron-up text-blue-400 hover:text-blue-600 cursor-pointer"
-                                                style="font-size: 8px; padding: 1px;"
+                                                class="pi pi-chevron-up text-blue-400 hover:text-blue-600 cursor-pointer stepper-icon"
                                                 @click="adjustRotation(1)"
                                                 title="1度右回転"
                                             ></i>
                                             <i
-                                                class="pi pi-chevron-down text-blue-400 hover:text-blue-600 cursor-pointer"
-                                                style="font-size: 8px; padding: 1px;"
+                                                class="pi pi-chevron-down text-blue-400 hover:text-blue-600 cursor-pointer stepper-icon"
                                                 @click="adjustRotation(-1)"
                                                 title="1度左回転"
                                             ></i>
@@ -742,7 +736,7 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                         <div class="flex flex-column gap-2 pt-2 border-top border-gray-200">
                             <!-- 上の段 -->
                             <div class="flex align-items-center gap-3">
-                                <div class="text-xs text-slate-500 font-bold select-none" style="width: 60px; min-width: 60px;">自動調整</div>
+                                <div class="text-xs text-slate-500 font-bold select-none section-label">自動調整</div>
                                 <div class="text-slate-300 text-xs select-none">|</div>
                                 <div class="flex gap-2 flex-1">
                                     <Button 
@@ -801,7 +795,7 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
                             </div>
                             <!-- 下の段 -->
                             <div class="flex align-items-center gap-3 pt-2 border-top border-gray-100">
-                                <div class="text-xs text-slate-500 font-bold select-none" style="width: 60px; min-width: 60px;">手動調整</div>
+                                <div class="text-xs text-slate-500 font-bold select-none section-label">手動調整</div>
                                 <div class="text-slate-300 text-xs select-none">|</div>
                                 <div class="flex gap-2 flex-1">
                                     <Button
@@ -865,14 +859,28 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
     border-top: 1px solid #e2e8f0 !important;
 }
 
+.sidebar-toggle-btn,
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+.sidebar-toggle-btn {
+    display: none;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
 /* 縦スリムリスト (高さを512pxに固定し、スクロールバーを紫に) */
 .expression-vertical-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    height: 560px !important;
-    max-height: 560px !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 560px;
+    max-height: 560px;
+    overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--color-primary-alpha-40) transparent;
 }
@@ -945,16 +953,20 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
 .vertical-slider-wrapper {
     display: flex;
     align-items: center;
+    height: 450px;
 }
 .vertical-slider {
     height: 100% !important;
 }
+.vertical-slider-container {
+    width: 40px;
+}
 .preview-slider-wrapper {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
 }
 
 .mascot-composite-preview {
@@ -965,6 +977,10 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+}
+.large-preview {
+    width: 420px;
+    height: 560px;
 }
 
 .preview-full-img {
@@ -1002,6 +1018,8 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
     min-width: 200px;
     flex-shrink: 0;
     transition: all 0.2s ease-in-out;
+    height: 570px;
+    overflow: hidden;
 }
 
 .expression-slot-info {
@@ -1011,6 +1029,21 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
 .preview-container {
     min-width: 420px;
     flex: 1;
+    height: 570px;
+}
+
+.stepper-controls {
+    line-height: 0.8;
+}
+
+.stepper-icon {
+    font-size: 8px;
+    padding: 1px;
+}
+
+.section-label {
+    width: 60px;
+    min-width: 60px;
 }
 
 @media (max-width: 1024px) {
@@ -1047,7 +1080,7 @@ const handleBackgroundRemovalDone = async (newBase64: string) => {
 @media (max-width: 768px) {
     /* モバイル時のヘッダー調整 */
     .sidebar-toggle-btn {
-        display: inline-flex !important;
+        display: inline-flex;
     }
     
     .header-icon {

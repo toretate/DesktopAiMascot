@@ -359,10 +359,10 @@ onBeforeUnmount(() => {
                     <i class="pi pi-scissors text-brand-500"></i>
                     <span>表情画像のトリミング・切り抜き</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary close-btn" @click="emit('close')" />
             </div>
 
-            <div class="modal-body flex-1 flex flex-column gap-3 mt-3 overflow-hidden" style="min-height: 0;">
+            <div class="modal-body flex-1 flex flex-column gap-3 mt-3 overflow-hidden">
                 <div class="text-xs text-slate-500 font-semibold select-none">
                     紫色の枠をマウスでドラッグして、表情に設定したい四角形の部分を切り出してください。
                 </div>
@@ -371,16 +371,14 @@ onBeforeUnmount(() => {
                 <div 
                     ref="cropContainerRef"
                     class="crop-work-container flex-1 border-round bg-slate-50 border-1 border-gray-200 flex align-items-center justify-content-center relative overflow-hidden"
-                    style="min-height: 0; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);"
                 >
                     <!-- 画像の実際の表示サイズに完全にフィットする相対位置ラッパー -->
-                    <div class="relative flex align-items-center justify-content-center" style="position: relative; max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center;">
+                    <div class="relative flex align-items-center justify-content-center crop-stage">
                         <img 
                             ref="cropImageRef"
                             :src="resolveImageUrl(imageSrc)" 
                             crossorigin="anonymous"
                             class="crop-base-img select-none"
-                            style="max-width: 100%; max-height: 100%; display: block; pointer-events: none; object-fit: contain;"
                             @load="handleCropImageLoaded"
                         />
 
@@ -417,13 +415,13 @@ onBeforeUnmount(() => {
 
             <div class="modal-footer flex justify-content-between gap-2 pt-2 border-top border-gray-200 mt-2">
                 <div class="flex gap-2">
-                    <Button label="範囲リセット" icon="pi pi-refresh" class="p-button-outlined p-button-secondary p-button-sm px-2" style="font-size: 11px;" @click="resetCropArea" title="切り抜き枠を最大範囲にリセットします" />
-                    <Button label="自動切り抜き" icon="pi pi-scissors" class="p-button-outlined p-button-warning p-button-sm px-2" style="font-size: 11px;" :loading="isAutoDetecting" @click="handleAutoDetectCropArea" title="画像から顔部分を自動的に検出して切り抜き枠を設定します" />
-                    <Button label="切り抜き解除 (元画像全体)" icon="pi pi-image" class="p-button-outlined p-button-info p-button-sm px-2" style="font-size: 11px;" @click="executeResetToOriginal" title="トリミングをせず、元の全体画像そのものを設定します" />
+                    <Button label="範囲リセット" icon="pi pi-refresh" class="p-button-outlined p-button-secondary p-button-sm px-2 footer-btn" @click="resetCropArea" title="切り抜き枠を最大範囲にリセットします" />
+                    <Button label="自動切り抜き" icon="pi pi-scissors" class="p-button-outlined p-button-warning p-button-sm px-2 footer-btn" :loading="isAutoDetecting" @click="handleAutoDetectCropArea" title="画像から顔部分を自動的に検出して切り抜き枠を設定します" />
+                    <Button label="切り抜き解除 (元画像全体)" icon="pi pi-image" class="p-button-outlined p-button-info p-button-sm px-2 footer-btn" @click="executeResetToOriginal" title="トリミングをせず、元の全体画像そのものを設定します" />
                 </div>
                 <div class="flex gap-2">
-                    <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm px-3" style="font-size: 11px;" @click="emit('close')" />
-                    <Button label="この範囲で切り抜く" icon="pi pi-check" class="p-button-primary p-button-sm px-4" style="font-size: 11px;" @click="executeCrop" />
+                    <Button label="キャンセル" icon="pi pi-times" class="p-button-outlined p-button-secondary p-button-sm px-3 footer-btn" @click="emit('close')" />
+                    <Button label="この範囲で切り抜く" icon="pi pi-check" class="p-button-primary p-button-sm px-4 footer-btn" @click="executeCrop" />
                 </div>
             </div>
     </AppModalShell>
@@ -435,6 +433,36 @@ onBeforeUnmount(() => {
 }
 .border-top {
     border-top: 1px solid #e2e8f0 !important;
+}
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+.modal-body {
+    min-height: 0;
+}
+.crop-work-container {
+    min-height: 0;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+}
+.crop-stage {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.crop-base-img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    pointer-events: none;
+    object-fit: contain;
+}
+.footer-btn {
+    font-size: 11px;
 }
 
 /* トリミング枠の境界線の検出用バー (見えないが太めの判定領域) */

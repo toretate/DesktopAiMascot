@@ -138,23 +138,21 @@ onBeforeUnmount(clearSelectedImage);
                     <i class="pi pi-file-import text-brand-600 text-sm"></i>
                     <span>AIスプライトインポート (スプライトシートから切り出し)</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary close-btn" @click="emit('close')" />
             </div>
 
             <!-- タブ選択 -->
             <div class="flex border-bottom border-gray-200 mt-2 mb-1">
                 <button 
-                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent"
+                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent tab-btn"
                     :class="activeTab === 'upload' ? 'border-brand-500 text-brand-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
-                    style="border-bottom-width: 2px;"
                     @click="activeTab = 'upload'"
                 >
                     ファイルをアップロード
                 </button>
                 <button 
-                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent flex align-items-center gap-1"
+                    class="py-2 px-3 font-semibold text-xs border-bottom-2 transition-all cursor-pointer bg-transparent border-transparent flex align-items-center gap-1 tab-btn"
                     :class="activeTab === 'history' ? 'border-brand-500 text-brand-600 font-bold border-solid' : 'text-slate-500 hover:text-slate-700'"
-                    style="border-bottom-width: 2px;"
                     @click="activeTab = 'history'"
                 >
                     <span>生成履歴から選択</span>
@@ -164,11 +162,11 @@ onBeforeUnmount(clearSelectedImage);
                 </button>
             </div>
 
-            <div class="modal-body-container flex flex-column gap-3 mt-2 flex-1 overflow-hidden" style="min-height: 0;">
+            <div class="modal-body-container flex flex-column gap-3 mt-2 flex-1 overflow-hidden">
                 <!-- タブ1: ファイルアップロード -->
                 <div 
                     v-if="activeTab === 'upload'"
-                    class="flex-1 border-2 border-round flex flex-column align-items-center justify-content-center relative overflow-hidden transition-all"
+                    class="drop-zone flex-1 border-2 border-round flex flex-column align-items-center justify-content-center relative overflow-hidden transition-all"
                     :class="{
                         'border-brand-400 bg-theme-alpha-05': isDragOver,
                         'border-dashed border-gray-300 bg-slate-50 hover:bg-slate-100/50': !isDragOver && !selectedImage,
@@ -177,7 +175,6 @@ onBeforeUnmount(clearSelectedImage);
                     @dragover="onDragOver"
                     @dragleave="onDragLeave"
                     @drop="onDrop"
-                    style="min-height: 280px;"
                 >
                     <template v-if="selectedImage">
                         <img :src="selectedImage" class="max-w-full max-h-full object-contain p-2" />
@@ -243,6 +240,24 @@ onBeforeUnmount(clearSelectedImage);
 <style scoped>
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.tab-btn {
+    border-bottom-width: 2px;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
+.drop-zone {
+    min-height: 280px;
 }
 
 .checkerboard-bg {

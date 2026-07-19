@@ -266,15 +266,15 @@ onUnmounted(() => {
                     <i class="pi pi-video text-brand-500 text-sm"></i>
                     <span>表情アニメーション編集 & アトラス作成</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary close-btn" @click="emit('close')" />
             </div>
 
             <!-- ボディ -->
-            <div class="modal-body-container flex gap-4 mt-3 overflow-hidden flex-1 relative" style="min-height: 0;">
+            <div class="modal-body-container flex gap-4 mt-3 overflow-hidden flex-1 relative">
                 <!-- 左カラム: 大型アニメーションプレビュー -->
-                <div class="flex-1 bg-slate-900 border-round flex align-items-center justify-content-center relative overflow-hidden" style="height: 520px;">
+                <div class="flex-1 bg-slate-900 border-round flex align-items-center justify-content-center relative overflow-hidden preview-pane">
                     <!-- のっぺらぼうベース画像 -->
-                    <div class="relative flex align-items-center justify-content-center" style="width: 380px; height: 500px;">
+                    <div class="relative flex align-items-center justify-content-center preview-stage">
                         <img 
                             v-if="baseMascotImageUrl" 
                             :src="resolveImageUrl(baseMascotImageUrl)" 
@@ -283,7 +283,7 @@ onUnmounted(() => {
                         />
                         
                         <!-- 動的差分重ね合わせ (目と口のアニメーションフレーム表示) -->
-                        <div v-if="partsCache.eyes.open" class="absolute pointer-events-none" style="top: 0; left: 0; width: 100%; height: 100%;">
+                        <div v-if="partsCache.eyes.open" class="absolute pointer-events-none eyes-overlay">
                             <!-- 目レイヤー (瞬きフレーム) -->
                             <img 
                                 v-if="activeBlinkFrame === 'open' && partsCache.eyes.open"
@@ -415,7 +415,7 @@ onUnmounted(() => {
                 </div>
 
                 <!-- 右カラム: コントロールパネル -->
-                <div class="w-80 flex flex-column gap-3 overflow-y-auto" style="height: 520px;">
+                <div class="w-80 flex flex-column gap-3 overflow-y-auto sidebar">
                     <!-- 1. 表情パーツの自動スキャン & 抽出 -->
                     <div class="bg-slate-50 border-1 border-gray-200 border-round p-3 flex flex-column gap-2">
                         <span class="text-xs font-bold text-slate-700 flex align-items-center gap-1 select-none">
@@ -519,6 +519,30 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+.modal-body-container {
+    min-height: 0;
+}
+.preview-pane {
+    height: 520px;
+}
+.preview-stage {
+    width: 380px;
+    height: 500px;
+}
+.eyes-overlay {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.sidebar {
+    height: 520px;
+}
 .border-bottom {
     border-bottom: 1px solid #e2e8f0;
 }

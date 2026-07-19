@@ -562,15 +562,15 @@ onMounted(async () => {
                                     <div class="flex align-items-center justify-content-between w-full">
                                         <span>{{ slotProps.option }}</span>
                                         <div class="flex gap-1">
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isThought" class="capability-icon pi pi-lightbulb text-brand-500" title="Thought"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isToolUse" class="capability-icon pi pi-wrench text-green-600" title="Tool Use"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isImageGeneration" class="capability-icon pi pi-image text-blue-500" title="Image Gen"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVision" class="capability-icon pi pi-eye text-amber-600" title="Vision"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isVideo" class="capability-icon pi pi-video text-red-500" title="Video"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isAudio" class="capability-icon pi pi-volume-up text-pink-500" title="Audio"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isStructuredOutput" class="capability-icon pi pi-code text-teal-600" title="Structured"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLongContext" class="capability-icon pi pi-align-left text-indigo-500" title="Long Context"></i>
+                                            <i v-if="getModelCapabilities('gemini', slotProps.option).isLocal" class="capability-icon pi pi-desktop text-slate-500" title="Local"></i>
                                         </div>
                                     </div>
                                 </template>
@@ -604,15 +604,15 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option.id }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isThought" class="capability-icon pi pi-lightbulb text-brand-500" title="Thought"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isToolUse" class="capability-icon pi pi-wrench text-green-600" title="Tool Use"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isImageGeneration" class="capability-icon pi pi-image text-blue-500" title="Image Gen"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVision" class="capability-icon pi pi-eye text-amber-600" title="Vision"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isVideo" class="capability-icon pi pi-video text-red-500" title="Video"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isAudio" class="capability-icon pi pi-volume-up text-pink-500" title="Audio"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isStructuredOutput" class="capability-icon pi pi-code text-teal-600" title="Structured"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLongContext" class="capability-icon pi pi-align-left text-indigo-500" title="Long Context"></i>
+                                    <i v-if="getModelCapabilities('lmstudio', slotProps.option.id).isLocal" class="capability-icon pi pi-desktop text-slate-500" title="Local"></i>
                                 </div>
                             </div>
                         </template>
@@ -637,15 +637,15 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('openai', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isThought" class="capability-icon pi pi-lightbulb text-brand-500" title="Thought"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isToolUse" class="capability-icon pi pi-wrench text-green-600" title="Tool Use"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isImageGeneration" class="capability-icon pi pi-image text-blue-500" title="Image Gen"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isVision" class="capability-icon pi pi-eye text-amber-600" title="Vision"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isVideo" class="capability-icon pi pi-video text-red-500" title="Video"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isAudio" class="capability-icon pi pi-volume-up text-pink-500" title="Audio"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isStructuredOutput" class="capability-icon pi pi-code text-teal-600" title="Structured"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isLongContext" class="capability-icon pi pi-align-left text-indigo-500" title="Long Context"></i>
+                                    <i v-if="getModelCapabilities('openai', slotProps.option).isLocal" class="capability-icon pi pi-desktop text-slate-500" title="Local"></i>
                                 </div>
                             </div>
                         </template>
@@ -664,15 +664,15 @@ onMounted(async () => {
                             <div class="flex align-items-center justify-content-between w-full">
                                 <span>{{ slotProps.option }}</span>
                                 <div class="flex gap-1">
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isThought" class="pi pi-lightbulb text-brand-500" title="Thought" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isToolUse" class="pi pi-wrench text-green-600" title="Tool Use" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isImageGeneration" class="pi pi-image text-blue-500" title="Image Gen" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isVision" class="pi pi-eye text-amber-600" title="Vision" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isVideo" class="pi pi-video text-red-500" title="Video" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isAudio" class="pi pi-volume-up text-pink-500" title="Audio" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isStructuredOutput" class="pi pi-code text-teal-600" title="Structured" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isLongContext" class="pi pi-align-left text-indigo-500" title="Long Context" style="font-size: 0.75rem;"></i>
-                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isLocal" class="pi pi-desktop text-slate-500" title="Local" style="font-size: 0.75rem;"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isThought" class="capability-icon pi pi-lightbulb text-brand-500" title="Thought"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isToolUse" class="capability-icon pi pi-wrench text-green-600" title="Tool Use"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isImageGeneration" class="capability-icon pi pi-image text-blue-500" title="Image Gen"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isVision" class="capability-icon pi pi-eye text-amber-600" title="Vision"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isVideo" class="capability-icon pi pi-video text-red-500" title="Video"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isAudio" class="capability-icon pi pi-volume-up text-pink-500" title="Audio"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isStructuredOutput" class="capability-icon pi pi-code text-teal-600" title="Structured"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isLongContext" class="capability-icon pi pi-align-left text-indigo-500" title="Long Context"></i>
+                                    <i v-if="getModelCapabilities('anthropic', slotProps.option).isLocal" class="capability-icon pi pi-desktop text-slate-500" title="Local"></i>
                                 </div>
                             </div>
                         </template>
@@ -682,8 +682,7 @@ onMounted(async () => {
                     <div v-if="currentModelCapabilities && (currentModelCapabilities.isThought || currentModelCapabilities.isToolUse || currentModelCapabilities.isImageGeneration || currentModelCapabilities.isVision || currentModelCapabilities.isAudio || currentModelCapabilities.isStructuredOutput || currentModelCapabilities.isLongContext || currentModelCapabilities.isVideo || currentModelCapabilities.isLocal)" class="model-capabilities-badges flex flex-wrap gap-2 mt-2">
                         <div 
                             v-if="currentModelCapabilities.isThought" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: var(--color-primary-alpha-08); border-color: var(--color-primary-alpha-30); color: var(--color-primary-hover);"
+                            class="capability-badge capability-badge--thought flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="思考プロセスを出力できるモデル（Reasoning/Thinking）"
                         >
                             <i class="pi pi-lightbulb"></i>
@@ -691,8 +690,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isToolUse" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.3); color: #16a34a;"
+                            class="capability-badge capability-badge--tool-use flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="関数呼び出しや外部ツールの実行が可能なモデル"
                         >
                             <i class="pi pi-wrench"></i>
@@ -700,8 +698,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isImageGeneration" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.3); color: #2563eb;"
+                            class="capability-badge capability-badge--image-gen flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="画像の生成が可能なモデル"
                         >
                             <i class="pi pi-image"></i>
@@ -709,8 +706,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isVision" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); color: #d97706;"
+                            class="capability-badge capability-badge--vision flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="画像の入力・理解（マルチモーダル）が可能なモデル"
                         >
                             <i class="pi pi-eye"></i>
@@ -718,8 +714,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isVideo" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(220, 38, 38, 0.08); border-color: rgba(220, 38, 38, 0.3); color: #dc2626;"
+                            class="capability-badge capability-badge--video flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="動画ファイルの入力・理解が可能なモデル"
                         >
                             <i class="pi pi-video"></i>
@@ -727,8 +722,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isAudio" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(236, 72, 153, 0.08); border-color: rgba(236, 72, 153, 0.3); color: #db2777;"
+                            class="capability-badge capability-badge--audio flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="音声入力・出力（オーディオ連携）が可能なモデル"
                         >
                             <i class="pi pi-volume-up"></i>
@@ -736,8 +730,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isStructuredOutput" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(13, 148, 136, 0.08); border-color: rgba(13, 148, 136, 0.3); color: #0d9488;"
+                            class="capability-badge capability-badge--structured flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="JSONモードなど構造化した出力を強制できるモデル"
                         >
                             <i class="pi pi-code"></i>
@@ -745,8 +738,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isLongContext" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(79, 70, 229, 0.08); border-color: rgba(79, 70, 229, 0.3); color: #4f46e5;"
+                            class="capability-badge capability-badge--long-context flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="10万トークン以上の長文コンテキストを読み込めるモデル"
                         >
                             <i class="pi pi-align-left"></i>
@@ -754,8 +746,7 @@ onMounted(async () => {
                         </div>
                         <div 
                             v-if="currentModelCapabilities.isLocal" 
-                            class="capability-badge flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
-                            style="background: rgba(71, 85, 105, 0.08); border-color: rgba(71, 85, 105, 0.3); color: #475569;"
+                            class="capability-badge capability-badge--local flex align-items-center gap-1.5 px-2 py-1 text-xs border-round border-1 font-semibold"
                             title="ローカルPC上でオフライン実行されているモデル"
                         >
                             <i class="pi pi-desktop"></i>
@@ -800,7 +791,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- 区切り線 -->
-                <hr class="my-4" style="border: 0; border-top: 1px solid var(--surface-border); opacity: 0.5;" />
+                <hr class="my-4 section-divider" />
 
                 <!-- 要約用AI設定セクション -->
                 <div class="flex flex-column gap-3">
@@ -991,8 +982,8 @@ onMounted(async () => {
                             :label="useExRadio ? '有効' : '無効'" 
                             :icon="useExRadio ? 'pi pi-check-circle' : 'pi pi-times-circle'" 
                             :class="useExRadio ? 'p-button-success' : 'p-button-secondary'" 
+                            class="toggle-btn"
                             @click="useExRadio = !useExRadio"
-                            style="width: 100px;"
                         />
                         <span class="text-xs text-gray-600">
                             LM Studio使用時に、Exラジオプロンプト（拡張用プロンプト）を優先して使用します。
@@ -1149,5 +1140,73 @@ onMounted(async () => {
 .reset-btn-container {
     display: flex;
     justify-content: flex-start;
+}
+
+.capability-icon {
+    font-size: 0.75rem;
+}
+
+.capability-badge--thought {
+    background: var(--color-primary-alpha-08);
+    border-color: var(--color-primary-alpha-30);
+    color: var(--color-primary-hover);
+}
+
+.capability-badge--tool-use {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #16a34a;
+}
+
+.capability-badge--image-gen {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+}
+
+.capability-badge--vision {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #d97706;
+}
+
+.capability-badge--video {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.3);
+    color: #dc2626;
+}
+
+.capability-badge--audio {
+    background: rgba(236, 72, 153, 0.08);
+    border-color: rgba(236, 72, 153, 0.3);
+    color: #db2777;
+}
+
+.capability-badge--structured {
+    background: rgba(13, 148, 136, 0.08);
+    border-color: rgba(13, 148, 136, 0.3);
+    color: #0d9488;
+}
+
+.capability-badge--long-context {
+    background: rgba(79, 70, 229, 0.08);
+    border-color: rgba(79, 70, 229, 0.3);
+    color: #4f46e5;
+}
+
+.capability-badge--local {
+    background: rgba(71, 85, 105, 0.08);
+    border-color: rgba(71, 85, 105, 0.3);
+    color: #475569;
+}
+
+.section-divider {
+    border: 0;
+    border-top: 1px solid var(--surface-border);
+    opacity: 0.5;
+}
+
+.toggle-btn {
+    width: 100px;
 }
 </style>

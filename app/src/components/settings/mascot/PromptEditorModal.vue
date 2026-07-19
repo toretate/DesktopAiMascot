@@ -100,10 +100,10 @@ const handleSave = async () => {
                     <i class="pi pi-user-edit text-brand-500 text-sm"></i>
                     <span>詳細プロンプト設定 (OpenClawフォーマット)</span>
                 </h2>
-                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary" style="width: 28px; height: 28px; padding: 0;" @click="emit('close')" />
+                <Button icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary modal-close-btn" @click="emit('close')" />
             </div>
 
-            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-y-auto flex-1 pr-1" style="min-height: 0;">
+            <div class="modal-body-container flex flex-column gap-3 mt-3 overflow-y-auto flex-1 pr-1">
                 
                 <!-- Identity -->
                 <div class="prompt-section p-3 bg-slate-50 border-round border-1 border-gray-200">
@@ -200,6 +200,16 @@ const handleSave = async () => {
 </template>
 
 <style scoped>
+.modal-close-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+.modal-body-container {
+    min-height: 0;
+}
+
 .border-bottom {
     border-bottom: 1px solid #e2e8f0 !important;
 }

@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import { useTaskStore, type SubTask, type Task } from '../../store/task';
+import TaskActionButtons from './TaskActionButtons.vue';
 import { useTaskInlineEdit } from './composables/useTaskInlineEdit';
 import { useTaskTreeDrag } from './composables/useTaskTreeDrag';
 import { getScheduledDisplay, isTaskOverdue } from './taskDisplayUtils';
@@ -102,8 +103,7 @@ onUnmounted(() => {
                 <button class="status-badge"
                         :class="isPendingComplete(task) ? 'pending-done' : (task.completed || task.status === 'done' ? 'done' : (task.status === 'doing' ? 'doing' : (task.status === 'paused' ? 'doing' : 'todo')))"
                         @click.stop="emit('cycleStatus', task)"
-                        :title="isPendingComplete(task) ? 'クリックでTODOに戻す' : ('ステータスをサイクル: ' + (task.status || 'todo'))"
-                        style="border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 16px; line-height: 16px; padding: 0 5px;">
+                        :title="isPendingComplete(task) ? 'クリックでTODOに戻す' : ('ステータスをサイクル: ' + (task.status || 'todo'))">
                     <span v-if="isPendingComplete(task)">取消 {{ pendingComplete[task.id] }}</span>
                     <span v-else-if="task.completed || task.status === 'done'">DONE</span>
                     <span v-else-if="task.status === 'doing'">DOING</span>
@@ -112,7 +112,7 @@ onUnmounted(() => {
                 </button>
 
                 <!-- タイトル -->
-                <div class="task-title-container flex-grow-1" style="display: flex; align-items: center; overflow: hidden; min-width: 0; gap: 6px;">
+                <div class="task-title-container flex-grow-1">
                     <span
                         v-if="editingTaskId !== task.id || editingSubTaskId !== null"
                         class="task-title"
@@ -123,7 +123,6 @@ onUnmounted(() => {
                         @mouseleave="handlePressEnd"
                         @touchstart="handlePressStart('task', task)"
                         @touchend="handlePressEnd"
-                        style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
                     >
                         {{ task.title }}
                     </span>
@@ -139,30 +138,27 @@ onUnmounted(() => {
                 </div>
 
                 <!-- 一時中断 / 再生 ボタン -->
-                <div class="pause-resume-buttons" style="display: flex; align-items: center; justify-content: center; width: 28px;">
+                <div class="pause-resume-buttons">
                     <button v-if="task.status === 'doing'"
                             class="action-icon-btn pause-task-btn"
                             @click.stop="taskStore.pauseTask(task.id)"
-                            title="一時中断"
-                            style="font-size: 14px; padding: 0;">
+                            title="一時中断">
                         <span>⏸️</span>
                     </button>
                     <button v-else-if="task.status === 'paused'"
                             class="action-icon-btn resume-task-btn"
                             @click.stop="taskStore.resumeTask(task.id)"
-                            title="タスクを再開"
-                            style="font-size: 14px; padding: 0;">
+                            title="タスクを再開">
                         <span>▶️</span>
                     </button>
                 </div>
 
                 <!-- カレンダー設定ボタン / 予定日時表示 -->
-                <div style="display: flex; align-items: center; gap: 2px;">
+                <div class="calendar-actions-wrapper">
                     <button
                         class="action-icon-btn calendar-set-btn"
                         @click.stop="emit('openDatePicker', task.id)"
                         :title="task.scheduledAt ? '予定日時を変更' : '予定日時を設定'"
-                        style="width: auto; padding: 0 4px;"
                     >
                         <span v-if="task.scheduledAt" :style="{ fontSize: '11px', fontWeight: '600', color: isOverdue(task) ? '#dc2626' : '#3b82f6', whiteSpace: 'nowrap' }">
                             {{ getScheduledDisplay(task.scheduledAt) }}
@@ -179,21 +175,12 @@ onUnmounted(() => {
                     {{ task.steps.filter(s => s.completed).length }}/{{ task.steps.length }}
                 </div>
 
-                <!-- 編集ボタン -->
-                <Button
-                    icon="pi pi-pencil"
-                    class="p-button-text p-button-secondary p-button-sm task-edit-btn"
-                    @click.stop="emit('editTask', task)"
-                    title="タスクを編集"
-                />
-
-                <!-- 削除ボタン (削除モード時のみ) -->
-                <Button
-                    v-if="showDeleteMode"
-                    icon="pi pi-trash"
-                    class="p-button-text p-button-danger p-button-sm task-delete-btn"
-                    @click.stop="taskStore.deleteTask(task.id)"
-                    title="タスクを削除"
+                <!-- 編集・削除ボタン群 -->
+                <TaskActionButtons
+                    :task="task"
+                    :show-delete-mode="showDeleteMode"
+                    @edit="emit('editTask', $event)"
+                    @delete="taskStore.deleteTask($event.id)"
                 />
             </div>
 
@@ -215,7 +202,7 @@ onUnmounted(() => {
                         @dragend="onSubTaskDragEnd"
                     >
                         <!-- 子タスク用ドラッグハンドル (〇から変更、戻すため) -->
-                        <div class="drag-handle subtask-drag-handle" title="ドラッグして親タスクに戻す / 移動" style="cursor: grab; color: #94a3b8; padding: 4px; display: flex; align-items: center;">
+                        <div class="drag-handle subtask-drag-handle" title="ドラッグして親タスクに戻す / 移動">
                             <i class="pi pi-bars"></i>
                         </div>
 
@@ -229,7 +216,7 @@ onUnmounted(() => {
                             {{ step.status.toUpperCase() }}
                         </button>
 
-                        <div class="subtask-title-container flex-grow-1" style="display: flex; align-items: center; overflow: hidden; min-width: 0; margin-right: 8px;">
+                        <div class="subtask-title-container flex-grow-1">
                             <span
                                 v-if="editingTaskId !== task.id || editingSubTaskId !== step.id"
                                 class="subtask-title"
@@ -240,7 +227,6 @@ onUnmounted(() => {
                                 @mouseleave="handlePressEnd"
                                 @touchstart="handlePressStart('subtask', step, task.id)"
                                 @touchend="handlePressEnd"
-                                style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap;"
                             >
                                 {{ step.title }}
                             </span>

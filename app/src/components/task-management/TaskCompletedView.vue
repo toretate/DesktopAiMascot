@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
 import { useTaskStore, type Task } from '../../store/task';
+import TaskActionButtons from './TaskActionButtons.vue';
 import { formatTaskTime } from './taskDisplayUtils';
 
 defineProps<{ showDeleteMode: boolean }>();
@@ -29,8 +29,12 @@ const getCategoryName = (categoryId: string) => taskStore.categories.find(catego
                             <span v-if="task.endedAt" class="completed-date">{{ formatTaskTime(task.endedAt) }}</span>
                         </div>
                     </div>
-                    <Button icon="pi pi-pencil" class="p-button-text p-button-secondary p-button-sm task-action-btn" title="タスクを編集" @click.stop="emit('editTask', task)" />
-                    <Button v-if="showDeleteMode" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm task-action-btn" title="タスクを削除" @click.stop="taskStore.deleteTask(task.id)" />
+                    <TaskActionButtons
+                        :task="task"
+                        :show-delete-mode="showDeleteMode"
+                        @edit="emit('editTask', $event)"
+                        @delete="taskStore.deleteTask($event.id)"
+                    />
                 </div>
             </div>
         </div>
@@ -52,6 +56,5 @@ const getCategoryName = (categoryId: string) => taskStore.categories.find(catego
 .timeline-cat-badge { font-size: 9px; font-weight: 600; color: #3b82f6; background: #eff6ff; padding: 1px 4px; border-radius: 3px; }
 .status-badge { border: none; border-radius: 3px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; height: 16px; padding: 0 5px; flex-shrink: 0; font-size: 9px; font-weight: 700; }
 .status-badge.done { color: #059669; background: #d1fae5; }
-.task-action-btn { width: 20px !important; height: 20px !important; padding: 0 !important; }
 .empty-state { text-align: center; color: #64748b; padding: 24px 0; font-size: 12px; }
 </style>

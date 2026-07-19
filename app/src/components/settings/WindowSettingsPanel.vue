@@ -483,7 +483,7 @@ onMounted(async () => {
                             <div class="form-field">
                                 <label class="font-medium">統合ウィンドウ全体の背景色</label>
                                 <div class="flex align-items-center gap-2 mt-2">
-                                    <input type="color" v-model="integratedBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
+                                    <input type="color" v-model="integratedBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300 color-picker-input" />
                                     <InputText v-model="integratedBackgroundColor" placeholder="#1e1e2e" class="flex-1" />
                                 </div>
                             </div>
@@ -515,13 +515,13 @@ onMounted(async () => {
                                         class="p-button-outlined p-button-danger p-button-sm"
                                         @click="clearIntegratedBackgroundImage" 
                                     />
-                                    <span v-if="integratedBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="max-width: 150px;">
+                                    <span v-if="integratedBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap file-name-label">
                                         設定済み
                                     </span>
                                     <span v-else class="text-xs text-gray-400">未設定</span>
                                 </div>
-                                <div v-if="integratedBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100" style="width: 100px; height: 60px; overflow: hidden;">
-                                    <img :src="integratedBackgroundImage" class="max-w-full max-h-full" style="object-fit: contain;" />
+                                <div v-if="integratedBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100 image-preview-thumbnail">
+                                    <img :src="integratedBackgroundImage" class="max-w-full max-h-full img-contain" />
                                 </div>
                             </div>
 
@@ -547,36 +547,36 @@ onMounted(async () => {
                         </div>
 
                         <!-- 右ペイン: 統合ウィンドウプレビュー -->
-                        <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
+                        <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full preview-column">
                             <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                                 <i class="pi pi-eye"></i>プレビュー（統合ウィンドウ）
                             </label>
-                            <div class="integrated-preview-box border-round shadow-2 p-2 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex gap-2" style="height: 240px;">
+                            <div class="integrated-preview-box border-round shadow-2 p-2 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex gap-2">
                                 <!-- 統合ウィンドウの全体背景レイヤー -->
                                 <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" :style="integratedPreviewBackgroundStyle"></div>
 
                                 <!-- 左側：マスコット表示エリア -->
-                                <div class="flex-1 flex justify-content-center align-items-center relative" style="z-index: 1; border-right: 1px solid rgba(255,255,255,0.2);">
+                                <div class="flex-1 flex justify-content-center align-items-center relative integrated-mascot-pane">
                                     <img 
                                         v-if="isMascotImage(activeMascotImageUrl)" 
                                         :src="activeMascotImageUrl" 
-                                        style="height: 90px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));" 
+                                        class="integrated-mascot-img"
                                     />
-                                    <div v-else class="flex align-items-center justify-content-center border-circle bg-white shadow-2 text-center" style="width: 50px; height: 50px; font-size: 24px;">
+                                    <div v-else class="flex align-items-center justify-content-center border-circle bg-white shadow-2 text-center integrated-avatar-fallback">
                                         {{ activeMascot?.avatar || '🤖' }}
                                     </div>
                                 </div>
 
                                 <!-- 右側：チャット表示エリア（極小モック） -->
-                                <div class="flex-1 flex flex-column justify-content-between p-1 relative" style="z-index: 1; background: rgba(255,255,255,0.1); border-radius: 4px; backdrop-filter: blur(2px);">
-                                    <div class="text-xs text-gray-500 font-bold border-bottom pb-1 mb-1" style="font-size: 10px;">Chat</div>
-                                    <div class="flex-1 flex flex-column gap-1 overflow-hidden" style="max-height: 120px;">
-                                        <div class="bg-brand-100 text-brand-900 border-round p-1" style="font-size: 8px; width: fit-content; max-width: 90%;">Hello!</div>
-                                        <div class="bg-white text-gray-800 border-round p-1 align-self-end" style="font-size: 8px; width: fit-content; max-width: 90%;">こんにちは</div>
+                                <div class="flex-1 flex flex-column justify-content-between p-1 relative integrated-chat-pane">
+                                    <div class="text-xs text-gray-500 font-bold border-bottom pb-1 mb-1 integrated-chat-header">Chat</div>
+                                    <div class="flex-1 flex flex-column gap-1 overflow-hidden integrated-chat-messages">
+                                        <div class="bg-brand-100 text-brand-900 border-round p-1 integrated-chat-bubble">Hello!</div>
+                                        <div class="bg-white text-gray-800 border-round p-1 align-self-end integrated-chat-bubble">こんにちは</div>
                                     </div>
                                     <div class="border-top pt-1 mt-1 flex gap-1">
-                                        <div class="bg-white border-1 border-300 border-round w-full" style="height: 12px;"></div>
-                                        <div class="bg-brand-500 text-white border-round" style="width: 12px; height: 12px;"></div>
+                                        <div class="bg-white border-1 border-300 border-round w-full integrated-input-mock"></div>
+                                        <div class="bg-brand-500 text-white border-round integrated-btn-mock"></div>
                                     </div>
                                 </div>
                             </div>
@@ -628,7 +628,7 @@ onMounted(async () => {
                                 <span>マスコットエリア背景色</span>
                             </label>
                             <div class="flex align-items-center gap-2 mt-2">
-                                <input type="color" v-model="mascotBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
+                                <input type="color" v-model="mascotBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300 color-picker-input" />
                                 <InputText v-model="mascotBackgroundColor" placeholder="#ffffff" class="flex-1" />
                             </div>
                         </div>
@@ -660,14 +660,14 @@ onMounted(async () => {
                                     class="p-button-outlined p-button-danger p-button-sm"
                                     @click="clearMascotBackgroundImage" 
                                 />
-                                <span v-if="mascotBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="max-width: 150px;">
+                                <span v-if="mascotBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap file-name-label">
                                     設定済み
                                 </span>
                                 <span v-else class="text-xs text-gray-400">未設定</span>
                             </div>
                             <!-- 背景画像のプレビュー -->
-                            <div v-if="mascotBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100" style="width: 100px; height: 60px; overflow: hidden;">
-                                <img :src="mascotBackgroundImage" class="max-w-full max-h-full" style="object-fit: contain;" />
+                            <div v-if="mascotBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100 image-preview-thumbnail">
+                                <img :src="mascotBackgroundImage" class="max-w-full max-h-full img-contain" />
                             </div>
                         </div>
 
@@ -693,38 +693,36 @@ onMounted(async () => {
                     </div>
 
                     <!-- 右ペイン: マスコットプレビュー -->
-                    <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
+                    <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full preview-column">
                         <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                             <i class="pi pi-eye"></i>プレビュー（サイズ・背景連動）
                         </label>
-                        <div class="mascot-preview-box border-round shadow-2 p-0 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex flex-column justify-content-center align-items-center" style="height: 240px;">
+                        <div class="mascot-preview-box border-round shadow-2 p-0 overflow-hidden w-full relative border-1 border-300 bg-gray-50 flex flex-column justify-content-center align-items-center">
                             <!-- 背景：デスクトップを模したグラデーション背景 -->
-                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background: linear-gradient(135deg, var(--color-primary-soft) 0%, #e0e7ff 100%); opacity: 0.8; z-index: 0;"></div>
+                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none mascot-preview-bg-gradient"></div>
                             
                             <!-- グリッド模様 (透過) -->
-                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" style="background-image: radial-gradient(var(--color-primary-alpha-10) 1.5px, transparent 1.5px); background-size: 16px 16px; z-index: 1;"></div>
+                            <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none mascot-preview-bg-grid"></div>
                             
                             <!-- マスコットウィンドウの背景レイヤー -->
                             <div class="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" :style="mascotPreviewBackgroundStyle"></div>
 
                             <!-- 最前面表示インジケーターバッジ -->
-                            <div class="absolute top-2 right-2 border-round px-2 py-1 text-xs font-semibold shadow-1" :class="alwaysOnTop ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'" style="z-index: 2;">
+                            <div class="absolute top-2 right-2 border-round px-2 py-1 text-xs font-semibold shadow-1 always-on-top-badge" :class="alwaysOnTop ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'">
                                 {{ alwaysOnTop ? '最前面' : '標準表示' }}
                             </div>
 
                             <!-- マスコット表示 -->
-                            <div class="flex justify-content-center align-items-center" style="width: 100%; height: 100%; z-index: 2; overflow: hidden;">
+                            <div class="flex justify-content-center align-items-center mascot-display-wrapper">
                                 <div :style="{ transform: 'scale(' + (windowMode === 'compact' ? 0.5 : (mascotScale || 1.0)) + ')', transformOrigin: 'center center', transition: 'transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1)' }" class="flex justify-content-center align-items-center">
                                     <img 
                                         v-if="isMascotImage(activeMascotImageUrl)" 
                                         :src="activeMascotImageUrl" 
-                                        class="max-w-full max-h-full" 
-                                        style="height: 120px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));" 
+                                        class="max-w-full max-h-full mascot-preview-img"
                                     />
                                     <div 
                                         v-else 
-                                        class="flex align-items-center justify-content-center border-circle bg-white shadow-2 text-center" 
-                                        style="width: 80px; height: 80px; font-size: 40px;"
+                                        class="flex align-items-center justify-content-center border-circle bg-white shadow-2 text-center mascot-avatar-fallback"
                                     >
                                         {{ activeMascot?.avatar || '🤖' }}
                                     </div>
@@ -749,7 +747,7 @@ onMounted(async () => {
                                 <span>メッセージエリア背景色</span>
                             </label>
                             <div class="flex align-items-center gap-2 mt-2">
-                                <input type="color" v-model="chatBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
+                                <input type="color" v-model="chatBackgroundColor" class="p-0 border-round cursor-pointer border-1 border-300 color-picker-input" />
                                 <InputText v-model="chatBackgroundColor" placeholder="#ffffff" class="flex-1" />
                             </div>
                         </div>
@@ -781,14 +779,14 @@ onMounted(async () => {
                                     class="p-button-outlined p-button-danger p-button-sm"
                                     @click="clearBackgroundImage" 
                                 />
-                                <span v-if="chatBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="max-width: 150px;">
+                                <span v-if="chatBackgroundImage" class="text-xs text-gray-500 overflow-hidden text-overflow-ellipsis white-space-nowrap file-name-label">
                                     設定済み
                                 </span>
                                 <span v-else class="text-xs text-gray-400">未設定</span>
                             </div>
                             <!-- 背景画像のプレビュー -->
-                            <div v-if="chatBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100" style="width: 100px; height: 60px; overflow: hidden;">
-                                <img :src="chatBackgroundImage" class="max-w-full max-h-full" style="object-fit: contain;" />
+                            <div v-if="chatBackgroundImage" class="mt-2 border-1 border-300 border-round p-1 flex justify-content-center align-items-center bg-gray-100 image-preview-thumbnail">
+                                <img :src="chatBackgroundImage" class="max-w-full max-h-full img-contain" />
                             </div>
                         </div>
 
@@ -813,7 +811,7 @@ onMounted(async () => {
                         </div>
 
                         <!-- 境界線（枠）設定（グループボックス表示） -->
-                        <fieldset class="border-round p-3" style="border: 1px solid rgba(0, 0, 0, 0.12);">
+                        <fieldset class="border-round p-3 border-fieldset">
                             <legend class="px-2 text-sm font-semibold text-brand-600">枠</legend>
                             <div class="flex align-items-center gap-3">
                                 <div class="flex align-items-center gap-2">
@@ -822,12 +820,12 @@ onMounted(async () => {
                                 </div>
                                 
                                 <div v-if="chatBorderShow" class="flex align-items-center gap-2">
-                                    <input type="color" v-model="chatBorderColor" class="p-0 border-round cursor-pointer border-1 border-300" style="width: 40px; height: 32px;" />
-                                    <InputText v-model="chatBorderColor" :placeholder="DEFAULT_ACCENT_COLOR" style="width: 80px; height: 32px;" />
+                                    <input type="color" v-model="chatBorderColor" class="p-0 border-round cursor-pointer border-1 border-300 color-picker-input" />
+                                    <InputText v-model="chatBorderColor" :placeholder="DEFAULT_ACCENT_COLOR" class="border-color-input" />
                                 </div>
                                 
                                 <div v-if="chatBorderShow" class="flex align-items-center gap-2">
-                                    <input v-model.number="chatBorderWidth" type="number" min="1" max="10" class="p-inputtext p-component" style="width: 60px; height: 32px;" />
+                                    <input v-model.number="chatBorderWidth" type="number" min="1" max="10" class="p-inputtext p-component border-width-input" />
                                     <span class="text-sm font-medium">px</span>
                                 </div>
                             </div>
@@ -873,7 +871,7 @@ onMounted(async () => {
                     </div>
 
                     <!-- 右ペイン: プレビュー -->
-                    <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full" style="max-width: 320px;">
+                    <div class="flex flex-column justify-content-start align-items-stretch mt-4 md:mt-0 pl-0 md:pl-4 w-full preview-column">
                         <label class="font-medium mb-2 align-self-start text-sm text-brand-600 flex align-items-center gap-2">
                             <i class="pi pi-eye"></i>プレビュー（リアルタイム）
                         </label>
@@ -882,7 +880,7 @@ onMounted(async () => {
                             <div class="chat-preview-background" :style="chatPreviewBackgroundStyle"></div>
                             
                             <!-- ヘッダー -->
-                            <div class="chat-preview-header flex align-items-center justify-content-between px-3" style="height: 40px; border-bottom: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3); backdrop-filter: blur(5px); z-index: 1; position: relative;">
+                            <div class="chat-preview-header flex align-items-center justify-content-between px-3">
                                 <span class="text-xs font-semibold text-color-secondary">Mascot Chat</span>
                                 <div class="flex gap-2">
                                     <i class="pi pi-volume-up text-xs text-gray-500"></i>
@@ -891,21 +889,21 @@ onMounted(async () => {
                             </div>
 
                             <!-- メッセージエリア -->
-                            <div class="chat-preview-messages flex-1 p-3 flex flex-column gap-3 overflow-y-auto" style="pointer-events: none; z-index: 1; position: relative;">
+                            <div class="chat-preview-messages flex-1 p-3 flex flex-column gap-3 overflow-y-auto">
                                 <div class="flex justify-content-start w-full">
-                                    <div class="p-2 border-round text-xs max-w-80 shadow-1" style="background: rgba(255, 255, 255, 0.95); color: #334155; border-radius: 12px 12px 12px 0px; line-height: 1.4;">
+                                    <div class="p-2 border-round text-xs max-w-80 shadow-1 chat-bubble-incoming">
                                         こんにちは！設定を変更すると、このプレビューにリアルタイムに反映されます。[happy]
                                     </div>
                                 </div>
                                 <div class="flex justify-content-end w-full">
-                                    <div class="p-2 border-round text-xs max-w-80 shadow-1 text-white" style="background: var(--color-primary); border-radius: 12px 12px 0px 12px; line-height: 1.4;">
+                                    <div class="p-2 border-round text-xs max-w-80 shadow-1 text-white chat-bubble-outgoing">
                                         背景やフォントが変わるんだね！
                                     </div>
                                 </div>
                             </div>
 
                             <!-- フッター -->
-                            <div class="chat-preview-footer p-2 flex align-items-center gap-2" style="border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3); z-index: 1; position: relative;">
+                            <div class="chat-preview-footer p-2 flex align-items-center gap-2">
                                 <div class="flex-1 border-1 border-300 border-round bg-white px-2 py-1 text-xs text-gray-400 flex align-items-center justify-content-between">
                                     <span>メッセージを入力...</span>
                                     <i class="pi pi-send text-xs text-brand-500"></i>
@@ -929,7 +927,7 @@ onMounted(async () => {
                             <label class="font-medium">サーバーホスト (IPアドレス / ドメイン)</label>
                             <InputText v-model="serverHost" placeholder="例: localhost または 192.168.1.10" class="w-full mt-1" />
                         </div>
-                        <div style="width: 150px;">
+                        <div class="server-port-col">
                             <label class="font-medium">ポート番号</label>
                             <input v-model.number="serverPort" type="number" placeholder="例: 3000" class="p-inputtext p-component w-full mt-1" />
                         </div>
@@ -992,3 +990,168 @@ onMounted(async () => {
         </template>
     </Card>
 </template>
+
+<style scoped>
+.color-picker-input {
+    width: 40px;
+    height: 32px;
+}
+
+.file-name-label {
+    max-width: 150px;
+}
+
+.image-preview-thumbnail {
+    width: 100px;
+    height: 60px;
+    overflow: hidden;
+}
+
+.img-contain {
+    object-fit: contain;
+}
+
+.preview-column {
+    max-width: 320px;
+}
+
+.integrated-preview-box,
+.mascot-preview-box {
+    height: 240px;
+}
+
+.integrated-mascot-pane {
+    z-index: 1;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.integrated-mascot-img {
+    height: 90px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+.integrated-avatar-fallback {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+}
+
+.integrated-chat-pane {
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+}
+
+.integrated-chat-header {
+    font-size: 10px;
+}
+
+.integrated-chat-messages {
+    max-height: 120px;
+}
+
+.integrated-chat-bubble {
+    font-size: 8px;
+    width: fit-content;
+    max-width: 90%;
+}
+
+.integrated-input-mock {
+    height: 12px;
+}
+
+.integrated-btn-mock {
+    width: 12px;
+    height: 12px;
+}
+
+.mascot-preview-bg-gradient {
+    background: linear-gradient(135deg, var(--color-primary-soft) 0%, #e0e7ff 100%);
+    opacity: 0.8;
+    z-index: 0;
+}
+
+.mascot-preview-bg-grid {
+    background-image: radial-gradient(var(--color-primary-alpha-10) 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+    z-index: 1;
+}
+
+.always-on-top-badge {
+    z-index: 2;
+}
+
+.mascot-display-wrapper {
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.mascot-preview-img {
+    height: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+.mascot-avatar-fallback {
+    width: 80px;
+    height: 80px;
+    font-size: 40px;
+}
+
+.border-fieldset {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.border-color-input {
+    width: 80px;
+    height: 32px;
+}
+
+.border-width-input {
+    width: 60px;
+    height: 32px;
+}
+
+.chat-preview-header {
+    height: 40px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+    z-index: 1;
+    position: relative;
+}
+
+.chat-preview-messages {
+    pointer-events: none;
+    z-index: 1;
+    position: relative;
+}
+
+.chat-bubble-incoming {
+    background: rgba(255, 255, 255, 0.95);
+    color: #334155;
+    border-radius: 12px 12px 12px 0px;
+    line-height: 1.4;
+}
+
+.chat-bubble-outgoing {
+    background: var(--color-primary);
+    border-radius: 12px 12px 0px 12px;
+    line-height: 1.4;
+}
+
+.chat-preview-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.3);
+    z-index: 1;
+    position: relative;
+}
+
+.server-port-col {
+    width: 150px;
+}
+</style>
