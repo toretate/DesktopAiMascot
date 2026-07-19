@@ -22,8 +22,8 @@ import {
     type RasterImage,
     type BoundingBox,
     type ComfyFaceDetection,
-} from '@desktop-ai-mascot/expression-alignment';
-import { loadOpenCvBrowser } from '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser';
+} from '@tonarice/expression-alignment';
+import { loadOpenCvBrowser } from '@tonarice/expression-alignment/adapters/opencv-browser';
 
 // ---------------------------------------------------------------------------
 // ローカル顔検出 API

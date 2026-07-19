@@ -1,4 +1,4 @@
-# DesktopAiMascot固有のPrimeVue規約
+# tonarice固有のPrimeVue規約
 
 ## 現在の構成
 

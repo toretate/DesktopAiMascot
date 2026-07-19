@@ -18,7 +18,7 @@
 - 位置が保存されていない場合は**画面右下**に配置
 
 ### 3. 保存先
-- **ファイル**: `%APPDATA%\DesktopAiMascot\system_config.yaml`
+- **ファイル**: `%APPDATA%\tonarice\system_config.yaml`
 - **プロパティ**: 
   - `window_position_x`: X座標
   - `window_position_y`: Y座標
@@ -365,7 +365,7 @@ WindowPositionY = -1
 1. マウスでマスコットを任意の位置に移動
 2. 1秒待つ
 3. ログ: `"位置が変更されました: (X, Y)"` → `"Saved location: X,Y"`
-4. `%APPDATA%\DesktopAiMascot\system_config.yaml` を確認
+4. `%APPDATA%\tonarice\system_config.yaml` を確認
 5. `window_position_x: X`, `window_position_y: Y` が保存されている
 
 **期待結果**: ✅ 位置が保存される
@@ -441,10 +441,10 @@ Saved location: 2500,800
 
 ```powershell
 # 設定ファイルを表示
-Get-Content "$env:APPDATA\DesktopAiMascot\system_config.yaml"
+Get-Content "$env:APPDATA\tonarice\system_config.yaml"
 
 # 位置情報のみ表示
-Get-Content "$env:APPDATA\DesktopAiMascot\system_config.yaml" | Select-String -Pattern "window_position"
+Get-Content "$env:APPDATA\tonarice\system_config.yaml" | Select-String -Pattern "window_position"
 ```
 
 期待される出力:
@@ -457,7 +457,7 @@ window_position_y: 800
 
 ```powershell
 # 設定ファイルを削除（初期化）
-Remove-Item "$env:APPDATA\DesktopAiMascot\system_config.yaml"
+Remove-Item "$env:APPDATA\tonarice\system_config.yaml"
 ```
 
 ---
@@ -481,7 +481,7 @@ Remove-Item "$env:APPDATA\DesktopAiMascot\system_config.yaml"
 ## 🔒 セキュリティ
 
 ### ファイルパス
-- `%APPDATA%\DesktopAiMascot\system_config.yaml`
+- `%APPDATA%\tonarice\system_config.yaml`
 - ユーザーディレクトリ内（他のユーザーからはアクセス不可）
 
 ### データ形式

@@ -21,7 +21,7 @@ VoiceAiPropertyPageにVoiceVox用のUI設定とマスコットへの保存機能
   - `LoadMascotVoiceConfig()` - VoiceVox設定の読み込み処理
 
 ### 3. テスト
-- ✅ `DesktopAiMascotTest\integration\VoiceVoxMascotIntegrationTests.cs` - 統合テスト（一部成功）
+- ✅ `tonariceTest\integration\VoiceVoxMascotIntegrationTests.cs` - 統合テスト（一部成功）
 
 ---
 

@@ -4,7 +4,7 @@ import { detectFaceFeatures, FeatureIsland } from '../feature-island-detector';
 
 // document.createElement('canvas') をモックしてテスト実行時に JSDOM 環境下で canvas 動作するようにする
 if (typeof document !== 'undefined') {
-    const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+    const { createCanvas } = eval("require('canvas')");
     const originalCreateElement = document.createElement.bind(document);
     document.createElement = function(tagName: string, options?: any) {
         if (tagName.toLowerCase() === 'canvas') {
@@ -16,7 +16,7 @@ if (typeof document !== 'undefined') {
 
 describe('FeatureIslandDetector', () => {
     test('detectFaceFeatures_透明のみの画像からは島が検出されないこと', async () => {
-        const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+        const { createCanvas } = eval("require('canvas')");
         const canvas = createCanvas(10, 10);
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'rgba(0, 0, 0, 0)';
@@ -31,7 +31,7 @@ describe('FeatureIslandDetector', () => {
 
     test('detectFaceFeatures_3つの非透明領域（目・目・口）から正確に左右の目と口の重心が同定されること', async () => {
         // Canvas を作成して目・目・口のダミーピクセルを描画し、Data URL 化してテストする
-        const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+        const { createCanvas } = eval("require('canvas')");
         const canvas = createCanvas(100, 100);
         const ctx = canvas.getContext('2d');
         

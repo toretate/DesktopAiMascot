@@ -6,7 +6,7 @@ export type { ConfigData };
 export { defaultData };
 
 // アプリケーション名を明示的に指定し、起動方法（VS Codeデバッガ vs CLI）によるuserDataディレクトリ（config.json保存先）のズレを防止
-app.setName('desktop-ai-mascot');
+app.setName('tonarice');
 
 export class AppConfig {
     private configPath: string;
@@ -16,8 +16,8 @@ export class AppConfig {
 
     constructor() {
         if (!app.isPackaged) {
-            // 開発環境ではプロジェクトのルートディレクトリにある config.json を使用してサーバーと同期する
-            this.configPath = path.resolve(__dirname, '../../config.json');
+            // 開発環境では storage 直下の config.json を使用してサーバーと同期する
+            this.configPath = path.resolve(__dirname, '../../storage/config.json');
         } else {
             this.configPath = path.join(app.getPath('userData'), 'config.json');
         }

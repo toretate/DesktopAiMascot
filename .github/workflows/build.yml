@@ -33,12 +33,12 @@ jobs:
       run: dotnet publish --configuration Release --runtime win-x64 --self-contained false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --output ./publish
 
     - name: Create Release Archive
-      run: Compress-Archive -Path ./publish/* -DestinationPath DesktopAiMascot-${{ github.ref_name }}.zip
+      run: Compress-Archive -Path ./publish/* -DestinationPath tonarice-${{ github.ref_name }}.zip
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: DesktopAiMascot-${{ github.ref_name }}.zip
+        files: tonarice-${{ github.ref_name }}.zip
         draft: false
         prerelease: false
       env:

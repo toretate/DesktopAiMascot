@@ -1,11 +1,11 @@
 {
-    "name": "desktop-ai-mascot",
+    "name": "tonarice",
     "version": "1.0.0",
     "main": "dist-electron/main.cjs",
     "type": "module",
     "scripts": {
-        "dev": "nuxt dev",
-        "dev:remote": "nuxt dev --host 0.0.0.0",
+        "dev": "node scripts/dev-nuxt.js",
+        "dev:remote": "node scripts/dev-nuxt.js --host 0.0.0.0",
         "dev:electron": "node scripts/dev-electron.js",
         "build": "tsup && nuxt build",
         "lint": "biome lint . --diagnostic-level=error",
@@ -17,7 +17,7 @@
         "typecheck": "vue-tsc --project tsconfig.json --noEmit",
         "typecheck:electron": "tsc --project tsconfig.electron.json --noEmit",
         "typecheck:all": "npm run typecheck && npm run typecheck:electron",
-        "kill": "taskkill /f /im node.exe /im electron.exe",
+        "kill": "node scripts/kill-dev.js",
         "postinstall": "patch-package"
     },
     "dependencies": {

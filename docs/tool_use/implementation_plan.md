@@ -29,7 +29,7 @@
 - **`ui/src/skills/tool-use/index.ts`** [NEW]: 各ツールをまとめてエクスポートするインデックスファイル
 
 ### 2. LM Studio コネクタの拡張
-#### [MODIFY] [lmstudio-connector.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/ui/src/connector/lmstudio-connector.ts)
+#### [MODIFY] `app/src/connector/lmstudio-connector.ts`
 - `llm.respond` の代わりに LM Studio SDK の `llm.act(chat, tools, opts)` を使用するように書き換えます。
 - インポートした `lmStudioTools` 配列を `llm.act` に渡します。
 - メッセージ応答およびクレンジング処理を適合させます。

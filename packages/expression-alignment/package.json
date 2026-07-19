@@ -1,5 +1,5 @@
 {
-    "name": "@desktop-ai-mascot/expression-alignment",
+    "name": "@tonarice/expression-alignment",
     "version": "0.0.0",
     "private": true,
     "description": "マスコット表情スプライト自動位置合わせライブラリ（framework/DOM 非依存・決定論的）",

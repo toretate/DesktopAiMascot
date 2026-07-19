@@ -36,9 +36,9 @@ export default defineNuxtConfig({
     alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@prompt': fileURLToPath(new URL('./src/skills/tool-use/prompts', import.meta.url)),
-        '@desktop-ai-mascot/expression-alignment/adapters/opencv-browser':
+        '@tonarice/expression-alignment/adapters/opencv-browser':
             path.resolve(pkgRoot, 'adapters/opencv-browser.ts'),
-        '@desktop-ai-mascot/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),
+        '@tonarice/expression-alignment': path.resolve(pkgRoot, 'src/index.ts'),
         '@techstark/opencv-js': path.resolve(pkgRoot, 'node_modules/@techstark/opencv-js'),
     },
 

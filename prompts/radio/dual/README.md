@@ -148,12 +148,12 @@ MC:
 
 ## テスト
 
-並行処理テストは `DesktopAiMascotTest\aiservice\voice\StyleBertVits2ServiceConcurrencyTests.cs` を参照してください。
+並行処理テストは `tonariceTest\aiservice\voice\StyleBertVits2ServiceConcurrencyTests.cs` を参照してください。
 
 ## 関連ドキュメント
 
-- [並行処理テスト仕様](../DesktopAiMascotTest/CONCURRENCY_TESTS.md)
-- [並行処理テスト完了報告](../DesktopAiMascotTest/CONCURRENCY_TESTS_SUMMARY.md)
+- [並行処理テスト仕様](../tonariceTest/CONCURRENCY_TESTS.md)
+- [並行処理テスト完了報告](../tonariceTest/CONCURRENCY_TESTS_SUMMARY.md)
 
 ## 今後の拡張
 

@@ -18,13 +18,13 @@ VoiceVox音声合成サービスの完全な実装が完了しました。
 - ✅ `aiservice\voice\schemas\VoiceVox_CoreVersions_Response.json` - コアバージョン一覧
 
 ### 3. テストファイル
-- ✅ `DesktopAiMascotTest\aiservice\voice\VoiceVoxServiceTests.cs` - 単体テスト（25テスト）
-- ✅ `DesktopAiMascotTest\aiservice\voice\VoiceVoxServiceIntegrationTests.cs` - 統合テスト（19テスト）
-- ✅ `DesktopAiMascotTest\aiservice\voice\VoiceVoxServiceSchemaTests.cs` - スキーマテスト（24テスト）
+- ✅ `tonariceTest\aiservice\voice\VoiceVoxServiceTests.cs` - 単体テスト（25テスト）
+- ✅ `tonariceTest\aiservice\voice\VoiceVoxServiceIntegrationTests.cs` - 統合テスト（19テスト）
+- ✅ `tonariceTest\aiservice\voice\VoiceVoxServiceSchemaTests.cs` - スキーマテスト（24テスト）
 
 ### 4. ドキュメント
 - ✅ `aiservice\voice\VoiceVoxService_README.md` - サービス詳細ドキュメント
-- ✅ `DesktopAiMascotTest\VOICEVOX_TESTS.md` - テストドキュメント
+- ✅ `tonariceTest\VOICEVOX_TESTS.md` - テストドキュメント
 
 ### 5. 統合
 - ✅ `aiservice\VoiceAiManager.cs` - VoiceVoxサービスの登録
@@ -257,7 +257,7 @@ VoiceVoxServiceの完全な実装が完了しました。
 - ✅ **UI統合** 完了
 - ✅ **スキーマ検証** 完了
 
-DesktopAiMascotでVoiceVoxを使用して、高品質な日本語音声合成が可能になりました！
+tonariceでVoiceVoxを使用して、高品質な日本語音声合成が可能になりました！
 
 ---
 

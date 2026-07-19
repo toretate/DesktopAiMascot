@@ -1,10 +1,26 @@
 import { spawn, exec } from 'child_process';
+import fs from 'fs';
 import net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
+const processFile = path.join(projectRoot, 'node_modules', '.cache', 'tonarice', 'dev-electron.json');
+
+function writeProcessFile() {
+    fs.mkdirSync(path.dirname(processFile), { recursive: true });
+    fs.writeFileSync(processFile, JSON.stringify({ pid: process.pid }), 'utf8');
+}
+
+function removeProcessFile() {
+    try {
+        const tracked = JSON.parse(fs.readFileSync(processFile, 'utf8'));
+        if (tracked.pid === process.pid) fs.rmSync(processFile, { force: true });
+    } catch {
+        // 記録が存在しない場合は何もしない。
+    }
+}
 
 // プロセスツリーを確実に強制終了する関数 (Windows対策)
 function killProcess(childProcess) {
@@ -58,6 +74,7 @@ async function ensureNuxt(url, timeout = 60000) {
 }
 
 async function start() {
+    writeProcessFile();
     let nuxtProcess = null;
     console.log('[DevElectron] Checking Nuxt dev server status...');
     try {
@@ -96,9 +113,12 @@ async function start() {
                 console.log('[DevElectron] Stopping Nuxt dev server...');
                 killProcess(nuxtProcess);
             }
+            removeProcessFile();
             process.exit(0);
         });
     }, 3000);
 }
+
+process.on('exit', removeProcessFile);
 
 start();

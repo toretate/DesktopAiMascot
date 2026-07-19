@@ -2,10 +2,9 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// プロジェクトルートの目印となるファイル/ディレクトリ。
-// config.json はこのリポジトリのルートにのみ存在するため最優先の目印にする。
-// （app/ には package.json があるため、package.json は目印に使わない）
-const ROOT_MARKERS = ['config.json', '.git'];
+// プロジェクトルートの目印となるディレクトリ。
+// app/ には package.json があるため、package.json は目印に使わない。
+const ROOT_MARKERS = ['.git'];
 
 // 指定ディレクトリから上方向へ marker を探索し、最初に見つかった階層を返す
 function findUpward(startDir: string, marker: string): string | null {
@@ -37,7 +36,7 @@ export function getProjectRoot(): string {
     const starts = [getCurrentFileDir(), process.cwd()].filter(
         (d): d is string => !!d
     );
-    // config.json → .git の優先順で、各起点を上方向に探索する
+    // 各起点から .git を上方向に探索する
     for (const marker of ROOT_MARKERS) {
         for (const start of starts) {
             const found = findUpward(start, marker);
@@ -73,8 +72,7 @@ export const USERS_FILE_PATH = path.join(STORAGE_DIR, 'users.json');
 export const VISION_DIR = path.join(PROJECT_ROOT, 'python-services/vision');
 export const PYTHON_DIR = path.join(PROJECT_ROOT, 'python-services');
 
-// 設定・履歴テンプレート
-export const CONFIG_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'config.json');
+// 履歴テンプレート
 export const HISTORY_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'chat_history.json');
 
 /**

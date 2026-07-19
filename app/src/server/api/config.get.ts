@@ -1,8 +1,10 @@
 import { defineEventHandler, createError } from 'h3';
 import fs from 'fs';
 import path from 'path';
-import { CONFIG_TEMPLATE_PATH, USERS_DIR, PROJECT_ROOT } from '../utils/paths';
+import { USERS_DIR, PROJECT_ROOT } from '../utils/paths';
 import { safeWriteFileSync } from '../utils/fs-helpers';
+import { createInitialConfig } from '../../config/config-template';
+import { externalizeConfigBackgroundImages } from '../utils/config-background-images';
 
 function getUserConfigPath(userId: string): string {
     return path.join(USERS_DIR, userId, 'user_config.json');
@@ -98,7 +100,11 @@ export default defineEventHandler(async (event) => {
         if (fs.existsSync(userConfigPath)) {
             try {
                 const fileData = fs.readFileSync(userConfigPath, 'utf8');
-                config = JSON.parse(fileData);
+                const parsedConfig = JSON.parse(fileData);
+                config = externalizeConfigBackgroundImages(parsedConfig, userId);
+                if (JSON.stringify(config) !== JSON.stringify(parsedConfig)) {
+                    safeWriteFileSync(userConfigPath, JSON.stringify(config, null, 4));
+                }
             } catch (e: any) {
                 console.error(`[Server] user_config.json のロードに失敗しました: ${e.message}`);
             }
@@ -130,33 +136,27 @@ export default defineEventHandler(async (event) => {
             }
         }
 
-        // 3. 移行データもない場合、テンプレートから初期化
+        // 3. 移行データもない場合、秘密情報を含まない専用テンプレートから初期化
         if (!config) {
-            if (fs.existsSync(CONFIG_TEMPLATE_PATH)) {
-                try {
-                    console.log(`[Server] テンプレートから設定を初期化します: ${userId}`);
-                    const templateData = fs.readFileSync(CONFIG_TEMPLATE_PATH, 'utf8');
-                    const rawConfig = JSON.parse(templateData);
+            try {
+                console.log(`[Server] 専用テンプレートから設定を初期化します: ${userId}`);
+                const initialConfig = createInitialConfig();
 
-                    // マスコットデータを分離して個別保存
-                    if (rawConfig && Array.isArray(rawConfig.mascots)) {
-                        for (let mascot of rawConfig.mascots) {
-                            mascot = migrateMascotAssets(userId, mascot);
-                            const mascotPath = getMascotConfigPath(userId, mascot.id);
-                            safeWriteFileSync(mascotPath, JSON.stringify(mascot, null, 4));
-                        }
-                        delete rawConfig.mascots;
+                // マスコットデータを分離して個別保存
+                if (Array.isArray(initialConfig.mascots)) {
+                    for (let mascot of initialConfig.mascots) {
+                        mascot = migrateMascotAssets(userId, mascot);
+                        const mascotPath = getMascotConfigPath(userId, mascot.id);
+                        safeWriteFileSync(mascotPath, JSON.stringify(mascot, null, 4));
                     }
-
-                    config = rawConfig;
-                    safeWriteFileSync(userConfigPath, JSON.stringify(config, null, 4));
-                } catch (e: any) {
-                    console.error(`[Server] テンプレートからの初期化に失敗しました: ${e.message}`);
-                    config = {};
+                    delete (initialConfig as Partial<typeof initialConfig>).mascots;
                 }
-            } else {
-                config = {};
+
+                config = initialConfig;
                 safeWriteFileSync(userConfigPath, JSON.stringify(config, null, 4));
+            } catch (e: any) {
+                console.error(`[Server] 専用テンプレートからの初期化に失敗しました: ${e.message}`);
+                config = {};
             }
         }
 

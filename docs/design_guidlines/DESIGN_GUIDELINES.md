@@ -1,6 +1,6 @@
-# DesktopAiMascot UI/UX デザイン指針 (DESIGN GUIDELINES)
+# tonarice UI/UX デザイン指針 (DESIGN GUIDELINES)
 
-本ドキュメントは、DesktopAiMascot アプリケーションにおける統一感のある美しくモダンな UI/UX を構築・維持するためのデザイン指針です。
+本ドキュメントは、tonarice アプリケーションにおける統一感のある美しくモダンな UI/UX を構築・維持するためのデザイン指針です。
 新規画面 of 追加や既存 UI の改修時には、本ガイドラインに沿って実装を行ってください。
 
 ---

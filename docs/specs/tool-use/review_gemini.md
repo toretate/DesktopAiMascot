@@ -23,12 +23,12 @@
 2. **エイリアス `@prompt` によるコード疎結合化**
     * `app/tsconfig.json` および `nuxt.config.ts` にエイリアスを設定し、`@prompt/` を用いてチャットAIサービスからスッキリ読み込めるようになったため、深い相対パスの依存が排除され、ソースコードの可読性が大幅に向上しました。
 3. **ラジオプロンプトのハイブリッド設計**
-    * [config-handler.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/app/electron/ipc-handlers/config-handler.ts) における、「デフォルト値は静的 TS プロンプトを読み込み、ユーザーのカスタム設定ファイル（MD）が存在すればそれを上書きロードする」フォールバック構造は非常に堅牢です。パッケージ配布直後でも空の状態でエラーにならず、ユーザーによる個別編集・保存機能とも整合しています。
+    * [config-handler.ts](../../../app/electron/ipc-handlers/config-handler.ts) における、「デフォルト値は静的 TS プロンプトを読み込み、ユーザーのカスタム設定ファイル（MD）が存在すればそれを上書きロードする」フォールバック構造は非常に堅牢です。パッケージ配布直後でも空の状態でエラーにならず、ユーザーによる個別編集・保存機能とも整合しています。
 
 ### 🔴 課題と改善推奨事項 (Critiques)
 
 #### A. 🔴 依然として残る「インポートとトグル判定の同期漏れ」問題
-リファクタリング後も、[chat-ai-service.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/app/src/server/utils/chat-ai-service.ts) では以下の2点を手動で同期する必要があります。
+リファクタリング後も、[chat-ai-service.ts](../../../app/src/server/utils/chat-ai-service.ts) では以下の2点を手動で同期する必要があります。
 1. `@prompt/...` からインポートして `TOOL_PROMPTS` マップに追加する作業。
 2. `filteredTools.filter` 内で、設定トグル名（例: `tools.toolsWeather !== false`）とツール名（例: `getWeather`）を switch-case で突き合わせる作業。
 
@@ -55,18 +55,18 @@
 ### 🔴 課題と改善推奨事項 (Critiques)
 
 #### A. 🔴 `manageTasks.prompt.ts` の過密と「タイマー」との混同リスク
-[manageTasks.prompt.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/app/src/skills/tool-use/prompts/manageTasks.prompt.ts) の内容には、ツール自体の使い方以外に、「タイマー通知タグ（TIMER）との重要な区別」や「過去の履歴を蒸し返さない」といったルールが長文で記載されています。
+[manageTasks.prompt.ts](../../../app/src/skills/tool-use/prompts/manageTasks.prompt.ts) の内容には、ツール自体の使い方以外に、「タイマー通知タグ（TIMER）との重要な区別」や「過去の履歴を蒸し返さない」といったルールが長文で記載されています。
 * **問題点**:
   この記述は、LLMがタスクを登録すべきか単にタイマーをかけるべきかを迷わせないための重要なルールですが、**「ツールの使用説明」の中に「タイマータグ（プロンプト側のハック記述）」の説明が入り混じっているため、モデルのコンテキスト解釈のノイズになる** 可能性があります。
 * **Gemini の提言**:
-  「タイマーとの区別」や「履歴の扱い」といった対話制御に関わるルールは、ツール（`manageTasks`）個別プロンプトから分離し、共通のガイドラインテンプレート（[tool-use-guideline.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/app/src/skills/tool-use/prompts/tool-use-guideline.ts)）側に移譲することを推奨します。
+  「タイマーとの区別」や「履歴の扱い」といった対話制御に関わるルールは、ツール（`manageTasks`）個別プロンプトから分離し、共通のガイドラインテンプレート（[tool-use-guideline.ts](../../../app/src/skills/tool-use/prompts/tool-use-guideline.ts)）側に移譲することを推奨します。
 
 ---
 
 ## 4. システムプロンプト構成全体とコンテキストキャッシュ
 
 ### A. 🔴 現在日時のインジェクト位置によるキャッシュ阻害
-[chat-ai-service.ts](file:///c:/workspace/workspace-win/DesktopAiMascot/app/src/server/utils/chat-ai-service.ts) では、システムプロンプトの構成が以下の順序になっています。
+[chat-ai-service.ts](../../../app/src/server/utils/chat-ai-service.ts) では、システムプロンプトの構成が以下の順序になっています。
 ```typescript
 const finalSystemPrompt = `${systemPrompt || ''}${timeInstruction}\n\n${toolUseGuideline}`;
 ```

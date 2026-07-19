@@ -268,7 +268,7 @@ export function loadImage(imageSource: string): Promise<HTMLImageElement> {
     // Node の canvas パッケージから Image を読み込んで使用します。
     if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST)) {
         try {
-            const { Image: NodeImage } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+            const { Image: NodeImage } = eval("require('canvas')");
             return new Promise((resolve, reject) => {
                 const img = new NodeImage();
                 img.onload = () => resolve(img as any);

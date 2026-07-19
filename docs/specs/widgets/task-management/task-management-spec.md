@@ -1,6 +1,6 @@
 # タスク管理ウィジェット（Quest Log）仕様書
 
-![UI Mockup Preview](file:///c:/workspace/workspace-win/DesktopAiMascot/docs/specs/widgets/task-management/task-management-preview.png)
+![UI Mockup Preview](task-management-preview.png)
 
 ## 1. 概要
 本ウィジェットは、チャットと同時に表示して操作できる、独立したフローティング型のタスク管理ツールです。

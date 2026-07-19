@@ -20,7 +20,7 @@ Electronによるデスクトップアプリ版に加え、Webブラウザでの
 本プロジェクトは、クライアント（Electron + Nuxt/Vue 3 レンダラー）とバックエンド（Nitro サーバー）を同一の `app/` 配下に統合し、共有ライブラリや Python 連携スクリプトを別ディレクトリに配置する構成です。
 
 ```
-DesktopAiMascot/
+tonarice/
 ├── app/                        # クライアント + バックエンド (Electron + Nuxt/Vue 3 + Nitro)
 │   ├── electron/               # Electron メインプロセス (ウィンドウ管理、IPCハンドラー)
 │   ├── src/                    # レンダラープロセス + Nitro サーバー
@@ -159,7 +159,7 @@ npm run build
 
 ### 2. 特定マスコットだけに効かせる読みを追加する
 
-`config.json`（開発時はプロジェクトルート、パッケージ版は `%APPDATA%/desktop-ai-mascot/config.json`）内の対象マスコットの `aiConfig` に `ttsDictionary` を追加します。こちらは**リビルド不要で、次回の設定読み込み時に反映**されます。
+`config.json`（開発時は `storage/config.json`、パッケージ版は `%APPDATA%/tonarice/config.json`）内の対象マスコットの `aiConfig` に `ttsDictionary` を追加します。こちらは**リビルド不要で、次回の設定読み込み時に反映**されます。
 
 ```json
 "aiConfig": {
@@ -197,4 +197,4 @@ npm run build
 
 ## ライセンス
 
-このプロジェクトはMITライセンスの下で公開されています。主要な外部依存ライブラリのライセンスに関しては [THIRD_PARTY_NOTICES.md](file:///C:/workspace/workspace-win/DesktopAiMascot/THIRD_PARTY_NOTICES.md) を参照してください。
+このプロジェクトはMITライセンスの下で公開されています。主要な外部依存ライブラリのライセンスに関しては [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

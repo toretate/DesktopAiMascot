@@ -1,4 +1,4 @@
-# @desktop-ai-mascot/expression-alignment
+# @tonarice/expression-alignment
 
 マスコット表情スプライトの自動位置合わせライブラリ。
 

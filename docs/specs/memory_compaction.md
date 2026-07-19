@@ -48,7 +48,7 @@ sequenceDiagram
 ### トリガーとアイドル制御
 - **タイマー制御の導入**:
     - ユーザーとのチャットのやり取りのテンポを最優先するため、応答直後の同期的な実行は行いません。
-    - マスコット（AI）からの応答（WebSocket の `chat-response` イベント）を受信完了した時点で、**30秒（30,000ms）のアイドルタイマー**を設定します（[useChatConnection.ts](file:///C:/workspace/workspace-win/DesktopAiMascot/app/src/components/chatpanel/useChatConnection.ts#L103)）。
+    - マスコット（AI）からの応答（WebSocket の `chat-response` イベント）を受信完了した時点で、**30秒（30,000ms）のアイドルタイマー**を設定します（[useChatConnection.ts](../../app/src/components/chatpanel/useChatConnection.ts#L103)）。
 - **タイマーのリセット（遅延処理）**:
     - タイマー待機中にユーザーがメッセージを送信した（`sendMessage`）場合、タイマーは破棄・クリア（`clearTimeout`）され、実行は延期されます。
     - 会話が完全に途切れ、最後の発話から30秒間無操作状態（入力や送信がない状態）が維持されたときに初めて、バックグラウンドで非同期的に処理が走ります。
@@ -60,7 +60,7 @@ sequenceDiagram
 
 ## 3. 会話履歴の圧縮アルゴリズム
 
-[useChatHistory.ts](file:///C:/workspace/workspace-win/DesktopAiMascot/app/src/components/chatpanel/useChatHistory.ts) の `runCompaction` 関数で処理が実行されます。
+[useChatHistory.ts](../../app/src/components/chatpanel/useChatHistory.ts) の `runCompaction` 関数で処理が実行されます。
 
 1. **メッセージの分類**:
     - **初期メッセージ（保存対象）**: `session.messages[0]`（マスコットの開始挨拶など。インデックス0番目のメッセージ）。
@@ -143,7 +143,7 @@ sequenceDiagram
 
 ## 6. サーバ側の処理
 
-Nuxt (Nitro) イベントハンドラ [summarize.post.ts](file:///C:/workspace/workspace-win/DesktopAiMascot/app/src/server/api/summarize.post.ts) および [update-memory.post.ts](file:///C:/workspace/workspace-win/DesktopAiMascot/app/src/server/api/update-memory.post.ts) にて受け付けられます。
+Nuxt (Nitro) イベントハンドラ [summarize.post.ts](../../app/src/server/api/summarize.post.ts) および [update-memory.post.ts](../../app/src/server/api/update-memory.post.ts) にて受け付けられます。
 
 - どちらも `ChatAiService.generateResponse` を呼び出してコンテンツを生成します。
 - 呼び出し時の主要パラメータ：
@@ -161,7 +161,7 @@ Nuxt (Nitro) イベントハンドラ [summarize.post.ts](file:///C:/workspace/w
     - `session.summary` に生成された新しい要約テキストを上書き保存します。
     - `session.messages` を `[初期メッセージ, ...保存対象の最新6件のメッセージ]` に置き換え、中間のメッセージ履歴を破棄します。
 3. **長期記憶ファイルの自動上書き保存**:
-    - 取得した最新の長期記憶データを Electron API `saveMascotPrompts` を通じてディスク上の [memory.md](file:///C:/workspace/workspace-win/DesktopAiMascot/app/mascots/mascot_1780700478396/memory.md) に自動で上書き保存します。
+    - 取得した最新の長期記憶データを Electron API `saveMascotPrompts` を通じてディスク上の `app/mascots/<mascot-id>/memory.md` に自動で上書き保存します。
     - Vue側の reactive 状態 `mascotPrompts.memory` にも自動反映され、設定画面に即時反映されます。
 4. **UIへの同期**:
     - 現在アクティブなセッションの場合、画面に表示されているメッセージ配列 (`messages.value`) に更新した配列を同期します。

@@ -8,7 +8,7 @@ const path = eval("require('path')");
 // and JSDOM's wrapped canvas rendering context expects a JSDOM wrapped HTMLImageElement
 // and throws "TypeError: Image or Canvas expected" when drawn onto JSDOM's simulated canvas.
 if (typeof document !== 'undefined') {
-    const { createCanvas } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+    const { createCanvas } = eval("require('canvas')");
     const originalCreateElement = document.createElement.bind(document);
     document.createElement = function(tagName: string, options?: any) {
         if (tagName.toLowerCase() === 'canvas') {
@@ -125,7 +125,7 @@ describe('Visual Alignment Test', () => {
             console.log(`- Difference:     scale=${diffScale.toFixed(2)}, offsetX=${diffX}, offsetY=${diffY}`);
 
             // Generate synthesized composite image representing what is shown in the editor preview (420x420 canvas)
-            const { createCanvas: tc, loadImage: tl } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+            const { createCanvas: tc, loadImage: tl } = eval("require('canvas')");
             const canvasComp = tc(420, 420);
             const ctxComp = canvasComp.getContext('2d');
             
@@ -309,7 +309,7 @@ describe('Visual Alignment Test', () => {
             console.log(`  HE diff: scale=${hDiffScale.toFixed(2)}, x=${hDiffX}, y=${hDiffY}`);
 
             // AI 方式の合成画像を生成
-            const { createCanvas: tc, loadImage: tl } = eval("require('c:\\\\workspace\\\\workspace-win\\\\DesktopAiMascot\\\\ui\\\\node_modules\\\\canvas')");
+            const { createCanvas: tc, loadImage: tl } = eval("require('canvas')");
             const canvasComp = tc(420, 420);
             const ctxComp = canvasComp.getContext('2d');
             ctxComp.fillStyle = 'rgb(239, 239, 239)';

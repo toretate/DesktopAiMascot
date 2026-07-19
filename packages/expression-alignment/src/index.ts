@@ -1,5 +1,5 @@
 /**
- * @desktop-ai-mascot/expression-alignment
+ * @tonarice/expression-alignment
  *
  * マスコット表情スプライト自動位置合わせライブラリ。
  * framework / DOM 非依存・決定論的。コアと型のみを公開する。
@@ -44,4 +44,3 @@ export {
     ComfyLandmarkRegistrationProvider,
     type ComfyFaceDetection,
 } from './registration-comfy';
-

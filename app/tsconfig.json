@@ -25,10 +25,10 @@
             "@prompt/*": [
                 "src/skills/tool-use/prompts/*"
             ],
-            "@desktop-ai-mascot/expression-alignment": [
+            "@tonarice/expression-alignment": [
                 "../packages/expression-alignment/src/index.ts"
             ],
-            "@desktop-ai-mascot/expression-alignment/adapters/opencv-browser": [
+            "@tonarice/expression-alignment/adapters/opencv-browser": [
                 "../packages/expression-alignment/adapters/opencv-browser.ts"
             ]
         }

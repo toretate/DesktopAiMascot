@@ -1,4 +1,4 @@
-const DATABASE_NAME = 'desktop-ai-mascot-music';
+const DATABASE_NAME = 'tonarice-music';
 const STORE_NAME = 'directory-handles';
 const LAST_DIRECTORY_KEY = 'last-directory';
 
