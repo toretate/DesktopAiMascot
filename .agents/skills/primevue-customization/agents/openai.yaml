@@ -1,0 +1,4 @@
+interface:
+  display_name: "PrimeVue Customization"
+  short_description: "PrimeVueテーマとCSS上書きを安全に設計・レビュー"
+  default_prompt: "Use $primevue-customization to review and improve this PrimeVue customization."
