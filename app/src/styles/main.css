@@ -12,6 +12,10 @@
  * :root[data-theme="テーマ名"] でセマンティックトークンを上書きする。
  */
 :root {
+    --visual-viewport-height: 100dvh;
+    --visual-viewport-offset-top: 0px;
+    --software-keyboard-inset: 0px;
+
     /* Tier 1: Purple パレット */
     --palette-purple-50: #faf5ff;
     --palette-purple-100: #f3e8ff;
@@ -116,13 +120,16 @@ body {
     place-content: center;
     min-width: 320px;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
     background-color: transparent;
 }
 
 #app {
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
 }
 
 /* 透過ウィンドウでのドラッグ領域の設定（一部要素のみドラッグ可能にする場合） */

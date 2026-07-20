@@ -8,6 +8,9 @@ import CompactLayout from './components/layouts/CompactLayout.vue';
 import TaskManagement from './components/TaskManagement.vue';
 import MemoWidget from './components/MemoWidget.vue';
 import MusicWidget from './components/MusicWidget.vue';
+import { useVisualViewport } from './composables/useVisualViewport';
+
+useVisualViewport();
 
 // 起動時の初期ハッシュを即座に退避（Nuxtルーターによるハッシュ消去対策）
 const initialHash = typeof window !== 'undefined' ? window.location.hash : '';
@@ -49,8 +52,10 @@ onUnmounted(() => {
 
 <style>
 .app-root {
-    width: 100vw;
+    width: 100%;
     height: 100vh;
+    height: 100dvh;
+    height: var(--visual-viewport-height, 100dvh);
     margin: 0;
     padding: 0;
     overflow: hidden;

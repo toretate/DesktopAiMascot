@@ -42,7 +42,7 @@ const isResizing = ref(false);
 const chatSectionStyle = computed(() => {
     if (windowMode.value === 'compact') return {};
     const ratio = Math.min(MAX_CHAT_RATIO, Math.max(MIN_CHAT_RATIO, integratedChatRatio.value ?? 0.6));
-    return { flex: `0 0 ${(ratio * 100).toFixed(2)}%` };
+    return { '--integrated-chat-size': `${(ratio * 100).toFixed(2)}%` };
 });
 
 const onSplitterPointerDown = (event: PointerEvent) => {
@@ -180,10 +180,11 @@ const integratedBackgroundStyle = computed(() => {
 <style scoped>
 .integrated-container {
     display: flex;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     position: relative;
+    box-sizing: border-box;
 }
 
 .integrated-background {
@@ -234,7 +235,7 @@ const integratedBackgroundStyle = computed(() => {
 }
 
 .chat-section {
-    flex: 6;
+    flex: 0 0 var(--integrated-chat-size, 60%);
     min-width: 0;
     height: 100%;
     position: relative;
@@ -284,5 +285,40 @@ const integratedBackgroundStyle = computed(() => {
 
 .floating-widgets-layer > * {
     pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    .integrated-container {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+    }
+
+    .chat-section:not(.is-compact) {
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+    .integrated-container {
+        flex-direction: column;
+    }
+
+    .mascot-section {
+        flex: 2 1 42%;
+        width: 100%;
+        min-height: 0;
+    }
+
+    .section-splitter {
+        display: none;
+    }
+
+    .chat-section:not(.is-compact) {
+        flex: 3 1 58%;
+        width: 100%;
+        min-height: 0;
+    }
 }
 </style>
