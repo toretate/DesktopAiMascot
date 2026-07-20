@@ -1,0 +1,20 @@
+{
+    "name": "tonarice",
+    "short_name": "tonarice",
+    "description": "マスコットと会話できるデスクトップ・Webアプリケーション",
+    "lang": "ja",
+    "start_url": "/#web",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#171923",
+    "theme_color": "#171923",
+    "icons": [
+        {
+            "src": "/icons/tonarice.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

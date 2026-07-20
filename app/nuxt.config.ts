@@ -7,6 +7,22 @@ const pkgRoot = path.resolve(__dirname, '../packages/expression-alignment');
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2024-11-01',
+    app: {
+        head: {
+            title: 'tonarice',
+            meta: [
+                { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+                { name: 'theme-color', content: '#171923' },
+                { name: 'apple-mobile-web-app-capable', content: 'yes' },
+                { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+                { name: 'apple-mobile-web-app-title', content: 'tonarice' },
+            ],
+            link: [
+                { rel: 'manifest', href: '/manifest.webmanifest' },
+                { rel: 'icon', href: '/icons/tonarice.svg', type: 'image/svg+xml' },
+            ],
+        },
+    },
     devtools: { enabled: true },
     experimental: {
         appManifest: false,

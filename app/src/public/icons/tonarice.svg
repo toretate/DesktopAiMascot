@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="tonarice">
+    <rect width="512" height="512" rx="112" fill="#171923" />
+    <path d="M128 176c0-35 29-64 64-64h128c35 0 64 29 64 64v112c0 35-29 64-64 64h-68l-76 60 18-60h-2c-35 0-64-29-64-64V176Z" fill="#8b5cf6" />
+    <circle cx="208" cy="232" r="18" fill="#fff" />
+    <circle cx="304" cy="232" r="18" fill="#fff" />
+    <path d="M208 288c27 24 69 24 96 0" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" />
+</svg>
