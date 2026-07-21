@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { encodeVoicevoxAudio } from '../../src/server/utils/voice-audio-transcoder';
 
 export function registerVoicevoxHandlers(config: any) {
     // 6. VOICEVOXによる音声合成のハンドラー
@@ -53,15 +54,15 @@ export function registerVoicevoxHandlers(config: any) {
                 throw new Error(`Synthesis Error: ${synthResponse.status}`);
             }
 
-            // バイナリデータを取得しBase64に変換
+            // バイナリデータを取得し、モバイル向け形式へ変換
             const arrayBuffer = await synthResponse.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
+            const audio = await encodeVoicevoxAudio(buffer);
 
             if (showVoiceLog) {
                 console.log(`[VoiceVox] 音声合成成功: ${buffer.length} bytes`);
             }
-            return base64;
+            return audio;
 
         } catch (error: any) {
             clearTimeout(timeoutId);

@@ -193,12 +193,12 @@ const testPlayVoice = async () => {
     if (!testMessage.value.trim()) return;
     isTestingVoice.value = true;
     try {
-        let base64Audio: string | null = null;
+        let audioPayload = null;
         const engine = selectedVoiceEngine.value;
         
         if (engine === 'voicevox') {
             if (window.electronAPI) {
-                base64Audio = await window.electronAPI.synthesizeVoicevox(
+                audioPayload = await window.electronAPI.synthesizeVoicevox(
                     testMessage.value,
                     voicevoxSpeaker.value,
                     voicevoxEndpoint.value
@@ -206,7 +206,7 @@ const testPlayVoice = async () => {
             }
         } else if (engine === 'irodori') {
             if (window.electronAPI) {
-                base64Audio = await window.electronAPI.synthesizeIrodori(
+                audioPayload = await window.electronAPI.synthesizeIrodori(
                     testMessage.value,
                     irodoriEndpoint.value,
                     irodoriModel.value,
@@ -216,17 +216,15 @@ const testPlayVoice = async () => {
             }
         }
         
-        if (base64Audio) {
-            const mimeType = engine === 'irodori' ? 'audio/mp3' : 'audio/wav';
-            const audio = new Audio(`data:${mimeType};base64,${base64Audio}`);
+        if (audioPayload) {
+            const audio = new Audio(`data:${audioPayload.mimeType};base64,${audioPayload.data}`);
             await audio.play();
 
             // 音声テスト実行時も保存がONであればローカルに保存する
             if (configStore.saveVoice) {
                 const mascotId = configStore.activeMascot?.id || 'default';
-                const extension = engine === 'irodori' ? 'mp3' : 'wav';
                 if (window.electronAPI) {
-                    window.electronAPI.saveMascotVoice(mascotId, base64Audio, extension).catch((err) => {
+                    window.electronAPI.saveMascotVoice(mascotId, audioPayload.data, audioPayload.extension).catch((err) => {
                         console.error('[Settings] 音声テスト保存エラー:', err);
                     });
                 }

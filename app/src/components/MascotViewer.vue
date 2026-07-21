@@ -1267,15 +1267,15 @@ onMounted(async () => {
                 try {
                     const dict = activeMascot.value?.aiConfig?.ttsDictionary;
                     const normalizedMemo = stripResidualAsterisks(normalizeTextForTts(memo, dict));
-                    let base64Audio: string | null = null;
+                    let audio = null;
                     if (voiceEngine === 'irodori') {
-                        base64Audio = await window.electronAPI.synthesizeIrodori(normalizedMemo, irodoriEndpointUrl, irodoriModelName, irodoriVoiceName, 'surprised');
+                        audio = await window.electronAPI.synthesizeIrodori(normalizedMemo, irodoriEndpointUrl, irodoriModelName, irodoriVoiceName, 'surprised');
                     } else {
-                        base64Audio = await window.electronAPI.synthesizeVoicevox(normalizedMemo, speakerId, voicevoxEndpointUrl);
+                        audio = await window.electronAPI.synthesizeVoicevox(normalizedMemo, speakerId, voicevoxEndpointUrl);
                     }
-                    if (base64Audio) {
+                    if (audio) {
                         playlist.stop();
-                        playlist.push(base64Audio);
+                        playlist.push(audio);
                     }
                 } catch (err) {
                     console.error('[MascotViewer] Failed to synthesize timer alert voice:', err);

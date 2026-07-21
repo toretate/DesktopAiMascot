@@ -352,7 +352,7 @@ const replayMessageTts = async (text: string) => {
             })
         });
         const result = await response.json();
-        const audios = Array.isArray(result.audios) ? result.audios.filter((audio: unknown) => typeof audio === 'string' && audio) : [];
+        const audios = Array.isArray(result.audios) ? result.audios.filter((audio: unknown) => audio && typeof audio === 'object') : [];
         if (!response.ok || !result.success || audios.length === 0) {
             throw new Error(result.error || '音声を合成できませんでした。');
         }

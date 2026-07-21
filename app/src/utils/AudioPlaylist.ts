@@ -1,5 +1,7 @@
+import { normalizeAudioPayload, type PlayableAudio } from '../types/audio';
+
 export class AudioPlaylist {
-    private queue: string[] = [];
+    private queue: PlayableAudio[] = [];
     private currentAudio: HTMLAudioElement | null = null;
     private isPlaying: boolean = false;
     private onSpeakingChange?: (speaking: boolean) => void;
@@ -10,10 +12,10 @@ export class AudioPlaylist {
 
     /**
      * 新しい音声データを再生キューに追加します。
-     * @param base64Audio Base64エンコードされたWAVデータ
+     * @param audio Base64エンコードされた音声データと形式情報
      */
-    public push(base64Audio: string): void {
-        this.queue.push(base64Audio);
+    public push(audio: PlayableAudio): void {
+        this.queue.push(audio);
         if (!this.isPlaying) {
             this.playNext();
         }
@@ -36,9 +38,9 @@ export class AudioPlaylist {
             this.onSpeakingChange(true);
         }
 
-        const base64Audio = this.queue.shift()!;
+        const audio = normalizeAudioPayload(this.queue.shift()!);
         try {
-            this.currentAudio = new Audio(`data:audio/wav;base64,${base64Audio}`);
+            this.currentAudio = new Audio(`data:${audio.mimeType};base64,${audio.data}`);
 
             this.currentAudio.onended = () => {
                 this.currentAudio = null;

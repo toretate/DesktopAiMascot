@@ -186,9 +186,9 @@ export function useChatConnection(params: {
                     await nextTick();
                     scrollToBottom();
                 } else if (wsEvent === 'chat-audio') {
-                    const { audio: base64Audio } = data;
-                    if (base64Audio && useTts.value) {
-                        playlist.push(base64Audio);
+                    const { audio } = data;
+                    if (audio && useTts.value) {
+                        playlist.push(audio);
                     }
                 } else if (wsEvent === 'timer-trigger') {
                     const { memo } = data;

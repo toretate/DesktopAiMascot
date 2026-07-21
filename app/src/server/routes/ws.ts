@@ -356,11 +356,11 @@ export default defineWebSocketHandler({
                         (async () => {
                             for (const promise of synthPromises) {
                                 try {
-                                    const base64Audio = await promise;
-                                    if (base64Audio) {
+                                    const audio = await promise;
+                                    if (audio) {
                                         peer.send(JSON.stringify({
                                             event: 'chat-audio',
-                                            data: { audio: base64Audio }
+                                            data: { audio }
                                         }));
 
                                         if (data.saveVoice) {
@@ -378,11 +378,10 @@ export default defineWebSocketHandler({
                                                     fs.mkdirSync(dirPath, { recursive: true });
                                                 }
 
-                                                const extension = voiceEngine === 'irodori' ? 'mp3' : 'wav';
-                                                const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
+                                                const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${audio.extension}`;
                                                 const filePath = path.join(dirPath, filename);
 
-                                                fs.writeFileSync(filePath, Buffer.from(base64Audio, 'base64'));
+                                                fs.writeFileSync(filePath, Buffer.from(audio.data, 'base64'));
                                                 console.log(`[WS] Voice saved to: ${filePath}`);
                                             } catch (saveErr: any) {
                                                 console.error('[WS] Failed to save voice file:', saveErr.message);

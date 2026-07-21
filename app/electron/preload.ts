@@ -87,11 +87,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveMascotPrompts: (mascotId: string, prompts: { soul: string; identity: string; user: string; agents: string; memory: string }) =>
         ipcRenderer.invoke('save-mascot-prompts', mascotId, prompts),
         
-    // VOICEVOXによる音声合成を呼び出す (Base64文字列で結果が返る)
+    // VOICEVOXによる音声合成を呼び出す（Base64データと形式情報が返る）
     synthesizeVoicevox: (text: string, speakerId: number, endpoint?: string) => 
         ipcRenderer.invoke('synthesize-voicevox', text, speakerId, endpoint),
 
-    // irodori-ttsによる音声合成を呼び出す (Base64文字列で結果が返る)
+    // irodori-ttsによる音声合成を呼び出す（Base64データと形式情報が返る）
     synthesizeIrodori: (text: string, endpoint: string, model: string, voice: string, emotion?: string) =>
         ipcRenderer.invoke('synthesize-irodori', text, endpoint, model, voice, emotion),
         

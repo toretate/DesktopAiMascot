@@ -6,6 +6,15 @@ import { VoiceAiService } from '../../server/utils/voice-ai-service';
 import * as serverNormalizer from '../../server/utils/tts-normalizer';
 import * as h3 from 'h3';
 
+const { mockAudio } = vi.hoisted(() => ({
+    mockAudio: {
+        data: 'mock-audio-base64',
+        mimeType: 'audio/mpeg' as const,
+        extension: 'mp3' as const,
+        codec: 'mp3' as const
+    }
+}));
+
 // h3 のモック
 vi.mock('h3', async () => {
     const actual = await vi.importActual<typeof import('h3')>('h3');
@@ -19,8 +28,8 @@ vi.mock('h3', async () => {
 vi.mock('../../server/utils/voice-ai-service', () => {
     return {
         VoiceAiService: {
-            synthesize: vi.fn().mockResolvedValue('mock-audio-base64'),
-            synthesizeIrodori: vi.fn().mockResolvedValue('mock-audio-base64')
+            synthesize: vi.fn().mockResolvedValue(mockAudio),
+            synthesizeIrodori: vi.fn().mockResolvedValue(mockAudio)
         }
     };
 });
@@ -288,7 +297,7 @@ describe('TTS正規化 統合・経路テスト', () => {
 
         expect(response).toEqual({
             success: true,
-            audios: ['mock-audio-base64', 'mock-audio-base64']
+            audios: [mockAudio, mockAudio]
         });
         expect(VoiceAiService.synthesizeIrodori).toHaveBeenNthCalledWith(
             1,

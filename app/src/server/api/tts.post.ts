@@ -4,6 +4,7 @@ import { normalizeTextForTts, stripResidualAsterisks } from '../utils/tts-normal
 import { filterDialogue } from '../utils/dialogue-filter';
 import { splitSentences } from '../utils/sentence-splitter';
 import { sanitizeForIrodoriTTS } from '../utils/irodori-sanitizer';
+import type { Base64AudioPayload } from '../../types/audio';
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
@@ -98,7 +99,7 @@ export default defineEventHandler(async (event) => {
                 );
             }));
 
-            const validAudios = audios.filter((audio): audio is string => typeof audio === 'string' && audio.length > 0);
+            const validAudios = audios.filter((audio): audio is Base64AudioPayload => Boolean(audio?.data));
             return {
                 success: validAudios.length > 0,
                 audios: validAudios
@@ -106,10 +107,10 @@ export default defineEventHandler(async (event) => {
         }
 
         // デフォルト: 音声合成 (action === 'synthesize' もしくは未指定)
-        let base64Audio: string | null = null;
+        let audio: Base64AudioPayload | null = null;
 
         if (engine === 'irodori') {
-            base64Audio = await VoiceAiService.synthesizeIrodori(
+            audio = await VoiceAiService.synthesizeIrodori(
                 sanitizeForIrodoriTTS(normalizedText),
                 endpoint,
                 model,
@@ -120,7 +121,7 @@ export default defineEventHandler(async (event) => {
         } else {
             // デフォルトは VOICEVOX
             const targetSpeakerId = speakerId !== undefined ? Number(speakerId) : 1;
-            base64Audio = await VoiceAiService.synthesize(
+            audio = await VoiceAiService.synthesize(
                 normalizedText,
                 targetSpeakerId,
                 endpoint,
@@ -129,8 +130,8 @@ export default defineEventHandler(async (event) => {
         }
 
         return {
-            success: base64Audio !== null,
-            audio: base64Audio
+            success: audio !== null,
+            audio
         };
     } catch (error: any) {
         console.error('[API TTS] エラー:', error);

@@ -1,8 +1,11 @@
+import type { Base64AudioPayload } from '../../types/audio';
+import { createMp3Payload, encodeVoicevoxAudio } from './voice-audio-transcoder';
+
 export class VoiceAiService {
     /**
      * VOICEVOXを使用して音声を合成し、Base64形式の音声データを返します。
      */
-    public static async synthesize(text: string, speakerId: number, endpoint: string, showVoiceLog: boolean = true): Promise<string | null> {
+    public static async synthesize(text: string, speakerId: number, endpoint: string, showVoiceLog: boolean = true): Promise<Base64AudioPayload | null> {
         const baseUrl = endpoint || 'http://localhost:50021';
         const speaker = speakerId !== undefined ? speakerId : 2;
 
@@ -50,12 +53,12 @@ export class VoiceAiService {
             }
 
             const arrayBuffer = await synthResponse.arrayBuffer();
-            const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+            const audio = await encodeVoicevoxAudio(Buffer.from(arrayBuffer));
 
             if (showVoiceLog) {
                 console.log(`[VoiceAiService] VOICEVOX synthesize success`);
             }
-            return base64Audio;
+            return audio;
         } catch (voiceError: any) {
             clearTimeout(voiceTimeoutId);
             if (voiceError.name === 'AbortError') {
@@ -72,7 +75,7 @@ export class VoiceAiService {
     /**
      * irodori-tts (OpenAI 互換) を使用して音声を合成し、Base64形式の音声データを返します。
      */
-    public static async synthesizeIrodori(text: string, endpoint: string, model: string, voice: string, emotion?: string, showVoiceLog: boolean = true): Promise<string | null> {
+    public static async synthesizeIrodori(text: string, endpoint: string, model: string, voice: string, emotion?: string, showVoiceLog: boolean = true): Promise<Base64AudioPayload | null> {
         const baseUrl = endpoint || 'http://127.0.0.1:8088';
         let targetModel = model || 'irodori-tts';
         if (targetModel === 'irodori-tts-500m-v3') {
@@ -112,12 +115,12 @@ export class VoiceAiService {
             }
 
             const arrayBuffer = await response.arrayBuffer();
-            const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+            const audio = createMp3Payload(Buffer.from(arrayBuffer));
 
             if (showVoiceLog) {
                 console.log(`[VoiceAiService] irodori-tts synthesize success`);
             }
-            return base64Audio;
+            return audio;
         } catch (error: any) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') {

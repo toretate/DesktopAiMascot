@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { createMp3Payload } from '../../src/server/utils/voice-audio-transcoder';
 
 export function registerIrodoriHandlers(config: any) {
     // irodori-tts v3 (OpenAI 互換) による音声合成のハンドラー
@@ -50,15 +51,14 @@ export function registerIrodoriHandlers(config: any) {
                 throw new Error(`OpenAI TTS Error: ${response.status}`);
             }
 
-            // バイナリデータを取得しBase64に変換
+            // バイナリデータを取得し、形式情報とともに返す
             const arrayBuffer = await response.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
 
             if (showVoiceLog) {
                 console.log(`[IrodoriTTS] 音声合成成功: ${buffer.length} bytes`);
             }
-            return base64;
+            return createMp3Payload(buffer);
 
         } catch (error: any) {
             clearTimeout(timeoutId);
@@ -214,4 +214,3 @@ function getIrodoriEmoji(emotion?: string): string {
 
     return '';
 }
-
