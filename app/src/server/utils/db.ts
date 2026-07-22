@@ -1,9 +1,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { PROJECT_ROOT } from './paths';
+import { STORAGE_DIR } from './paths';
 
-const DB_DIR = path.join(PROJECT_ROOT, 'storage');
+const DB_DIR = STORAGE_DIR;
 const DB_PATH = path.join(DB_DIR, 'config.db');
 
 let _db: Database.Database | null = null;

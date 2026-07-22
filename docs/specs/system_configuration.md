@@ -65,6 +65,17 @@ graph TD
 - **開発時の起動**:
     - `server` ディレクトリ内の `npm run dev` を実行することで、バックエンドサーバー（API用ポート）が起動します。
 
+#### 2.2.1 ファイルシステムのルート
+
+- `APP_ROOT` はNuxtアプリのルート（`<workspace>/app`）を表し、`package.json`、`src/`、`nuxt.config.ts` を持つディレクトリとしてcwdから探索します。
+- `WORKSPACE_ROOT` は `APP_ROOT` の親ディレクトリ（`<workspace>`）を表します。
+- cwdが `app/`、`app/` 配下、ワークスペース直下、またはワークスペース配下の別ディレクトリでも、同じ2つのルートを解決します。
+- `storage/`、`python-services/`、`docs/`、`aiservice/`、履歴テンプレートは `WORKSPACE_ROOT` 基準で参照します。
+- Nuxtの公開アセットとビルド出力は `APP_ROOT` 基準で参照します。
+- 標準のユーザーデータ保存先は `<workspace>/storage` です。`app/storage` は使用しません。
+- `MASCOT_STORAGE_DIR` が相対パスの場合は `WORKSPACE_ROOT` 基準で解決します。
+- Nitroサーバー起動時には、`APP_ROOT`、`WORKSPACE_ROOT`、`STORAGE_DIR`、`USERS_DIR`、`PYTHON_DIR`、`VISION_DIR`、履歴テンプレートの解決結果を `[ServerPaths] 起動時パス設定:` ログへ一度出力します。
+
 ### 2.3 外部連携サービス
 AIによるテキスト生成および音声合成を提供する外部のローカルAPIサーバー群です。
 
