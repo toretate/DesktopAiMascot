@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach, afterAll } from 'vites
 import * as fs from 'fs';
 import * as path from 'path';
 
-// paths モジュールの PROJECT_ROOT をテスト用の一時フォルダにモック化
+// paths モジュールの保存先をテスト用の一時フォルダにモック化
 vi.mock('../utils/paths', async (importOriginal) => {
     const actual = await importOriginal() as any;
     const path = await import('path');
@@ -10,6 +10,7 @@ vi.mock('../utils/paths', async (importOriginal) => {
     return {
         ...actual,
         PROJECT_ROOT: mockRoot,
+        STORAGE_DIR: path.join(mockRoot, 'storage'),
         USERS_DIR: path.join(mockRoot, 'storage/users')
     };
 });

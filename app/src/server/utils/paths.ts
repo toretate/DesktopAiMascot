@@ -2,19 +2,35 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// プロジェクトルートの目印となるディレクトリ。
-// app/ には package.json があるため、package.json は目印に使わない。
-const ROOT_MARKERS = ['.git'];
+export interface ProjectRoots {
+    appRoot: string;
+    workspaceRoot: string;
+}
 
-// 指定ディレクトリから上方向へ marker を探索し、最初に見つかった階層を返す
-function findUpward(startDir: string, marker: string): string | null {
+// Nuxtアプリのルートとして必要な構成を持つか判定する。
+function isAppRoot(dir: string): boolean {
+    return fs.existsSync(path.join(dir, 'package.json'))
+        && fs.existsSync(path.join(dir, 'src'))
+        && fs.existsSync(path.join(dir, 'nuxt.config.ts'));
+}
+
+// 指定ディレクトリから上方向へ条件に一致する階層を探索する。
+function findUpward(startDir: string, predicate: (dir: string) => boolean): string | null {
     let dir = path.resolve(startDir);
     while (true) {
-        if (fs.existsSync(path.join(dir, marker))) return dir;
+        if (predicate(dir)) return dir;
         const parent = path.dirname(dir);
-        if (parent === dir) return null; // ファイルシステムのルートに到達
+        if (parent === dir) return null;
         dir = parent;
     }
+}
+
+// cwdがapp内・ワークスペース内のどちらでもappルートを見つける。
+function findAppRoot(startDir: string): string | null {
+    return findUpward(startDir, (dir) => {
+        if (isAppRoot(dir)) return true;
+        return isAppRoot(path.join(dir, 'app'));
+    });
 }
 
 // このソースファイルの場所を取得する（cwd 非依存の安定した起点）
@@ -28,38 +44,49 @@ function getCurrentFileDir(): string | null {
 }
 
 /**
- * プロジェクトルートを cwd に依存せず解決する。
- * このファイルの位置（安定）を起点に上方向へ ROOT_MARKERS を探索し、
- * 見つからなければ cwd から探索、それも無ければ cwd を返す。
+ * cwdを起点にアプリルートとワークスペースルートを解決する。
+ * cwdがワークスペース側の場合は直下のapp/も探索する。
  */
-export function getProjectRoot(): string {
-    const starts = [getCurrentFileDir(), process.cwd()].filter(
-        (d): d is string => !!d
-    );
-    // 各起点から .git を上方向に探索する
-    for (const marker of ROOT_MARKERS) {
-        for (const start of starts) {
-            const found = findUpward(start, marker);
-            if (found) return found;
-        }
+export function resolveProjectRoots(cwd = process.cwd()): ProjectRoots {
+    const resolvedCwd = path.resolve(cwd);
+    let appRoot = findAppRoot(resolvedCwd);
+    if (appRoot && !isAppRoot(appRoot)) {
+        appRoot = path.join(appRoot, 'app');
     }
-    return process.cwd();
+
+    if (!appRoot) {
+        const sourceDir = getCurrentFileDir();
+        appRoot = sourceDir ? findUpward(sourceDir, isAppRoot) : null;
+    }
+
+    appRoot ??= resolvedCwd;
+    const parentDir = path.dirname(appRoot);
+    const workspaceRoot = path.basename(appRoot).toLowerCase() === 'app'
+        ? parentDir
+        : appRoot;
+
+    return { appRoot, workspaceRoot };
 }
 
-export const PROJECT_ROOT = getProjectRoot();
+export const { appRoot: APP_ROOT, workspaceRoot: WORKSPACE_ROOT } = resolveProjectRoots();
+
+// 既存コードとの互換性を保つ。ワークスペース資産は常にこちらを基準にする。
+export const PROJECT_ROOT = WORKSPACE_ROOT;
 
 /**
  * ユーザーデータ（tasks/config/history/mascots など）の保存先ルート。
  * サーバー管理者は環境変数 MASCOT_STORAGE_DIR で任意の場所を指定できる。
- * 相対パスが指定された場合は PROJECT_ROOT 基準で解決する（cwd 非依存）。
- * 未指定時は従来どおり PROJECT_ROOT/storage を使う。
+ * 相対パスが指定された場合は WORKSPACE_ROOT 基準で解決する。
+ * 未指定時は標準の WORKSPACE_ROOT/storage を使う。
  */
-export function getStorageDir(): string {
-    const envDir = process.env.MASCOT_STORAGE_DIR;
+export function getStorageDir(
+    workspaceRoot = WORKSPACE_ROOT,
+    envDir = process.env.MASCOT_STORAGE_DIR
+): string {
     if (envDir && envDir.trim() !== '') {
-        return path.resolve(PROJECT_ROOT, envDir.trim());
+        return path.resolve(workspaceRoot, envDir.trim());
     }
-    return path.join(PROJECT_ROOT, 'storage');
+    return path.join(workspaceRoot, 'storage');
 }
 
 export const STORAGE_DIR = getStorageDir();
@@ -69,11 +96,36 @@ export const USERS_DIR = path.join(STORAGE_DIR, 'users');
 export const USERS_FILE_PATH = path.join(STORAGE_DIR, 'users.json');
 
 // Python関連
-export const VISION_DIR = path.join(PROJECT_ROOT, 'python-services/vision');
-export const PYTHON_DIR = path.join(PROJECT_ROOT, 'python-services');
+export const VISION_DIR = path.join(WORKSPACE_ROOT, 'python-services/vision');
+export const PYTHON_DIR = path.join(WORKSPACE_ROOT, 'python-services');
 
 // 履歴テンプレート
-export const HISTORY_TEMPLATE_PATH = path.join(PROJECT_ROOT, 'chat_history.json');
+export const HISTORY_TEMPLATE_PATH = path.join(WORKSPACE_ROOT, 'chat_history.json');
+
+export interface RuntimePathConfig {
+    appRoot: string;
+    workspaceRoot: string;
+    storageDir: string;
+    usersDir: string;
+    pythonDir: string;
+    visionDir: string;
+    historyTemplatePath: string;
+}
+
+/**
+ * 起動時ログや診断で使用する主要パス設定を返す。
+ */
+export function getRuntimePathConfig(): RuntimePathConfig {
+    return {
+        appRoot: APP_ROOT,
+        workspaceRoot: WORKSPACE_ROOT,
+        storageDir: STORAGE_DIR,
+        usersDir: USERS_DIR,
+        pythonDir: PYTHON_DIR,
+        visionDir: VISION_DIR,
+        historyTemplatePath: HISTORY_TEMPLATE_PATH
+    };
+}
 
 /**
  * リクエストされた /mascots/... パスからローカルファイルシステム上の絶対パスを解決する。
@@ -103,10 +155,9 @@ export function resolveMascotPath(requestPath: string): string {
 
     // 2. プリセット（共通）アセットの場合
     const isDev = process.env.NODE_ENV !== 'production';
-    const appDirName = fs.existsSync(path.resolve(PROJECT_ROOT, 'app')) ? 'app' : 'ui';
     const publicMascotsBase = isDev
-        ? path.resolve(PROJECT_ROOT, `${appDirName}/src/public/mascots`)
-        : path.resolve(PROJECT_ROOT, `${appDirName}/.output/public/mascots`);
+        ? path.resolve(APP_ROOT, 'src/public/mascots')
+        : path.resolve(APP_ROOT, '.output/public/mascots');
 
     return path.resolve(publicMascotsBase, decodedSubpath);
 }
