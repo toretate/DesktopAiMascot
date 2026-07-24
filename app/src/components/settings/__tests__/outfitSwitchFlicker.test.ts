@@ -4,6 +4,7 @@ import { useMascotSettings, type MascotAsset } from '../composables/useMascotSet
 import { createPinia, setActivePinia } from 'pinia';
 import { useConfigStore } from '../../../store/config';
 import { mount, flushPromises } from '@vue/test-utils';
+import PrimeVue from 'primevue/config';
 import MascotSettings from '../MascotSettings.vue';
 
 vi.mock('../../../skills/expression-alignment/auto-align-v2', () => ({
@@ -128,20 +129,21 @@ describe('outfit切り替え時のちらつき防止テスト', () => {
                     mascots: configStore.mascots,
                     activeMascotId: 'mascot_test',
                     geminiApiKey: 'test-api-key'
+                },
+                global: {
+                    plugins: [PrimeVue]
                 }
             });
+
+            const subtabButtons = wrapper.findAll('button.mascot-subtab');
+            expect(subtabButtons).toHaveLength(3);
+            expect(subtabButtons[0].attributes('aria-pressed')).toBe('true');
+            await subtabButtons[1].trigger('click');
+            expect(subtabButtons[1].attributes('aria-pressed')).toBe('true');
 
             // MascotOutfitSettngs コンポーネントから set-main-outfit イベントを発火させる
             const outfitComponent = wrapper.findComponent({ name: 'MascotOutfitSettngs' });
             if (outfitComponent.exists()) {
-                // outfit タブへ切り替え
-                const outfitTabBtn = wrapper.findAll('button').find(
-                    btn => btn.text().includes('立ち絵')
-                );
-                if (outfitTabBtn) {
-                    await outfitTabBtn.trigger('click');
-                }
-
                 await outfitComponent.vm.$emit('set-main-outfit', {
                     id: 'outfit_2',
                     name: '衣装2',
@@ -314,6 +316,9 @@ describe('outfit切り替え時のちらつき防止テスト', () => {
                     mascots: configStore.mascots,
                     activeMascotId: 'mascot_test',
                     geminiApiKey: 'test-api-key'
+                },
+                global: {
+                    plugins: [PrimeVue]
                 }
             });
 
@@ -366,6 +371,9 @@ describe('outfit切り替え時のちらつき防止テスト', () => {
                     mascots: configStore.mascots,
                     activeMascotId: 'mascot_test',
                     geminiApiKey: 'test-api-key'
+                },
+                global: {
+                    plugins: [PrimeVue]
                 }
             });
 

@@ -135,9 +135,14 @@ const cancelMode = () => {
     height: 4px;
     border-radius: 2px;
     background: var(--color-primary-alpha-15);
-    outline: none;
+    outline: 2px solid transparent;
     -webkit-appearance: none;
     cursor: pointer;
+}
+
+.denoise-slider:focus-visible {
+    outline-color: var(--control-focus-color);
+    outline-offset: 3px;
 }
 
 .denoise-slider::-webkit-slider-runnable-track {

@@ -76,8 +76,12 @@ export const useTaskTreeDrag = (taskStore: ReturnType<typeof useTaskStore>) => {
 
     const onParentDrop = (_event: DragEvent, _targetTaskId: string) => promoteDraggedSubTask();
     const onContainerDrop = (_event: DragEvent) => promoteDraggedSubTask();
-    const onSubTaskDragStart = (parentId: string, subTaskId: string) => {
+    const onSubTaskDragStart = (event: DragEvent, parentId: string, subTaskId: string) => {
         draggedSubTask.value = { parentId, subTaskId };
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', subTaskId);
+        }
     };
     const onSubTaskDragEnd = () => {
         draggedSubTask.value = null;

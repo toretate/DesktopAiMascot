@@ -282,12 +282,12 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #ffffff;
+    background: var(--color-surface-raised);
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     overflow: hidden;
-    font-family: 'Outfit', 'Inter', sans-serif;
-    color: #1e293b;
+    font-family: var(--font-body);
+    color: var(--color-ink-strong);
 }
 
 /* ヘッダー */
@@ -307,10 +307,11 @@ onMounted(() => {
 }
 
 .title {
+    font-family: var(--font-display);
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.05em;
-    color: #475569;
+    color: var(--color-ink);
     margin: 0;
 }
 
@@ -324,7 +325,7 @@ onMounted(() => {
 .main-scroll-area {
     overflow-y: auto;
     padding: 8px;
-    background: #f8fafc;
+    background: var(--color-surface-muted);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -332,13 +333,12 @@ onMounted(() => {
 
 /* メモカード (付箋風ではなくTODO LISTのタスクカードと統一) */
 .memo-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px var(--color-border-soft);
     overflow: hidden;
     padding: 8px 12px;
-    border-left: 3px solid #10b981; /* メモ用のエメラルドグリーン左枠線 */
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
@@ -349,13 +349,13 @@ onMounted(() => {
 .memo-content {
     font-size: 13px;
     font-weight: 500;
-    color: #334155;
+    color: var(--color-ink);
     line-height: 1.4;
 }
 
 .empty-state {
     text-align: center;
-    color: #64748b;
+    color: var(--color-ink-muted);
     padding: 24px 0;
     font-size: 12px;
 }
@@ -365,45 +365,49 @@ onMounted(() => {
     display: flex;
     padding: 8px;
     gap: 8px;
-    border-top: 1px solid #e2e8f0;
-    background: #ffffff;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
 }
 
 .task-input-field {
-    border-color: #cbd5e1;
+    border-color: var(--color-border);
     height: 30px;
     font-size: 12px;
 }
 
 .task-input-field:focus {
-    border-color: #3b82f6;
+    border-color: var(--color-primary);
 }
 
 .add-task-btn {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: #ffffff;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .add-task-btn:hover {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
 }
 
 .edit-textarea {
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     padding: 6px 8px;
     font-size: 12px;
     font-family: inherit;
-    color: #334155;
-    background: #ffffff;
+    color: var(--color-ink);
+    background: var(--color-surface-raised);
     resize: vertical;
     min-height: 60px;
 }
 
 .edit-textarea:focus {
-    border-color: #3b82f6;
-    outline: none;
+    border-color: var(--color-primary);
+}
+
+.edit-textarea:focus-visible {
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 1px;
 }
 </style>

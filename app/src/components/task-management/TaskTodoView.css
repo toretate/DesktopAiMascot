@@ -6,7 +6,7 @@
 
 /* タスクカード */
 .task-card {
-    background: #ffffff;
+    background: var(--color-surface-raised);
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -91,6 +91,9 @@
     border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
 .priority-btn {
@@ -146,10 +149,31 @@
 }
 
 .subtask-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 4px 0;
+}
+
+.subtask-item.drop-before::before,
+.subtask-item.drop-after::after {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 2px;
+    border-radius: 9999px;
+    background: #3b82f6;
+    content: '';
+    pointer-events: none;
+}
+
+.subtask-item.drop-before::before {
+    top: -4px;
+}
+
+.subtask-item.drop-after::after {
+    bottom: -4px;
 }
 
 .subtask-drag-handle {
@@ -190,6 +214,11 @@
     color: #065f46;
 }
 
+.status-badge.paused {
+    background: #fef3c7;
+    color: #b45309;
+}
+
 /* DONE猶予中（クリックで取消） */
 .status-badge.pending-done {
     background: #fef3c7;
@@ -222,6 +251,30 @@
 .subtask-title.completed {
     color: #94a3b8;
     text-decoration: line-through;
+}
+
+.subtask-schedule {
+    flex-shrink: 0;
+    color: #3b82f6;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.subtask-controls {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 1px;
+}
+
+.subtask-controls .action-icon-btn:disabled {
+    cursor: default;
+    opacity: 0.3;
+}
+
+.subtask-controls .action-icon-btn.has-schedule {
+    color: #2563eb;
 }
 
 .step-delete-btn {
@@ -298,15 +351,14 @@
 
 /* 進行中のタスクスタイル */
 .task-card.status-doing {
-    border-left: 3px solid #f59e0b; /* オレンジ色の左枠線 */
-    background: #fffbeb; /* 薄いオレンジの背景 */
+    border-color: var(--color-warning);
+    background: var(--color-warning-soft);
 }
 
 /* 期限切れタスクのスタイル（警告色） */
 .task-card.overdue {
-    border-left: 3px solid #ef4444; /* 赤色の左枠線 */
-    background: #fef2f2; /* 薄い赤の背景 */
-    border-color: #fecaca;
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
 }
 
 .doing-badge-pill {

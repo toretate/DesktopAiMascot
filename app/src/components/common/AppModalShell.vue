@@ -168,11 +168,11 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--color-border-soft);
     border-radius: 12px;
-    background: #ffffff;
-    color: #1e293b;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    background: var(--color-surface-raised);
+    color: var(--color-ink-strong);
+    box-shadow: var(--shadow-raised);
     box-sizing: border-box;
     margin: auto;
     max-width: calc(100vw - 32px);
@@ -185,13 +185,13 @@ onUnmounted(() => {
 
 /* ::backdrop スタイル（ダーク） */
 .app-modal-shell.backdrop-dark::backdrop {
-    background-color: rgba(15, 23, 42, 0.6);
+    background-color: var(--color-backdrop);
     backdrop-filter: blur(4px);
 }
 
 /* ::backdrop スタイル（ライト） */
 .app-modal-shell.backdrop-light::backdrop {
-    background-color: rgba(241, 245, 249, 0.8);
+    background-color: color-mix(in oklab, var(--color-surface-muted) 80%, transparent);
     backdrop-filter: blur(12px);
 }
 

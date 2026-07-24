@@ -423,32 +423,35 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
             </div>
 
             <!-- サブタブ -->
-            <div class="flex border-bottom border-gray-200 pb-2 gap-2">
+            <div class="mascot-subtabs flex border-bottom border-gray-200 pb-2 gap-2">
                 <Button 
-                    class="p-button-sm flex align-items-center justify-content-center"
-                    :class="activeMascotSubTab === 'expression' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
+                    class="mascot-subtab p-button-sm flex align-items-center justify-content-center"
+                    :class="{ 'is-active': activeMascotSubTab === 'expression' }"
+                    :aria-pressed="activeMascotSubTab === 'expression'"
                     @click="activeMascotSubTab = 'expression'"
                     title="表情"
                 >
-                    <img :src="mascotEmotionIcon" class="subtab-icon" />
+                    <img :src="mascotEmotionIcon" class="subtab-icon" alt="" aria-hidden="true" />
                     <span class="subtab-label">表情</span>
                 </Button>
                 <Button 
-                    class="p-button-sm flex align-items-center justify-content-center"
-                    :class="activeMascotSubTab === 'outfit' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
+                    class="mascot-subtab p-button-sm flex align-items-center justify-content-center"
+                    :class="{ 'is-active': activeMascotSubTab === 'outfit' }"
+                    :aria-pressed="activeMascotSubTab === 'outfit'"
                     @click="activeMascotSubTab = 'outfit'"
                     title="立ち絵"
                 >
-                    <img :src="mascotOutfitIcon" class="subtab-icon" />
+                    <img :src="mascotOutfitIcon" class="subtab-icon" alt="" aria-hidden="true" />
                     <span class="subtab-label">立ち絵</span>
                 </Button>
                 <Button 
-                    class="p-button-sm flex align-items-center justify-content-center"
-                    :class="activeMascotSubTab === 'profile' ? 'p-button-primary' : 'p-button-text p-button-secondary'"
+                    class="mascot-subtab p-button-sm flex align-items-center justify-content-center"
+                    :class="{ 'is-active': activeMascotSubTab === 'profile' }"
+                    :aria-pressed="activeMascotSubTab === 'profile'"
                     @click="activeMascotSubTab = 'profile'"
                     title="プロフィール"
                 >
-                    <img :src="mascotProfileIcon" class="subtab-icon" />
+                    <img :src="mascotProfileIcon" class="subtab-icon" alt="" aria-hidden="true" />
                     <span class="subtab-label">プロフィール</span>
                 </Button>
             </div>
@@ -640,6 +643,7 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
 </template>
 
 <style scoped>
+/* Hallmark · コンポーネント: 設定タブ · 現代的で簡潔 · Purple · critique: P5 H5 E5 S5 R5 V4 */
 .mascot-settings-container {
     display: flex;
     flex-direction: row;
@@ -759,12 +763,69 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
     width: 100% !important;
 }
 
+.mascot-subtabs {
+    min-height: 42px;
+}
+
+.mascot-subtab.p-button {
+    min-width: 0;
+    height: 34px;
+    padding: 4px 10px;
+    gap: 6px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--color-ink-muted);
+    box-shadow: none;
+}
+
+.mascot-subtab.p-button:hover {
+    border-color: var(--color-border);
+    background: var(--color-surface-muted);
+    color: var(--color-ink-strong);
+}
+
+.mascot-subtab.p-button:active {
+    border-color: var(--color-primary-border);
+    background: var(--color-primary-subtle);
+}
+
+.mascot-subtab.p-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.mascot-subtab.p-button.is-active {
+    border-color: var(--color-primary-border);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-strong);
+}
+
+.mascot-subtab.p-button:focus-visible {
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 2px;
+}
+
 .subtab-icon {
-    width: 48px !important;
-    height: 48px !important;
-    margin-right: 4px;
+    width: 24px !important;
+    height: 24px !important;
     object-fit: contain;
     border-radius: 2px;
+    opacity: 0.78;
+}
+
+.mascot-subtab:hover .subtab-icon,
+.mascot-subtab.is-active .subtab-icon {
+    opacity: 1;
+}
+
+.subtab-label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    text-box: trim-both cap alphabetic;
+    white-space: nowrap;
 }
 
 .mobile-text {
@@ -819,19 +880,19 @@ const updateOutfitNofacePath = ({ outfitId, nofacePath }: { outfitId: string; no
         display: none !important;
     }
     .subtab-icon {
-        width: 48px !important;
-        height: 48px !important;
+        width: 24px !important;
+        height: 24px !important;
     }
     .mascot-detail-panel .pb-2 button svg,
     .mascot-detail-panel .pb-2 button img {
         margin-right: 0 !important;
     }
 
-    .mascot-detail-panel .pb-2 button.p-button-sm {
-        padding: 0px !important;     /* パディング */
-        width: 48px !important;      /* ボタン自体の横幅 */
-        height: 48px !important;     /* ボタン自体の高さ */
-        justify-content: center !important; /* 中央寄せ */
+    .mascot-detail-panel .mascot-subtabs button.p-button-sm {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+        justify-content: center !important;
     }
 
     .desktop-text {

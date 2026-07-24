@@ -112,7 +112,7 @@ defineExpose({ openDatePicker });
 .panel-title { font-size: 14px; font-weight: 700; color: #1e293b; }
 .close-btn { width: 24px; height: 24px; padding: 0; }
 .calendar-panel-content { flex: 1; overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
-.task-title-summary { background: #f8fafc; border-left: 3px solid #3b82f6; padding: 8px 12px; border-radius: 4px; font-size: 12px; line-height: 1.4; flex-shrink: 0; word-break: break-all; white-space: pre-wrap; }
+.task-title-summary { background: var(--color-primary-subtle); border: 1px solid var(--color-primary-border); padding: 8px 12px; border-radius: 4px; font-size: 12px; line-height: 1.4; flex-shrink: 0; word-break: break-all; white-space: pre-wrap; }
 .task-title-summary .label { color: #64748b; font-weight: 600; margin-right: 6px; }
 .task-title-summary .task-name { color: #1e293b; font-weight: 500; }
 .datepicker-container { display: flex; justify-content: center; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; flex-shrink: 0; }
@@ -131,4 +131,7 @@ defineExpose({ openDatePicker });
 :deep(.p-datepicker-calendar td) { padding: 1px; }
 :deep(.p-datepicker-calendar td > span) { width: 20px; height: 20px; line-height: 20px; font-size: 10px; }
 @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    .fullscreen-calendar-panel { animation: none; }
+}
 </style>

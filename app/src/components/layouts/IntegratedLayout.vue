@@ -300,7 +300,7 @@ const integratedBackgroundStyle = computed(() => {
     }
 }
 
-@media (max-width: 768px) and (orientation: portrait) and (hover: none) and (pointer: coarse) {
+@media (max-width: 480px) {
     .integrated-container {
         flex-direction: column;
     }

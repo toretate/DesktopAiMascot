@@ -356,17 +356,17 @@ const registerTtsReadings = () => {
 .message-action-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--color-ink-subtle);
     cursor: pointer;
     padding: 6px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 44px;
+    height: 44px;
 }
 
 .bubble-wrapper:hover .message-action-buttons,
@@ -581,9 +581,9 @@ const registerTtsReadings = () => {
 .custom-context-menu {
     position: fixed;
     z-index: 2147483647;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-raised);
     border-radius: 8px;
     padding: 4px 0;
     min-width: 120px;
@@ -597,13 +597,13 @@ const registerTtsReadings = () => {
     gap: 8px;
     padding: 8px 12px;
     font-size: 13px;
-    color: #334155;
+    color: var(--color-ink);
     cursor: pointer;
     transition: background 0.15s ease;
 }
 
 .custom-context-menu .menu-item:hover {
-    background: #f1f5f9;
+    background: var(--color-surface-muted);
     color: var(--color-primary-hover);
 }
 
@@ -613,17 +613,23 @@ const registerTtsReadings = () => {
 
 /* シークレットモードでのコンテキストメニュー */
 .custom-context-menu.secret-mode {
-    background: #1e1e2f;
-    border-color: #2d2d3f;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    background: var(--color-surface-overlay-dark);
+    border-color: var(--color-on-dark-border-strong);
+    box-shadow: var(--shadow-dark-control);
 }
 
 .custom-context-menu.secret-mode .menu-item {
-    color: #cbd5e1;
+    color: var(--color-surface-muted);
 }
 
 .custom-context-menu.secret-mode .menu-item:hover {
-    background: #2d2d3f;
+    background: var(--color-on-dark-hover);
     color: var(--theme-accent-400);
+}
+
+@media (hover: none), (pointer: coarse) {
+    .message-action-buttons {
+        opacity: 1;
+    }
 }
 </style>

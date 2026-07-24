@@ -129,6 +129,56 @@ describe('useTaskStore', () => {
             expect(task.steps[0].title).toBe('新規サブタスク');
         });
 
+        it('updateSubTask_日時と内容がサブタスク単位で更新されること', () => {
+            const store = useTaskStore();
+            store.addCategory('サブタスクテスト');
+            store.addTask(store.categories[0].id, '親タスク');
+            const task = store.tasks[0];
+            store.addSubTask(task.id, 'サブタスク');
+
+            store.updateSubTask(task.id, task.steps[0].id, {
+                memo: '詳細な内容',
+                scheduledAt: '2026-07-24T01:00:00.000Z',
+                scheduledEndAt: '2026-07-24T02:00:00.000Z'
+            });
+
+            expect(task.steps[0].memo).toBe('詳細な内容');
+            expect(task.steps[0].scheduledAt).toBe('2026-07-24T01:00:00.000Z');
+            expect(task.steps[0].scheduledEndAt).toBe('2026-07-24T02:00:00.000Z');
+        });
+
+        it('pauseSubTaskとresumeSubTask_サブタスクを中断して再開できること', () => {
+            const store = useTaskStore();
+            store.addCategory('サブタスクテスト');
+            store.addTask(store.categories[0].id, '親タスク');
+            const task = store.tasks[0];
+            store.addSubTask(task.id, 'サブタスク');
+            const subTaskId = task.steps[0].id;
+            store.updateSubTaskStatus(task.id, subTaskId, 'doing');
+
+            store.pauseSubTask(task.id, subTaskId);
+            expect(task.steps[0].status).toBe('paused');
+
+            store.resumeSubTask(task.id, subTaskId);
+            expect(task.steps[0].status).toBe('doing');
+        });
+
+        it('reorderSubTask_ドロップ位置に応じてサブタスクを並べ替えられること', () => {
+            const store = useTaskStore();
+            store.addCategory('サブタスクテスト');
+            store.addTask(store.categories[0].id, '親タスク');
+            const task = store.tasks[0];
+            store.addSubTask(task.id, 'サブタスク1');
+            store.addSubTask(task.id, 'サブタスク2');
+            store.addSubTask(task.id, 'サブタスク3');
+
+            store.reorderSubTask(task.id, task.steps[0].id, task.steps[2].id, true);
+            expect(task.steps.map(step => step.title)).toEqual(['サブタスク2', 'サブタスク3', 'サブタスク1']);
+
+            store.reorderSubTask(task.id, task.steps[2].id, task.steps[0].id, false);
+            expect(task.steps.map(step => step.title)).toEqual(['サブタスク1', 'サブタスク2', 'サブタスク3']);
+        });
+
         it('toggleSubTask_すべてのサブタスクが完了になった時のみ親タスクが自動的に完了になること', async () => {
             const store = useTaskStore();
             await store.loadFromLocalStorage();

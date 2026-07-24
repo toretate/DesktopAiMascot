@@ -198,11 +198,12 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
                 :placeholder="imageGenMode ? (imageGenMode === 't2i' ? '[画像生成] プロンプトを入力...' : '[画像編集] 編集指示を入力...（元画像が必要です）') : 'メッセージを入力...'" 
                 class="message-input"
                 :class="{ 'secret-mode': isSecretMode }"
+                aria-label="メッセージ"
                 rows="1"
                 @keydown="onTextareaKeyDown"
             ></textarea>
-            <button type="submit" class="send-btn" :class="{ 'secret-mode': isSecretMode }" :disabled="!inputText.trim() && pendingAttachments.length === 0">
-                <i class="pi pi-send"></i>
+            <button type="submit" class="send-btn" :class="{ 'secret-mode': isSecretMode }" :disabled="!inputText.trim() && pendingAttachments.length === 0" aria-label="送信">
+                <i class="pi pi-send" aria-hidden="true"></i>
             </button>
         </form>
     </footer>
@@ -226,28 +227,29 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
 
 .message-input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 8px 12px;
-    color: #1e293b;
+    color: var(--color-ink-strong);
     font-size: 13px;
-    outline: none;
-    transition: all 0.2s ease;
+    outline: 2px solid transparent;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
     resize: none;
     font-family: inherit;
     height: 34px;
     box-sizing: border-box;
 }
 
-.message-input:focus {
+.message-input:focus-visible {
     border-color: var(--color-primary);
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 0 0 2px var(--color-primary-alpha-10);
+    background: var(--color-surface-raised);
+    outline-color: var(--control-focus-color);
+    outline-offset: 1px;
 }
 
 .message-input::placeholder {
-    color: #94a3b8;
+    color: var(--color-ink-subtle);
 }
 
 .send-btn {
@@ -440,6 +442,12 @@ const onTextareaKeyDown = (event: KeyboardEvent) => {
     }
     100% {
         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mic-btn.recording {
+        animation: none;
     }
 }
 

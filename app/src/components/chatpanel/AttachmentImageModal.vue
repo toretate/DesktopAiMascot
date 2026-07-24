@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { extractImageParameters } from '../../utils/png-metadata';
+import AppModalShell from '../common/AppModalShell.vue';
 
 const props = defineProps<{
     url: string | null;
@@ -36,6 +37,12 @@ const copyParameters = async () => {
 
 const handleClose = () => {
     emit('close');
+};
+
+const useAsImageSource = () => {
+    if (!props.url) return;
+    emit('use-i2i', props.url);
+    handleClose();
 };
 
 watch(() => props.url, (newUrl) => {
@@ -84,12 +91,27 @@ watch(() => props.url, (newUrl) => {
 </script>
 
 <template>
-    <div v-if="url" class="image-modal" @click="handleClose">
-        <div class="image-modal-content" @click.stop>
-            <img :src="url" class="full-image" @click="handleClose" />
+    <AppModalShell
+        :visible="Boolean(url)"
+        title-id="attachment-image-title"
+        width="min(1120px, 94vw)"
+        height="min(760px, 92dvh)"
+        max-width="94vw"
+        max-height="92dvh"
+        padding="0"
+        backdrop="dark"
+        mobile-fullscreen
+        @close="handleClose"
+    >
+        <div v-if="url" class="image-modal-content">
+            <h2 id="attachment-image-title" class="visually-hidden">添付画像の拡大表示</h2>
+            <button type="button" class="modal-close-btn" aria-label="画像を閉じる" @click="handleClose">
+                <i class="pi pi-times" aria-hidden="true"></i>
+            </button>
+            <img :src="url" class="full-image" alt="添付画像の拡大表示" />
 
             <div class="modal-action-bar">
-                <button type="button" class="modal-action-btn i2i-btn" @click="emit('use-i2i', url); handleClose()" title="この画像を画像編集 (i2i) の元画像に設定">
+                <button type="button" class="modal-action-btn i2i-btn" @click="useAsImageSource" title="この画像を画像編集 (i2i) の元画像に設定">
                     <i class="pi pi-pencil"></i> この画像を i2i 元画像に設定
                 </button>
 
@@ -120,49 +142,40 @@ watch(() => props.url, (newUrl) => {
                 </div>
             </div>
         </div>
-    </div>
+    </AppModalShell>
 </template>
 
 <style scoped>
-/* 画像拡大モーダル */
-.image-modal {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    cursor: zoom-out;
-    animation: fadeIn 0.2s ease;
-}
-
 .image-modal-content {
     position: relative;
     width: 100%;
     height: 100%;
-    max-width: 90%;
-    max-height: 90%;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--color-surface-overlay-dark);
 }
 
 .full-image {
-    max-width: 100%;
-    max-height: 100%;
+    max-width: calc(100% - 32px);
+    max-height: calc(100% - 104px);
     object-fit: contain;
     border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-raised);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.modal-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10002;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--color-primary-alpha-20);
+    border-radius: 50%;
+    background: var(--color-surface-overlay-dark);
+    color: var(--color-on-primary);
+    cursor: pointer;
 }
 
 .modal-action-bar {
@@ -183,9 +196,9 @@ watch(() => props.url, (newUrl) => {
     display: flex;
     align-items: center;
     gap: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    color: white;
+    box-shadow: var(--shadow-dark-control);
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    color: var(--color-on-primary);
 }
 
 .modal-action-btn.i2i-btn {
@@ -195,37 +208,37 @@ watch(() => props.url, (newUrl) => {
 .modal-action-btn.i2i-btn:hover {
     background: var(--color-primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 6px 20px var(--color-primary-alpha-50);
 }
 
 .modal-action-btn.info-btn {
-    background: rgba(30, 41, 59, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-dark-control);
+    border: 1px solid var(--color-on-dark-border);
     backdrop-filter: blur(4px);
 }
 
 .modal-action-btn.info-btn:hover {
-    background: rgba(30, 41, 59, 1);
+    background: var(--color-dark-control-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-dark-overlay);
 }
 
 .modal-action-btn.info-btn.active-info {
-    background: #0ea5e9;
-    border-color: #38bdf8;
-    box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
+    background: var(--color-primary);
+    border-color: var(--color-primary-border);
+    box-shadow: 0 0 12px var(--color-primary-alpha-50);
 }
 
 .modal-action-btn.folder-btn {
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-dark-control-muted);
+    border: 1px solid var(--color-on-dark-border);
     backdrop-filter: blur(4px);
 }
 
 .modal-action-btn.folder-btn:hover {
-    background: rgba(15, 23, 42, 0.9);
+    background: var(--color-dark-control-muted-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-dark-overlay);
 }
 
 /* ---- パラメータ詳細表示パネル ---- */
@@ -235,13 +248,13 @@ watch(() => props.url, (newUrl) => {
     left: 5%;
     width: 90%;
     height: 90%;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--color-surface-overlay-dark);
+    border: 1px solid var(--color-on-dark-border-strong);
     border-radius: 12px;
     display: flex;
     flex-direction: column;
     z-index: 10001;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-dark-overlay);
     animation: fadeIn 0.15s ease;
 }
 
@@ -250,13 +263,13 @@ watch(() => props.url, (newUrl) => {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--color-on-dark-border);
 }
 
 .info-panel-title {
     font-size: 13px;
     font-weight: 600;
-    color: #f1f5f9;
+    color: var(--color-on-primary);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -270,7 +283,7 @@ watch(() => props.url, (newUrl) => {
 .panel-icon-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--color-ink-subtle);
     cursor: pointer;
     font-size: 14px;
     width: 28px;
@@ -279,12 +292,12 @@ watch(() => props.url, (newUrl) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .panel-icon-btn:hover {
-    color: #f1f5f9;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-on-primary);
+    background: var(--color-on-dark-hover);
 }
 
 .info-panel-body {
@@ -297,13 +310,20 @@ watch(() => props.url, (newUrl) => {
     margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
-    font-family: Consolas, Monaco, monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1.6;
-    color: #cbd5e1;
+    color: var(--color-surface-muted);
 }
 
 .text-green-500 {
-    color: #10b981 !important;
+    color: var(--color-success) !important;
+}
+
+.modal-close-btn:focus-visible,
+.modal-action-btn:focus-visible,
+.panel-icon-btn:focus-visible {
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 2px;
 }
 </style>

@@ -60,4 +60,43 @@ describe('ChatHeader', () => {
 
         expect(window.location.hash).toBe('#settings');
     });
+
+    it('画像生成メニューをボタンで操作できること', async () => {
+        const wrapper = mountHeader();
+        const trigger = wrapper.get('[aria-controls="image-generation-menu"]');
+
+        await trigger.trigger('click');
+
+        const items = wrapper.findAll('#image-generation-menu .menu-item');
+        expect(items).toHaveLength(3);
+        expect(items.every((item) => item.element.tagName === 'BUTTON')).toBe(true);
+
+        await items[0].trigger('click');
+        expect(wrapper.emitted('update:imageGenMode')).toEqual([['t2i']]);
+    });
+
+    it('アイコン操作にアクセシブルな名前と選択状態が設定されること', () => {
+        const wrapper = mountHeader();
+        const statefulLabels = [
+            'シークレットモードを切り替える',
+            '音声読み上げを切り替える',
+            'ラジオモードを切り替える',
+            'メモを切り替える',
+            '音楽プレイヤーを切り替える',
+            'タスク管理を切り替える',
+            '対話履歴を切り替える',
+        ];
+
+        for (const label of statefulLabels) {
+            expect(wrapper.get(`[aria-label="${label}"]`).attributes('aria-pressed')).toMatch(/^(true|false)$/);
+        }
+
+        expect(wrapper.get('[aria-label="メモを切り替える"]').attributes('aria-pressed')).toBe('false');
+        expect(wrapper.get('[aria-label="音楽プレイヤーを切り替える"]').attributes('aria-pressed')).toBe('false');
+        expect(wrapper.get('[aria-label="タスク管理を切り替える"]').attributes('aria-pressed')).toBe('false');
+        expect(wrapper.get('[aria-label="対話履歴を切り替える"]').attributes('aria-pressed')).toBe('false');
+        expect(wrapper.get('[aria-label="画像生成・編集メニューを開く"]').attributes('aria-expanded')).toBe('false');
+        expect(wrapper.get('[aria-label="新しい話題を開始する"]').element.tagName).toBe('BUTTON');
+        expect(wrapper.get('[aria-label="設定を開く"]').element.tagName).toBe('BUTTON');
+    });
 });

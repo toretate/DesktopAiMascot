@@ -84,9 +84,9 @@ onUnmounted(() => {
 .timeline-limit { display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 5px; min-width: 52px; flex-shrink: 0; font-size: 10px; font-weight: 600; color: #3b82f6; white-space: nowrap; }
 .timeline-limit.overdue { color: #dc2626; }
 .unscheduled { color: #cbd5e1; font-weight: 500; }
-.timeline-content-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; margin-bottom: 5px; flex-grow: 1; min-width: 0; }
-.timeline-content-card.overdue { background: #fef2f2; border-color: #fecaca; border-left: 3px solid #ef4444; }
-.timeline-content-card.completed { background: #f8fafc; }
+.timeline-content-card { background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 6px; padding: 4px 8px; margin-bottom: 5px; flex-grow: 1; min-width: 0; }
+.timeline-content-card.overdue { background: var(--color-danger-soft); border-color: var(--color-danger); }
+.timeline-content-card.completed { background: var(--color-surface-muted); }
 .timeline-row-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .timeline-task-title { flex-grow: 1; min-width: 0; font-size: 12px; font-weight: 600; color: #334155; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-task-title.completed { color: #94a3b8; text-decoration: line-through; }

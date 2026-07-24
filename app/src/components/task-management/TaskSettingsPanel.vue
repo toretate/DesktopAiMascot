@@ -210,24 +210,24 @@ const close = () => {
 </template>
 
 <style scoped>
-.inline-settings-panel { display: flex; flex-direction: column; height: 100%; padding: 8px; }
-.settings-header { display: flex; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+.inline-settings-panel { display: flex; flex-direction: column; height: 100%; padding: 8px; background: var(--color-surface-raised); }
+.settings-header { display: flex; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--color-border-soft); padding-bottom: 8px; }
 .settings-header .back-btn { padding: 4px 8px !important; font-size: 12px !important; height: 28px !important; }
 .settings-content { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex-grow: 1; }
 .settings-section { display: flex; flex-direction: column; gap: 8px; }
 .section-title { font-size: 12px; font-weight: 600; color: #475569; }
 .category-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
-.category-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; gap: 12px; }
+.category-item { display: flex; align-items: center; justify-content: space-between; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 8px; padding: 6px 8px; gap: 12px; }
 .cat-left { display: flex; align-items: center; gap: 8px; flex-grow: 1; }
 .order-buttons { display: flex; flex-direction: column; gap: 2px; }
 .move-btn { width: 18px !important; height: 18px !important; padding: 0 !important; }
-.cat-name-input { flex-grow: 1; border-color: #cbd5e1; background: #fff; padding: 4px 8px !important; font-size: 12px !important; height: 28px !important; }
+.cat-name-input { flex-grow: 1; border-color: var(--color-border); background: var(--color-surface-raised); padding: 4px 8px !important; font-size: 12px !important; height: 28px !important; }
 .cat-name-input:focus { border-color: #3b82f6; }
 .delete-btn { width: 28px !important; height: 28px !important; padding: 0 !important; }
 .empty-message { text-align: center; color: #64748b; padding: 12px 0; font-size: 12px; }
 .add-category-form { display: flex; gap: 8px; margin-top: 4px; }
 .add-btn { background: #3b82f6; border-color: #3b82f6; color: #fff; padding: 4px 12px !important; height: 28px !important; }
-.divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
+.divider { height: 1px; background: var(--color-border-soft); margin: 4px 0; }
 .opacity-control { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
 .opacity-value { font-size: 12px; font-weight: 600; color: #334155; width: 36px; text-align: right; }
 .opacity-slider { flex-grow: 1; }

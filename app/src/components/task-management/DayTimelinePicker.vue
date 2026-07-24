@@ -227,18 +227,19 @@ onUnmounted(removePointerListeners);
     width: 74px;
     min-width: 0;
     padding: 3px 4px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
     border-radius: 5px;
-    background: #ffffff;
-    color: #334155;
-    font-family: inherit;
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+    font-family: var(--font-body);
     font-size: 11px;
     font-weight: 600;
 }
 
-.time-input:focus {
-    border-color: #3b82f6;
-    outline: none;
+.time-input:focus-visible {
+    border-color: var(--color-primary);
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 2px;
 }
 
 .time-separator {
@@ -250,9 +251,9 @@ onUnmounted(removePointerListeners);
     min-height: 190px;
     flex: 1;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 7px;
-    background: #ffffff;
+    background: var(--color-surface-raised);
     scrollbar-width: thin;
 }
 

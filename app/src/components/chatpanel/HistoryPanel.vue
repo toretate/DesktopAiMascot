@@ -34,17 +34,23 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
             <h3>{{ isSecretMode ? 'シークレット対話履歴一覧' : '対話履歴スレッド一覧' }}</h3>
         </div>
         <div class="history-list">
-            <div 
+            <div
                 v-for="session in sessions" 
                 :key="session.id" 
                 class="history-item"
                 :class="{ active: session.id === activeSessionId }"
-                @click="emit('select-session', session.id)"
             >
-                <div class="history-item-content">
-                    <span class="history-item-title">{{ session.title }}</span>
-                    <span class="history-item-time">{{ formatTimestamp(session.timestamp, session.id) }}</span>
-                </div>
+                <button
+                    type="button"
+                    class="history-select-btn"
+                    :aria-current="session.id === activeSessionId ? 'true' : undefined"
+                    @click="emit('select-session', session.id)"
+                >
+                    <span class="history-item-content">
+                        <span class="history-item-title">{{ session.title }}</span>
+                        <span class="history-item-time">{{ formatTimestamp(session.timestamp, session.id) }}</span>
+                    </span>
+                </button>
                 <button class="delete-session-btn" @click="emit('delete-session', { sessionId: session.id, event: $event })" title="削除">
                     <i class="pi pi-trash"></i>
                 </button>
@@ -87,15 +93,31 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
     align-items: center;
     padding: 10px 12px;
     border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    background: var(--color-surface-overlay);
+    border: 1px solid var(--color-border-soft);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.history-item:hover {
+.history-item:hover,
+.history-item:focus-within {
     background: var(--color-primary-alpha-05);
     border-color: var(--color-primary-alpha-20);
+}
+
+.history-select-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.history-select-btn:focus-visible {
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 4px;
 }
 
 .history-item.active {
@@ -114,7 +136,7 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
 .history-item-title {
     font-size: 13px;
     font-weight: 500;
-    color: #1e293b;
+    color: var(--color-ink-strong);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -123,21 +145,21 @@ const formatTimestamp = (timestamp: number | undefined, sessionId: string) => {
 
 .history-item-time {
     font-size: 10px;
-    color: #94a3b8;
+    color: var(--color-ink-subtle);
     text-align: left;
 }
 
 .delete-session-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--color-ink-subtle);
     cursor: pointer;
     padding: 6px;
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .delete-session-btn:hover {

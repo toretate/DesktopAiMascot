@@ -198,47 +198,56 @@ onUnmounted(() => {
             </span>
         </span>
         <div class="header-actions">
-            <button class="icon-btn" @click="mascotStore.setSecretMode(!isSecretMode)" :class="{ 'active-secret-btn': isSecretMode, 'secret-mode': isSecretMode }" title="シークレットモード ON/OFF">
-                <i :class="isSecretMode ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+            <button class="icon-btn" aria-label="シークレットモードを切り替える" :aria-pressed="isSecretMode" @click="mascotStore.setSecretMode(!isSecretMode)" :class="{ 'active-secret-btn': isSecretMode, 'secret-mode': isSecretMode }" title="シークレットモード ON/OFF">
+                <i aria-hidden="true" :class="isSecretMode ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
             </button>
-            <button class="icon-btn" @click="toggleTts" :class="{ 'active-btn': useTts, 'secret-mode': isSecretMode }" title="アプリ全体の音声 ON/OFF">
-                <i :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
+            <button class="icon-btn" aria-label="音声読み上げを切り替える" :aria-pressed="useTts" @click="toggleTts" :class="{ 'active-btn': useTts, 'secret-mode': isSecretMode }" title="アプリ全体の音声 ON/OFF">
+                <i aria-hidden="true" :class="useTts ? 'pi pi-volume-up' : 'pi pi-volume-off'"></i>
             </button>
             <!-- 画像生成・編集メニュー -->
             <div class="image-menu-wrapper mobile-collapsible-action">
-                <button type="button" class="icon-btn" @click="toggleImageMenu" :class="{ 'active-btn': imageGenMode !== null, 'secret-mode': isSecretMode }" title="画像生成・編集メニュー">
-                    <i class="pi pi-image"></i>
+                <button
+                    type="button"
+                    class="icon-btn"
+                    :class="{ 'active-btn': imageGenMode !== null, 'secret-mode': isSecretMode }"
+                    title="画像生成・編集メニュー"
+                    aria-label="画像生成・編集メニューを開く"
+                    aria-controls="image-generation-menu"
+                    :aria-expanded="showImageMenu"
+                    @click="toggleImageMenu"
+                >
+                    <i aria-hidden="true" class="pi pi-image"></i>
                 </button>
-                <div v-if="showImageMenu" class="image-dropdown-menu" :class="{ 'secret-mode': isSecretMode }">
-                    <div class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="setImageGenMode('t2i')">
+                <div v-if="showImageMenu" id="image-generation-menu" class="image-dropdown-menu" :class="{ 'secret-mode': isSecretMode }">
+                    <button type="button" class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="setImageGenMode('t2i')">
                         <i class="pi pi-pencil"></i> テキストから画像生成 (t2i)
                         <i v-if="imageGenMode === 't2i'" class="pi pi-check active-check" :class="{ 'secret-mode': isSecretMode }"></i>
-                    </div>
-                    <div class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="setImageGenMode('i2i')">
+                    </button>
+                    <button type="button" class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="setImageGenMode('i2i')">
                         <i class="pi pi-image"></i> 画像から画像生成 (i2i)
                         <i v-if="imageGenMode === 'i2i'" class="pi pi-check active-check" :class="{ 'secret-mode': isSecretMode }"></i>
-                    </div>
+                    </button>
                     <div class="menu-divider" :class="{ 'secret-mode': isSecretMode }"></div>
-                    <div class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="openImageGenDialog">
+                    <button type="button" class="menu-item" :class="{ 'secret-mode': isSecretMode }" @click="openImageGenDialog">
                         <i class="pi pi-cog"></i> 生成パラメータ設定
-                    </div>
+                    </button>
                 </div>
             </div>
-            <button class="icon-btn mobile-collapsible-action" @click="toggleRadio" :class="{ 'active-radio-btn': isRadioMode, 'secret-mode': isSecretMode }" title="ラジオモード ON/OFF">
-                <img :src="radioIcon" class="radio-svg-icon" :class="{ 'active-radio-btn': isRadioMode }" alt="ラジオ" />
+            <button class="icon-btn mobile-collapsible-action" aria-label="ラジオモードを切り替える" :aria-pressed="isRadioMode" @click="toggleRadio" :class="{ 'active-radio-btn': isRadioMode, 'secret-mode': isSecretMode }" title="ラジオモード ON/OFF">
+                <img :src="radioIcon" class="radio-svg-icon" :class="{ 'active-radio-btn': isRadioMode }" alt="" aria-hidden="true" />
             </button>
-            <button class="icon-btn mobile-collapsible-action" @click="toggleMemo" :class="{ 'active-btn': showMemoManagement, 'secret-mode': isSecretMode }" title="メモ ON/OFF">
-                <i class="pi pi-file-edit"></i>
+            <button class="icon-btn mobile-collapsible-action" aria-label="メモを切り替える" :aria-pressed="showMemoManagement" @click="toggleMemo" :class="{ 'active-btn': showMemoManagement, 'secret-mode': isSecretMode }" title="メモ ON/OFF">
+                <i aria-hidden="true" class="pi pi-file-edit"></i>
             </button>
-            <button class="icon-btn mobile-collapsible-action" @click="toggleMusic" :class="{ 'active-btn': showMusicPlayer, 'secret-mode': isSecretMode }" title="音楽プレイヤー ON/OFF">
-                <i class="pi pi-headphones"></i>
+            <button class="icon-btn mobile-collapsible-action" aria-label="音楽プレイヤーを切り替える" :aria-pressed="showMusicPlayer" @click="toggleMusic" :class="{ 'active-btn': showMusicPlayer, 'secret-mode': isSecretMode }" title="音楽プレイヤー ON/OFF">
+                <i aria-hidden="true" class="pi pi-headphones"></i>
             </button>
-            <button class="icon-btn mobile-collapsible-action" @click="toggleTasks" :class="{ 'active-btn': showTaskManagement, 'secret-mode': isSecretMode }" title="タスク管理 ON/OFF">
-                <i class="pi pi-check-square"></i>
+            <button class="icon-btn mobile-collapsible-action" aria-label="タスク管理を切り替える" :aria-pressed="showTaskManagement" @click="toggleTasks" :class="{ 'active-btn': showTaskManagement, 'secret-mode': isSecretMode }" title="タスク管理 ON/OFF">
+                <i aria-hidden="true" class="pi pi-check-square"></i>
             </button>
-            <button class="icon-btn mobile-collapsible-action" @click="triggerClearHistory" :class="{ 'secret-mode': isSecretMode }" title="新規話題"><i class="pi pi-plus"></i></button>
-            <button class="icon-btn mobile-collapsible-action" @click="toggleHistory" :class="{ 'active-btn': showHistoryList, 'secret-mode': isSecretMode }" title="履歴一覧"><i class="pi pi-history"></i></button>
-            <button class="icon-btn mobile-collapsible-action" @click="openSettings" :class="{ 'secret-mode': isSecretMode }" title="設定"><i class="pi pi-cog"></i></button>
+            <button class="icon-btn mobile-collapsible-action" aria-label="新しい話題を開始する" @click="triggerClearHistory" :class="{ 'secret-mode': isSecretMode }" title="新規話題"><i aria-hidden="true" class="pi pi-plus"></i></button>
+            <button class="icon-btn mobile-collapsible-action" aria-label="対話履歴を切り替える" :aria-pressed="showHistoryList" @click="toggleHistory" :class="{ 'active-btn': showHistoryList, 'secret-mode': isSecretMode }" title="履歴一覧"><i aria-hidden="true" class="pi pi-history"></i></button>
+            <button class="icon-btn mobile-collapsible-action" aria-label="設定を開く" @click="openSettings" :class="{ 'secret-mode': isSecretMode }" title="設定"><i aria-hidden="true" class="pi pi-cog"></i></button>
 
             <div class="mobile-menu-wrapper">
                 <button
@@ -290,14 +299,15 @@ onUnmounted(() => {
 }
 
 .chat-title {
+    font-family: var(--font-display);
     font-size: 14px;
     font-weight: 600;
-    color: #475569;
+    color: var(--color-ink);
 }
 
 .header-actions {
     display: flex;
-    gap: 8px;
+    gap: 4px;
 }
 
 .mobile-menu-wrapper {
@@ -308,21 +318,21 @@ onUnmounted(() => {
 .icon-btn {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--color-ink-muted);
     cursor: pointer;
     font-size: 14px;
-    width: 28px;
-    height: 28px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .icon-btn:hover {
-    color: #0f172a;
-    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-ink-strong);
+    background: var(--color-border-soft);
 }
 
 .active-btn {
@@ -378,11 +388,11 @@ onUnmounted(() => {
     top: calc(100% + 6px);
     right: 0;
     width: 200px;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--color-surface-overlay);
     backdrop-filter: blur(12px);
     border: 1px solid var(--color-primary-alpha-20);
     border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-raised);
     padding: 6px;
     z-index: 110;
     display: flex;
@@ -396,10 +406,15 @@ onUnmounted(() => {
     gap: 8px;
     padding: 8px 12px;
     font-size: 12px;
-    color: #475569;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font: inherit;
+    text-align: left;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, background-color 0.2s ease;
     user-select: none;
     position: relative;
 }
@@ -407,6 +422,13 @@ onUnmounted(() => {
 .menu-item:hover {
     background: var(--color-primary-alpha-08);
     color: var(--color-primary);
+}
+
+.icon-btn:focus-visible,
+.menu-item:focus-visible,
+.mobile-actions-panel > button:focus-visible {
+    outline: 2px solid var(--control-focus-color);
+    outline-offset: 2px;
 }
 
 .menu-item i:first-child {
@@ -497,7 +519,7 @@ onUnmounted(() => {
     background: rgba(255, 255, 255, 0.08);
 }
 
-@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+@media (max-width: 768px) {
     .chat-header {
         padding-inline: 12px;
     }
@@ -521,11 +543,6 @@ onUnmounted(() => {
 
     .mobile-menu-wrapper {
         display: block;
-    }
-
-    .icon-btn {
-        width: 36px;
-        height: 36px;
     }
 
     .mobile-actions-panel {
@@ -585,6 +602,12 @@ onUnmounted(() => {
 
     .mobile-actions-panel.secret-mode > button {
         color: #e2e8f0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .active-radio-btn {
+        animation: none;
     }
 }
 </style>

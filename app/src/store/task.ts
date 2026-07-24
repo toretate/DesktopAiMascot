@@ -14,7 +14,10 @@ export interface SubTask {
     id: string;
     title: string;
     completed: boolean;
-    status: 'todo' | 'doing' | 'done';
+    status: 'todo' | 'doing' | 'paused' | 'done';
+    scheduledAt?: string;
+    scheduledEndAt?: string;
+    memo?: string;
 }
 
 // 親タスク（Quest）のインターフェース
@@ -545,9 +548,15 @@ export const useTaskStore = defineStore('task', () => {
             id: 'step_' + Math.random().toString(36).substring(2, 11),
             title: sourceTask.title,
             completed: sourceTask.completed,
-            status: sourceTask.status === 'done' ? 'done' : (sourceTask.status === 'doing' ? 'doing' : 'todo')
+            status: sourceTask.status === 'done'
+                ? 'done'
+                : (sourceTask.status === 'doing' || sourceTask.status === 'paused' ? sourceTask.status : 'todo'),
+            scheduledAt: sourceTask.scheduledAt,
+            scheduledEndAt: sourceTask.scheduledEndAt,
+            memo: sourceTask.memo
         };
         targetTask.steps.push(newStep);
+        targetTask.expanded = true;
         recalculateTaskCompletion(targetTask);
         
         tasks.value = tasks.value.filter(t => t.id !== sourceTaskId);
@@ -587,7 +596,10 @@ export const useTaskStore = defineStore('task', () => {
             expanded: false,
             order,
             createdAt: new Date().toISOString(),
-            status: step.status === 'done' ? 'done' : (step.status === 'doing' ? 'doing' : 'todo')
+            status: step.status,
+            scheduledAt: step.scheduledAt,
+            scheduledEndAt: step.scheduledEndAt,
+            memo: step.memo
         });
 
         tasks.value = [...tasks.value];
@@ -614,6 +626,7 @@ export const useTaskStore = defineStore('task', () => {
                 status: 'todo'
             };
             task.steps.push(step);
+            task.expanded = true;
             // サブタスクが追加されたら、親の完了フラグを再計算
             recalculateTaskCompletion(task);
         }
@@ -639,7 +652,7 @@ export const useTaskStore = defineStore('task', () => {
         }
     };
 
-    const updateSubTaskStatus = (taskId: string, subTaskId: string, status: 'todo' | 'doing' | 'done') => {
+    const updateSubTaskStatus = (taskId: string, subTaskId: string, status: SubTask['status']) => {
         const task = tasks.value.find(t => t.id === taskId);
         if (task) {
             const step = task.steps.find(s => s.id === subTaskId);
@@ -651,6 +664,14 @@ export const useTaskStore = defineStore('task', () => {
         }
     };
 
+    const pauseSubTask = (taskId: string, subTaskId: string) => {
+        updateSubTaskStatus(taskId, subTaskId, 'paused');
+    };
+
+    const resumeSubTask = (taskId: string, subTaskId: string) => {
+        updateSubTaskStatus(taskId, subTaskId, 'doing');
+    };
+
     const updateSubTask = (taskId: string, subTaskId: string, updates: Partial<SubTask>) => {
         const task = tasks.value.find(t => t.id === taskId);
         if (task) {
@@ -659,6 +680,27 @@ export const useTaskStore = defineStore('task', () => {
                 Object.assign(step, updates);
             }
         }
+    };
+
+    const reorderSubTask = (
+        taskId: string,
+        subTaskId: string,
+        targetSubTaskId: string,
+        placeAfter: boolean
+    ) => {
+        const task = tasks.value.find(t => t.id === taskId);
+        if (!task || subTaskId === targetSubTaskId) return;
+
+        const sourceIndex = task.steps.findIndex(step => step.id === subTaskId);
+        if (sourceIndex < 0) return;
+
+        const reorderedSteps = [...task.steps];
+        const [movedStep] = reorderedSteps.splice(sourceIndex, 1);
+        const targetIndex = reorderedSteps.findIndex(step => step.id === targetSubTaskId);
+        if (targetIndex < 0) return;
+
+        reorderedSteps.splice(targetIndex + (placeAfter ? 1 : 0), 0, movedStep);
+        task.steps = reorderedSteps;
     };
 
     // サブタスク状態から親タスクの完了を再計算
@@ -728,6 +770,9 @@ export const useTaskStore = defineStore('task', () => {
         deleteSubTask,
         toggleSubTask,
         updateSubTaskStatus,
-        updateSubTask
+        pauseSubTask,
+        resumeSubTask,
+        updateSubTask,
+        reorderSubTask
     };
 });
